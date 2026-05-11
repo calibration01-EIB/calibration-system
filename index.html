@@ -1024,15 +1024,16 @@ tbody tr:hover { background: var(--surface2); }
 
 <script>
 // ====================================================
-// CONFIG — อ่านจาก localStorage
+// CONFIG — ฝังค่าตรงนี้เลย ไม่ต้องกรอก Setup
 // ====================================================
 const CFG_KEY = 'calibration_config';
-let CONFIG = {};
+let CONFIG = {
+  clientId: '116134477095-9hoivc0amc5i6vo0ijvbq4deikhftjq2.apps.googleusercontent.com',
+  folderId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs'
+};
 
 function loadConfig() {
-  try {
-    CONFIG = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-  } catch(e) { CONFIG = {}; }
+  // ใช้ค่า hardcode ด้านบนเลย ไม่ต้องอ่านจาก localStorage
 }
 
 function saveSetup() {
@@ -1040,7 +1041,6 @@ function saveSetup() {
   const folderId = document.getElementById('setupFolderId').value.trim();
   if (!clientId || !folderId) { alert('กรุณากรอกข้อมูลให้ครบ'); return; }
   CONFIG = { clientId, folderId };
-  localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG));
   document.getElementById('setupScreen').style.display = 'none';
   initGoogleAuth();
 }
