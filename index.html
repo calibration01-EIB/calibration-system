@@ -685,6 +685,8 @@ function renderTable() {
     return `<tr>
       <td>${i+1}</td>
       <td>${typeBadge(d.instrument_type)}</td>
+      <td>${d.machine_name||'–'}</td>
+      <td>${d.location||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
       <td>${d.range_val||'–'}</td>
@@ -696,8 +698,11 @@ function renderTable() {
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
       <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
+      <td>${d.cal_frequency||'–'}</td>
+      <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
       <td>${statusBadge}</td>
-      <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\\'")}')">📎 ไฟล์</button></td>
+      <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\'")}')" >📎 ไฟล์</button></td>
+      <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
       <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
   }).join('');
