@@ -236,7 +236,6 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sidebar-brand"><div><h2>🔧 Calibration</h2><p>Management System</p></div></div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
-        <div class="nav-item" onclick="showPage('monthly')" id="nav-monthly"><span class="nav-icon">📅</span> รายเดือน</div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
       </nav>
       <div class="sidebar-user">
@@ -299,6 +298,40 @@ tbody tr:hover { background: var(--surface2); }
             </thead>
             <tbody id="dataTable"><tr><td colspan="14" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- MONTHLY CARDS ON DASHBOARD -->
+      <div style="margin-top:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:15px;font-weight:600">สรุปรายเดือน</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">เครื่องมือครบกำหนดแต่ละเดือน — กดการ์ดเพื่อดูรายละเอียด</div>
+          </div>
+        </div>
+        <div id="monthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:16px"></div>
+        <div id="monthDetail" style="display:none;background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2)">
+            <span id="monthDetailTitle" style="font-size:15px;font-weight:600"></span>
+            <button class="btn-close" onclick="document.getElementById('monthDetail').style.display='none'">×</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">ID Code</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">เครื่องมือ</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">ยี่ห้อ</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">หน่วยงาน</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">CERT.</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">ครบกำหนด</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">เหลือ</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;border-bottom:1.5px solid var(--border)">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="monthDetailBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -497,6 +530,7 @@ async function loadData() {
     populateFilters();
     updateStats();
     renderTable();
+    renderMonthly();
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
@@ -805,7 +839,6 @@ async function deleteUser(userId) {
 function showPage(page) {
   document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
   document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
-  document.getElementById('pageMonthly').style.display = page === 'monthly' ? 'block' : 'none';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('nav-' + page)?.classList.add('active');
   const titles = {
