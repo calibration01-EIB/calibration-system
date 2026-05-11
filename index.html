@@ -927,7 +927,6 @@ async function deleteInstrument(id, name) {
 function toggleManageColumns(show) {
   document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
   document.getElementById('thManage').style.display = show ? '' : 'none';
-  document.querySelectorAll('[id^="tdManage-"]').forEach(el => el.style.display = show ? '' : 'none');
 }
 
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
