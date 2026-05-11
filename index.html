@@ -253,6 +253,10 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
+
+        <!-- MONTH CARDS -->
+        <div id="monthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;margin-bottom:16px"></div>
+
         <div class="stats-grid">
           <div class="stat-card overdue"><div class="stat-label">🔴 เลยกำหนดแล้ว</div><div class="stat-num" id="statOverdue">–</div><div class="stat-sub">เครื่อง</div></div>
           <div class="stat-card warning"><div class="stat-label">🟡 ใกล้ครบ (≤30 วัน)</div><div class="stat-num" id="statWarning">–</div><div class="stat-sub">เครื่อง</div></div>
@@ -565,6 +569,7 @@ function resetFilters() {
   document.getElementById('unitFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('monthFilter').value = '';
+  if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
   filteredData = [...allData];
   updateStats(); renderTable();
 }
@@ -808,6 +813,58 @@ async function deleteUser(userId) {
 // ====================================================
 // PAGES
 // ====================================================
+let activeMonthCard = null;
+
+function renderMonthly() {
+  if (!allData.length) { setTimeout(renderMonthly, 500); return; }
+  const byMonth = {};
+  for (let i=0;i<12;i++) byMonth[i] = [];
+  allData.forEach(d => {
+    if (!d.due_date) return;
+    byMonth[new Date(d.due_date).getMonth()].push(d);
+  });
+  const grid = document.getElementById('monthGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let i=0;i<12;i++) {
+    const items = byMonth[i];
+    const cnt = items.length;
+    const hasOverdue = items.some(d => d.days_left < 0);
+    const hasWarning = items.some(d => d.days_left >= 0 && d.days_left <= 30);
+    let bg, color, border;
+    if (hasOverdue) { bg='var(--red-light)'; color='var(--red)'; border='#f5c6c4'; }
+    else if (hasWarning) { bg='var(--amber-light)'; color='var(--amber)'; border='#f0d070'; }
+    else if (cnt > 0) { bg='var(--green-light)'; color='var(--green)'; border='#b8e0bf'; }
+    else { bg='var(--surface2)'; color='var(--text2)'; border='var(--border)'; }
+    const card = document.createElement('div');
+    card.id = `mcard-${i}`;
+    card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:var(--radius);padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.innerHTML = `<div style="font-size:11px;font-weight:600;color:${color};margin-bottom:4px">${MONTH_NAMES_SHORT[i]}</div>
+      <div style="font-size:24px;font-weight:600;color:${color};line-height:1">${cnt}</div>
+      <div style="font-size:10px;color:${color};margin-top:3px;opacity:.8">เครื่อง</div>`;
+    if (cnt) card.addEventListener('click', () => filterByMonth(i, card));
+    grid.appendChild(card);
+  }
+}
+
+function filterByMonth(monthIdx, card) {
+  if (activeMonthCard === card) {
+    activeMonthCard.style.boxShadow = '';
+    activeMonthCard.style.transform = '';
+    activeMonthCard = null;
+    document.getElementById('monthFilter').value = '';
+    filterData();
+    return;
+  }
+  if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; }
+  activeMonthCard = card;
+  card.style.boxShadow = '0 0 0 3px var(--accent)';
+  card.style.transform = 'translateY(-3px)';
+  document.getElementById('monthFilter').value = String(monthIdx + 1);
+  filterData();
+  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function showPage(page) {
   document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
   document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
@@ -822,91 +879,6 @@ function showPage(page) {
   document.getElementById('topbarSub').textContent = titles[page][1];
   if (page === 'admin') loadUsers();
   if (page === 'monthly') renderMonthly();
-}
-
-// ====================================================
-// MONTHLY VIEW
-// ====================================================
-const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const MONTH_NAMES_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-
-function renderMonthly() {
-  if (!allData.length) { setTimeout(renderMonthly, 500); return; }
-
-  // จัดกลุ่มตามเดือนครบกำหนด
-  const byMonth = {};
-  for (let i=0;i<12;i++) byMonth[i] = [];
-  allData.forEach(d => {
-    if (!d.due_date) return;
-    const m = new Date(d.due_date).getMonth();
-    byMonth[m].push(d);
-  });
-
-  const grid = document.getElementById('monthGrid');
-  grid.innerHTML = '';
-
-  for (let i=0;i<12;i++) {
-    const items = byMonth[i];
-    const cnt = items.length;
-    const hasOverdue = items.some(d => d.days_left < 0);
-    const hasWarning = items.some(d => d.days_left >= 0 && d.days_left <= 30);
-
-    let bg, color, border;
-    if (hasOverdue) { bg='var(--red-light)'; color='var(--red)'; border='#f5c6c4'; }
-    else if (hasWarning) { bg='var(--amber-light)'; color='var(--amber)'; border='#f0d070'; }
-    else if (cnt > 0) { bg='var(--green-light)'; color='var(--green)'; border='#b8e0bf'; }
-    else { bg='var(--surface2)'; color='var(--text2)'; border='var(--border)'; }
-
-    const card = document.createElement('div');
-    card.style.cssText = `background:${bg};border:1px solid ${border};border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:${cnt?'pointer':'default'};transition:transform .15s`;
-    card.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:${color};margin-bottom:6px">${MONTH_NAMES_SHORT[i]}</div>
-      <div style="font-size:28px;font-weight:600;color:${color};line-height:1">${cnt}</div>
-      <div style="font-size:11px;color:${color};margin-top:4px;opacity:.8">เครื่อง</div>
-      ${hasOverdue ? '<div style="font-size:10px;margin-top:4px">🔴 เลยกำหนด</div>' : hasWarning ? '<div style="font-size:10px;margin-top:4px">🟡 ใกล้ครบ</div>' : cnt ? '<div style="font-size:10px;margin-top:4px">🟢 ปกติ</div>' : ''}
-    `;
-    if (cnt) {
-      card.addEventListener('mouseenter', () => card.style.transform='translateY(-2px)');
-      card.addEventListener('mouseleave', () => card.style.transform='');
-      card.addEventListener('click', () => showMonthDetail(i, byMonth[i]));
-    }
-    grid.appendChild(card);
-  }
-}
-
-function showMonthDetail(monthIdx, items) {
-  const year = new Date().getFullYear() + 543;
-  document.getElementById('monthDetailTitle').textContent = `${MONTH_NAMES_FULL[monthIdx]} ${year} — ${items.length} รายการ`;
-
-  const tbody = document.getElementById('monthDetailBody');
-  tbody.innerHTML = items
-    .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
-    .map(d => {
-      let badge, rowBg='';
-      if (d.days_left < 0) {
-        badge = '<span class="badge badge-red">🔴 เลยกำหนด</span>';
-        rowBg = 'background:var(--red-light)';
-      } else if (d.days_left <= 30) {
-        badge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>';
-        rowBg = 'background:var(--amber-light)';
-      } else {
-        badge = '<span class="badge badge-green">🟢 ปกติ</span>';
-      }
-      const due = new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
-      return `<tr style="${rowBg}">
-        <td style="padding:11px 14px;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border)">${d.id_code||'–'}</td>
-        <td style="padding:11px 14px;border-bottom:1px solid var(--border)">${d.instrument_name||'–'}</td>
-        <td style="padding:11px 14px;border-bottom:1px solid var(--border)">${d.brand||'–'}</td>
-        <td style="padding:11px 14px;font-weight:600;border-bottom:1px solid var(--border)">${d.department||'–'}</td>
-        <td style="padding:11px 14px;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border)">${d.cert_no||'–'}</td>
-        <td style="padding:11px 14px;border-bottom:1px solid var(--border)">${due}</td>
-        <td style="padding:11px 14px;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border)">${d.days_left} วัน</td>
-        <td style="padding:11px 14px;border-bottom:1px solid var(--border)">${badge}</td>
-      </tr>`;
-    }).join('');
-
-  document.getElementById('monthDetail').style.display = 'block';
-  document.getElementById('monthDetail').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // ====================================================
