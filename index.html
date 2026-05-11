@@ -291,6 +291,7 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
           <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
+          <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -938,6 +939,138 @@ async function deleteInstrument(id, name) {
 function toggleManageColumns(show) {
   document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
   document.getElementById('thManage').style.display = show ? '' : 'none';
+}
+
+
+// ====================================================
+// PRINT / PDF REPORT
+// ====================================================
+function printReport() {
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
+  const year = today.getFullYear() + 543;
+
+  let ov=0, wa=0, ok=0;
+  filteredData.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) ov++;
+    else if (d.days_left <= 30) wa++;
+    else ok++;
+  });
+
+  // สร้างแถวตาราง
+  const rows = filteredData.map((d, i) => {
+    const days = d.days_left;
+    let statusText, statusColor;
+    if (days === null) { statusText = '–'; statusColor = '#666'; }
+    else if (days < 0) { statusText = 'เลยกำหนด'; statusColor = '#c0392b'; }
+    else if (days <= 30) { statusText = 'ใกล้ครบ'; statusColor = '#b8860b'; }
+    else { statusText = 'ปกติ'; statusColor = '#1e7e34'; }
+    const due = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    const cal = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${d.instrument_type||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${d.brand||'–'}</td>
+      <td>${d.range_val||'–'}</td>
+      <td>${d.department||'–'}</td>
+      <td>${d.id_code||'–'}</td>
+      <td>${d.cert_no||'–'}</td>
+      <td>${cal}</td>
+      <td>${due}</td>
+      <td style="color:${statusColor};font-weight:600">${statusText}</td>
+    </tr>`;
+  }).join('');
+
+  // ชื่อ filter ที่เลือก
+  const filterInfo = [];
+  const tf = document.getElementById('typeFilter').value;
+  const uf = document.getElementById('unitFilter').value;
+  const sf = document.getElementById('statusFilter').value;
+  const mf = document.getElementById('monthFilter').value;
+  const mfNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  if (tf) filterInfo.push(`ประเภท: ${tf}`);
+  if (uf) filterInfo.push(`หน่วยงาน: ${uf}`);
+  if (sf) filterInfo.push(`สถานะ: ${sf==='overdue'?'เลยกำหนด':sf==='warning'?'ใกล้ครบ':'ปกติ'}`);
+  if (mf) filterInfo.push(`เดือน: ${mfNames[parseInt(mf)]}`);
+
+  const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>รายงานสอบเทียบเครื่องมือ</title>
+<style>
+  @page { size: A4 landscape; margin: 15mm 12mm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 9pt; color: #222; }
+  .header { text-align:center; margin-bottom: 12px; border-bottom: 2px solid #1a2f4a; padding-bottom: 10px; }
+  .header h1 { font-size: 16pt; color: #1a2f4a; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 9pt; color: #555; }
+  .summary { display: flex; gap: 12px; margin-bottom: 12px; }
+  .sum-card { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; text-align: center; }
+  .sum-card .num { font-size: 20pt; font-weight: 700; line-height: 1.2; }
+  .sum-card .lbl { font-size: 8pt; color: #666; margin-top: 2px; }
+  .sum-card.ov { border-color: #e74c3c; }
+  .sum-card.ov .num { color: #e74c3c; }
+  .sum-card.wa { border-color: #f39c12; }
+  .sum-card.wa .num { color: #f39c12; }
+  .sum-card.ok { border-color: #27ae60; }
+  .sum-card.ok .num { color: #27ae60; }
+  .sum-card.tt .num { color: #1a2f4a; }
+  .filter-info { font-size: 8pt; color: #555; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1a2f4a; color: white; padding: 6px 5px; text-align: left; font-size: 8pt; font-weight: 600; }
+  td { padding: 5px; border-bottom: 0.5px solid #e0e0e0; font-size: 8pt; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  tr:last-child td { border-bottom: none; }
+  .footer { margin-top: 12px; font-size: 8pt; color: #888; text-align: right; border-top: 1px solid #ddd; padding-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔧 รายงานสถานะการสอบเทียบเครื่องมือ</h1>
+    <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length} รายการ</p>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card ov"><div class="num">${ov}</div><div class="lbl">🔴 เลยกำหนด</div></div>
+    <div class="sum-card wa"><div class="num">${wa}</div><div class="lbl">🟡 ใกล้ครบ (≤30 วัน)</div></div>
+    <div class="sum-card ok"><div class="num">${ok}</div><div class="lbl">🟢 ปกติ</div></div>
+    <div class="sum-card tt"><div class="num">${filteredData.length}</div><div class="lbl">📦 ทั้งหมด</div></div>
+  </div>
+
+  ${filterInfo.length ? `<div class="filter-info">⚙️ Filter: ${filterInfo.join(' | ')}</div>` : ''}
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>ประเภท</th>
+        <th>เครื่องมือ</th>
+        <th>ยี่ห้อ / รุ่น</th>
+        <th>Range</th>
+        <th>หน่วยงาน</th>
+        <th>ID Code</th>
+        <th>CERT.</th>
+        <th>วันสอบเทียบ</th>
+        <th>ครบกำหนด</th>
+        <th>สถานะ</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="footer">
+    รายงานนี้สร้างจากระบบสอบเทียบเครื่องมือ &nbsp;|&nbsp; พิมพ์วันที่ ${todayStr}
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
 }
 
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
