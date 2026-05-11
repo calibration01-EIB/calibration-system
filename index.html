@@ -306,12 +306,30 @@ tbody tr:hover { background: var(--surface2); }
           <table>
             <thead>
               <tr>
-                <th>#</th><th>ประเภท</th><th>เครื่องมือ</th><th>ยี่ห้อ</th><th>Range</th><th>Tolerance (±)</th>
-                <th>S/N</th><th>หน่วยงาน</th><th>ID Code</th><th>CERT.</th>
-                <th>วันสอบเทียบ</th><th>ครบกำหนด</th><th>เหลือ</th><th>สถานะ</th><th>ไฟล์</th><th id="thManage" style="display:none">จัดการ</th>
+                <th>#</th>
+                <th>ประเภทเครื่องมือ</th>
+                <th>ชื่อเครื่องจักร</th>
+                <th>สถานที่ใช้งาน</th>
+                <th>เครื่องมือ</th>
+                <th>ยี่ห้อ</th>
+                <th>Range</th>
+                <th>Tolerance (±)</th>
+                <th>S/N</th>
+                <th>หน่วยงาน</th>
+                <th>ID Code</th>
+                <th>CERT.</th>
+                <th>วันสอบเทียบ</th>
+                <th>ครบกำหนด</th>
+                <th>เหลือ</th>
+                <th>ความถี่สอบเทียบ</th>
+                <th>ภายใน/ภายนอก</th>
+                <th>สถานะ</th>
+                <th>ไฟล์</th>
+                <th>Remark</th>
+                <th id="thManage" style="display:none">จัดการ</th>
               </tr>
             </thead>
-            <tbody id="dataTable"><tr><td colspan="14" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            <tbody id="dataTable"><tr><td colspan="21" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -393,6 +411,30 @@ tbody tr:hover { background: var(--surface2); }
         <div class="form-group">
           <label>วันครบกำหนด</label>
           <input type="date" id="iDueDate">
+        </div>
+        <div class="form-group">
+          <label>ชื่อเครื่องจักร</label>
+          <input type="text" id="iMachineName" placeholder="เช่น MIX 1000L">
+        </div>
+        <div class="form-group">
+          <label>สถานที่ใช้งาน</label>
+          <input type="text" id="iLocation" placeholder="เช่น ตึก 5/1">
+        </div>
+        <div class="form-group">
+          <label>ความถี่สอบเทียบ</label>
+          <input type="text" id="iCalFrequency" placeholder="เช่น 1 ครั้ง/ปี">
+        </div>
+        <div class="form-group">
+          <label>ภายใน / ภายนอก</label>
+          <select id="iCalType" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+            <option value="">-- เลือก --</option>
+            <option value="ภายใน">🏭 ภายใน</option>
+            <option value="ภายนอก">🌐 ภายนอก</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label>Remark</label>
+          <input type="text" id="iRemark" placeholder="หมายเหตุ">
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:8px">
@@ -632,7 +674,7 @@ function typeBadge(t) {
 
 function renderTable() {
   const tbody = document.getElementById('dataTable');
-  if (!filteredData.length) { tbody.innerHTML = '<tr><td colspan="14" class="no-data">ไม่พบข้อมูล</td></tr>'; return; }
+  if (!filteredData.length) { tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>'; return; }
   tbody.innerHTML = filteredData.map((d, i) => {
     const days = d.days_left;
     let statusBadge, daysClass;
@@ -888,6 +930,11 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iBrand').value = d.brand || '';
     document.getElementById('iRange').value = d.range_val || '';
     document.getElementById('iTolerance').value = d.tolerance || '';
+    document.getElementById('iMachineName').value = d.machine_name || '';
+    document.getElementById('iLocation').value = d.location || '';
+    document.getElementById('iCalFrequency').value = d.cal_frequency || '';
+    document.getElementById('iCalType').value = d.cal_type || '';
+    document.getElementById('iRemark').value = d.remark || '';
     document.getElementById('iSerial').value = d.serial_no || '';
     document.getElementById('iDept').value = d.department || '';
     document.getElementById('iIdCode').value = d.id_code || '';
@@ -895,7 +942,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
   } else {
-    ['iType','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate']
+    ['iType','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
@@ -919,6 +966,11 @@ async function saveInstrument() {
     cert_no: document.getElementById('iCertNo').value.trim(),
     cal_date: document.getElementById('iCalDate').value || null,
     due_date: document.getElementById('iDueDate').value || null,
+    machine_name: document.getElementById('iMachineName').value.trim() || null,
+    location: document.getElementById('iLocation').value.trim() || null,
+    cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,
+    cal_type: document.getElementById('iCalType').value || null,
+    remark: document.getElementById('iRemark').value.trim() || null,
   };
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
