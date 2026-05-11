@@ -290,6 +290,7 @@ tbody tr:hover { background: var(--surface2); }
           </select>
           <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
           <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
+          <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -297,7 +298,7 @@ tbody tr:hover { background: var(--surface2); }
               <tr>
                 <th>#</th><th>ประเภท</th><th>เครื่องมือ</th><th>ยี่ห้อ</th><th>Range</th>
                 <th>S/N</th><th>หน่วยงาน</th><th>ID Code</th><th>CERT.</th>
-                <th>วันสอบเทียบ</th><th>ครบกำหนด</th><th>เหลือ</th><th>สถานะ</th><th>ไฟล์</th>
+                <th>วันสอบเทียบ</th><th>ครบกำหนด</th><th>เหลือ</th><th>สถานะ</th><th>ไฟล์</th><th id="thManage" style="display:none">จัดการ</th>
               </tr>
             </thead>
             <tbody id="dataTable"><tr><td colspan="14" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
@@ -320,6 +321,69 @@ tbody tr:hover { background: var(--surface2); }
         <div style="margin-top:16px;padding:16px 20px;background:var(--amber-light);border:1px solid #f0d070;border-radius:var(--radius);font-size:13px;color:var(--amber);">
           ⚠️ รหัสผ่านถูก hash ด้วย SHA-256 ก่อนบันทึก — Admin ไม่สามารถดูรหัสผ่านจริงได้
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INSTRUMENT MODAL -->
+<div class="modal-overlay" id="instrumentModal">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h3 id="instrumentModalTitle">เพิ่มเครื่องมือ</h3>
+      <button class="btn-close" onclick="closeInstrumentModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>ประเภทเครื่องมือ</label>
+          <select id="iType" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+            <option value="">-- เลือกประเภท --</option>
+            <option value="BALANCE">BALANCE</option>
+            <option value="WEIGHT">WEIGHT</option>
+            <option value="TYPE F">TYPE F</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ชื่อเครื่องมือ</label>
+          <input type="text" id="iName" placeholder="เช่น Electronic Balance">
+        </div>
+        <div class="form-group">
+          <label>ยี่ห้อ / รุ่น</label>
+          <input type="text" id="iBrand" placeholder="เช่น AND / GF-3000">
+        </div>
+        <div class="form-group">
+          <label>Range</label>
+          <input type="text" id="iRange" placeholder="เช่น 30 kg">
+        </div>
+        <div class="form-group">
+          <label>Serial No. (S/N)</label>
+          <input type="text" id="iSerial" placeholder="หมายเลขซีเรียล">
+        </div>
+        <div class="form-group">
+          <label>หน่วยงาน</label>
+          <input type="text" id="iDept" placeholder="เช่น PMP1">
+        </div>
+        <div class="form-group">
+          <label>ID Code</label>
+          <input type="text" id="iIdCode" placeholder="เช่น PMP1BB01-WI01">
+        </div>
+        <div class="form-group">
+          <label>เลขที่ Certificate</label>
+          <input type="text" id="iCertNo" placeholder="เช่น 25B001-0">
+        </div>
+        <div class="form-group">
+          <label>วันที่สอบเทียบ</label>
+          <input type="date" id="iCalDate">
+        </div>
+        <div class="form-group">
+          <label>วันครบกำหนด</label>
+          <input type="date" id="iDueDate">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn-primary" id="saveInstrumentBtn" onclick="saveInstrument()">บันทึก</button>
+        <button class="btn-reset" onclick="closeInstrumentModal()" style="flex:none;padding:13px 20px">ยกเลิก</button>
       </div>
     </div>
   </div>
@@ -446,6 +510,7 @@ function enterApp(user) {
   document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
   if (user.role === 'admin') document.getElementById('nav-admin').style.display = 'flex';
   if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
+  if (user.role === 'admin' || user.role === 'editor') toggleManageColumns(true);
   setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
   loadData();
 }
@@ -779,6 +844,92 @@ async function deleteUser(userId) {
 // ====================================================
 // PAGES
 // ====================================================
+
+// ====================================================
+// INSTRUMENT CRUD
+// ====================================================
+let editingInstrumentId = null;
+
+function openInstrumentModal(instrumentId) {
+  editingInstrumentId = instrumentId || null;
+  document.getElementById('instrumentModalTitle').textContent = instrumentId ? 'แก้ไขเครื่องมือ' : 'เพิ่มเครื่องมือ';
+
+  if (instrumentId) {
+    const d = allData.find(x => x.id === instrumentId);
+    if (!d) return;
+    document.getElementById('iType').value = d.instrument_type || '';
+    document.getElementById('iName').value = d.instrument_name || '';
+    document.getElementById('iBrand').value = d.brand || '';
+    document.getElementById('iRange').value = d.range_val || '';
+    document.getElementById('iSerial').value = d.serial_no || '';
+    document.getElementById('iDept').value = d.department || '';
+    document.getElementById('iIdCode').value = d.id_code || '';
+    document.getElementById('iCertNo').value = d.cert_no || '';
+    document.getElementById('iCalDate').value = d.cal_date || '';
+    document.getElementById('iDueDate').value = d.due_date || '';
+  } else {
+    ['iType','iName','iBrand','iRange','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  }
+  document.getElementById('instrumentModal').classList.add('open');
+}
+
+function closeInstrumentModal() {
+  document.getElementById('instrumentModal').classList.remove('open');
+  editingInstrumentId = null;
+}
+
+async function saveInstrument() {
+  const payload = {
+    instrument_type: document.getElementById('iType').value.trim(),
+    instrument_name: document.getElementById('iName').value.trim(),
+    brand: document.getElementById('iBrand').value.trim(),
+    range_val: document.getElementById('iRange').value.trim(),
+    serial_no: document.getElementById('iSerial').value.trim(),
+    department: document.getElementById('iDept').value.trim(),
+    id_code: document.getElementById('iIdCode').value.trim(),
+    cert_no: document.getElementById('iCertNo').value.trim(),
+    cal_date: document.getElementById('iCalDate').value || null,
+    due_date: document.getElementById('iDueDate').value || null,
+  };
+
+  if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
+
+  const btn = document.getElementById('saveInstrumentBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    if (editingInstrumentId) {
+      const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
+      if (error) throw error;
+      showToast('แก้ไขเครื่องมือแล้ว', 'success');
+    } else {
+      const { error } = await sb.from('instruments').insert(payload);
+      if (error) throw error;
+      showToast('เพิ่มเครื่องมือแล้ว', 'success');
+    }
+    closeInstrumentModal();
+    await loadData();
+  } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
+}
+
+async function deleteInstrument(id, name) {
+  if (!confirm(`ต้องการลบ "${name}" ออกจากระบบ?`)) return;
+  try {
+    const { error } = await sb.from('instruments').delete().eq('id', id);
+    if (error) throw error;
+    showToast('ลบเครื่องมือแล้ว', 'success');
+    await loadData();
+  } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
+}
+
+function toggleManageColumns(show) {
+  document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
+  document.getElementById('thManage').style.display = show ? '' : 'none';
+  document.querySelectorAll('[id^="tdManage-"]').forEach(el => el.style.display = show ? '' : 'none');
+}
+
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const MONTH_NAMES_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 let activeMonthCard = null;
@@ -867,6 +1018,7 @@ function showToast(msg, type) {
 }
 
 document.getElementById('certModal').addEventListener('click', function(e) { if (e.target === this) closeCertModal(); });
+document.getElementById('instrumentModal').addEventListener('click', function(e) { if (e.target === this) closeInstrumentModal(); });
 document.getElementById('userModal').addEventListener('click', function(e) { if (e.target === this) closeUserModal(); });
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('searchInput').addEventListener('input', filterData);
