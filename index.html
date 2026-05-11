@@ -641,8 +641,19 @@ function renderTable() {
       <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
       <td>${statusBadge}</td>
       <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\\'")}')">📎 ไฟล์</button></td>
+      <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
   }).join('');
+
+  // ใส่ปุ่มจัดการถ้าเป็น Admin/Editor
+  if (currentUser?.role === 'admin' || currentUser?.role === 'editor') {
+    document.querySelectorAll('.td-manage').forEach((td, i) => {
+      const d = filteredData[i];
+      if (!d) return;
+      const name = (d.instrument_name||'').replace(/'/g, "\\'");
+      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
+    });
+  }
 }
 
 // ====================================================
