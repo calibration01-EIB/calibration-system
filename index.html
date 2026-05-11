@@ -126,11 +126,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); }
-th { padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
-td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+td { padding: 13px 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
 .badge-green { background: var(--green-light); color: var(--green); }
@@ -297,7 +297,7 @@ tbody tr:hover { background: var(--surface2); }
           <table>
             <thead>
               <tr>
-                <th>#</th><th>ประเภท</th><th>เครื่องมือ</th><th>ยี่ห้อ</th><th>Range</th>
+                <th>#</th><th>ประเภท</th><th>เครื่องมือ</th><th>ยี่ห้อ</th><th>Range</th><th>Tolerance (±)</th>
                 <th>S/N</th><th>หน่วยงาน</th><th>ID Code</th><th>CERT.</th>
                 <th>วันสอบเทียบ</th><th>ครบกำหนด</th><th>เหลือ</th><th>สถานะ</th><th>ไฟล์</th><th id="thManage" style="display:none">จัดการ</th>
               </tr>
@@ -340,7 +340,7 @@ tbody tr:hover { background: var(--surface2); }
           <label>ประเภทเครื่องมือ</label>
           <select id="iType" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
             <option value="">-- เลือกประเภท --</option>
-            <option value="BALANCE">BALANCE</option>
+            <option value="Electronic Balance">Electronic Balance</option>
             <option value="WEIGHT">WEIGHT</option>
             <option value="TYPE F">TYPE F</option>
           </select>
@@ -356,6 +356,10 @@ tbody tr:hover { background: var(--surface2); }
         <div class="form-group">
           <label>Range</label>
           <input type="text" id="iRange" placeholder="เช่น 30 kg">
+        </div>
+        <div class="form-group">
+          <label>Tolerance (±)</label>
+          <input type="text" id="iTolerance" placeholder="เช่น 0.01 g">
         </div>
         <div class="form-group">
           <label>Serial No. (S/N)</label>
@@ -613,7 +617,7 @@ function formatDate(s) {
 
 function typeBadge(t) {
   if (!t) return '<span class="badge badge-gray">–</span>';
-  const map = { 'BALANCE': 'badge-blue', 'WEIGHT': 'badge-purple', 'TYPE F': 'badge-gray' };
+  const map = { 'Electronic Balance': 'badge-blue', 'WEIGHT': 'badge-purple', 'TYPE F': 'badge-gray' };
   return `<span class="badge ${map[t]||'badge-gray'}">${t}</span>`;
 }
 
@@ -633,7 +637,8 @@ function renderTable() {
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
       <td>${d.range_val||'–'}</td>
-      <td style="font-family:var(--mono);font-size:12px">${d.serial_no||'–'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
       <td class="id-code">${d.id_code||'–'}</td>
       <td style="font-family:var(--mono);font-size:12px">${d.cert_no||'–'}</td>
@@ -873,6 +878,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iName').value = d.instrument_name || '';
     document.getElementById('iBrand').value = d.brand || '';
     document.getElementById('iRange').value = d.range_val || '';
+    document.getElementById('iTolerance').value = d.tolerance || '';
     document.getElementById('iSerial').value = d.serial_no || '';
     document.getElementById('iDept').value = d.department || '';
     document.getElementById('iIdCode').value = d.id_code || '';
@@ -880,7 +886,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
   } else {
-    ['iType','iName','iBrand','iRange','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate']
+    ['iType','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
@@ -897,6 +903,7 @@ async function saveInstrument() {
     instrument_name: document.getElementById('iName').value.trim(),
     brand: document.getElementById('iBrand').value.trim(),
     range_val: document.getElementById('iRange').value.trim(),
+    tolerance: document.getElementById('iTolerance').value.trim() || null,
     serial_no: document.getElementById('iSerial').value.trim(),
     department: document.getElementById('iDept').value.trim(),
     id_code: document.getElementById('iIdCode').value.trim(),
