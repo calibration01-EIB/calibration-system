@@ -6,6 +6,7 @@
 <title>ระบบสอบเทียบเครื่องมือ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #f4f4f0;
@@ -31,354 +32,69 @@
   --font: 'IBM Plex Sans Thai', sans-serif;
   --mono: 'IBM Plex Mono', monospace;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 100vh;
-}
-
-/* ====== LOGIN PAGE ====== */
-#loginPage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: linear-gradient(145deg, #1a2f4a 0%, #2d5a8e 50%, #1a3a5c 100%);
-  padding: 20px;
-}
-
-.login-card {
-  background: white;
-  border-radius: 16px;
-  padding: 48px 40px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-.login-logo {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.login-logo .icon {
-  width: 64px; height: 64px;
-  background: var(--accent);
-  border-radius: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  margin-bottom: 16px;
-}
-
-.login-logo h1 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.login-logo p {
-  font-size: 13px;
-  color: var(--text2);
-}
-
-.form-group {
-  margin-bottom: 18px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text2);
-  margin-bottom: 8px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--font);
-  font-size: 14px;
-  color: var(--text);
-  background: var(--surface);
-  transition: border-color .2s;
-  outline: none;
-}
-
-.form-group input:focus {
-  border-color: var(--accent);
-}
-
-.btn-primary {
-  width: 100%;
-  padding: 13px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity .2s, transform .1s;
-}
-
+/* LOGIN */
+#loginPage { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(145deg, #1a2f4a 0%, #2d5a8e 50%, #1a3a5c 100%); padding: 20px; }
+.login-card { background: white; border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo .icon { width: 64px; height: 64px; background: var(--accent); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px; }
+.login-logo h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.login-logo p { font-size: 13px; color: var(--text2); }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+.form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 14px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+.btn-primary { width: 100%; padding: 13px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity .2s; }
 .btn-primary:hover { opacity: .9; }
-.btn-primary:active { transform: scale(.99); }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; display: none; }
+.alert-error { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c4; }
+.alert-success { background: var(--green-light); color: var(--green); border: 1px solid #b8e0bf; }
 
-.login-error {
-  background: var(--red-light);
-  color: var(--red);
-  border: 1px solid #f5c6c4;
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-bottom: 16px;
-  display: none;
-}
-
-/* ====== MAIN APP ====== */
+/* APP */
 #app { display: none; }
-
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 220px;
-  background: #1a2f4a;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  z-index: 100;
-}
-
-.sidebar-brand {
-  padding: 20px 18px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.1);
-}
-
-.sidebar-brand h2 {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.sidebar-brand p {
-  font-size: 11px;
-  opacity: .5;
-  margin-top: 2px;
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: 12px 0;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 18px;
-  font-size: 13px;
-  color: rgba(255,255,255,.7);
-  cursor: pointer;
-  border-left: 3px solid transparent;
-  transition: all .15s;
-}
-
+.app-layout { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: #1a2f4a; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+.sidebar-brand { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.sidebar-brand h2 { font-size: 14px; font-weight: 600; }
+.sidebar-brand p { font-size: 11px; opacity: .5; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 18px; font-size: 13px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
 .nav-item:hover { background: rgba(255,255,255,.05); color: white; }
 .nav-item.active { background: rgba(255,255,255,.1); color: white; border-left-color: #5b9bd5; }
-.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
-
-.sidebar-user {
-  padding: 14px 18px;
-  border-top: 1px solid rgba(255,255,255,.1);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-avatar {
-  width: 32px; height: 32px;
-  background: var(--accent);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 32px; height: 32px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .user-info { flex: 1; min-width: 0; }
 .user-info .name { font-size: 12px; font-weight: 500; color: white; }
 .user-info .role { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
-
-.btn-logout {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.4);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  transition: color .15s;
-}
+.btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 16px; padding: 4px; transition: color .15s; }
 .btn-logout:hover { color: white; }
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  margin-left: 220px;
-  display: flex;
-  flex-direction: column;
-}
-
-.topbar {
-  background: white;
-  border-bottom: 1px solid var(--border);
-  padding: 14px 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
+.main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; }
+.topbar { background: white; border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
 .topbar-title { font-size: 16px; font-weight: 600; }
 .topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-
 .page-content { padding: 24px 28px; }
+.db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+.status-dot.ok { background: var(--green); }
+.status-dot.error { background: var(--red); }
 
-/* ====== LOADING OVERLAY ====== */
-#loadingOverlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
-  color: white;
-  font-size: 15px;
-}
+/* LOADING */
+#loadingOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: white; font-size: 15px; }
 #loadingOverlay.show { display: flex; }
-.spinner {
-  width: 40px; height: 40px;
-  border: 3px solid rgba(255,255,255,.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
+.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ====== SETUP SCREEN ====== */
-#setupScreen {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 500;
-  overflow-y: auto;
-  padding: 40px 20px;
-}
-
-.setup-card {
-  max-width: 640px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: var(--shadow-lg);
-}
-
-.setup-card h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
-.setup-card p { color: var(--text2); margin-bottom: 24px; }
-
-.setup-step {
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-
-.setup-step h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.step-num {
-  width: 24px; height: 24px;
-  background: var(--accent);
-  color: white;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.setup-step input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--text);
-  outline: none;
-  margin-top: 8px;
-}
-
-.setup-step input:focus { border-color: var(--accent); }
-.setup-hint { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.5; }
-.setup-hint a { color: var(--accent); }
-.setup-hint code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); }
-
-/* ====== STATS ====== */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
-}
-
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); border-left: 4px solid var(--border); }
 .stat-card.overdue { border-left-color: var(--red); }
 .stat-card.warning { border-left-color: var(--amber); }
 .stat-card.ok { border-left-color: var(--green); }
 .stat-card.total { border-left-color: var(--accent); }
-
 .stat-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
 .stat-num { font-size: 36px; font-weight: 600; line-height: 1; }
 .stat-card.overdue .stat-num { color: var(--red); }
@@ -387,336 +103,87 @@ body {
 .stat-card.total .stat-num { color: var(--accent); }
 .stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
 
-/* ====== CONTROLS ====== */
-.controls-bar {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.controls-bar input,
-.controls-bar select {
-  padding: 9px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 13px;
-  color: var(--text);
-  background: var(--surface);
-  outline: none;
-  transition: border-color .2s;
-}
-
-.controls-bar input:focus,
-.controls-bar select:focus { border-color: var(--accent); }
-
+/* CONTROLS */
+.controls-bar { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.controls-bar input, .controls-bar select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.controls-bar input:focus, .controls-bar select:focus { border-color: var(--accent); }
 .controls-bar input[type="text"] { flex: 1; min-width: 200px; }
-
-.btn-reset {
-  padding: 9px 16px;
-  background: var(--bg);
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 13px;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all .15s;
-}
+.btn-reset { padding: 9px 16px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text2); cursor: pointer; transition: all .15s; }
 .btn-reset:hover { border-color: var(--text2); color: var(--text); }
-
-.btn-refresh {
-  padding: 9px 16px;
-  background: var(--accent-light);
-  border: 1.5px solid #c5d9ef;
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 13px;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all .15s;
-  font-weight: 500;
-}
+.btn-refresh { padding: 9px 16px; background: var(--accent-light); border: 1.5px solid #c5d9ef; border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--accent); cursor: pointer; transition: all .15s; font-weight: 500; }
 .btn-refresh:hover { background: #d8e8f5; }
 
-/* ====== TABLE ====== */
-.table-wrap {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  overflow-x: auto;
-}
-
+/* TABLE */
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-
 thead { background: var(--surface2); }
-
-th {
-  padding: 11px 14px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text2);
-  white-space: nowrap;
-  border-bottom: 1.5px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: .03em;
-}
-
-td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  vertical-align: middle;
-}
-
+th { padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
 .badge-green { background: var(--green-light); color: var(--green); }
 .badge-blue { background: var(--accent-light); color: var(--accent); }
 .badge-purple { background: var(--purple-light); color: var(--purple); }
 .badge-gray { background: #f4f4f0; color: var(--text2); }
-
-.days-chip {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
+.days-chip { font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
 .id-code { font-family: var(--mono); font-size: 12px; color: var(--text2); }
-
-.btn-cert {
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1.5px solid;
-  transition: all .15s;
-  white-space: nowrap;
-}
-
+.btn-cert { padding: 5px 12px; border-radius: 6px; font-family: var(--font); font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
 .btn-cert-has { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-cert-has:hover { background: #d8e8f5; }
 .btn-cert-empty { background: var(--surface2); color: var(--text2); border-color: var(--border); }
 .btn-cert-empty:hover { border-color: var(--text2); color: var(--text); }
+.no-data { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
 
-.no-data {
-  text-align: center;
-  padding: 60px;
-  color: var(--text3);
-  font-size: 14px;
-}
-
-/* ====== MODAL ====== */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
-
-.modal-box {
-  background: white;
-  border-radius: 14px;
-  width: 100%;
-  max-width: 580px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  animation: modalIn .2s ease;
-}
+.modal-box { background: white; border-radius: 14px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modalIn .2s ease; }
 @keyframes modalIn { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 1;
-}
-
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white; z-index: 1; }
 .modal-header h3 { font-size: 16px; font-weight: 600; }
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: var(--text3);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all .15s;
-  line-height: 1;
-}
+.btn-close { background: none; border: none; font-size: 20px; color: var(--text3); cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all .15s; line-height: 1; }
 .btn-close:hover { background: var(--bg); color: var(--text); }
-
 .modal-body { padding: 24px; }
-
-.meta-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
+.meta-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 .meta-item label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; margin-bottom: 4px; display: block; }
 .meta-item span { font-size: 13px; color: var(--text); font-weight: 500; }
-
-.upload-area {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 28px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s;
-  background: var(--surface2);
-}
+.upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all .2s; background: var(--surface2); }
 .upload-area:hover { border-color: var(--accent); background: var(--accent-light); }
 .upload-area.dragover { border-color: var(--accent); background: var(--accent-light); }
 .upload-area .upload-icon { font-size: 32px; margin-bottom: 8px; }
 .upload-area p { color: var(--text2); font-size: 13px; }
 .upload-area span { color: var(--text3); font-size: 12px; }
-
 .file-list-section { margin-top: 16px; }
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--surface2);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--border);
-}
-
+.file-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
 .file-item-icon { font-size: 20px; flex-shrink: 0; }
 .file-item-info { flex: 1; min-width: 0; }
 .file-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .file-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
-
-.btn-view, .btn-del {
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1.5px solid;
-  transition: all .15s;
-}
-
+.btn-view, .btn-del { padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
 .btn-view { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-view:hover { background: #d8e8f5; }
 .btn-del { background: var(--red-light); color: var(--red); border-color: #f5c6c4; }
 .btn-del:hover { background: #fae0df; }
 
-/* ====== ADMIN PANEL ====== */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
+/* ADMIN */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h2 { font-size: 18px; font-weight: 600; }
-
-.btn-add {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity .15s;
-}
+.btn-add { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
 .btn-add:hover { opacity: .9; }
+.users-table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
-.users-table-wrap {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-/* ====== DRIVE STATUS ====== */
-.drive-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text3);
-}
-.status-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--text3);
-}
-.status-dot.connected { background: var(--green); }
-.status-dot.error { background: var(--red); }
-
-/* ====== TOAST ====== */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--text);
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13px;
-  z-index: 9999;
-  transform: translateY(100px);
-  opacity: 0;
-  transition: all .3s;
-  max-width: 320px;
-}
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .3s; max-width: 320px; }
 .toast.show { transform: translateY(0); opacity: 1; }
-.toast.success { background: #1e7e34; }
+.toast.success { background: var(--green); }
 .toast.error { background: var(--red); }
 
-/* ====== RESPONSIVE ====== */
 @media (max-width: 768px) {
-  .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; z-index: 100; padding: 0 16px; }
+  .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
   .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
   .sidebar-nav { display: none; }
   .sidebar-user { border: none; padding: 0; }
@@ -728,55 +195,10 @@ tbody tr:hover { background: var(--surface2); }
 </head>
 <body>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay">
-  <div class="spinner"></div>
-  <span id="loadingText">กำลังโหลด...</span>
-</div>
-
-<!-- Toast -->
+<div id="loadingOverlay"><div class="spinner"></div><span id="loadingText">กำลังโหลด...</span></div>
 <div id="toast" class="toast"></div>
 
-<!-- ====== SETUP SCREEN ====== -->
-<div id="setupScreen">
-  <div class="setup-card">
-    <h2>⚙️ ตั้งค่าระบบ</h2>
-    <p>กรุณากรอกข้อมูล Google API ครั้งแรกก่อนใช้งาน (ค่าเหล่านี้จะถูกบันทึกใน browser ของคุณ)</p>
-
-    <div class="setup-step">
-      <h3><span class="step-num">1</span> Google Client ID</h3>
-      <div class="setup-hint">
-        ไปที่ <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>
-        → APIs &amp; Services → Credentials → สร้าง OAuth 2.0 Client ID (Web application)
-      </div>
-      <input type="text" id="setupClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
-    </div>
-
-    <div class="setup-step">
-      <h3><span class="step-num">2</span> Google Drive Folder ID</h3>
-      <div class="setup-hint">
-        สร้าง Folder ชื่อ <code>CalibrationSystem</code> ใน Google Drive
-        แล้วคัดลอก ID จาก URL:<br>
-        <code>drive.google.com/drive/folders/<strong>THIS_PART</strong></code>
-      </div>
-      <input type="text" id="setupFolderId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs">
-    </div>
-
-    <div class="setup-step">
-      <h3><span class="step-num">3</span> อัพโหลดไฟล์เริ่มต้นขึ้น Google Drive</h3>
-      <div class="setup-hint">
-        อัพโหลดไฟล์เหล่านี้เข้าใน Folder ที่สร้าง:<br>
-        • <code>users.json</code> — ข้อมูล users (ดาวน์โหลดจาก repo)<br>
-        • <code>data.json</code> — ข้อมูลเครื่องมือ (ดาวน์โหลดจาก repo)<br>
-        แล้วสร้าง Folder ย่อยชื่อ <code>certificates</code> ไว้ด้วย
-      </div>
-    </div>
-
-    <button class="btn-primary" onclick="saveSetup()" style="margin-top: 8px;">บันทึกและเริ่มใช้งาน</button>
-  </div>
-</div>
-
-<!-- ====== LOGIN PAGE ====== -->
+<!-- LOGIN -->
 <div id="loginPage">
   <div class="login-card">
     <div class="login-logo">
@@ -784,7 +206,7 @@ tbody tr:hover { background: var(--surface2); }
       <h1>ระบบสอบเทียบเครื่องมือ</h1>
       <p>Calibration Management System</p>
     </div>
-    <div class="login-error" id="loginError">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+    <div class="alert alert-error" id="loginError">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
     <div class="form-group">
       <label>ชื่อผู้ใช้</label>
       <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้" autocomplete="username">
@@ -794,93 +216,44 @@ tbody tr:hover { background: var(--surface2); }
       <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
-    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3);">
-      ติดต่อ Admin หากต้องการสิทธิ์เข้าใช้งาน
-    </p>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">ติดต่อ Admin หากต้องการสิทธิ์เข้าใช้งาน</p>
   </div>
 </div>
 
-<!-- ====== MAIN APP ====== -->
+<!-- APP -->
 <div id="app">
   <div class="app-layout">
-
-    <!-- Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-brand">
-        <div>
-          <h2>🔧 Calibration</h2>
-          <p>Management System</p>
-        </div>
-      </div>
+      <div class="sidebar-brand"><div><h2>🔧 Calibration</h2><p>Management System</p></div></div>
       <nav class="sidebar-nav">
-        <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-          <span class="nav-icon">📊</span> Dashboard
-        </div>
-        <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none">
-          <span class="nav-icon">👥</span> จัดการผู้ใช้
-        </div>
+        <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
       </nav>
       <div class="sidebar-user">
         <div class="user-avatar" id="sidebarInitial">A</div>
-        <div class="user-info">
-          <div class="name" id="sidebarName">Admin</div>
-          <div class="role" id="sidebarRole">admin</div>
-        </div>
+        <div class="user-info"><div class="name" id="sidebarName">Admin</div><div class="role" id="sidebarRole">admin</div></div>
         <button class="btn-logout" onclick="doLogout()" title="ออกจากระบบ">↩</button>
       </div>
     </div>
 
-    <!-- Main -->
     <div class="main-content">
-
-      <!-- Topbar -->
       <div class="topbar">
-        <div>
-          <div class="topbar-title" id="topbarTitle">Dashboard</div>
-          <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
-        </div>
-        <div class="drive-status">
-          <div class="status-dot" id="statusDot"></div>
-          <span id="statusText">กำลังเชื่อมต่อ...</span>
-        </div>
+        <div><div class="topbar-title" id="topbarTitle">Dashboard</div><div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div></div>
+        <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
       </div>
 
-      <!-- ====== DASHBOARD PAGE ====== -->
+      <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
-
-        <!-- Stats -->
         <div class="stats-grid">
-          <div class="stat-card overdue">
-            <div class="stat-label">🔴 เลยกำหนดแล้ว</div>
-            <div class="stat-num" id="statOverdue">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card warning">
-            <div class="stat-label">🟡 ใกล้ครบ (≤30 วัน)</div>
-            <div class="stat-num" id="statWarning">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card ok">
-            <div class="stat-label">🟢 ปกติ</div>
-            <div class="stat-num" id="statOk">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card total">
-            <div class="stat-label">📦 ทั้งหมด</div>
-            <div class="stat-num" id="statTotal">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
+          <div class="stat-card overdue"><div class="stat-label">🔴 เลยกำหนดแล้ว</div><div class="stat-num" id="statOverdue">–</div><div class="stat-sub">เครื่อง</div></div>
+          <div class="stat-card warning"><div class="stat-label">🟡 ใกล้ครบ (≤30 วัน)</div><div class="stat-num" id="statWarning">–</div><div class="stat-sub">เครื่อง</div></div>
+          <div class="stat-card ok"><div class="stat-label">🟢 ปกติ</div><div class="stat-num" id="statOk">–</div><div class="stat-sub">เครื่อง</div></div>
+          <div class="stat-card total"><div class="stat-label">📦 ทั้งหมด</div><div class="stat-num" id="statTotal">–</div><div class="stat-sub">เครื่อง</div></div>
         </div>
-
-        <!-- Controls -->
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
-          <select id="typeFilter">
-            <option value="">ทุกประเภท</option>
-          </select>
-          <select id="unitFilter">
-            <option value="">ทุกหน่วยงาน</option>
-          </select>
+          <select id="typeFilter"><option value="">ทุกประเภท</option></select>
+          <select id="unitFilter"><option value="">ทุกหน่วยงาน</option></select>
           <select id="statusFilter">
             <option value="">ทุกสถานะ</option>
             <option value="overdue">เลยกำหนด</option>
@@ -888,134 +261,88 @@ tbody tr:hover { background: var(--surface2); }
             <option value="ok">ปกติ</option>
           </select>
           <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
-          <button class="btn-refresh" onclick="refreshData()">↻ รีเฟรช</button>
+          <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
         </div>
-
-        <!-- Table -->
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>ประเภท</th>
-                <th>เครื่องมือ</th>
-                <th>ยี่ห้อ / รุ่น</th>
-                <th>Range</th>
-                <th>S/N</th>
-                <th>หน่วยงาน</th>
-                <th>ID Code</th>
-                <th>CERT.</th>
-                <th>วันสอบเทียบ</th>
-                <th>ครบกำหนด</th>
-                <th>เหลือ</th>
-                <th>สถานะ</th>
-                <th>ไฟล์</th>
+                <th>#</th><th>ประเภท</th><th>เครื่องมือ</th><th>ยี่ห้อ</th><th>Range</th>
+                <th>S/N</th><th>หน่วยงาน</th><th>ID Code</th><th>CERT.</th>
+                <th>วันสอบเทียบ</th><th>ครบกำหนด</th><th>เหลือ</th><th>สถานะ</th><th>ไฟล์</th>
               </tr>
             </thead>
-            <tbody id="dataTable">
-              <tr><td colspan="14" class="no-data">กำลังโหลดข้อมูล...</td></tr>
-            </tbody>
+            <tbody id="dataTable"><tr><td colspan="14" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
       </div>
 
-      <!-- ====== ADMIN PAGE ====== -->
+      <!-- ADMIN -->
       <div id="pageAdmin" class="page-content" style="display:none">
         <div class="section-header">
           <h2>จัดการผู้ใช้งาน</h2>
           <button class="btn-add" onclick="openUserModal()">+ เพิ่มผู้ใช้</button>
         </div>
-
         <div class="users-table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>ชื่อ</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>สถานะ</th>
-                <th>สร้างเมื่อ</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="usersTable">
-              <tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr>
-            </tbody>
+            <thead><tr><th>ชื่อ</th><th>Username</th><th>Role</th><th>สถานะ</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
+            <tbody id="usersTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
           </table>
         </div>
-
         <div style="margin-top:16px;padding:16px 20px;background:var(--amber-light);border:1px solid #f0d070;border-radius:var(--radius);font-size:13px;color:var(--amber);">
-          ⚠️ รหัสผ่านถูก hash ด้วย SHA-256 ก่อนบันทึก — Admin ไม่สามารถดูรหัสผ่านจริงของผู้ใช้ได้
+          ⚠️ รหัสผ่านถูก hash ด้วย SHA-256 ก่อนบันทึก — Admin ไม่สามารถดูรหัสผ่านจริงได้
         </div>
       </div>
-
-    </div><!-- /main-content -->
+    </div>
   </div>
 </div>
 
-<!-- ====== CERT MODAL ====== -->
+<!-- CERT MODAL -->
 <div class="modal-overlay" id="certModal">
   <div class="modal-box">
-    <div class="modal-header">
-      <h3>📄 ไฟล์ Certificate</h3>
-      <button class="btn-close" onclick="closeCertModal()">×</button>
-    </div>
+    <div class="modal-header"><h3>📄 ไฟล์ Certificate</h3><button class="btn-close" onclick="closeCertModal()">×</button></div>
     <div class="modal-body">
       <div class="meta-row">
         <div class="meta-item"><label>ID Code</label><span id="mIdCode">–</span></div>
         <div class="meta-item"><label>CERT.</label><span id="mCertNo">–</span></div>
         <div class="meta-item"><label>เครื่องมือ</label><span id="mEquipment">–</span></div>
       </div>
-
       <div id="uploadSection">
         <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
           <div class="upload-icon">📁</div>
           <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
-          <span>รองรับ PDF, JPG, PNG (สูงสุด 15MB)</span>
+          <span>รองรับ PDF, JPG, PNG (สูงสุด 50MB)</span>
           <input type="file" id="fileInput" style="display:none" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleFileSelect(this.files)">
         </div>
       </div>
-
       <div class="file-list-section" id="fileListSection"></div>
     </div>
   </div>
 </div>
 
-<!-- ====== USER MODAL ====== -->
+<!-- USER MODAL -->
 <div class="modal-overlay" id="userModal">
   <div class="modal-box" style="max-width:440px">
-    <div class="modal-header">
-      <h3 id="userModalTitle">เพิ่มผู้ใช้</h3>
-      <button class="btn-close" onclick="closeUserModal()">×</button>
-    </div>
+    <div class="modal-header"><h3 id="userModalTitle">เพิ่มผู้ใช้</h3><button class="btn-close" onclick="closeUserModal()">×</button></div>
     <div class="modal-body">
-      <div class="form-group">
-        <label>ชื่อ-นามสกุล</label>
-        <input type="text" id="uName" placeholder="ชื่อที่แสดง">
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="uUsername" placeholder="username (ตัวเล็ก ไม่มีเว้นวรรค)">
-      </div>
+      <div class="form-group"><label>ชื่อ-นามสกุล</label><input type="text" id="uName" placeholder="ชื่อที่แสดง"></div>
+      <div class="form-group"><label>Username</label><input type="text" id="uUsername" placeholder="ตัวเล็ก ไม่มีเว้นวรรค"></div>
       <div class="form-group">
         <label id="uPasswordLabel">รหัสผ่าน</label>
-        <input type="password" id="uPassword" placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร">
+        <input type="password" id="uPassword" placeholder="อย่างน้อย 6 ตัวอักษร">
         <div style="font-size:11px;color:var(--text3);margin-top:4px" id="uPasswordHint"></div>
       </div>
       <div class="form-group">
         <label>Role</label>
-        <select id="uRole" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+        <select id="uRole">
           <option value="viewer">Viewer — ดูข้อมูลอย่างเดียว</option>
           <option value="editor">Editor — แก้ไขข้อมูล + อัพโหลด cert</option>
           <option value="admin">Admin — จัดการทุกอย่าง</option>
         </select>
       </div>
-      <div class="form-group" id="uActiveGroup">
+      <div class="form-group" id="uActiveGroup" style="display:none">
         <label>สถานะ</label>
-        <select id="uActive" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
-          <option value="true">เปิดใช้งาน</option>
-          <option value="false">ปิดใช้งาน</option>
-        </select>
+        <select id="uActive"><option value="true">เปิดใช้งาน</option><option value="false">ปิดใช้งาน</option></select>
       </div>
       <button class="btn-primary" id="saveUserBtn" onclick="saveUser()">บันทึก</button>
     </div>
@@ -1024,46 +351,22 @@ tbody tr:hover { background: var(--surface2); }
 
 <script>
 // ====================================================
-// CONFIG — ฝังค่าตรงนี้เลย ไม่ต้องกรอก Setup
+// SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
 // ====================================================
-const CFG_KEY = 'calibration_config';
-let CONFIG = {
-  clientId: '116134477095-9hoivc0amc5i6vo0ijvbq4deikhftjq2.apps.googleusercontent.com',
-  folderId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs'
-};
-
-function loadConfig() {
-  // ใช้ค่า hardcode ด้านบนเลย ไม่ต้องอ่านจาก localStorage
-}
-
-function saveSetup() {
-  const clientId = document.getElementById('setupClientId').value.trim();
-  const folderId = document.getElementById('setupFolderId').value.trim();
-  if (!clientId || !folderId) { alert('กรุณากรอกข้อมูลให้ครบ'); return; }
-  CONFIG = { clientId, folderId };
-  document.getElementById('setupScreen').style.display = 'none';
-  initGoogleAuth();
-}
+const SUPABASE_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ====================================================
 // SESSION
 // ====================================================
-const SESSION_KEY = 'calibration_session';
 let currentUser = null;
 
 function getSession() {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; }
+  try { return JSON.parse(sessionStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
 }
-
-function setSession(user) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
-  currentUser = user;
-}
-
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-  currentUser = null;
-}
+function setSession(u) { sessionStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
+function clearSession() { sessionStorage.removeItem('cal_session'); currentUser = null; }
 
 // ====================================================
 // SHA-256
@@ -1071,221 +374,6 @@ function clearSession() {
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-// ====================================================
-// GOOGLE DRIVE API
-// ====================================================
-let gapiLoaded = false;
-let gisLoaded = false;
-let tokenClient = null;
-let accessToken = null;
-let driveConnected = false;
-
-const SCOPES = 'https://www.googleapis.com/auth/drive';
-
-function initGoogleAuth() {
-  if (!CONFIG.clientId) return;
-
-  // Load GAPI
-  const script1 = document.createElement('script');
-  script1.src = 'https://apis.google.com/js/api.js';
-  script1.onload = () => {
-    gapi.load('client', async () => {
-      await gapi.client.init({
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-      });
-      gapiLoaded = true;
-      tryConnect();
-    });
-  };
-  document.head.appendChild(script1);
-
-  // Load GIS
-  const script2 = document.createElement('script');
-  script2.src = 'https://accounts.google.com/gsi/client';
-  script2.onload = () => {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.clientId,
-      scope: SCOPES,
-      callback: (resp) => {
-        if (resp.error) { setDriveStatus(false, 'เชื่อมต่อไม่สำเร็จ'); return; }
-        accessToken = resp.access_token;
-        gapi.client.setToken({ access_token: accessToken });
-        driveConnected = true;
-        setDriveStatus(true, 'เชื่อมต่อ Google Drive แล้ว');
-        // หลัง auth สำเร็จ ถ้า login อยู่ให้โหลดข้อมูล
-        if (currentUser) loadData();
-      }
-    });
-    gisLoaded = true;
-    tryConnect();
-  };
-  document.head.appendChild(script2);
-}
-
-function tryConnect() {
-  if (!gapiLoaded || !gisLoaded) return;
-  // Request token silently
-  tokenClient.requestAccessToken({ prompt: 'none' });
-}
-
-function requireAuth() {
-  return new Promise((resolve, reject) => {
-    if (driveConnected) { resolve(); return; }
-    tokenClient.callback = (resp) => {
-      if (resp.error) { reject(resp); return; }
-      accessToken = resp.access_token;
-      gapi.client.setToken({ access_token: accessToken });
-      driveConnected = true;
-      setDriveStatus(true, 'เชื่อมต่อ Google Drive แล้ว');
-      resolve();
-    };
-    tokenClient.requestAccessToken({ prompt: '' });
-  });
-}
-
-function setDriveStatus(ok, text) {
-  const dot = document.getElementById('statusDot');
-  const txt = document.getElementById('statusText');
-  if (dot) dot.className = 'status-dot ' + (ok ? 'connected' : 'error');
-  if (txt) txt.textContent = text;
-}
-
-// ====================================================
-// DRIVE FILE HELPERS
-// ====================================================
-async function findFile(name, parentId) {
-  const q = `name='${name}' and '${parentId}' in parents and trashed=false`;
-  const res = await gapi.client.drive.files.list({ q, fields: 'files(id,name)', pageSize: 1 });
-  return res.result.files[0] || null;
-}
-
-async function readJsonFile(fileId) {
-  const res = await gapi.client.drive.files.get({ fileId, alt: 'media' });
-  return typeof res.result === 'string' ? JSON.parse(res.result) : res.result;
-}
-
-async function writeJsonFile(fileId, data) {
-  const token = gapi.client.getToken().access_token;
-  const body = JSON.stringify(data, null, 2);
-  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-    method: 'PATCH',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body
-  });
-  if (!res.ok) throw new Error('Write failed: ' + res.status);
-}
-
-async function uploadFileToDrive(file, parentId) {
-  const token = gapi.client.getToken().access_token;
-  const meta = { name: file.name, parents: [parentId] };
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-  form.append('file', file);
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-    body: form
-  });
-  return res.json();
-}
-
-async function deleteFile(fileId) {
-  await gapi.client.drive.files.delete({ fileId });
-}
-
-async function findOrCreateFolder(name, parentId) {
-  const q = `name='${name}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-  const res = await gapi.client.drive.files.list({ q, fields: 'files(id)', pageSize: 1 });
-  if (res.result.files[0]) return res.result.files[0].id;
-  const created = await gapi.client.drive.files.create({
-    resource: { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-    fields: 'id'
-  });
-  return created.result.id;
-}
-
-async function listFilesInFolder(folderId) {
-  const q = `'${folderId}' in parents and trashed=false`;
-  const res = await gapi.client.drive.files.list({ q, fields: 'files(id,name,size,createdTime,mimeType)', pageSize: 100 });
-  return res.result.files || [];
-}
-
-// ====================================================
-// FILE IDs CACHE
-// ====================================================
-let fileIds = { users: null, data: null, certFolder: null };
-
-async function resolveFileIds() {
-  const fid = CONFIG.folderId;
-  if (!fileIds.users) {
-    const f = await findFile('users.json', fid);
-    if (f) fileIds.users = f.id;
-  }
-  if (!fileIds.data) {
-    const f = await findFile('data.json', fid);
-    if (f) fileIds.data = f.id;
-  }
-  if (!fileIds.certFolder) {
-    fileIds.certFolder = await findOrCreateFolder('certificates', fid);
-  }
-}
-
-// ====================================================
-// DATA STATE
-// ====================================================
-let allData = [];
-let filteredData = [];
-let usersData = [];
-let certFolders = {}; // idCode -> folderId
-
-async function loadData() {
-  showLoading('กำลังโหลดข้อมูล...');
-  try {
-    await requireAuth();
-    await resolveFileIds();
-
-    if (!fileIds.data) throw new Error('ไม่พบไฟล์ data.json ใน Google Drive');
-
-    allData = await readJsonFile(fileIds.data);
-    // คำนวณวันที่เหลือใหม่
-    const today = new Date(); today.setHours(0,0,0,0);
-    allData.forEach(item => {
-      if (item.ครบกำหนด) {
-        const due = new Date(item.ครบกำหนด);
-        item.ก่อนถึงกำหนด = Math.round((due - today) / 86400000);
-      }
-    });
-
-    filteredData = [...allData];
-    populateFilters();
-    updateStats();
-    renderTable();
-    setDriveStatus(true, 'อัพเดทล่าสุด ' + new Date().toLocaleTimeString('th-TH'));
-  } catch(e) {
-    console.error(e);
-    setDriveStatus(false, 'โหลดข้อมูลไม่สำเร็จ');
-    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function loadUsers() {
-  try {
-    await requireAuth();
-    await resolveFileIds();
-    if (!fileIds.users) throw new Error('ไม่พบ users.json');
-    usersData = await readJsonFile(fileIds.users);
-    renderUsersTable();
-  } catch(e) {
-    showToast('โหลดข้อมูล users ไม่สำเร็จ', 'error');
-  }
-}
-
-async function saveUsers() {
-  await writeJsonFile(fileIds.users, usersData);
 }
 
 // ====================================================
@@ -1298,19 +386,22 @@ async function doLogin() {
 
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+  document.getElementById('loginError').style.display = 'none';
 
   try {
-    await requireAuth();
-    await resolveFileIds();
-    if (!fileIds.users) throw new Error('ไม่พบ users.json');
-    usersData = await readJsonFile(fileIds.users);
     const hash = await sha256(password);
-    const user = usersData.find(u => u.username === username && u.password === hash && u.active !== false);
-    if (!user) {
+    const { data, error } = await sb.from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', hash)
+      .eq('active', true)
+      .single();
+
+    if (error || !data) {
       document.getElementById('loginError').style.display = 'block';
     } else {
-      setSession(user);
-      enterApp(user);
+      setSession(data);
+      enterApp(data);
     }
   } catch(e) {
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
@@ -1325,59 +416,57 @@ function enterApp(user) {
   document.getElementById('sidebarName').textContent = user.name;
   document.getElementById('sidebarRole').textContent = user.role;
   document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
-
-  if (user.role === 'admin') {
-    document.getElementById('nav-admin').style.display = 'flex';
-  }
-
-  // Viewer ไม่เห็นปุ่มอัพโหลด
-  if (user.role === 'viewer') {
-    document.getElementById('uploadSection').style.display = 'none';
-  }
-
+  if (user.role === 'admin') document.getElementById('nav-admin').style.display = 'flex';
+  if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
+  setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
   loadData();
 }
 
-function doLogout() {
-  clearSession();
-  location.reload();
-}
+function doLogout() { clearSession(); location.reload(); }
 
 // ====================================================
-// PAGES
+// DATA
 // ====================================================
-function showPage(page) {
-  document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
-  document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('nav-' + page)?.classList.add('active');
+let allData = [], filteredData = [];
 
-  const titles = { dashboard: ['Dashboard', 'ภาพรวมสถานะเครื่องมือ'], admin: ['จัดการผู้ใช้', 'Admin Panel'] };
-  document.getElementById('topbarTitle').textContent = titles[page][0];
-  document.getElementById('topbarSub').textContent = titles[page][1];
+async function loadData() {
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    const { data, error } = await sb.from('instruments').select('*').order('id');
+    if (error) throw error;
 
-  if (page === 'admin') loadUsers();
+    const today = new Date(); today.setHours(0,0,0,0);
+    allData = data.map(d => ({
+      ...d,
+      days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
+    }));
+    filteredData = [...allData];
+    populateFilters();
+    updateStats();
+    renderTable();
+    setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
+  } catch(e) {
+    setDriveStatus(false, 'โหลดไม่สำเร็จ');
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+  } finally { hideLoading(); }
 }
 
 // ====================================================
 // DASHBOARD
 // ====================================================
 function populateFilters() {
-  const types = [...new Set(allData.map(d => d.ประเภทเครื่องมือ))].filter(Boolean).sort();
-  const units = [...new Set(allData.map(d => d.หน่วยงาน))].filter(Boolean).sort();
-
-  const tf = document.getElementById('typeFilter');
-  const uf = document.getElementById('unitFilter');
-  tf.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join('');
-  uf.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option>${u}</option>`).join('');
+  const types = [...new Set(allData.map(d => d.instrument_type))].filter(Boolean).sort();
+  const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
+  document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join('');
+  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option>${u}</option>`).join('');
 }
 
 function updateStats() {
   let ov = 0, wa = 0, ok = 0;
   filteredData.forEach(d => {
-    const days = parseInt(d.ก่อนถึงกำหนด);
-    if (days < 0) ov++;
-    else if (days <= 30) wa++;
+    if (d.days_left === null) return;
+    if (d.days_left < 0) ov++;
+    else if (d.days_left <= 30) wa++;
     else ok++;
   });
   document.getElementById('statOverdue').textContent = ov;
@@ -1393,19 +482,17 @@ function filterData() {
   const status = document.getElementById('statusFilter').value;
 
   filteredData = allData.filter(d => {
-    if (search && !['เครื่องมือ','ยี่ห้อ','ID CODE','CERT.'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
-    if (type && d.ประเภทเครื่องมือ !== type) return false;
-    if (unit && d.หน่วยงาน !== unit) return false;
-    if (status) {
-      const days = parseInt(d.ก่อนถึงกำหนด);
-      if (status === 'overdue' && days >= 0) return false;
-      if (status === 'warning' && (days < 0 || days > 30)) return false;
-      if (status === 'ok' && days <= 30) return false;
+    if (search && !['instrument_name','brand','id_code','cert_no'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
+    if (type && d.instrument_type !== type) return false;
+    if (unit && d.department !== unit) return false;
+    if (status && d.days_left !== null) {
+      if (status === 'overdue' && d.days_left >= 0) return false;
+      if (status === 'warning' && (d.days_left < 0 || d.days_left > 30)) return false;
+      if (status === 'ok' && d.days_left <= 30) return false;
     }
     return true;
   });
-  updateStats();
-  renderTable();
+  updateStats(); renderTable();
 }
 
 function resetFilters() {
@@ -1414,17 +501,12 @@ function resetFilters() {
   document.getElementById('unitFilter').value = '';
   document.getElementById('statusFilter').value = '';
   filteredData = [...allData];
-  updateStats();
-  renderTable();
+  updateStats(); renderTable();
 }
 
-async function refreshData() { await loadData(); }
-
 function formatDate(s) {
-  if (!s || s === 'nan') return '–';
-  const d = new Date(s);
-  if (isNaN(d)) return s;
-  return d.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  if (!s) return '–';
+  return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 function typeBadge(t) {
@@ -1435,166 +517,145 @@ function typeBadge(t) {
 
 function renderTable() {
   const tbody = document.getElementById('dataTable');
-  if (!filteredData.length) {
-    tbody.innerHTML = '<tr><td colspan="14" class="no-data">ไม่พบข้อมูล</td></tr>';
-    return;
-  }
-  tbody.innerHTML = filteredData.map(d => {
-    const days = parseInt(d.ก่อนถึงกำหนด);
+  if (!filteredData.length) { tbody.innerHTML = '<tr><td colspan="14" class="no-data">ไม่พบข้อมูล</td></tr>'; return; }
+  tbody.innerHTML = filteredData.map((d, i) => {
+    const days = d.days_left;
     let statusBadge, daysClass;
-    if (days < 0) {
-      statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>';
-      daysClass = 'badge-red';
-    } else if (days <= 30) {
-      statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>';
-      daysClass = 'badge-amber';
-    } else {
-      statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>';
-      daysClass = 'badge-green';
-    }
-    const idCode = d['ID CODE'] || '';
+    if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysClass = 'badge-gray'; }
+    else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysClass = 'badge-red'; }
+    else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysClass = 'badge-amber'; }
+    else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
     return `<tr>
-      <td>${d.ลำดับ||'–'}</td>
-      <td>${typeBadge(d.ประเภทเครื่องมือ)}</td>
-      <td>${d.เครื่องมือ||'–'}</td>
-      <td>${d.ยี่ห้อ||'–'}</td>
-      <td>${d.Range||'–'}</td>
-      <td style="font-family:var(--mono);font-size:12px">${d['S/N']||'–'}</td>
-      <td><strong>${d.หน่วยงาน||'–'}</strong></td>
-      <td class="id-code">${idCode}</td>
-      <td style="font-family:var(--mono);font-size:12px">${d['CERT.']||'–'}</td>
-      <td>${formatDate(d.วันที่สอบเทียบ)}</td>
-      <td>${formatDate(d.ครบกำหนด)}</td>
-      <td><span class="days-chip badge ${daysClass}">${days} วัน</span></td>
+      <td>${i+1}</td>
+      <td>${typeBadge(d.instrument_type)}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${d.brand||'–'}</td>
+      <td>${d.range_val||'–'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${d.serial_no||'–'}</td>
+      <td><strong>${d.department||'–'}</strong></td>
+      <td class="id-code">${d.id_code||'–'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${d.cert_no||'–'}</td>
+      <td>${formatDate(d.cal_date)}</td>
+      <td>${formatDate(d.due_date)}</td>
+      <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
       <td>${statusBadge}</td>
-      <td>
-        <button class="btn-cert btn-cert-empty" onclick="openCertModal('${idCode}','${d['CERT.']||''}','${(d.เครื่องมือ||'').replace(/'/g,"\\'")}')">
-          📎 ไฟล์
-        </button>
-      </td>
+      <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\\'")}')">📎 ไฟล์</button></td>
     </tr>`;
   }).join('');
 }
 
 // ====================================================
-// CERT MODAL
+// CERT MODAL — Supabase Storage
 // ====================================================
-let currentIdCode = '';
-let currentCertFolderId = null;
+let currentInstrumentId = null;
 
-async function openCertModal(idCode, certNo, equipment) {
-  currentIdCode = idCode;
+async function openCertModal(instrumentId, idCode, certNo, equipment) {
+  currentInstrumentId = instrumentId;
   document.getElementById('mIdCode').textContent = idCode;
   document.getElementById('mCertNo').textContent = certNo;
   document.getElementById('mEquipment').textContent = equipment;
   document.getElementById('certModal').classList.add('open');
   document.getElementById('fileListSection').innerHTML = '<p style="color:var(--text3);font-size:13px">กำลังโหลดไฟล์...</p>';
+  await loadCertFiles(instrumentId, idCode);
+}
 
+async function loadCertFiles(instrumentId, idCode) {
   try {
-    await requireAuth();
-    await resolveFileIds();
-    // หา/สร้าง subfolder ตาม idCode
-    currentCertFolderId = await findOrCreateFolder(idCode, fileIds.certFolder);
-    const files = await listFilesInFolder(currentCertFolderId);
-    renderFileList(files);
+    const folder = `cert_${instrumentId}_${idCode}`;
+    const { data, error } = await sb.storage.from('certificates').list(folder);
+    if (error) throw error;
+    renderFileList(data || [], folder);
 
     // อัพเดทปุ่มในตาราง
-    const btn = document.querySelector(`button[onclick*="${idCode}"]`);
+    const btn = document.querySelector(`button[onclick*="openCertModal(${instrumentId},"]`);
     if (btn) {
-      if (files.length > 0) {
-        btn.className = 'btn-cert btn-cert-has';
-        btn.innerHTML = `📎 ${files.length} ไฟล์`;
-      } else {
-        btn.className = 'btn-cert btn-cert-empty';
-        btn.innerHTML = '📎 ไฟล์';
-      }
+      if (data && data.length > 0) { btn.className = 'btn-cert btn-cert-has'; btn.innerHTML = `📎 ${data.length} ไฟล์`; }
+      else { btn.className = 'btn-cert btn-cert-empty'; btn.innerHTML = '📎 ไฟล์'; }
     }
   } catch(e) {
     document.getElementById('fileListSection').innerHTML = '<p style="color:var(--red);font-size:13px">โหลดไฟล์ไม่สำเร็จ</p>';
   }
 }
 
-function closeCertModal() {
-  document.getElementById('certModal').classList.remove('open');
-  currentIdCode = ''; currentCertFolderId = null;
-}
-
-function renderFileList(files) {
+function renderFileList(files, folder) {
   const section = document.getElementById('fileListSection');
-  if (!files.length) {
-    section.innerHTML = '<p style="color:var(--text3);font-size:13px;margin-top:12px;text-align:center">ยังไม่มีไฟล์</p>';
-    return;
-  }
-  section.innerHTML = files.map(f => {
-    const icon = f.mimeType?.includes('pdf') ? '📄' : '🖼️';
-    const size = f.size ? (parseInt(f.size)/1024).toFixed(0) + ' KB' : '';
-    const date = f.createdTime ? new Date(f.createdTime).toLocaleDateString('th-TH') : '';
+  const validFiles = files.filter(f => f.name !== '.emptyFolderPlaceholder');
+  if (!validFiles.length) { section.innerHTML = '<p style="color:var(--text3);font-size:13px;margin-top:12px;text-align:center">ยังไม่มีไฟล์</p>'; return; }
+
+  section.innerHTML = validFiles.map(f => {
+    const icon = f.name.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️';
+    const size = f.metadata?.size ? (f.metadata.size/1024).toFixed(0) + ' KB' : '';
     const canEdit = currentUser?.role !== 'viewer';
     return `<div class="file-item">
       <div class="file-item-icon">${icon}</div>
       <div class="file-item-info">
         <div class="file-item-name">${f.name}</div>
-        <div class="file-item-meta">${size} ${date}</div>
+        <div class="file-item-meta">${size}</div>
       </div>
       <div class="file-item-actions">
-        <button class="btn-view" onclick="viewDriveFile('${f.id}')">ดู</button>
-        ${canEdit ? `<button class="btn-del" onclick="deleteDriveFile('${f.id}')">ลบ</button>` : ''}
+        <button class="btn-view" onclick="viewFile('${folder}','${f.name}')">ดู</button>
+        ${canEdit ? `<button class="btn-del" onclick="deleteFile('${folder}','${f.name}')">ลบ</button>` : ''}
       </div>
     </div>`;
   }).join('');
 }
 
-function viewDriveFile(fileId) {
-  window.open(`https://drive.google.com/file/d/${fileId}/view`, '_blank');
+async function viewFile(folder, name) {
+  const { data } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${name}`, 300);
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
 }
 
-async function deleteDriveFile(fileId) {
+async function deleteFile(folder, name) {
   if (!confirm('ต้องการลบไฟล์นี้?')) return;
-  try {
-    await deleteFile(fileId);
-    const files = await listFilesInFolder(currentCertFolderId);
-    renderFileList(files);
-    showToast('ลบไฟล์แล้ว', 'success');
-  } catch(e) { showToast('ลบไม่สำเร็จ', 'error'); }
+  const { error } = await sb.storage.from('certificates').remove([`${folder}/${name}`]);
+  if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
+  showToast('ลบไฟล์แล้ว', 'success');
+  const idCode = document.getElementById('mIdCode').textContent;
+  await loadCertFiles(currentInstrumentId, idCode);
 }
 
 async function handleFileSelect(files) {
-  if (!currentCertFolderId) return;
+  if (!currentInstrumentId) return;
   if (currentUser?.role === 'viewer') { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
+  const idCode = document.getElementById('mIdCode').textContent;
+  const folder = `cert_${currentInstrumentId}_${idCode}`;
   showLoading('กำลังอัพโหลด...');
   try {
     for (const file of files) {
-      if (file.size > 15 * 1024 * 1024) { showToast(`${file.name} ขนาดเกิน 15MB`, 'error'); continue; }
-      await uploadFileToDrive(file, currentCertFolderId);
+      const { error } = await sb.storage.from('certificates').upload(`${folder}/${file.name}`, file, { upsert: true });
+      if (error) throw error;
     }
-    const updated = await listFilesInFolder(currentCertFolderId);
-    renderFileList(updated);
     showToast('อัพโหลดสำเร็จ', 'success');
-  } catch(e) { showToast('อัพโหลดไม่สำเร็จ', 'error'); }
+    await loadCertFiles(currentInstrumentId, idCode);
+  } catch(e) { showToast('อัพโหลดไม่สำเร็จ: ' + e.message, 'error'); }
   finally { hideLoading(); }
 }
 
-// Drag & Drop
+function closeCertModal() { document.getElementById('certModal').classList.remove('open'); currentInstrumentId = null; }
+
 const uploadArea = document.getElementById('uploadArea');
 uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-uploadArea.addEventListener('drop', e => {
-  e.preventDefault(); uploadArea.classList.remove('dragover');
-  handleFileSelect(e.dataTransfer.files);
-});
+uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); handleFileSelect(e.dataTransfer.files); });
 
 // ====================================================
-// ADMIN — USER MANAGEMENT
+// ADMIN
 // ====================================================
+let usersData = [];
+
+async function loadUsers() {
+  const { data } = await sb.from('users').select('*').order('created_at');
+  usersData = data || [];
+  renderUsersTable();
+}
+
 function renderUsersTable() {
   const tbody = document.getElementById('usersTable');
   const roleMap = { admin: ['badge-purple','Admin'], editor: ['badge-blue','Editor'], viewer: ['badge-gray','Viewer'] };
   tbody.innerHTML = usersData.map(u => {
     const [cls, label] = roleMap[u.role] || ['badge-gray', u.role];
-    const activeBadge = u.active !== false
-      ? '<span class="badge badge-green">เปิด</span>'
-      : '<span class="badge badge-red">ปิด</span>';
-    const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('th-TH') : '–';
+    const activeBadge = u.active ? '<span class="badge badge-green">เปิด</span>' : '<span class="badge badge-red">ปิด</span>';
+    const date = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH') : '–';
     const isSelf = currentUser?.id === u.id;
     return `<tr>
       <td><strong>${u.name}</strong></td>
@@ -1616,7 +677,6 @@ function openUserModal(userId) {
   editingUserId = userId || null;
   document.getElementById('userModalTitle').textContent = userId ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้';
   document.getElementById('uActiveGroup').style.display = userId ? 'block' : 'none';
-
   if (userId) {
     const u = usersData.find(x => x.id === userId);
     if (!u) return;
@@ -1624,9 +684,9 @@ function openUserModal(userId) {
     document.getElementById('uUsername').value = u.username;
     document.getElementById('uPassword').value = '';
     document.getElementById('uPasswordHint').textContent = 'เว้นว่างถ้าไม่ต้องการเปลี่ยนรหัสผ่าน';
-    document.getElementById('uPasswordLabel').textContent = 'รหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)';
+    document.getElementById('uPasswordLabel').textContent = 'รหัสผ่านใหม่';
     document.getElementById('uRole').value = u.role;
-    document.getElementById('uActive').value = String(u.active !== false);
+    document.getElementById('uActive').value = String(u.active);
   } else {
     document.getElementById('uName').value = '';
     document.getElementById('uUsername').value = '';
@@ -1634,15 +694,11 @@ function openUserModal(userId) {
     document.getElementById('uPasswordHint').textContent = '';
     document.getElementById('uPasswordLabel').textContent = 'รหัสผ่าน';
     document.getElementById('uRole').value = 'viewer';
-    document.getElementById('uActive').value = 'true';
   }
   document.getElementById('userModal').classList.add('open');
 }
 
-function closeUserModal() {
-  document.getElementById('userModal').classList.remove('open');
-  editingUserId = null;
-}
+function closeUserModal() { document.getElementById('userModal').classList.remove('open'); editingUserId = null; }
 
 async function saveUser() {
   const name = document.getElementById('uName').value.trim();
@@ -1653,34 +709,23 @@ async function saveUser() {
 
   if (!name || !username) { showToast('กรุณากรอกชื่อและ username', 'error'); return; }
   if (!editingUserId && !password) { showToast('กรุณากรอกรหัสผ่าน', 'error'); return; }
-  if (password && password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error'); return; }
+  if (password && password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัว', 'error'); return; }
 
   const btn = document.getElementById('saveUserBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
   try {
+    const payload = { name, username, role, active };
+    if (password) payload.password = await sha256(password);
+
     if (editingUserId) {
-      const idx = usersData.findIndex(u => u.id === editingUserId);
-      if (idx === -1) return;
-      usersData[idx].name = name;
-      usersData[idx].username = username;
-      usersData[idx].role = role;
-      usersData[idx].active = active;
-      if (password) usersData[idx].password = await sha256(password);
+      const { error } = await sb.from('users').update(payload).eq('id', editingUserId);
+      if (error) throw error;
     } else {
-      if (usersData.find(u => u.username === username)) {
-        showToast('Username นี้ถูกใช้แล้ว', 'error'); return;
-      }
-      usersData.push({
-        id: Date.now().toString(),
-        username, name, role,
-        password: await sha256(password),
-        active: true,
-        createdAt: new Date().toISOString()
-      });
+      const { error } = await sb.from('users').insert({ ...payload, active: true });
+      if (error) throw error;
     }
-    await saveUsers();
-    renderUsersTable();
+    await loadUsers();
     closeUserModal();
     showToast('บันทึกสำเร็จ', 'success');
   } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
@@ -1689,49 +734,46 @@ async function saveUser() {
 
 async function deleteUser(userId) {
   if (!confirm('ต้องการลบผู้ใช้นี้?')) return;
-  usersData = usersData.filter(u => u.id !== userId);
-  try {
-    await saveUsers();
-    renderUsersTable();
-    showToast('ลบผู้ใช้แล้ว', 'success');
-  } catch(e) { showToast('ลบไม่สำเร็จ', 'error'); }
+  const { error } = await sb.from('users').delete().eq('id', userId);
+  if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
+  await loadUsers();
+  showToast('ลบผู้ใช้แล้ว', 'success');
+}
+
+// ====================================================
+// PAGES
+// ====================================================
+function showPage(page) {
+  document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
+  document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page)?.classList.add('active');
+  const titles = { dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'], admin: ['จัดการผู้ใช้','Admin Panel'] };
+  document.getElementById('topbarTitle').textContent = titles[page][0];
+  document.getElementById('topbarSub').textContent = titles[page][1];
+  if (page === 'admin') loadUsers();
 }
 
 // ====================================================
 // UI HELPERS
 // ====================================================
-function showLoading(text) {
-  document.getElementById('loadingText').textContent = text || 'กำลังโหลด...';
-  document.getElementById('loadingOverlay').classList.add('show');
+function showLoading(text) { document.getElementById('loadingText').textContent = text || 'กำลังโหลด...'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function setDriveStatus(ok, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + (ok ? 'ok' : 'error');
+  document.getElementById('statusText').textContent = text;
 }
-
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.remove('show');
-}
-
 let toastTimer;
 function showToast(msg, type) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' ' + type : '');
+  t.textContent = msg; t.className = 'toast show' + (type ? ' '+type : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
 }
 
-// Close modal on overlay click
-document.getElementById('certModal').addEventListener('click', function(e) {
-  if (e.target === this) closeCertModal();
-});
-document.getElementById('userModal').addEventListener('click', function(e) {
-  if (e.target === this) closeUserModal();
-});
-
-// Enter key on login
-document.getElementById('loginPassword').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-
-// Filter listeners
+document.getElementById('certModal').addEventListener('click', function(e) { if (e.target === this) closeCertModal(); });
+document.getElementById('userModal').addEventListener('click', function(e) { if (e.target === this) closeUserModal(); });
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('searchInput').addEventListener('input', filterData);
 document.getElementById('typeFilter').addEventListener('change', filterData);
 document.getElementById('unitFilter').addEventListener('change', filterData);
@@ -1741,24 +783,17 @@ document.getElementById('statusFilter').addEventListener('change', filterData);
 // INIT
 // ====================================================
 (function init() {
-  loadConfig();
-
-  // เช็ค setup
-  if (!CONFIG.clientId || !CONFIG.folderId) {
-    document.getElementById('setupScreen').style.display = 'block';
-    document.getElementById('loginPage').style.display = 'none';
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    document.getElementById('loginPage').innerHTML = `
+      <div style="text-align:center;color:white;padding:40px">
+        <div style="font-size:48px;margin-bottom:16px">⚙️</div>
+        <h2 style="margin-bottom:8px">ยังไม่ได้ตั้งค่า Supabase</h2>
+        <p style="opacity:.7">กรุณาใส่ SUPABASE_URL และ SUPABASE_KEY ในโค้ดก่อนใช้งาน</p>
+      </div>`;
     return;
   }
-
-  // เช็ค session
   const session = getSession();
-  if (session) {
-    currentUser = session;
-    document.getElementById('loginPage').style.display = 'none';
-    enterApp(session);
-  }
-
-  initGoogleAuth();
+  if (session) { currentUser = session; enterApp(session); }
 })();
 </script>
 </body>
