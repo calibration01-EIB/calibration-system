@@ -125,21 +125,24 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 /* TABLE */
 .table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; table-layout: auto; }
+table td, table th { white-space: nowrap; }
+table td { font-size: 16px !important; padding: 14px 18px !important; }
+table th { font-size: 15px !important; padding: 13px 18px !important; }
 thead { background: var(--surface2); }
 th { padding: 14px 20px; text-align: left; font-size: 16px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
 td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 18px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; font-size: 15px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
 .badge-green { background: var(--green-light); color: var(--green); }
 .badge-blue { background: var(--accent-light); color: var(--accent); }
 .badge-purple { background: var(--purple-light); color: var(--purple); }
 .badge-gray { background: #f4f4f0; color: var(--text2); }
-.days-chip { font-family: var(--mono); font-size: 15px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
+.days-chip { font-family: var(--mono); font-size: 16px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
 .id-code { font-family: var(--mono); font-size: 15px; color: var(--text2); }
-.btn-cert { padding: 8px 16px; border-radius: 6px; font-family: var(--font); font-size: 15px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
+.btn-cert { padding: 8px 16px; border-radius: 6px; font-family: var(--font); font-size: 16px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
 .btn-cert-has { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-cert-has:hover { background: #d8e8f5; }
 .btn-cert-empty { background: var(--surface2); color: var(--text2); border-color: var(--border); }
@@ -172,7 +175,7 @@ tbody tr:hover { background: var(--surface2); }
 .file-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .file-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.btn-view, .btn-del { padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
+.btn-view, .btn-del { padding: 7px 14px; border-radius: 6px; font-size: 15px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
 .btn-view { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-view:hover { background: #d8e8f5; }
 .btn-del { background: var(--red-light); color: var(--red); border-color: #f5c6c4; }
@@ -637,11 +640,11 @@ function renderTable() {
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
       <td>${d.range_val||'–'}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.serial_no||'–'}</td>
+      <td style="font-family:var(--mono);font-size:16px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
+      <td style="font-family:var(--mono);font-size:16px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
       <td class="id-code">${d.id_code||'–'}</td>
-      <td style="font-family:var(--mono);font-size:12px">${d.cert_no||'–'}</td>
+      <td style="font-family:var(--mono);font-size:16px">${d.cert_no||'–'}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
       <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
@@ -777,7 +780,7 @@ function renderUsersTable() {
     const isSelf = currentUser?.id === u.id;
     return `<tr>
       <td><strong>${u.name}</strong></td>
-      <td style="font-family:var(--mono);font-size:12px">${u.username}</td>
+      <td style="font-family:var(--mono);font-size:16px">${u.username}</td>
       <td><span class="badge ${cls}">${label}</span></td>
       <td>${activeBadge}</td>
       <td>${date}</td>
@@ -1027,6 +1030,9 @@ function printReport() {
   .sum-card.tt .num { color: #1a2f4a; }
   .filter-info { font-size: 8pt; color: #555; margin-bottom: 8px; }
   table { width: 100%; border-collapse: collapse; table-layout: auto; }
+table td, table th { white-space: nowrap; }
+table td { font-size: 16px !important; padding: 14px 18px !important; }
+table th { font-size: 15px !important; padding: 13px 18px !important; }
   th { background: #1a2f4a; color: white; padding: 6px 5px; text-align: left; font-size: 8pt; font-weight: 600; }
   td { padding: 5px; border-bottom: 0.5px solid #e0e0e0; font-size: 8pt; vertical-align: middle; }
   tr:nth-child(even) td { background: #f8f9fa; }
