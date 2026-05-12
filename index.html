@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <meta name="theme-color" content="#1a2f4a">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -263,6 +264,12 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
+
+        <!-- CATEGORY CARDS -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px">กลุ่มเครื่องมือ <span style="font-size:13px;font-weight:400;color:var(--text3)">— กดเพื่อกรอง</span></div>
+          <div id="categoryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px"></div>
+        </div>
 
         <!-- MONTH CARDS -->
         <div id="monthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;margin-bottom:16px"></div>
@@ -636,6 +643,7 @@ async function loadData() {
     updateStats();
     renderTable();
     renderMonthly();
+    renderCategoryCards();
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
@@ -699,6 +707,8 @@ function resetFilters() {
   document.getElementById('unitFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('monthFilter').value = '';
+  activeCategory = 'all';
+  renderCategoryCards();
   if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
   filteredData = [...allData];
   currentPage = 1;
@@ -1232,6 +1242,77 @@ table th { font-size: 18px !important; padding: 15px 20px !important; color: #ff
   win.document.write(html);
   win.document.close();
   win.onload = () => { win.print(); };
+}
+
+
+// ====================================================
+// CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)
+// ====================================================
+const CATEGORY_ICONS = {
+  'มวล/น้ำหนัก': 'ti-weight',
+  'อุณหภูมิ/ความชื้น': 'ti-temperature',
+  'ความยาว/มิติ': 'ti-ruler',
+  'ความดัน/สุญญากาศ': 'ti-gauge',
+  'ความเร็วรอบ': 'ti-rotate-clockwise',
+  'เวลา': 'ti-clock',
+  'เคมี/ความเข้มข้น': 'ti-flask',
+  'ความหนืด/ความหนาแน่น': 'ti-droplet',
+  'ไฟฟ้า': 'ti-bolt',
+  'การไหล/ปริมาตร': 'ti-wave-sine',
+  'แสง/เสียง': 'ti-bulb',
+  'ความปลอดภัย': 'ti-shield',
+  'แรงบิด/แรงกด': 'ti-arrows-transfer-down',
+  'อื่นๆ': 'ti-dots-circle-horizontal',
+};
+
+let activeCategory = 'all';
+
+function renderCategoryCards() {
+  const container = document.getElementById('categoryCards');
+  if (!container) return;
+
+  // นับจากคอลัมน์ category ใน Supabase
+  const counts = {};
+  let total = 0;
+  allData.forEach(d => {
+    const cat = d.category || 'อื่นๆ';
+    counts[cat] = (counts[cat] || 0) + 1;
+    total++;
+  });
+
+  // การ์ด "ทั้งหมด" + แต่ละ category
+  const allCard = `<div onclick="selectCategory('all')" style="
+    background:${activeCategory==='all' ? 'var(--accent-light)' : 'white'};
+    border:${activeCategory==='all' ? '2px solid var(--accent)' : '1px solid var(--border)'};
+    border-radius:var(--radius);padding:12px 10px;text-align:center;cursor:pointer;transition:all .15s">
+    <i class="ti ti-layout-grid" style="font-size:22px;color:${activeCategory==='all' ? 'var(--accent)' : 'var(--text2)'};margin-bottom:4px;display:block" aria-hidden="true"></i>
+    <div style="font-size:12px;font-weight:500;color:${activeCategory==='all' ? 'var(--accent)' : 'var(--text2)'};line-height:1.3;margin-bottom:4px">ทั้งหมด</div>
+    <div style="font-size:22px;font-weight:600;color:${activeCategory==='all' ? 'var(--accent)' : 'var(--text)'}">${total}</div>
+  </div>`;
+
+  const catCards = Object.entries(counts)
+    .sort((a,b) => b[1]-a[1])
+    .map(([cat, count]) => {
+      const isActive = activeCategory === cat;
+      const icon = CATEGORY_ICONS[cat] || 'ti-tool';
+      return `<div onclick="selectCategory('${cat}')" style="
+        background:${isActive ? 'var(--accent-light)' : 'white'};
+        border:${isActive ? '2px solid var(--accent)' : '1px solid var(--border)'};
+        border-radius:var(--radius);padding:12px 10px;text-align:center;cursor:pointer;transition:all .15s">
+        <i class="ti ${icon}" style="font-size:22px;color:${isActive ? 'var(--accent)' : 'var(--text2)'};margin-bottom:4px;display:block" aria-hidden="true"></i>
+        <div style="font-size:12px;font-weight:500;color:${isActive ? 'var(--accent)' : 'var(--text2)'};line-height:1.3;margin-bottom:4px">${cat}</div>
+        <div style="font-size:22px;font-weight:600;color:${isActive ? 'var(--accent)' : 'var(--text)'}">${count}</div>
+      </div>`;
+    }).join('');
+
+  container.innerHTML = allCard + catCards;
+}
+
+function selectCategory(cat) {
+  activeCategory = (activeCategory === cat) ? 'all' : cat;
+  currentPage = 1;
+  filterData();
+  renderCategoryCards();
 }
 
 // ====================================================
