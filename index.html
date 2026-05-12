@@ -277,23 +277,6 @@ tbody tr:hover { background: var(--surface2); }
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
           <select id="typeFilter"><option value="">ทุกประเภท</option></select>
-          <select id="categoryFilter" onchange="filterData()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;font-weight:500;background:var(--surface);outline:none">
-            <option value="">ทุกประเภท</option>
-            <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
-            <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
-            <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
-            <option value="ความดัน/สุญญากาศ (Pressure/Vacuum)">ความดัน/สุญญากาศ (Pressure/Vacuum)</option>
-            <option value="ความเร็วรอบ (Speed/Rotation)">ความเร็วรอบ (Speed/Rotation)</option>
-            <option value="เวลา (Time)">เวลา (Time)</option>
-            <option value="เคมี/ความเข้มข้น (Chemical/Concentration)">เคมี/ความเข้มข้น (Chemical/Concentration)</option>
-            <option value="ความหนืด/ความหนาแน่น (Viscosity/Density)">ความหนืด/ความหนาแน่น (Viscosity/Density)</option>
-            <option value="ไฟฟ้า (Electrical)">ไฟฟ้า (Electrical)</option>
-            <option value="การไหล/ปริมาตร (Flow/Volume)">การไหล/ปริมาตร (Flow/Volume)</option>
-            <option value="แสง/เสียง (Light/Sound)">แสง/เสียง (Light/Sound)</option>
-            <option value="ความปลอดภัย (Safety)">ความปลอดภัย (Safety)</option>
-            <option value="แรงบิด/แรงกด (Torque/Force)">แรงบิด/แรงกด (Torque/Force)</option>
-            <option value="อื่นๆ (Others)">อื่นๆ (Others)</option>
-          </select>
           <select id="unitFilter"><option value="">ทุกหน่วยงาน</option></select>
           <select id="statusFilter">
             <option value="">ทุกสถานะ</option>
@@ -737,7 +720,7 @@ function resetFilters() {
   document.getElementById('unitFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('monthFilter').value = '';
-  if(document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = '';
+
   activeCategory = 'all';
   renderCategoryCards();
   if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
