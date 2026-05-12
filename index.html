@@ -265,12 +265,6 @@ tbody tr:hover { background: var(--surface2); }
       <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- CATEGORY CARDS -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px">กลุ่มเครื่องมือ <span style="font-size:13px;font-weight:400;color:var(--text3)">— กดเพื่อกรอง</span></div>
-          <div id="categoryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px"></div>
-        </div>
-
         <!-- MONTH CARDS -->
         <div id="monthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;margin-bottom:16px"></div>
 
@@ -283,7 +277,7 @@ tbody tr:hover { background: var(--surface2); }
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
           <select id="typeFilter"><option value="">ทุกประเภท</option></select>
-          <select id="categoryFilter" onchange="filterData()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:var(--text);background:var(--surface);outline:none">
+          <select id="categoryFilter" onchange="filterData()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;font-weight:500;background:var(--surface);outline:none">
             <option value="">ทุกกลุ่ม</option>
             <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
             <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
@@ -681,7 +675,6 @@ async function loadData() {
     updateStats();
     renderTable();
     renderMonthly();
-    renderCategoryCards();
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
