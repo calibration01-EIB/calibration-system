@@ -278,7 +278,7 @@ tbody tr:hover { background: var(--surface2); }
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
           <select id="typeFilter"><option value="">ทุกประเภท</option></select>
           <select id="categoryFilter" onchange="filterData()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;font-weight:500;background:var(--surface);outline:none">
-            <option value="">ทุกกลุ่ม</option>
+            <option value="">ทุกประเภท</option>
             <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
             <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
             <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
@@ -343,7 +343,6 @@ tbody tr:hover { background: var(--surface2); }
               <tr>
                 <th>#</th>
                 <th>ประเภทเครื่องมือ</th>
-                <th>กลุ่ม</th>
                 <th>ชื่อเครื่องจักร</th>
                 <th>สถานที่ใช้งาน</th>
                 <th>เครื่องมือ</th>
@@ -365,7 +364,7 @@ tbody tr:hover { background: var(--surface2); }
                 <th id="thManage" style="display:none">จัดการ</th>
               </tr>
             </thead>
-            <tbody id="dataTable"><tr><td colspan="22" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            <tbody id="dataTable"><tr><td colspan="21" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -761,7 +760,7 @@ function typeBadge(t) {
 function renderTable() {
   const tbody = document.getElementById('dataTable');
   if (!filteredData.length) { 
-    tbody.innerHTML = '<tr><td colspan="22" class="no-data">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>';
     updatePaginationUI();
     return; 
   }
@@ -781,8 +780,7 @@ function renderTable() {
     else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
     return `<tr>
       <td>${rowNum}</td>
-      <td>${typeBadge(d.instrument_type)}</td>
-      <td><span style="font-size:13px;color:var(--text2)">${d.category||'–'}</span></td>
+      <td><span class="badge badge-blue" style="font-size:13px">${d.category||d.instrument_type||'–'}</span></td>
       <td>${d.machine_name||'–'}</td>
       <td>${d.location||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
