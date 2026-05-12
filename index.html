@@ -469,7 +469,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="form-group">
           <label>วันที่สอบเทียบ</label>
-          <input type="date" id="iCalDate">
+          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value)">
         </div>
         <div class="form-group">
           <label>วันครบกำหนด</label>
@@ -485,7 +485,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="form-group">
           <label>ความถี่สอบเทียบ</label>
-          <input type="text" id="iCalFrequency" placeholder="เช่น 1 ครั้ง/ปี">
+          <input type="text" id="iCalFrequency" placeholder="เช่น 1 ครั้ง/ปี" onchange="calcDueDate(document.getElementById('iCalDate').value, this.value)" onblur="calcDueDate(document.getElementById('iCalDate').value, this.value)">
         </div>
         <div class="form-group">
           <label>ภายใน / ภายนอก</label>
@@ -1524,6 +1524,36 @@ function renderAuditTable() {
       <td>${details}</td>
     </tr>`;
   }).join('');
+}
+
+
+function calcDueDate(calDate, frequency) {
+  if (!calDate || !frequency) return;
+  const d = new Date(calDate);
+  if (isNaN(d)) return;
+  const f = frequency.toLowerCase();
+
+  if (f.includes('6') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 6);
+  } else if (f.includes('3') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 3);
+  } else if (f.includes('2') && (f.includes('ปี') || f.includes('year'))) {
+    d.setFullYear(d.getFullYear() + 2);
+  } else if (f.includes('1') && (f.includes('ปี') || f.includes('year'))) {
+    d.setFullYear(d.getFullYear() + 1);
+  } else if (f.includes('ปี') || f.includes('year') || f.includes('/ปี') || f.includes('/year')) {
+    d.setFullYear(d.getFullYear() + 1);
+  } else if (f.includes('เดือน') || f.includes('month')) {
+    d.setMonth(d.getMonth() + 6);
+  } else {
+    return; // ไม่รู้ความถี่ ไม่คำนวณ
+  }
+
+  // set วันครบกำหนด
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  document.getElementById('iDueDate').value = `${yyyy}-${mm}-${dd}`;
 }
 
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
