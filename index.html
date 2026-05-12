@@ -1511,7 +1511,7 @@ function renderAuditTable() {
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
       details = Object.entries(d.changes).map(([field, val]) =>
-        `<div style="font-size:16px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
+        `<div style="font-size:22px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
       ).join('');
     }
 
