@@ -1153,6 +1153,19 @@ async function saveInstrument() {
     }
     closeInstrumentModal();
     await loadData();
+    // scroll ไปหาแถวที่แก้ไข/เพิ่ม
+    if (editingInstrumentId) {
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#dataTable tr');
+        rows.forEach(row => {
+          if (row.textContent.includes(payload.id_code || '')) {
+            row.style.background = '#e0f4f1';
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { row.style.background = ''; }, 2500);
+          }
+        });
+      }, 500);
+    }
   } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
 }
