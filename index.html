@@ -245,6 +245,7 @@ tbody tr:hover { background: var(--surface2); }
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
+        <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
       </nav>
       <div class="sidebar-user">
         <div class="user-avatar" id="sidebarInitial">A</div>
@@ -348,6 +349,38 @@ tbody tr:hover { background: var(--surface2); }
               </tr>
             </thead>
             <tbody id="dataTable"><tr><td colspan="21" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDIT LOG -->
+      <div id="pageAudit" class="page-content" style="display:none">
+        <div class="section-header">
+          <h2>Audit Log — ประวัติการแก้ไข</h2>
+          <button class="btn-refresh" onclick="loadAuditLogs()">↻ รีเฟรช</button>
+        </div>
+        <div class="controls-bar" style="margin-bottom:16px">
+          <input type="text" id="auditSearch" placeholder="🔍 ค้นหา ผู้ใช้, ID Code, การกระทำ..." style="flex:1;min-width:200px" oninput="filterAuditLogs()">
+          <select id="auditActionFilter" onchange="filterAuditLogs()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
+            <option value="">ทุกการกระทำ</option>
+            <option value="เพิ่ม">เพิ่ม</option>
+            <option value="แก้ไข">แก้ไข</option>
+            <option value="ลบ">ลบ</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>เวลา</th>
+                <th>ผู้ใช้</th>
+                <th>การกระทำ</th>
+                <th>ID Code</th>
+                <th>เครื่องมือ</th>
+                <th>รายละเอียด</th>
+              </tr>
+            </thead>
+            <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -601,7 +634,10 @@ function enterApp(user) {
   document.getElementById('sidebarName').textContent = user.name;
   document.getElementById('sidebarRole').textContent = user.role;
   document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
-  if (user.role === 'admin') document.getElementById('nav-admin').style.display = 'flex';
+  if (user.role === 'admin') {
+    document.getElementById('nav-admin').style.display = 'flex';
+    document.getElementById('nav-audit').style.display = 'flex';
+  }
   if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
   if (user.role === 'admin' || user.role === 'editor') toggleManageColumns(true);
   setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
@@ -1102,12 +1138,16 @@ async function saveInstrument() {
 
   try {
     if (editingInstrumentId) {
+      const original = allData.find(x => x.id === editingInstrumentId);
       const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
       if (error) throw error;
+      const diff = original ? getDiff(original, {...original, ...payload}) : null;
+      await logAudit('แก้ไข', {...payload, id: editingInstrumentId}, diff);
       showToast('แก้ไขเครื่องมือแล้ว', 'success');
     } else {
-      const { error } = await sb.from('instruments').insert(payload);
+      const { data: inserted, error } = await sb.from('instruments').insert(payload).select().single();
       if (error) throw error;
+      await logAudit('เพิ่ม', inserted, null);
       showToast('เพิ่มเครื่องมือแล้ว', 'success');
     }
     closeInstrumentModal();
@@ -1119,8 +1159,10 @@ async function saveInstrument() {
 async function deleteInstrument(id, name) {
   if (!confirm(`ต้องการลบ "${name}" ออกจากระบบ?`)) return;
   try {
+    const instrument = allData.find(x => x.id === id);
     const { error } = await sb.from('instruments').delete().eq('id', id);
     if (error) throw error;
+    await logAudit('ลบ', instrument || {id, instrument_name: name, id_code: ''}, null);
     showToast('ลบเครื่องมือแล้ว', 'success');
     await loadData();
   } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
@@ -1367,6 +1409,122 @@ function updatePaginationUI() {
   document.getElementById('btnNext').disabled = currentPage >= totalPages;
 }
 
+
+// ====================================================
+// AUDIT LOG
+// ====================================================
+let auditData = [];
+let auditFiltered = [];
+
+async function logAudit(action, instrument, changes) {
+  try {
+    await sb.from('audit_logs').insert({
+      user_id: currentUser?.id || null,
+      username: currentUser?.name || 'Unknown',
+      action,
+      instrument_id: instrument?.id || null,
+      id_code: instrument?.id_code || null,
+      instrument_name: instrument?.instrument_name || instrument?.instrument_type || null,
+      changes: changes || null,
+    });
+  } catch(e) { console.warn('Audit log failed:', e); }
+}
+
+function getDiff(original, updated) {
+  const changes = {};
+  const fields = {
+    instrument_type: 'ประเภท',
+    instrument_name: 'เครื่องมือ',
+    brand: 'ยี่ห้อ',
+    range_val: 'Range',
+    tolerance: 'Tolerance',
+    serial_no: 'S/N',
+    department: 'หน่วยงาน',
+    id_code: 'ID Code',
+    cert_no: 'CERT.',
+    cal_date: 'วันสอบเทียบ',
+    due_date: 'ครบกำหนด',
+    machine_name: 'ชื่อเครื่องจักร',
+    location: 'สถานที่',
+    cal_frequency: 'ความถี่',
+    cal_type: 'ภายใน/ภายนอก',
+    remark: 'Remark',
+    category: 'กลุ่ม',
+  };
+  for (const [key, label] of Object.entries(fields)) {
+    const oldVal = String(original[key] || '');
+    const newVal = String(updated[key] || '');
+    if (oldVal !== newVal) {
+      changes[label] = { from: oldVal || '–', to: newVal || '–' };
+    }
+  }
+  return Object.keys(changes).length > 0 ? changes : null;
+}
+
+async function loadAuditLogs() {
+  const tbody = document.getElementById('auditTable');
+  tbody.innerHTML = '<tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr>';
+  try {
+    const { data, error } = await sb.from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    auditData = data || [];
+    auditFiltered = [...auditData];
+    renderAuditTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">โหลดไม่สำเร็จ</td></tr>';
+  }
+}
+
+function filterAuditLogs() {
+  const search = document.getElementById('auditSearch').value.toLowerCase();
+  const action = document.getElementById('auditActionFilter').value;
+  auditFiltered = auditData.filter(d => {
+    if (action && d.action !== action) return false;
+    if (search && !['username','id_code','instrument_name','action'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
+    return true;
+  });
+  renderAuditTable();
+}
+
+function renderAuditTable() {
+  const tbody = document.getElementById('auditTable');
+  if (!auditFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
+    return;
+  }
+  tbody.innerHTML = auditFiltered.map(d => {
+    const actionBadge = d.action === 'เพิ่ม' 
+      ? '<span class="badge badge-green">➕ เพิ่ม</span>'
+      : d.action === 'แก้ไข'
+      ? '<span class="badge badge-amber">✏️ แก้ไข</span>'
+      : '<span class="badge badge-red">🗑️ ลบ</span>';
+    
+    const dt = d.created_at ? new Date(d.created_at).toLocaleString('th-TH', {
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    }) : '–';
+
+    let details = '–';
+    if (d.changes && typeof d.changes === 'object') {
+      details = Object.entries(d.changes).map(([field, val]) =>
+        `<div style="font-size:12px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
+      ).join('');
+    }
+
+    return `<tr>
+      <td style="white-space:nowrap;font-size:13px">${dt}</td>
+      <td><strong>${d.username||'–'}</strong></td>
+      <td>${actionBadge}</td>
+      <td style="font-family:var(--mono);font-size:13px">${d.id_code||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${details}</td>
+    </tr>`;
+  }).join('');
+}
+
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const MONTH_NAMES_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 let activeMonthCard = null;
@@ -1429,11 +1587,13 @@ function showPage(page) {
   const titles = {
     dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
     admin: ['จัดการผู้ใช้','Admin Panel'],
-    monthly: ['รายเดือน','สรุปการครบกำหนดแต่ละเดือน']
+    monthly: ['รายเดือน','สรุปการครบกำหนดแต่ละเดือน'],
+    audit: ['Audit Log','ประวัติการแก้ไขข้อมูล']
   };
   document.getElementById('topbarTitle').textContent = titles[page][0];
   document.getElementById('topbarSub').textContent = titles[page][1];
   if (page === 'admin') loadUsers();
+  if (page === 'audit') loadAuditLogs();
   if (page === 'monthly') renderMonthly();
 }
 
