@@ -753,8 +753,22 @@ function formatDate(s) {
 
 function typeBadge(t) {
   if (!t) return '<span class="badge badge-gray">–</span>';
-  const map = { 'Electronic Balance': 'badge-blue', 'WEIGHT': 'badge-purple', 'TYPE F': 'badge-gray' };
-  return `<span class="badge ${map[t]||'badge-gray'}">${t}</span>`;
+  const map = {
+    'มวล/น้ำหนัก (Mass/Weight)': 'badge-blue',
+    'ความยาว/มิติ (Length/Dimension)': 'badge-purple',
+    'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'badge-amber',
+    'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'badge-gray',
+    'ความเร็วรอบ (Speed/Rotation)': 'badge-green',
+    'เวลา (Time)': 'badge-gray',
+    'เคมี/ความเข้มข้น (Chemical/Concentration)': 'badge-green',
+    'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'badge-blue',
+    'ไฟฟ้า (Electrical)': 'badge-amber',
+    'การไหล/ปริมาตร (Flow/Volume)': 'badge-blue',
+    'แสง/เสียง (Light/Sound)': 'badge-amber',
+    'ความปลอดภัย (Safety)': 'badge-red',
+    'แรงบิด/แรงกด (Torque/Force)': 'badge-purple',
+  };
+  return `<span class="badge ${map[t]||'badge-gray'}" style="font-size:13px">${t}</span>`;
 }
 
 function renderTable() {
@@ -780,7 +794,7 @@ function renderTable() {
     else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
     return `<tr>
       <td>${rowNum}</td>
-      <td><span class="badge badge-blue" style="font-size:13px">${d.category||d.instrument_type||'–'}</span></td>
+      <td>${typeBadge(d.instrument_type)}</td>
       <td>${d.machine_name||'–'}</td>
       <td>${d.location||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
@@ -1308,7 +1322,7 @@ function renderCategoryCards() {
   const counts = {};
   let total = 0;
   allData.forEach(d => {
-    const cat = d.category || 'อื่นๆ';
+    const cat = d.instrument_type || 'อื่นๆ (Others)';
     counts[cat] = (counts[cat] || 0) + 1;
     total++;
   });
