@@ -1511,15 +1511,15 @@ function renderAuditTable() {
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
       details = Object.entries(d.changes).map(([field, val]) =>
-        `<div style="font-size:12px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
+        `<div style="font-size:16px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
       ).join('');
     }
 
     return `<tr>
-      <td style="white-space:nowrap;font-size:13px">${dt}</td>
+      <td style="white-space:nowrap">${dt}</td>
       <td><strong>${d.username||'–'}</strong></td>
       <td>${actionBadge}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.id_code||'–'}</td>
+      <td style="font-family:var(--mono)">${d.id_code||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${details}</td>
     </tr>`;
