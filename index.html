@@ -302,6 +302,22 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
           <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
         </div>
+        <!-- PAGINATION TOP -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:15px;color:var(--text2)" id="paginationInfo">–</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:15px;color:var(--text2)">แสดง</span>
+            <select id="pageSizeSelect" onchange="changePageSize()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:15px;outline:none">
+              <option value="50">50 แถว</option>
+              <option value="100" selected>100 แถว</option>
+              <option value="200">200 แถว</option>
+            </select>
+            <button onclick="goPage(-1)" id="btnPrev" class="btn-reset" style="padding:7px 14px">◀ ก่อนหน้า</button>
+            <span id="pageNum" style="font-size:15px;font-weight:600;color:var(--accent)">หน้า 1</span>
+            <button onclick="goPage(1)" id="btnNext" class="btn-reset" style="padding:7px 14px">ถัดไป ▶</button>
+          </div>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>
@@ -663,6 +679,7 @@ function filterData() {
     }
     return true;
   });
+  currentPage = 1;
   updateStats(); renderTable();
 }
 
@@ -674,6 +691,7 @@ function resetFilters() {
   document.getElementById('monthFilter').value = '';
   if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
   filteredData = [...allData];
+  currentPage = 1;
   updateStats(); renderTable();
 }
 
@@ -690,8 +708,19 @@ function typeBadge(t) {
 
 function renderTable() {
   const tbody = document.getElementById('dataTable');
-  if (!filteredData.length) { tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>'; return; }
-  tbody.innerHTML = filteredData.map((d, i) => {
+  if (!filteredData.length) { 
+    tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>';
+    updatePaginationUI();
+    return; 
+  }
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * pageSize;
+  const pageData = filteredData.slice(start, start + pageSize);
+  updatePaginationUI();
+  tbody.innerHTML = pageData.map((d, i) => {
+  const rowNum = start + i + 1;
     const days = d.days_left;
     let statusBadge, daysClass;
     if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysClass = 'badge-gray'; }
@@ -699,7 +728,7 @@ function renderTable() {
     else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysClass = 'badge-amber'; }
     else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
     return `<tr>
-      <td>${i+1}</td>
+      <td>${rowNum}</td>
       <td>${typeBadge(d.instrument_type)}</td>
       <td>${d.machine_name||'–'}</td>
       <td>${d.location||'–'}</td>
@@ -1058,7 +1087,7 @@ function printReport() {
     const due = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
     const cal = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
     return `<tr>
-      <td>${i+1}</td>
+      <td>${rowNum}</td>
       <td>${d.instrument_type||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
@@ -1163,6 +1192,36 @@ table th { font-size: 18px !important; padding: 15px 20px !important; color: #33
   win.document.write(html);
   win.document.close();
   win.onload = () => { win.print(); };
+}
+
+// ====================================================
+// PAGINATION
+// ====================================================
+let currentPage = 1;
+let pageSize = 100;
+
+function changePageSize() {
+  pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+  currentPage = 1;
+  renderTable();
+}
+
+function goPage(dir) {
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  currentPage = Math.max(1, Math.min(currentPage + dir, totalPages));
+  renderTable();
+  document.querySelector('.table-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function updatePaginationUI() {
+  const total = filteredData.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, total);
+  document.getElementById('paginationInfo').textContent = `แสดง ${start.toLocaleString()}–${end.toLocaleString()} จาก ${total.toLocaleString()} รายการ`;
+  document.getElementById('pageNum').textContent = `หน้า ${currentPage} / ${totalPages}`;
+  document.getElementById('btnPrev').disabled = currentPage <= 1;
+  document.getElementById('btnNext').disabled = currentPage >= totalPages;
 }
 
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
