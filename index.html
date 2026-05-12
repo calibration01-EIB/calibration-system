@@ -381,15 +381,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="modal-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="form-group">
-          <label>ประเภทเครื่องมือ</label>
-          <select id="iType" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
-            <option value="">-- เลือกประเภท --</option>
-            <option value="Electronic Balance">Electronic Balance</option>
-            <option value="WEIGHT">WEIGHT</option>
-            <option value="TYPE F">TYPE F</option>
-          </select>
-        </div>
+        
         <div class="form-group">
           <label>ประเภทเครื่องมือ</label>
           <select id="iCategory" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
@@ -1053,7 +1045,7 @@ function openInstrumentModal(instrumentId) {
   if (instrumentId) {
     const d = allData.find(x => x.id === instrumentId);
     if (!d) return;
-    document.getElementById('iType').value = d.instrument_type || '';
+
     document.getElementById('iCategory').value = d.category || '';
     document.getElementById('iName').value = d.instrument_name || '';
     document.getElementById('iBrand').value = d.brand || '';
@@ -1071,7 +1063,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
   } else {
-    ['iType','iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
+    ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
@@ -1084,7 +1076,7 @@ function closeInstrumentModal() {
 
 async function saveInstrument() {
   const payload = {
-    instrument_type: document.getElementById('iType').value.trim(),
+    instrument_type: document.getElementById('iCategory').value || null,
     category: document.getElementById('iCategory').value || null,
     instrument_name: document.getElementById('iName').value.trim(),
     brand: document.getElementById('iBrand').value.trim(),
