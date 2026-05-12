@@ -581,7 +581,23 @@ let allData = [], filteredData = [];
 async function loadData() {
   showLoading('กำลังโหลดข้อมูล...');
   try {
-    const { data, error } = await sb.from('instruments').select('*').order('id');
+    // ดึงข้อมูลทั้งหมด (Supabase default limit 1000 ต้องใช้ range)
+    let allRows = [];
+    let from = 0;
+    const chunkSize = 1000;
+    while (true) {
+      const { data: chunk, error: err } = await sb.from('instruments')
+        .select('*')
+        .order('id')
+        .range(from, from + chunkSize - 1);
+      if (err) throw err;
+      if (!chunk || chunk.length === 0) break;
+      allRows = allRows.concat(chunk);
+      if (chunk.length < chunkSize) break;
+      from += chunkSize;
+    }
+    const data = allRows;
+    const error = null;
     if (error) throw error;
 
     const today = new Date(); today.setHours(0,0,0,0);
