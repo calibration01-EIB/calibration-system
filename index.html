@@ -1582,6 +1582,7 @@ function filterByMonth(monthIdx, card) {
 function showPage(page) {
   document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
   document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
+  document.getElementById('pageAudit').style.display = page === 'audit' ? 'block' : 'none';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('nav-' + page)?.classList.add('active');
   const titles = {
