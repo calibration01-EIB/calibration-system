@@ -283,6 +283,23 @@ tbody tr:hover { background: var(--surface2); }
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
           <select id="typeFilter"><option value="">ทุกประเภท</option></select>
+          <select id="categoryFilter" onchange="filterData()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:var(--text);background:var(--surface);outline:none">
+            <option value="">ทุกกลุ่ม</option>
+            <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
+            <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
+            <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
+            <option value="ความดัน/สุญญากาศ (Pressure/Vacuum)">ความดัน/สุญญากาศ (Pressure/Vacuum)</option>
+            <option value="ความเร็วรอบ (Speed/Rotation)">ความเร็วรอบ (Speed/Rotation)</option>
+            <option value="เวลา (Time)">เวลา (Time)</option>
+            <option value="เคมี/ความเข้มข้น (Chemical/Concentration)">เคมี/ความเข้มข้น (Chemical/Concentration)</option>
+            <option value="ความหนืด/ความหนาแน่น (Viscosity/Density)">ความหนืด/ความหนาแน่น (Viscosity/Density)</option>
+            <option value="ไฟฟ้า (Electrical)">ไฟฟ้า (Electrical)</option>
+            <option value="การไหล/ปริมาตร (Flow/Volume)">การไหล/ปริมาตร (Flow/Volume)</option>
+            <option value="แสง/เสียง (Light/Sound)">แสง/เสียง (Light/Sound)</option>
+            <option value="ความปลอดภัย (Safety)">ความปลอดภัย (Safety)</option>
+            <option value="แรงบิด/แรงกด (Torque/Force)">แรงบิด/แรงกด (Torque/Force)</option>
+            <option value="อื่นๆ (Others)">อื่นๆ (Others)</option>
+          </select>
           <select id="unitFilter"><option value="">ทุกหน่วยงาน</option></select>
           <select id="statusFilter">
             <option value="">ทุกสถานะ</option>
@@ -332,6 +349,7 @@ tbody tr:hover { background: var(--surface2); }
               <tr>
                 <th>#</th>
                 <th>ประเภทเครื่องมือ</th>
+                <th>กลุ่ม</th>
                 <th>ชื่อเครื่องจักร</th>
                 <th>สถานที่ใช้งาน</th>
                 <th>เครื่องมือ</th>
@@ -353,7 +371,7 @@ tbody tr:hover { background: var(--surface2); }
                 <th id="thManage" style="display:none">จัดการ</th>
               </tr>
             </thead>
-            <tbody id="dataTable"><tr><td colspan="21" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            <tbody id="dataTable"><tr><td colspan="22" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -394,6 +412,26 @@ tbody tr:hover { background: var(--surface2); }
             <option value="Electronic Balance">Electronic Balance</option>
             <option value="WEIGHT">WEIGHT</option>
             <option value="TYPE F">TYPE F</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>กลุ่ม (Category)</label>
+          <select id="iCategory" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+            <option value="">-- เลือกกลุ่ม --</option>
+            <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
+            <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
+            <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
+            <option value="ความดัน/สุญญากาศ (Pressure/Vacuum)">ความดัน/สุญญากาศ (Pressure/Vacuum)</option>
+            <option value="ความเร็วรอบ (Speed/Rotation)">ความเร็วรอบ (Speed/Rotation)</option>
+            <option value="เวลา (Time)">เวลา (Time)</option>
+            <option value="เคมี/ความเข้มข้น (Chemical/Concentration)">เคมี/ความเข้มข้น (Chemical/Concentration)</option>
+            <option value="ความหนืด/ความหนาแน่น (Viscosity/Density)">ความหนืด/ความหนาแน่น (Viscosity/Density)</option>
+            <option value="ไฟฟ้า (Electrical)">ไฟฟ้า (Electrical)</option>
+            <option value="การไหล/ปริมาตร (Flow/Volume)">การไหล/ปริมาตร (Flow/Volume)</option>
+            <option value="แสง/เสียง (Light/Sound)">แสง/เสียง (Light/Sound)</option>
+            <option value="ความปลอดภัย (Safety)">ความปลอดภัย (Safety)</option>
+            <option value="แรงบิด/แรงกด (Torque/Force)">แรงบิด/แรงกด (Torque/Force)</option>
+            <option value="อื่นๆ (Others)">อื่นๆ (Others)</option>
           </select>
         </div>
         <div class="form-group">
@@ -707,6 +745,7 @@ function resetFilters() {
   document.getElementById('unitFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('monthFilter').value = '';
+  if(document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = '';
   activeCategory = 'all';
   renderCategoryCards();
   if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
@@ -729,7 +768,7 @@ function typeBadge(t) {
 function renderTable() {
   const tbody = document.getElementById('dataTable');
   if (!filteredData.length) { 
-    tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="22" class="no-data">ไม่พบข้อมูล</td></tr>';
     updatePaginationUI();
     return; 
   }
@@ -750,6 +789,7 @@ function renderTable() {
     return `<tr>
       <td>${rowNum}</td>
       <td>${typeBadge(d.instrument_type)}</td>
+      <td><span style="font-size:13px;color:var(--text2)">${d.category||'–'}</span></td>
       <td>${d.machine_name||'–'}</td>
       <td>${d.location||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
@@ -1026,6 +1066,7 @@ function openInstrumentModal(instrumentId) {
     const d = allData.find(x => x.id === instrumentId);
     if (!d) return;
     document.getElementById('iType').value = d.instrument_type || '';
+    document.getElementById('iCategory').value = d.category || '';
     document.getElementById('iName').value = d.instrument_name || '';
     document.getElementById('iBrand').value = d.brand || '';
     document.getElementById('iRange').value = d.range_val || '';
@@ -1042,7 +1083,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
   } else {
-    ['iType','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
+    ['iType','iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
@@ -1056,6 +1097,7 @@ function closeInstrumentModal() {
 async function saveInstrument() {
   const payload = {
     instrument_type: document.getElementById('iType').value.trim(),
+    category: document.getElementById('iCategory').value || null,
     instrument_name: document.getElementById('iName').value.trim(),
     brand: document.getElementById('iBrand').value.trim(),
     range_val: document.getElementById('iRange').value.trim(),
@@ -1249,20 +1291,20 @@ table th { font-size: 18px !important; padding: 15px 20px !important; color: #ff
 // CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)
 // ====================================================
 const CATEGORY_ICONS = {
-  'มวล/น้ำหนัก': 'ti-weight',
-  'อุณหภูมิ/ความชื้น': 'ti-temperature',
-  'ความยาว/มิติ': 'ti-ruler',
-  'ความดัน/สุญญากาศ': 'ti-gauge',
-  'ความเร็วรอบ': 'ti-rotate-clockwise',
-  'เวลา': 'ti-clock',
-  'เคมี/ความเข้มข้น': 'ti-flask',
-  'ความหนืด/ความหนาแน่น': 'ti-droplet',
-  'ไฟฟ้า': 'ti-bolt',
-  'การไหล/ปริมาตร': 'ti-wave-sine',
-  'แสง/เสียง': 'ti-bulb',
-  'ความปลอดภัย': 'ti-shield',
-  'แรงบิด/แรงกด': 'ti-arrows-transfer-down',
-  'อื่นๆ': 'ti-dots-circle-horizontal',
+  'มวล/น้ำหนัก (Mass/Weight)': 'ti-weight',
+  'ความยาว/มิติ (Length/Dimension)': 'ti-ruler',
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'ti-temperature',
+  'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'ti-gauge',
+  'ความเร็วรอบ (Speed/Rotation)': 'ti-rotate-clockwise',
+  'เวลา (Time)': 'ti-clock',
+  'เคมี/ความเข้มข้น (Chemical/Concentration)': 'ti-flask',
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'ti-droplet',
+  'ไฟฟ้า (Electrical)': 'ti-bolt',
+  'การไหล/ปริมาตร (Flow/Volume)': 'ti-wave-sine',
+  'แสง/เสียง (Light/Sound)': 'ti-bulb',
+  'ความปลอดภัย (Safety)': 'ti-shield',
+  'แรงบิด/แรงกด (Torque/Force)': 'ti-arrows-transfer-down',
+  'อื่นๆ (Others)': 'ti-dots-circle-horizontal',
 };
 
 let activeCategory = 'all';
