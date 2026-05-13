@@ -403,6 +403,46 @@ tbody tr:hover { background: var(--surface2); }
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px" id="d2TypeGrid"></div>
         </div>
 
+        <!-- ตารางข้อมูลเครื่องมือ (sticky header) -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:16px;font-weight:600;color:var(--text)">รายการเครื่องมือทั้งหมด</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="d2Search" type="text" placeholder="🔍 ค้นหา..." oninput="d2FilterTable()"
+                style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none;width:200px">
+              <select id="d2StatusFilter" onchange="d2FilterTable()"
+                style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none">
+                <option value="">ทุกสถานะ</option>
+                <option value="overdue">เกินกำหนด</option>
+                <option value="warning">ใกล้ครบ</option>
+                <option value="ok">ปกติ</option>
+              </select>
+              <span id="d2RowCount" style="font-size:13px;color:var(--text2)"></span>
+            </div>
+          </div>
+
+          <!-- wrapper scroll แนวตั้ง max 500px -->
+          <div style="overflow-y:auto;max-height:500px;border:1px solid var(--border);border-radius:8px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface2);position:sticky;top:0;z-index:2">
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">#</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ประเภท</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ชื่อเครื่องมือ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ยี่ห้อ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">S/N</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ID Code</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">หน่วยงาน</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">วันสอบเทียบ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ครบกำหนด</th>
+                  <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="d2TableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
             <!-- DASHBOARD -->
@@ -2144,6 +2184,9 @@ function renderDashboard2() {
       <div style="font-size:12px;color:${color}">${pct}% ยังไม่ครบ/ปกติ</div>
     </div>`;
   });
+
+  // render ตารางข้อมูล sticky header
+  d2RenderTable();
 }
 
 function showD2MonthDetail(monthIdx, items, card) {
@@ -2300,6 +2343,73 @@ document.getElementById('monthFilter').addEventListener('change', filterData);
   const session = getSession();
   if (session) { currentUser = session; enterApp(session); }
 })();
+
+// ====================================================
+// DASHBOARD2 TABLE — sticky header
+// ====================================================
+let d2Filtered = [];
+
+function d2RenderTable() {
+  const tbody = document.getElementById('d2TableBody');
+  if (!tbody) return;
+
+  const search = (document.getElementById('d2Search')?.value || '').toLowerCase();
+  const statusF = document.getElementById('d2StatusFilter')?.value || '';
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  d2Filtered = allData.filter(d => {
+    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
+    let status = 'ok';
+    if (days === null) status = 'ok';
+    else if (days < 0) status = 'overdue';
+    else if (days <= 30) status = 'warning';
+
+    if (statusF && status !== statusF) return false;
+    if (search) {
+      const hay = [d.instrument_type, d.instrument_name, d.brand, d.serial_no, d.id_code, d.department, d.cert_no].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const count = document.getElementById('d2RowCount');
+  if (count) count.textContent = `${d2Filtered.length.toLocaleString()} รายการ`;
+
+  tbody.innerHTML = d2Filtered.map((d, i) => {
+    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
+    let status = 'ok', badge = '', rowBg = '';
+    if (days !== null && days < 0) {
+      status = 'overdue';
+      badge = `<span style="background:var(--red-light);color:var(--red);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">เกินกำหนด</span>`;
+      rowBg = 'background:#fff8f8';
+    } else if (days !== null && days <= 30) {
+      status = 'warning';
+      badge = `<span style="background:var(--amber-light);color:var(--amber);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ใกล้ครบ ${days} วัน</span>`;
+      rowBg = 'background:#fffdf0';
+    } else {
+      badge = `<span style="background:var(--green-light);color:var(--green);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ปกติ</span>`;
+    }
+    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const border = 'border-bottom:1px solid var(--border)';
+    const cell = `padding:9px 12px;${border};white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis`;
+    const typShort = (d.instrument_type||'–').split(' (')[0];
+    return `<tr style="${rowBg}">
+      <td style="${cell};color:var(--text2);font-size:12px">${i+1}</td>
+      <td style="${cell};color:var(--text2);font-size:12px" title="${d.instrument_type||''}">${typShort}</td>
+      <td style="${cell};font-weight:500" title="${d.instrument_name||''}">${d.instrument_name||'–'}</td>
+      <td style="${cell};color:var(--text2)">${d.brand||'–'}</td>
+      <td style="${cell};color:var(--text2);font-family:monospace">${d.serial_no||'–'}</td>
+      <td style="${cell};color:var(--accent);font-weight:500">${d.id_code||'–'}</td>
+      <td style="${cell};color:var(--text2)">${d.department||'–'}</td>
+      <td style="${cell};color:var(--text2)">${calDate}</td>
+      <td style="${cell};color:var(--text2)">${dueDate}</td>
+      <td style="padding:9px 12px;${border};text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function d2FilterTable() { d2RenderTable(); }
 </script>
 
 <script>
