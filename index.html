@@ -197,6 +197,10 @@ tbody tr:hover { background: var(--surface2); }
 .toast.success { background: var(--green); }
 .toast.error { background: var(--red); }
 
+@media (max-width: 1100px) {
+  #dashRow2 { grid-template-columns: 1fr 1fr !important; }
+  #dashRow2 > div:last-child { grid-column: span 2; }
+}
 @media (max-width: 768px) {
   .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
   .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
@@ -205,6 +209,8 @@ tbody tr:hover { background: var(--surface2); }
   .main-content { margin-left: 0; padding-top: 60px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .meta-row { grid-template-columns: 1fr; }
+  #dashRow2 { grid-template-columns: 1fr !important; }
+  #dashRow2 > div:last-child { grid-column: span 1; }
 }
 </style>
 </head>
@@ -402,8 +408,8 @@ tbody tr:hover { background: var(--surface2); }
             <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 2: MONTH CARDS + PROGRESS -->
-        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- ROW 2: MONTH CARDS + PROGRESS + CATEGORY (3 คอลัมน์) -->
+        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 0.9fr 1.2fr;gap:16px;margin-bottom:16px">
 
           <!-- แผนสอบเทียบรายเดือน (ซ้าย) -->
           <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
@@ -420,7 +426,7 @@ tbody tr:hover { background: var(--surface2); }
             <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
           </div>
 
-          <!-- สถานะภาพรวม (ขวา) -->
+          <!-- สถานะภาพรวม (กลาง) -->
           <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
             <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px">สถานะภาพรวม</div>
 
@@ -474,15 +480,14 @@ tbody tr:hover { background: var(--surface2); }
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- ROW 3: ประเภทเครื่องมือ -->
-        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div style="font-size:16px;font-weight:600;color:var(--text)">ประเภทเครื่องมือ</div>
+          <!-- ประเภทเครื่องมือ (ขวา) -->
+          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;overflow-y:auto;max-height:420px">
+            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px">ประเภทเครื่องมือ</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเพื่อกรองตามประเภท</div>
+            <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
           </div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเพื่อกรองตามประเภท</div>
-          <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"></div>
+
         </div>
 
         <!-- ROW 4: FILTER + TABLE -->
