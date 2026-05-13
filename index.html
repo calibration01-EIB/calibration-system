@@ -402,30 +402,6 @@ tbody tr:hover { background: var(--surface2); }
             <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 1: 4 STAT CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="stat-card" style="border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer" onclick="filterByStatus('')">
-            <div class="stat-label">✏️ เครื่องมือทั้งหมด</div>
-            <div class="stat-num" id="statTotal">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card ok" style="border-radius:12px;padding:16px;cursor:pointer" onclick="filterByStatus('ok')">
-            <div class="stat-label">✅ สอบเทียบแล้ว (ปกติ)</div>
-            <div class="stat-num" id="statOk">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card overdue" style="border-radius:12px;padding:16px;cursor:pointer" onclick="filterByStatus('overdue')">
-            <div class="stat-label">🔴 เกินกำหนดสอบเทียบ</div>
-            <div class="stat-num" id="statOverdue">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-          <div class="stat-card warning" style="border-radius:12px;padding:16px;cursor:pointer" onclick="filterByStatus('warning')">
-            <div class="stat-label">🟡 ใกล้ครบกำหนด (≤30 วัน)</div>
-            <div class="stat-num" id="statWarning">–</div>
-            <div class="stat-sub">เครื่อง</div>
-          </div>
-        </div>
-
         <!-- ROW 2: MONTH CARDS + PROGRESS -->
         <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
 
@@ -448,26 +424,43 @@ tbody tr:hover { background: var(--surface2); }
           <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
             <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px">สถานะภาพรวม</div>
 
-            <!-- Donut -->
-            <div style="display:flex;justify-content:center;margin-bottom:20px">
-              <div style="position:relative;width:140px;height:140px;margin:0 auto">
-                <canvas id="dashDonut" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สัดส่วนสถานะ</canvas>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-                  <div style="font-size:26px;font-weight:700;color:var(--text)" id="dashDonutPct">–%</div>
-                  <div style="font-size:12px;color:var(--text2)">ปกติ</div>
+            <!-- 4 stat cards -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="stat-card" style="border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('')">
+                  <div class="stat-label" style="font-size:13px">✏️ เครื่องมือทั้งหมด</div>
+                  <div class="stat-num" style="font-size:28px" id="statTotal">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+                <div class="stat-card ok" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('ok')">
+                  <div class="stat-label" style="font-size:13px">✅ สอบเทียบแล้ว (ปกติ)</div>
+                  <div class="stat-num" style="font-size:28px" id="statOk">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="stat-card overdue" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('overdue')">
+                  <div class="stat-label" style="font-size:13px">🔴 เกินกำหนดสอบเทียบ</div>
+                  <div class="stat-num" style="font-size:28px" id="statOverdue">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+                <div class="stat-card warning" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('warning')">
+                  <div class="stat-label" style="font-size:13px">🟡 ใกล้ครบ (≤30 วัน)</div>
+                  <div class="stat-num" style="font-size:28px" id="statWarning">–</div>
+                  <div class="stat-sub">เครื่อง</div>
                 </div>
               </div>
             </div>
 
             <!-- Progress bars -->
-            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
               <div>
                 <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
                   <span style="color:var(--text2)">สอบเทียบภายใน</span>
                   <span style="font-weight:600;color:var(--green)" id="dashPctIn">–%</span>
                 </div>
                 <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s" id="dashBarIn" style="width:0%"></div>
+                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s;width:0%" id="dashBarIn"></div>
                 </div>
               </div>
               <div>
@@ -476,26 +469,7 @@ tbody tr:hover { background: var(--surface2); }
                   <span style="font-weight:600;color:var(--accent)" id="dashPctOut">–%</span>
                 </div>
                 <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s" id="dashBarOut" style="width:0%"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Summary -->
-            <div style="padding-top:14px;border-top:1px solid var(--border)">
-              <div style="font-size:13px;color:var(--text2);margin-bottom:10px">สรุปสถานะ</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-                <div style="background:var(--green-light);border-radius:8px;padding:10px;cursor:pointer" onclick="filterByStatus('ok')">
-                  <div style="font-size:22px;font-weight:700;color:var(--green)" id="dashSumOk">–</div>
-                  <div style="font-size:12px;color:var(--green)">ปกติ</div>
-                </div>
-                <div style="background:var(--red-light);border-radius:8px;padding:10px;cursor:pointer" onclick="filterByStatus('overdue')">
-                  <div style="font-size:22px;font-weight:700;color:var(--red)" id="dashSumOver">–</div>
-                  <div style="font-size:12px;color:var(--red)">เกินกำหนด</div>
-                </div>
-                <div style="background:var(--amber-light);border-radius:8px;padding:10px;cursor:pointer" onclick="filterByStatus('warning')">
-                  <div style="font-size:22px;font-weight:700;color:var(--amber)" id="dashSumWarn">–</div>
-                  <div style="font-size:12px;color:var(--amber)">ใกล้ครบ</div>
+                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s;width:0%" id="dashBarOut"></div>
                 </div>
               </div>
             </div>
@@ -2163,15 +2137,16 @@ function renderMonthly() {
     const MONTH_EN_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const MONTH_EN_F = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:12px;padding:16px 12px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    const MONTH_TH_S = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
     card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
         <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
       </div>
-      <div style="font-size:26px;font-weight:700;color:${color};line-height:1;margin-bottom:3px">${MONTH_EN_S[i]}</div>
-      <div style="font-size:13px;color:${color};opacity:.6;margin-bottom:10px">${MONTH_EN_F[i]}</div>
-      <div style="font-size:24px;font-weight:700;color:${color};line-height:1">${cnt}</div>
-      <div style="font-size:13px;color:${color};opacity:.7;margin-top:3px">เครื่อง</div>`;
+      <div style="font-size:22px;font-weight:700;color:${color};line-height:1;margin-bottom:2px">${MONTH_EN_S[i]}</div>
+      <div style="font-size:12px;color:${color};opacity:.7;margin-bottom:2px">${MONTH_TH_S[i]} / ${MONTH_EN_F[i]}</div>
+      <div style="font-size:22px;font-weight:700;color:${color};line-height:1;margin-top:6px">${cnt}</div>
+      <div style="font-size:12px;color:${color};opacity:.7;margin-top:2px">เครื่อง</div>`;
     if (cnt) card.addEventListener('click', () => filterByMonth(i, card));
     grid.appendChild(card);
   }
