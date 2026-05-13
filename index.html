@@ -401,26 +401,53 @@ tbody tr:hover { background: var(--surface2); }
             <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- MONTH CARDS -->
-        <div id="monthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;margin-bottom:16px"></div>
+        <!-- ROW 1: STATS + MONTH CARDS -->
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;margin-bottom:16px;align-items:start">
 
-        <div class="stats-grid">
-          <div class="stat-card overdue"><div class="stat-label">🔴 เลยกำหนดแล้ว</div><div class="stat-num" id="statOverdue">–</div><div class="stat-sub">เครื่อง</div></div>
-          <div class="stat-card warning"><div class="stat-label">🟡 ใกล้ครบ (≤30 วัน)</div><div class="stat-num" id="statWarning">–</div><div class="stat-sub">เครื่อง</div></div>
-          <div class="stat-card ok"><div class="stat-label">🟢 ปกติ</div><div class="stat-num" id="statOk">–</div><div class="stat-sub">เครื่อง</div></div>
-          <div class="stat-card total"><div class="stat-label">📦 ทั้งหมด</div><div class="stat-num" id="statTotal">–</div><div class="stat-sub">เครื่อง</div></div>
+          <!-- Stats cards (ซ้าย) -->
+          <div style="display:flex;flex-direction:column;gap:10px;min-width:200px">
+            <div class="stat-card overdue" style="cursor:pointer" onclick="filterByStatus('overdue')">
+              <div class="stat-label">🔴 เลยกำหนดแล้ว</div>
+              <div class="stat-num" id="statOverdue">–</div>
+              <div class="stat-sub">เครื่อง</div>
+            </div>
+            <div class="stat-card warning" style="cursor:pointer" onclick="filterByStatus('warning')">
+              <div class="stat-label">🟡 ใกล้ครบ (≤30 วัน)</div>
+              <div class="stat-num" id="statWarning">–</div>
+              <div class="stat-sub">เครื่อง</div>
+            </div>
+            <div class="stat-card ok" style="cursor:pointer" onclick="filterByStatus('ok')">
+              <div class="stat-label">🟢 ปกติ</div>
+              <div class="stat-num" id="statOk">–</div>
+              <div class="stat-sub">เครื่อง</div>
+            </div>
+            <div class="stat-card total" style="cursor:pointer" onclick="filterByStatus('')">
+              <div class="stat-label">📦 ทั้งหมด</div>
+              <div class="stat-num" id="statTotal">–</div>
+              <div class="stat-sub">เครื่อง</div>
+            </div>
+          </div>
+
+          <!-- Month cards (ขวา) -->
+          <div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📅 ครบกำหนดรายเดือน — กดเพื่อกรอง</div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px"></div>
+          </div>
+
         </div>
+
+        <!-- ROW 2: FILTER + TABLE -->
         <div class="controls-bar">
-          <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT...">
-          <select id="typeFilter"><option value="">ทุกประเภท</option></select>
-          <select id="unitFilter"><option value="">ทุกหน่วยงาน</option></select>
-          <select id="statusFilter">
+          <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT..." oninput="filterData()">
+          <select id="typeFilter" onchange="filterData()"><option value="">ทุกประเภท</option></select>
+          <select id="unitFilter" onchange="filterData()"><option value="">ทุกหน่วยงาน</option></select>
+          <select id="statusFilter" onchange="filterData()">
             <option value="">ทุกสถานะ</option>
             <option value="overdue">เลยกำหนด</option>
             <option value="warning">ใกล้ครบ</option>
             <option value="ok">ปกติ</option>
           </select>
-          <select id="monthFilter">
+          <select id="monthFilter" onchange="filterData()">
             <option value="">ทุกเดือน (ครบกำหนด)</option>
             <option value="1">มกราคม</option>
             <option value="2">กุมภาพันธ์</option>
@@ -440,6 +467,7 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
           <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
         </div>
+
         <!-- PAGINATION TOP -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:15px;color:var(--text2)" id="paginationInfo">–</div>
@@ -488,7 +516,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
 
-      <!-- AUDIT LOG -->
+            <!-- AUDIT LOG -->
       <div id="pageAudit" class="page-content" style="display:none">
         <div class="section-header">
           <h2>Audit Log — ประวัติการแก้ไข</h2>
@@ -1983,6 +2011,13 @@ function showD2MonthDetail(monthIdx, items, card) {
   document.getElementById('d2mOverdue').textContent = items.filter(d => d.days_left < 0).length;
   document.getElementById('d2mOk').textContent = items.filter(d => d.days_left >= 0).length;
   document.getElementById('d2MonthDetail').style.display = 'block';
+}
+
+
+function filterByStatus(status) {
+  document.getElementById('statusFilter').value = status;
+  filterData();
+  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
