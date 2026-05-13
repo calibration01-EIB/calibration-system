@@ -925,24 +925,25 @@ function populateFilters() {
 }
 
 function updateStats() {
-  // อัพเดท donut และ progress bars
-  const total = allData.length;
-  let ok = 0, ov = 0, wa = 0;
-  allData.forEach(d => {
+  let ov = 0, wa = 0, ok = 0;
+  filteredData.forEach(d => {
     if (d.days_left === null) return;
     if (d.days_left < 0) ov++;
     else if (d.days_left <= 30) wa++;
     else ok++;
   });
+  document.getElementById('statOverdue').textContent = ov;
+  document.getElementById('statWarning').textContent = wa;
 
-  // Stat cards
+  // อัพเดท total และ ok
   const elTotal = document.getElementById('statTotal');
   const elOk = document.getElementById('statOk');
-  if (elTotal) elTotal.textContent = total.toLocaleString();
-  if (elOk) elOk.textContent = ok.toLocaleString();
+  if (elTotal) elTotal.textContent = allData.length.toLocaleString();
+  if (elOk) elOk.textContent = (allData.length - ov - wa).toLocaleString();
 
   // Donut
-  const pct = total > 0 ? Math.round(ok/total*100) : 0;
+  const okCount = allData.length - ov - wa;
+  const pct = allData.length > 0 ? Math.round(okCount/allData.length*100) : 0;
   const pctEl = document.getElementById('dashDonutPct');
   if (pctEl) pctEl.textContent = pct + '%';
   const donutCanvas = document.getElementById('dashDonut');
@@ -950,11 +951,10 @@ function updateStats() {
     if (window._dashDonut) window._dashDonut.destroy();
     window._dashDonut = new Chart(donutCanvas, {
       type: 'doughnut',
-      data: { datasets: [{ data: [ok, ov, wa], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
+      data: { datasets: [{ data: [okCount, ov, wa], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
       options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
     });
   }
-
   // Progress
   const internal = allData.filter(d => d.cal_type === 'ภายใน');
   const external = allData.filter(d => d.cal_type === 'ภายนอก');
@@ -970,25 +970,13 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
-
   // Summary
   const sOk = document.getElementById('dashSumOk');
   const sOv = document.getElementById('dashSumOver');
   const sWa = document.getElementById('dashSumWarn');
-  if (sOk) sOk.textContent = ok;
+  if (sOk) sOk.textContent = okCount;
   if (sOv) sOv.textContent = ov;
   if (sWa) sWa.textContent = wa;
-
-function updateStats() {
-  let ov = 0, wa = 0, ok = 0;
-  filteredData.forEach(d => {
-    if (d.days_left === null) return;
-    if (d.days_left < 0) ov++;
-    else if (d.days_left <= 30) wa++;
-    else ok++;
-  });
-  document.getElementById('statOverdue').textContent = ov;
-  document.getElementById('statWarning').textContent = wa;
   document.getElementById('statOk').textContent = ok;
   document.getElementById('statTotal').textContent = filteredData.length;
 }
