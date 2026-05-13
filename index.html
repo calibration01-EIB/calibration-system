@@ -431,7 +431,7 @@ tbody tr:hover { background: var(--surface2); }
           <!-- Month cards (ขวา) -->
           <div>
             <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📅 ครบกำหนดรายเดือน — กดเพื่อกรอง</div>
-            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px"></div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
           </div>
 
         </div>
@@ -2047,10 +2047,18 @@ function renderMonthly() {
     else { bg='var(--surface2)'; color='var(--text2)'; border='var(--border)'; }
     const card = document.createElement('div');
     card.id = `mcard-${i}`;
-    card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:var(--radius);padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
-    card.innerHTML = `<div style="font-size:18px;font-weight:600;color:${color};margin-bottom:4px">${MONTH_NAMES_SHORT[i]}</div>
-      <div style="font-size:32px;font-weight:600;color:${color};line-height:1">${cnt}</div>
-      <div style="font-size:16px;color:${color};margin-top:4px;opacity:.8">เครื่อง</div>`;
+    const MONTH_EN_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_EN_F = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:12px;padding:16px 12px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
+      </div>
+      <div style="font-size:26px;font-weight:700;color:${color};line-height:1;margin-bottom:3px">${MONTH_EN_S[i]}</div>
+      <div style="font-size:13px;color:${color};opacity:.6;margin-bottom:10px">${MONTH_EN_F[i]}</div>
+      <div style="font-size:24px;font-weight:700;color:${color};line-height:1">${cnt}</div>
+      <div style="font-size:13px;color:${color};opacity:.7;margin-top:3px">เครื่อง</div>`;
     if (cnt) card.addEventListener('click', () => filterByMonth(i, card));
     grid.appendChild(card);
   }
