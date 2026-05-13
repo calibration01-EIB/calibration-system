@@ -408,8 +408,8 @@ tbody tr:hover { background: var(--surface2); }
             <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 2: MONTH CARDS + PROGRESS + CATEGORY (3 คอลัมน์) -->
-        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 0.9fr 1.2fr;gap:16px;margin-bottom:16px">
+        <!-- ROW 2: MONTH CARDS + PROGRESS (2 คอลัมน์) -->
+        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
 
           <!-- แผนสอบเทียบรายเดือน (ซ้าย) -->
           <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
@@ -426,7 +426,7 @@ tbody tr:hover { background: var(--surface2); }
             <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
           </div>
 
-          <!-- สถานะภาพรวม (กลาง) -->
+          <!-- สถานะภาพรวม (ขวา) -->
           <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
             <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px">สถานะภาพรวม</div>
 
@@ -480,14 +480,13 @@ tbody tr:hover { background: var(--surface2); }
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- ประเภทเครื่องมือ (ขวา) -->
-          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;overflow-y:auto;max-height:420px">
-            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px">ประเภทเครื่องมือ</div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเพื่อกรองตามประเภท</div>
-            <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
-          </div>
-
+        <!-- ROW 3: ประเภทเครื่องมือ — สถานะล่าสุด (เต็มแถว) -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px">ประเภทเครื่องมือ — สถานะล่าสุด</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:16px">กดการ์ดเพื่อกรองตามประเภท</div>
+          <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
         </div>
 
         <!-- ROW 4: FILTER + TABLE -->
@@ -1631,47 +1630,66 @@ function renderCategoryCards() {
     ['อื่นๆ (Others)', 'Others'],
   ];
 
-  // นับจำนวนจาก allData
-  const counts = {};
+  const today = new Date();
+
+  // นับจำนวนและสถานะจาก allData
+  const stats = {};
   allData.forEach(d => {
     const t = d.instrument_type || 'อื่นๆ (Others)';
-    counts[t] = (counts[t] || 0) + 1;
+    if (!stats[t]) stats[t] = { total: 0, overdue: 0, warning: 0, ok: 0 };
+    stats[t].total++;
+    const due = d.due_date ? new Date(d.due_date) : null;
+    if (!due) { stats[t].ok++; return; }
+    const diff = Math.ceil((due - today) / 86400000);
+    if (diff < 0) stats[t].overdue++;
+    else if (diff <= 30) stats[t].warning++;
+    else stats[t].ok++;
   });
 
   CAT_14.forEach(([fullName, enName]) => {
-    const cnt = counts[fullName] || 0;
+    const s = stats[fullName] || { total: 0, overdue: 0, warning: 0, ok: 0 };
+    const cnt = s.total;
     const thName = fullName.split(' (')[0];
     const isActive = activeCategory === fullName;
 
-    // สีตามสถานะ active หรือมีข้อมูล
-    let bg, color, border;
-    if (isActive) {
-      bg = 'var(--accent)'; color = 'white'; border = 'var(--accent)';
-    } else if (cnt > 0) {
-      bg = 'var(--green-light)'; color = 'var(--green)'; border = '#b8e0bf';
+    // คำนวณ % ที่ยังไม่ครบ/ปกติ = overdue+warning / total
+    const notOkPct = cnt > 0 ? Math.round((s.overdue + s.warning) / cnt * 100) : 0;
+    const okPct = 100 - notOkPct;
+
+    // สีตามสถานะ
+    let barColor, statusText, statusColor;
+    if (s.overdue > 0) {
+      barColor = 'var(--red)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--red)';
+    } else if (s.warning > 0) {
+      barColor = 'var(--amber)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--amber)';
     } else {
-      bg = 'var(--surface2)'; color = 'var(--text2)'; border = 'var(--border)';
+      barColor = 'var(--green)'; statusText = `${okPct}% ปกติ`; statusColor = 'var(--green)';
     }
 
+    // สี card
+    const cardBg = isActive ? '#e8f5e9' : (cnt === 0 ? 'var(--surface2)' : 'white');
+    const cardBorder = isActive ? 'var(--green)' : (cnt === 0 ? 'var(--border)' : 'var(--border)');
+    const boxShadow = isActive ? '0 0 0 2px var(--green)' : 'none';
+
     const card = document.createElement('div');
-    card.style.cssText = `background:${bg};border:1.5px solid ${border};border-radius:10px;padding:14px 10px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.style.cssText = `background:${cardBg};border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:12px;padding:16px;cursor:${cnt?'pointer':'default'};transition:all .15s`;
     card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="width:6px;height:6px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
-        <span style="width:6px;height:6px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
+      <div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:2px">${thName}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">(${enName})</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px">${cnt > 0 ? cnt : '–'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">เครื่อง</div>
+      ${cnt > 0 ? `
+      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden">
+        <div style="height:100%;width:${okPct}%;background:${barColor};border-radius:3px;transition:width .5s"></div>
       </div>
-      <div style="font-size:15px;font-weight:600;color:${color};line-height:1.3;margin-bottom:2px">${thName}</div>
-      <div style="font-size:12px;color:${color};opacity:.7;margin-bottom:10px">${enName}</div>
-      <div style="font-size:26px;font-weight:700;color:${color};line-height:1">${cnt||'–'}</div>
-      <div style="font-size:12px;color:${color};opacity:.7;margin-top:2px">เครื่อง</div>`;
+      <div style="font-size:12px;color:${statusColor};font-weight:500">${statusText}</div>
+      ` : `<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
 
     if (cnt) {
+      card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = 'var(--green)'; card.style.transform = 'translateY(-1px)'; });
+      card.addEventListener('mouseleave', () => { if (activeCategory !== fullName) card.style.borderColor = cardBorder; card.style.transform = ''; });
       card.addEventListener('click', () => {
-        if (activeCategory === fullName) {
-          activeCategory = 'all';
-        } else {
-          activeCategory = fullName;
-        }
+        activeCategory = (activeCategory === fullName) ? 'all' : fullName;
         renderCategoryCards();
         filterData();
       });
