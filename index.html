@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <meta name="theme-color" content="#1a2f4a">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -449,8 +450,8 @@ tbody tr:hover { background: var(--surface2); }
 
             <!-- Donut -->
             <div style="display:flex;justify-content:center;margin-bottom:20px">
-              <div style="position:relative;width:130px;height:130px">
-                <canvas id="dashDonut" width="130" height="130" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สัดส่วนสถานะ</canvas>
+              <div style="position:relative;width:140px;height:140px;margin:0 auto">
+                <canvas id="dashDonut" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สัดส่วนสถานะ</canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
                   <div style="font-size:26px;font-weight:700;color:var(--text)" id="dashDonutPct">–%</div>
                   <div style="font-size:12px;color:var(--text2)">ปกติ</div>
@@ -878,20 +879,30 @@ async function loadData() {
   try {
     // ดึงข้อมูลทั้งหมด (Supabase default limit 1000 ต้องใช้ range)
     let allRows = [];
-    let from = 0;
     const chunkSize = 1000;
-    while (true) {
-      let query = sb.from('instruments').select('*').order('id').range(from, from + chunkSize - 1);
-      // กรองเฉพาะประเภทที่รับผิดชอบ (ถ้าไม่ใช่ Admin)
-      if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
-        query = query.in('instrument_type', currentUser.instrument_types);
+    // ดึง chunk แรกก่อน
+    let query0 = sb.from('instruments').select('*').order('id').range(0, chunkSize - 1);
+    if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
+      query0 = query0.in('instrument_type', currentUser.instrument_types);
+    }
+    const { data: first, error: err0 } = await query0;
+    if (err0) throw err0;
+    allRows = first || [];
+    // ถ้ายังมีเพิ่ม ดึงต่อ
+    if (allRows.length === chunkSize) {
+      let from = chunkSize;
+      while (true) {
+        let q = sb.from('instruments').select('*').order('id').range(from, from + chunkSize - 1);
+        if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
+          q = q.in('instrument_type', currentUser.instrument_types);
+        }
+        const { data: chunk, error: err } = await q;
+        if (err) throw err;
+        if (!chunk || chunk.length === 0) break;
+        allRows = allRows.concat(chunk);
+        if (chunk.length < chunkSize) break;
+        from += chunkSize;
       }
-      const { data: chunk, error: err } = await query;
-      if (err) throw err;
-      if (!chunk || chunk.length === 0) break;
-      allRows = allRows.concat(chunk);
-      if (chunk.length < chunkSize) break;
-      from += chunkSize;
     }
     const data = allRows;
     const error = null;
@@ -952,7 +963,7 @@ function updateStats() {
     window._dashDonut = new Chart(donutCanvas, {
       type: 'doughnut',
       data: { datasets: [{ data: [okCount, ov, wa], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
-      options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
     });
   }
   // Progress
