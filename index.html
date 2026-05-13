@@ -905,6 +905,7 @@ async function loadData() {
     updateStats();
     renderTable();
     renderMonthly();
+    renderCategoryCards();
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
