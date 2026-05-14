@@ -924,7 +924,7 @@ function filterData() {
       if (status === 'ok' && d.days_left <= 30) return false;
     }
     if (month && d.due_date) {
-      const m = new Date(d.due_date).getMonth() + 1;
+      const m = parseInt(d.due_date.slice(5, 7), 10); // YYYY-MM-DD ไม่ผ่าน timezone
       if (String(m) !== month) return false;
     }
     return true;
@@ -1547,29 +1547,37 @@ function renderMonthly() {
   if (!allData.length) { setTimeout(renderMonthly, 500); return; }
   const byMonth = {};
   for (let i = 0; i < 12; i++) byMonth[i] = [];
+
+  // ใช้ string slice เพื่อหลีกเลี่ยง timezone offset
   allData.forEach(d => {
     if (!d.due_date) return;
-    byMonth[new Date(d.due_date).getMonth()].push(d);
+    const mIdx = parseInt(d.due_date.slice(5, 7), 10) - 1; // 0-11
+    byMonth[mIdx].push(d);
   });
+
   const grid = document.getElementById('monthGrid');
   if (!grid) return;
   grid.innerHTML = '';
+
   for (let i = 0; i < 12; i++) {
     const items = byMonth[i];
     const cnt = items.length;
-    const ov  = items.filter(d => d.days_left !== null && d.days_left < 0).length;
-    const wa  = items.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
-    const barColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
-    const numColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
+    // นับ ov/wa จาก days_left ซึ่งบอกสถานะปัจจุบัน
+    const ov = items.filter(d => d.days_left !== null && d.days_left < 0).length;
+    const wa = items.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
+    const barColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
+    const numColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
+
     const card = document.createElement('div');
     card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
     card.innerHTML = `
       <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500">${MONTH_NAMES_SHORT[i]}</div>
       <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
       <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px">
-        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
+        <div style="width:${cnt ? Math.min(100, Math.round((ov + wa) / cnt * 100)) : 0}%;height:100%;background:${barColor};border-radius:2px"></div>
       </div>
-      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
+      <div style="font-size:10px;color:${barColor}">${ov > 0 ? '🔴 ' + ov : wa > 0 ? '🟡 ' + wa : cnt > 0 ? '🟢' : '–'}</div>`;
+
     if (cnt) {
       card.addEventListener('mouseenter', () => { card.style.borderColor = barColor; card.style.transform = 'translateY(-1px)'; });
       card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = 'var(--border)'; card.style.transform = ''; } });
