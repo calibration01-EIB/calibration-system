@@ -1602,7 +1602,8 @@ function printReport() {
 <title>รายงานสอบเทียบเครื่องมือ</title>
 <style>
   @page { size: A4 landscape; margin: 12mm 10mm; }
-  @page { margin-top: 8mm; } 
+  @page { margin-top: 8mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Sarabun','Segoe UI',Tahoma,sans-serif; font-size: 8pt; color: #222; }
   .header { text-align:center; margin-bottom:12px; border-bottom:2px solid #00695C; padding-bottom:10px; }
@@ -1664,7 +1665,13 @@ function printReport() {
     <span>Calibration (EIB)</span>
     <span>พิมพ์วันที่ ${todayStr}</span>
   </div>
-  <script>window.onload = () => window.print();<\/script>
+  <script>
+    window.onload = function() {
+      // แจ้งให้ปิด Headers and Footers ก่อนพิมพ์
+      document.title = ' '; // ล้าง title เพื่อไม่ให้ browser แสดงชื่อ
+      setTimeout(() => window.print(), 300);
+    };
+  <\/script>
 </body>
 </html>`;
 
