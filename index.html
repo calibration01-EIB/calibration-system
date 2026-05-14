@@ -375,7 +375,7 @@ tbody tr:hover { background: var(--surface2); }
             <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
           </select>
           <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
-          <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
+          <button class="btn-refresh" onclick="loadData(true)">↻ รีเฟรช</button>
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
           <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
         </div>
@@ -726,44 +726,14 @@ function doLogout() { clearSession(); location.reload(); }
 // ====================================================
 let allData = [], filteredData = [];
 
-async function loadData() {
-  showLoading('กำลังโหลดข้อมูล...');
-  try {
-    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark';
-    const chunkSize = 500;
-    const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
+async function loadData(forceRefresh = false) {
+  const CACHE_KEY = 'ilc_instruments_cache';
+  const CACHE_TIME_KEY = 'ilc_instruments_cache_time';
+  const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
 
-    // 1) ดึง count ก่อนเพื่อรู้จำนวน chunk
-    let countQ = sb.from('instruments').select('id', { count: 'exact', head: true });
-    if (isFiltered) countQ = countQ.in('instrument_type', currentUser.instrument_types);
-    const { count, error: cErr } = await countQ;
-    if (cErr) throw cErr;
-
-    // 2) สร้าง array ของ chunk ranges
-    const total = count || 0;
-    const chunks = [];
-    for (let from = 0; from < total; from += chunkSize) {
-      chunks.push([from, Math.min(from + chunkSize - 1, total - 1)]);
-    }
-
-    // 3) fetch ทุก chunk พร้อมกัน (parallel)
-    showLoading(`กำลังโหลด ${total.toLocaleString()} รายการ...`);
-    const fetches = chunks.map(([from, to]) => {
-      let q = sb.from('instruments').select(COLS).order('id').range(from, to);
-      if (isFiltered) q = q.in('instrument_type', currentUser.instrument_types);
-      return q;
-    });
-    const results = await Promise.all(fetches);
-
-    // 4) รวมข้อมูล
-    let allRows = [];
-    for (const { data, error } of results) {
-      if (error) throw error;
-      if (data) allRows = allRows.concat(data);
-    }
-
+  const procesData = (rows) => {
     const today = new Date(); today.setHours(0,0,0,0);
-    allData = allRows.map(d => ({
+    allData = rows.map(d => ({
       ...d,
       days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
     }));
@@ -773,11 +743,83 @@ async function loadData() {
     renderTable();
     renderMonthly();
     renderCategoryCards();
+  };
+
+  // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const cachedTime = parseInt(localStorage.getItem(CACHE_TIME_KEY) || '0');
+    const age = Date.now() - cachedTime;
+    if (!forceRefresh && cached && age < CACHE_TTL) {
+      procesData(JSON.parse(cached));
+      hideLoading();
+      setDriveStatus(true, 'แคช ' + Math.round(age/1000) + 'วินาทีที่แล้ว');
+      // refresh ใน background เงียบๆ
+      fetchFromSupabase().then(rows => {
+        if (rows) {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+          procesData(rows);
+          setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
+        }
+      });
+      return;
+    }
+  } catch(e) { /* cache miss */ }
+
+  // ไม่มี cache หรือหมดอายุ → โหลดจาก Supabase ปกติ
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    const rows = await fetchFromSupabase();
+    if (!rows) return;
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+      localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+    } catch(e) { /* storage full */ }
+    procesData(rows);
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
   } finally { hideLoading(); }
+}
+
+async function fetchFromSupabase() {
+  try {
+    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark';
+    const chunkSize = 500;
+    const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
+
+    // ดึง count
+    let countQ = sb.from('instruments').select('id', { count: 'exact', head: true });
+    if (isFiltered) countQ = countQ.in('instrument_type', currentUser.instrument_types);
+    const { count, error: cErr } = await countQ;
+    if (cErr) throw cErr;
+
+    const total = count || 0;
+    const chunks = [];
+    for (let from = 0; from < total; from += chunkSize) {
+      chunks.push([from, Math.min(from + chunkSize - 1, total - 1)]);
+    }
+
+    // parallel fetch
+    const fetches = chunks.map(([from, to]) => {
+      let q = sb.from('instruments').select(COLS).order('id').range(from, to);
+      if (isFiltered) q = q.in('instrument_type', currentUser.instrument_types);
+      return q;
+    });
+    const results = await Promise.all(fetches);
+
+    let allRows = [];
+    for (const { data, error } of results) {
+      if (error) throw error;
+      if (data) allRows = allRows.concat(data);
+    }
+    return allRows;
+  } catch(e) {
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+    return null;
+  }
 }
 
 // ====================================================
