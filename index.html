@@ -872,38 +872,23 @@ function updateStats() {
     else if (d.days_left <= 30) wa++;
     else ok++;
   });
+  const total = filteredData.length;
+  const okCount = total - ov - wa;
+
+  document.getElementById('statTotal').textContent = total.toLocaleString();
+  document.getElementById('statOk').textContent = okCount.toLocaleString();
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
 
-  // อัพเดท total และ ok
-  const elTotal = document.getElementById('statTotal');
-  const elOk = document.getElementById('statOk');
-  if (elTotal) elTotal.textContent = allData.length.toLocaleString();
-  if (elOk) elOk.textContent = (allData.length - ov - wa).toLocaleString();
-
-  // sync กับ element ใน summary box ใหม่
+  // summary box
   const el2Ok = document.getElementById('statOk2');
   const el2Ov = document.getElementById('statOverdue2');
   const el2Wa = document.getElementById('statWarning2');
-  if (el2Ok) el2Ok.textContent = (allData.length - ov - wa).toLocaleString();
+  if (el2Ok) el2Ok.textContent = okCount.toLocaleString();
   if (el2Ov) el2Ov.textContent = ov.toLocaleString();
   if (el2Wa) el2Wa.textContent = wa.toLocaleString();
 
-  // Donut
-  const okCount = allData.length - ov - wa;
-  const pct = allData.length > 0 ? Math.round(okCount/allData.length*100) : 0;
-  const pctEl = document.getElementById('dashDonutPct');
-  if (pctEl) pctEl.textContent = pct + '%';
-  const donutCanvas = document.getElementById('dashDonut');
-  if (donutCanvas) {
-    if (window._dashDonut) window._dashDonut.destroy();
-    window._dashDonut = new Chart(donutCanvas, {
-      type: 'doughnut',
-      data: { datasets: [{ data: [okCount, ov, wa], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
-    });
-  }
-  // Progress
+  // Progress bars (ใช้ allData เสมอ เพราะเป็นภาพรวมทั้งหมด)
   const internal = allData.filter(d => d.cal_type === 'ภายใน');
   const external = allData.filter(d => d.cal_type === 'ภายนอก');
   const inOk = internal.filter(d => d.days_left !== null && d.days_left >= 0).length;
@@ -918,13 +903,6 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
-  // Summary
-  const sOk = document.getElementById('dashSumOk');
-  const sOv = document.getElementById('dashSumOver');
-  const sWa = document.getElementById('dashSumWarn');
-  if (sOk) sOk.textContent = okCount;
-  if (sOv) sOv.textContent = ov;
-  if (sWa) sWa.textContent = wa;
 }
 
 function filterData() {
@@ -932,12 +910,14 @@ function filterData() {
   const type = document.getElementById('typeFilter').value;
   const unit = document.getElementById('unitFilter').value;
   const status = document.getElementById('statusFilter').value;
-
   const month = document.getElementById('monthFilter').value;
+
   filteredData = allData.filter(d => {
     if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
     if (type && d.instrument_type !== type) return false;
     if (unit && d.department !== unit) return false;
+    // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
+    if (activeCategory && activeCategory !== 'all' && d.instrument_type !== activeCategory) return false;
     if (status && d.days_left !== null) {
       if (status === 'overdue' && d.days_left >= 0) return false;
       if (status === 'warning' && (d.days_left < 0 || d.days_left > 30)) return false;
