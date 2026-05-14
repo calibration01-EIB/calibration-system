@@ -202,15 +202,27 @@ tbody tr:hover { background: var(--surface2); }
   #dashRow2 > div:last-child { grid-column: span 2; }
 }
 @media (max-width: 768px) {
-  .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
-  .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
-  .sidebar-nav { display: none; }
-  .sidebar-user { border: none; padding: 0; }
-  .main-content { margin-left: 0; padding-top: 60px; }
+  .sidebar { display: none !important; }
+  .main-content { margin-left: 0 !important; padding-top: 0 !important; padding-bottom: 70px !important; }
+  .page-content { padding: 12px !important; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .meta-row { grid-template-columns: 1fr; }
   #dashRow2 { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: span 1; }
+  .topbar { padding: 10px 14px !important; }
+  .kpi-grid-mobile { display: grid !important; }
+  .kpi-grid-desktop { display: none !important; }
+  .table-wrap { display: none !important; }
+  .mobile-card-list { display: block !important; }
+  .controls-bar { flex-wrap: wrap; gap: 6px !important; }
+  .controls-bar input { width: 100% !important; }
+  .bottom-nav { display: flex !important; }
+  #categoryGrid { grid-template-columns: repeat(2,1fr) !important; }
+}
+@media (min-width: 769px) {
+  .kpi-grid-mobile { display: none !important; }
+  .mobile-card-list { display: none !important; }
+  .bottom-nav { display: none !important; }
 }
 </style>
 </head>
@@ -674,6 +686,29 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
+<!-- BOTTOM NAV (mobile only) -->
+<div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
+  <div onclick="showPage('dashboard')" id="bnav-dashboard" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+    <div style="font-size:22px">📊</div>
+    <div style="font-size:10px;color:var(--accent);font-weight:600" id="bnav-dashboard-lbl">Dashboard</div>
+  </div>
+  <div onclick="showPage('admin')" id="bnav-admin" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
+    <div style="font-size:22px">👥</div>
+    <div style="font-size:10px;color:var(--text3)">ผู้ใช้</div>
+  </div>
+  <div onclick="showPage('audit')" id="bnav-audit" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
+    <div style="font-size:22px">📋</div>
+    <div style="font-size:10px;color:var(--text3)">Audit Log</div>
+  </div>
+  <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+    <div style="font-size:22px">↩️</div>
+    <div style="font-size:10px;color:var(--text3)">ออกจากระบบ</div>
+  </div>
+</div>
+
+<!-- MOBILE CARD LIST -->
+<div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
+
 <script>
 // ====================================================
 // SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
@@ -953,6 +988,58 @@ function formatDate(s) {
   return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
+function renderMobileCards() {
+  const el = document.getElementById('mobileCardList');
+  if (!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = (currentPage - 1) * pageSize;
+  const rows = filteredData.slice(start, start + pageSize);
+
+  el.innerHTML = rows.map((d, i) => {
+    const days = d.days_left;
+    let badge = '', rowBg = '', daysText = '';
+    if (days !== null && days < 0) {
+      badge = `<span style="background:#fdecea;color:#C62828;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">เกินกำหนด</span>`;
+      daysText = `<span style="font-size:11px;color:#C62828">${days} วัน</span>`;
+      rowBg = '#fff8f8';
+    } else if (days !== null && days <= 30) {
+      badge = `<span style="background:#fff8e1;color:#F57F17;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ใกล้ครบ</span>`;
+      daysText = `<span style="font-size:11px;color:#F57F17">${days} วัน</span>`;
+      rowBg = '#fffdf0';
+    } else {
+      badge = `<span style="background:#e8f5e9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ปกติ</span>`;
+      daysText = `<span style="font-size:11px;color:#2E7D32">${days !== null ? days + ' วัน' : '–'}</span>`;
+    }
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const typShort = (d.instrument_type||'–').split(' (')[0];
+
+    return `<div style="background:${rowBg||'white'};border:0.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="flex:1;min-width:0;margin-right:8px">
+          <div style="font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${d.brand||''} · ${d.department||''}</div>
+        </div>
+        ${badge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text2)">🏷 <span style="color:var(--accent);font-weight:500">${d.id_code||'–'}</span></div>
+        <div style="font-size:11px;color:var(--text2)">📂 ${typShort}</div>
+        <div style="font-size:11px;color:var(--text2)">📅 ครบ: ${dueDate}</div>
+        <div style="font-size:11px">${daysText}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="openInstrumentModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="flex:1;padding:8px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent);cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
+        <button onclick="openCertModal(${JSON.stringify(d.id)},'${(d.id_code||'').replace(/'/g,"\\'")}','${(d.instrument_name||'').replace(/'/g,"\\'")}','${(d.instrument_type||'').replace(/'/g,"\\'")}','${(d.cal_date||'').replace(/'/g,"\\'")}','${(d.due_date||'').replace(/'/g,"\\'")}','${(d.cal_frequency||'').replace(/'/g,"\\'")}','${(d.cert_no||'').replace(/'/g,"\\'")}')" style="flex:1;padding:8px;background:var(--green-light);border:1px solid var(--green);border-radius:8px;font-size:13px;color:var(--green);cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
+      </div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;padding:32px;color:var(--text2)">ไม่พบข้อมูล</div>`;
+}
+
+function formatDate(s) {
+  if (!s) return '–';
+  return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
 function typeBadge(t) {
   if (!t) return '<span class="badge badge-gray">–</span>';
   const map = {
@@ -986,6 +1073,7 @@ function renderTable() {
   const start = (currentPage - 1) * pageSize;
   const pageData = filteredData.slice(start, start + pageSize);
   updatePaginationUI();
+  renderMobileCards();
   tbody.innerHTML = pageData.map((d, i) => {
   const rowNum = start + i + 1;
     const days = d.days_left;
