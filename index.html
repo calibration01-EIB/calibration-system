@@ -1602,12 +1602,13 @@ function printReport() {
 <title>รายงานสอบเทียบเครื่องมือ</title>
 <style>
   @page { size: A4 landscape; margin: 12mm 10mm; }
+  @page { margin-top: 8mm; } 
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Sarabun','Segoe UI',Tahoma,sans-serif; font-size: 8pt; color: #222; }
-  .header { display:flex; align-items:center; gap:14px; margin-bottom:10px; border-bottom:2px solid #00695C; padding-bottom:8px; }
-  .header-text h1 { font-size:14pt; color:#00695C; font-weight:700; margin-bottom:2px; }
-  .header-text p { font-size:8pt; color:#555; }
-  .logo-box { background:#00695C; color:white; font-size:12pt; font-weight:700; padding:6px 10px; border-radius:6px; letter-spacing:.05em; }
+  .header { text-align:center; margin-bottom:12px; border-bottom:2px solid #00695C; padding-bottom:10px; }
+  .logo-box { display:inline-block; background:#00695C; color:white; font-size:22pt; font-weight:700; padding:8px 18px; border-radius:8px; letter-spacing:.08em; margin-bottom:8px; }
+  .header h1 { font-size:16pt; color:#00695C; font-weight:700; margin-bottom:3px; }
+  .header p { font-size:8.5pt; color:#555; }
   .summary { display:flex; gap:10px; margin-bottom:10px; }
   .sum-card { flex:1; border-radius:6px; padding:8px 10px; text-align:center; }
   .sum-card .num { font-size:18pt; font-weight:700; line-height:1.2; }
@@ -1618,18 +1619,17 @@ function printReport() {
   .sum-card.tt { background:#e3f2fd; color:#1565C0; }
   .filter-info { font-size:7.5pt; color:#555; margin-bottom:8px; background:#f5f5f5; padding:4px 8px; border-radius:4px; border-left:3px solid #00695C; }
   table { width:100%; border-collapse:collapse; }
-  th { background:#00695C; color:white; padding:5px 6px; text-align:left; font-size:7.5pt; font-weight:600; white-space:nowrap; }
+  th { background:#00695C; color:white; padding:5px 6px; text-align:left; font-size:7.5pt; font-weight:700; white-space:nowrap; }
   td { padding:4px 6px; border-bottom:0.5px solid #e0e0e0; font-size:7.5pt; vertical-align:middle; white-space:nowrap; }
-  .footer { margin-top:10px; font-size:7pt; color:#888; text-align:right; border-top:1px solid #ddd; padding-top:5px; display:flex; justify-content:space-between; }
+  tr:nth-child(even) td { background:#f8f9fa; }
+  .footer { margin-top:10px; font-size:7pt; color:#888; border-top:1px solid #ddd; padding-top:5px; display:flex; justify-content:space-between; }
 </style>
 </head>
 <body>
   <div class="header">
     <div class="logo-box">ILC</div>
-    <div class="header-text">
-      <h1>รายงานสถานะการสอบเทียบเครื่องมือ</h1>
-      <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length.toLocaleString()} รายการ &nbsp;|&nbsp; International Laboratories Corp.,Ltd.</p>
-    </div>
+    <h1>รายงานสถานะการสอบเทียบเครื่องมือ</h1>
+    <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length.toLocaleString()} รายการ &nbsp;|&nbsp; International Laboratories Corp.,Ltd.</p>
   </div>
 
   <div class="summary">
@@ -1661,7 +1661,7 @@ function printReport() {
   </table>
 
   <div class="footer">
-    <span>ระบบสอบเทียบเครื่องมือ — ILC</span>
+    <span>Calibration (EIB)</span>
     <span>พิมพ์วันที่ ${todayStr}</span>
   </div>
   <script>window.onload = () => window.print();<\/script>
