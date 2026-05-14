@@ -1089,12 +1089,12 @@ function renderMobileCards() {
 
 function mobileEdit(i) {
   const d = window._mobileRows && window._mobileRows[i];
-  if (d) openInstrumentModal(d);
+  if (d) openInstrumentModal(d.id);
 }
 
 function mobileCert(i) {
   const d = window._mobileRows && window._mobileRows[i];
-  if (d) openCertModal(d.id, d.id_code||'', d.instrument_name||'', d.instrument_type||'', d.cal_date||'', d.due_date||'', d.cal_frequency||'', d.cert_no||'');
+  if (d) openCertModal(d.id, d.id_code||'', d.cert_no||'', d.instrument_name||'');
 }
 
 
