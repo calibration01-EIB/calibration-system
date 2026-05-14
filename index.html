@@ -729,39 +729,41 @@ let allData = [], filteredData = [];
 async function loadData() {
   showLoading('กำลังโหลดข้อมูล...');
   try {
-    // ดึงข้อมูลทั้งหมด (Supabase default limit 1000 ต้องใช้ range)
+    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark';
+    const chunkSize = 500;
+    const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
+
+    // 1) ดึง count ก่อนเพื่อรู้จำนวน chunk
+    let countQ = sb.from('instruments').select('id', { count: 'exact', head: true });
+    if (isFiltered) countQ = countQ.in('instrument_type', currentUser.instrument_types);
+    const { count, error: cErr } = await countQ;
+    if (cErr) throw cErr;
+
+    // 2) สร้าง array ของ chunk ranges
+    const total = count || 0;
+    const chunks = [];
+    for (let from = 0; from < total; from += chunkSize) {
+      chunks.push([from, Math.min(from + chunkSize - 1, total - 1)]);
+    }
+
+    // 3) fetch ทุก chunk พร้อมกัน (parallel)
+    showLoading(`กำลังโหลด ${total.toLocaleString()} รายการ...`);
+    const fetches = chunks.map(([from, to]) => {
+      let q = sb.from('instruments').select(COLS).order('id').range(from, to);
+      if (isFiltered) q = q.in('instrument_type', currentUser.instrument_types);
+      return q;
+    });
+    const results = await Promise.all(fetches);
+
+    // 4) รวมข้อมูล
     let allRows = [];
-    const chunkSize = 1000;
-    // ดึง chunk แรกก่อน
-    let query0 = sb.from('instruments').select('*').order('id').range(0, chunkSize - 1);
-    if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
-      query0 = query0.in('instrument_type', currentUser.instrument_types);
+    for (const { data, error } of results) {
+      if (error) throw error;
+      if (data) allRows = allRows.concat(data);
     }
-    const { data: first, error: err0 } = await query0;
-    if (err0) throw err0;
-    allRows = first || [];
-    // ถ้ายังมีเพิ่ม ดึงต่อ
-    if (allRows.length === chunkSize) {
-      let from = chunkSize;
-      while (true) {
-        let q = sb.from('instruments').select('*').order('id').range(from, from + chunkSize - 1);
-        if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
-          q = q.in('instrument_type', currentUser.instrument_types);
-        }
-        const { data: chunk, error: err } = await q;
-        if (err) throw err;
-        if (!chunk || chunk.length === 0) break;
-        allRows = allRows.concat(chunk);
-        if (chunk.length < chunkSize) break;
-        from += chunkSize;
-      }
-    }
-    const data = allRows;
-    const error = null;
-    if (error) throw error;
 
     const today = new Date(); today.setHours(0,0,0,0);
-    allData = data.map(d => ({
+    allData = allRows.map(d => ({
       ...d,
       days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
     }));
