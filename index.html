@@ -1942,6 +1942,8 @@ function showPage(page) {
   if (ts) ts.textContent = t[1];
 
   if (page === 'monthly') renderMonthly();
+  if (page === 'admin') loadUsers();
+  if (page === 'audit') loadAuditLogs();
 }
 
 // ====================================================
