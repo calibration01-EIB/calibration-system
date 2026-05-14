@@ -1894,6 +1894,29 @@ function calcDueDate(calDate, frequency) {
 
 
 // ====================================================
+// UI HELPERS
+// ====================================================
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'กำลังโหลด...';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+function setDriveStatus(ok, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + (ok ? 'ok' : 'error');
+  document.getElementById('statusText').textContent = text;
+}
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// ====================================================
 // PAGE NAVIGATION
 // ====================================================
 function showPage(page) {
