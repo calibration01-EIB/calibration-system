@@ -1556,6 +1556,68 @@ const CATEGORY_ICONS = {
 
 let activeCategory = 'all';
 
+// ====================================================
+// RENDER MONTHLY CARDS
+// ====================================================
+const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_NAMES_FULL  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let activeMonthCard = null;
+
+function renderMonthly() {
+  if (!allData.length) { setTimeout(renderMonthly, 500); return; }
+  const byMonth = {};
+  for (let i = 0; i < 12; i++) byMonth[i] = [];
+  allData.forEach(d => {
+    if (!d.due_date) return;
+    byMonth[new Date(d.due_date).getMonth()].push(d);
+  });
+  const grid = document.getElementById('monthGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    const items = byMonth[i];
+    const cnt = items.length;
+    const ov  = items.filter(d => d.days_left !== null && d.days_left < 0).length;
+    const wa  = items.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
+    const barColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
+    const numColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
+    const card = document.createElement('div');
+    card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
+    card.innerHTML = `
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500">${MONTH_NAMES_SHORT[i]}</div>
+      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
+      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px">
+        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
+      </div>
+      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
+    if (cnt) {
+      card.addEventListener('mouseenter', () => { card.style.borderColor = barColor; card.style.transform = 'translateY(-1px)'; });
+      card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = 'var(--border)'; card.style.transform = ''; } });
+      card.addEventListener('click', () => {
+        if (activeMonthCard && activeMonthCard !== card) {
+          activeMonthCard.style.borderColor = 'var(--border)';
+          activeMonthCard.style.transform = '';
+          activeMonthCard.style.boxShadow = '';
+        }
+        if (activeMonthCard === card) {
+          activeMonthCard = null;
+          card.style.borderColor = 'var(--border)';
+          card.style.transform = '';
+          document.getElementById('monthFilter').value = '';
+        } else {
+          activeMonthCard = card;
+          card.style.borderColor = barColor;
+          card.style.boxShadow = `0 0 0 2px ${barColor}40`;
+          document.getElementById('monthFilter').value = i + 1;
+        }
+        filterData();
+      });
+    }
+    grid.appendChild(card);
+  }
+}
+
+
 function renderCategoryCards() {
   const grid = document.getElementById('categoryGrid');
   if (!grid) return;
