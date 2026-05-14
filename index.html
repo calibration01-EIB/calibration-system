@@ -656,10 +656,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
 function getSession() {
-  try { return JSON.parse(sessionStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
+  try { return JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
 }
-function setSession(u) { sessionStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
-function clearSession() { sessionStorage.removeItem('cal_session'); currentUser = null; }
+function setSession(u) { localStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
+function clearSession() { localStorage.removeItem('cal_session'); currentUser = null; }
 
 // ====================================================
 // SHA-256
