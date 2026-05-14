@@ -1619,9 +1619,9 @@ function printReport() {
   .sum-card.ok { background:#e8f5e9; color:#1e7e34; }
   .sum-card.tt { background:#e3f2fd; color:#1565C0; }
   .filter-info { font-size:7.5pt; color:#555; margin-bottom:8px; background:#f5f5f5; padding:4px 8px; border-radius:4px; border-left:3px solid #00695C; }
-  table { width:100%; border-collapse:collapse; }
-  th { background:#00695C; color:white; padding:5px 6px; text-align:left; font-size:7.5pt; font-weight:700; white-space:nowrap; }
-  td { padding:4px 6px; border-bottom:0.5px solid #e0e0e0; font-size:7.5pt; vertical-align:middle; white-space:nowrap; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  th { background:#00695C; color:white; padding:4px 3px; text-align:left; font-size:6.5pt; font-weight:700; white-space:normal; word-break:break-word; }
+  td { padding:3px 3px; border-bottom:0.5px solid #e0e0e0; font-size:6.5pt; vertical-align:middle; white-space:normal; word-break:break-word; overflow:hidden; }
   tr:nth-child(even) td { background:#f8f9fa; }
   .footer { margin-top:10px; font-size:7pt; color:#888; border-top:1px solid #ddd; padding-top:5px; display:flex; justify-content:space-between; }
 </style>
@@ -1643,6 +1643,19 @@ function printReport() {
   ${filterInfo.length ? `<div class="filter-info">⚙️ กรองข้อมูล: ${filterInfo.join(' | ')}</div>` : ''}
 
   <table>
+    <colgroup>
+      <col style="width:2%">
+      <col style="width:8%">
+      <col style="width:13%">
+      <col style="width:13%">
+      <col style="width:7%">
+      <col style="width:6%">
+      <col style="width:11%">
+      <col style="width:8%">
+      <col style="width:10%">
+      <col style="width:10%">
+      <col style="width:7%">
+    </colgroup>
     <thead>
       <tr>
         <th style="width:30px">#</th>
