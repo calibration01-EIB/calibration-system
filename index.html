@@ -1241,7 +1241,18 @@ function renderFileList(files, folder) {
 
 async function viewFile(folder, name) {
   const { data } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${name}`, 300);
-  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  if (data?.signedUrl) {
+    // ใช้ anchor tag แทน window.open เพื่อหลีกเลี่ยงการ block บนมือถือ
+    const a = document.createElement('a');
+    a.href = data.signedUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    showToast('ไม่สามารถเปิดไฟล์ได้', 'error');
+  }
 }
 
 async function deleteFile(folder, name) {
