@@ -126,8 +126,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .btn-refresh:hover { background: #d8e8f5; }
 
 /* TABLE */
-.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: 600px; }
-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 420px); min-height: 300px; }
+table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: auto; }
 table td, table th { white-space: nowrap; }
 table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
 table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
