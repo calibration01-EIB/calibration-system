@@ -204,20 +204,23 @@ tbody tr:hover { background: var(--surface2); }
 @media (max-width: 768px) {
   .sidebar { display: none !important; }
   .main-content { margin-left: 0 !important; padding-top: 0 !important; padding-bottom: 70px !important; }
-  .page-content { padding: 12px !important; }
+  .page-content { padding: 12px !important; background:#121212 !important; min-height: 100vh; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .meta-row { grid-template-columns: 1fr; }
-  #dashRow2 { grid-template-columns: 1fr !important; }
-  #dashRow2 > div:last-child { grid-column: span 1; }
-  .topbar { padding: 10px 14px !important; }
+  #dashRow2 { display: none !important; }
+  #categoryGrid { display: none !important; }
+  .topbar { display: none !important; }
+  #mobileTopbar { display: block !important; }
   .kpi-grid-mobile { display: grid !important; }
   .kpi-grid-desktop { display: none !important; }
   .table-wrap { display: none !important; }
   .mobile-card-list { display: block !important; }
-  .controls-bar { flex-wrap: wrap; gap: 6px !important; }
-  .controls-bar input { width: 100% !important; }
-  .bottom-nav { display: flex !important; }
+  .controls-bar { flex-wrap: wrap; gap: 6px !important; background:#1E1E1E !important; border-radius:12px; padding:10px !important; }
+  .controls-bar input { width: 100% !important; background:#2A2A2A !important; color:white !important; border-color:#444 !important; }
+  .controls-bar select { background:#2A2A2A !important; color:white !important; border-color:#444 !important; }
+  .bottom-nav { display: flex !important; background:#1E1E1E !important; border-top: 1px solid #333 !important; }
   #categoryGrid { grid-template-columns: repeat(2,1fr) !important; }
+  .month-card-mobile { background:#1E1E1E !important; border-radius:12px; padding:12px; margin-bottom:12px; }
 }
 @media (min-width: 769px) {
   .kpi-grid-mobile { display: none !important; }
@@ -274,6 +277,22 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <div class="main-content">
+
+      <!-- MOBILE TOPBAR (มองเห็นเฉพาะมือถือ) -->
+      <div id="mobileTopbar" style="display:none;background:#004D40;padding:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:#00897B;border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;color:white;letter-spacing:.05em">ILC</div>
+            <span style="color:white;font-size:15px;font-weight:600">Calibration System</span>
+          </div>
+          <span style="font-size:22px;cursor:pointer">🔔</span>
+        </div>
+        <div style="background:#00695C;padding:10px 16px">
+          <div style="color:white;font-size:16px;font-weight:600" id="mobilePageTitle">Dashboard</div>
+          <div style="color:rgba(255,255,255,.65);font-size:12px" id="mobilePageSub">ภาพรวมสถานะเครื่องมือ</div>
+        </div>
+      </div>
+
       <div class="topbar">
         <div>
             <div class="topbar-title" id="topbarTitle">Dashboard</div>
@@ -282,17 +301,40 @@ tbody tr:hover { background: var(--surface2); }
         <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
       </div>
 
-
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 1: KPI CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+        <!-- KPI MOBILE 2x2 (มองเห็นเฉพาะมือถือ) -->
+        <div class="kpi-grid-mobile" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div onclick="filterByStatus('')" style="background:#1B4332;border:1.5px solid #2E7D32;border-radius:14px;padding:16px 14px;cursor:pointer">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ทั้งหมด</div>
+            <div style="font-size:30px;font-weight:700;color:white;line-height:1" id="statTotal">–</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">เครื่องมือ</div>
+          </div>
+          <div onclick="filterByStatus('ok')" style="background:#1B4332;border:1.5px solid #43A047;border-radius:14px;padding:16px 14px;cursor:pointer">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ปกติ</div>
+            <div style="font-size:30px;font-weight:700;color:#69F0AE;line-height:1" id="statOk">–</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">สอบเทียบแล้ว</div>
+          </div>
+          <div onclick="filterByStatus('overdue')" style="background:#3E1212;border:1.5px solid #E53935;border-radius:14px;padding:16px 14px;cursor:pointer">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">เกินกำหนด</div>
+            <div style="font-size:30px;font-weight:700;color:#FF5252;line-height:1" id="statOverdue">–</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">ต้องดำเนินการ</div>
+          </div>
+          <div onclick="filterByStatus('warning')" style="background:#3E2A00;border:1.5px solid #F57F17;border-radius:14px;padding:16px 14px;cursor:pointer">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ใกล้ครบ</div>
+            <div style="font-size:30px;font-weight:700;color:#FFD740;line-height:1" id="statWarning">–</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">ภายใน 30 วัน</div>
+          </div>
+        </div>
+
+        <!-- KPI DESKTOP (ซ่อนบนมือถือ) -->
+        <div class="kpi-grid-desktop" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
           <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#00695C);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,137,123,0.3);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="background:rgba(255,255,255,.2);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔧</div>
               <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ทั้งหมด</span>
             </div>
-            <div style="font-size:36px;font-weight:700;color:white;line-height:1" id="statTotal">–</div>
+            <div style="font-size:36px;font-weight:700;color:white;line-height:1" id="statTotalD">–</div>
             <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">เครื่องมือ</div>
           </div>
           <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
@@ -301,7 +343,7 @@ tbody tr:hover { background: var(--surface2); }
               <div style="background:var(--green-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">✅</div>
               <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ปกติ</span>
             </div>
-            <div style="font-size:36px;font-weight:700;color:var(--green);line-height:1" id="statOk">–</div>
+            <div style="font-size:36px;font-weight:700;color:var(--green);line-height:1" id="statOkD">–</div>
             <div style="font-size:13px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
           </div>
           <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
@@ -310,7 +352,7 @@ tbody tr:hover { background: var(--surface2); }
               <div style="background:var(--red-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔴</div>
               <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">เกินกำหนด</span>
             </div>
-            <div style="font-size:36px;font-weight:700;color:var(--red);line-height:1" id="statOverdue">–</div>
+            <div style="font-size:36px;font-weight:700;color:var(--red);line-height:1" id="statOverdueD">–</div>
             <div style="font-size:13px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
           </div>
           <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
@@ -319,7 +361,7 @@ tbody tr:hover { background: var(--surface2); }
               <div style="background:var(--amber-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🟡</div>
               <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ใกล้ครบ</span>
             </div>
-            <div style="font-size:36px;font-weight:700;color:var(--amber);line-height:1" id="statWarning">–</div>
+            <div style="font-size:36px;font-weight:700;color:var(--amber);line-height:1" id="statWarningD">–</div>
             <div style="font-size:13px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
           </div>
         </div>
@@ -687,22 +729,22 @@ tbody tr:hover { background: var(--surface2); }
 </div>
 
 <!-- BOTTOM NAV (mobile only) -->
-<div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
+<div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1E1E1E;border-top:1px solid #333;z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
   <div onclick="showPage('dashboard')" id="bnav-dashboard" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">📊</div>
-    <div style="font-size:10px;color:var(--accent);font-weight:600" id="bnav-dashboard-lbl">Dashboard</div>
+    <div style="font-size:10px;color:#69F0AE;font-weight:600">Dashboard</div>
   </div>
   <div onclick="showPage('admin')" id="bnav-admin" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
     <div style="font-size:22px">👥</div>
-    <div style="font-size:10px;color:var(--text3)">ผู้ใช้</div>
+    <div style="font-size:10px;color:#888">ผู้ใช้</div>
   </div>
   <div onclick="showPage('audit')" id="bnav-audit" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
     <div style="font-size:22px">📋</div>
-    <div style="font-size:10px;color:var(--text3)">Audit Log</div>
+    <div style="font-size:10px;color:#888">Audit Log</div>
   </div>
   <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">↩️</div>
-    <div style="font-size:10px;color:var(--text3)">ออกจากระบบ</div>
+    <div style="font-size:10px;color:#888">ออกจากระบบ</div>
   </div>
 </div>
 
@@ -914,6 +956,15 @@ function updateStats() {
   document.getElementById('statOk').textContent = okCount.toLocaleString();
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
+  // sync desktop IDs
+  const elTD = document.getElementById('statTotalD');
+  const elOD = document.getElementById('statOkD');
+  const elVD = document.getElementById('statOverdueD');
+  const elWD = document.getElementById('statWarningD');
+  if (elTD) elTD.textContent = total.toLocaleString();
+  if (elOD) elOD.textContent = okCount.toLocaleString();
+  if (elVD) elVD.textContent = ov.toLocaleString();
+  if (elWD) elWD.textContent = wa.toLocaleString();
 
   // summary box
   const el2Ok = document.getElementById('statOk2');
@@ -991,9 +1042,9 @@ function formatDate(s) {
 function renderMobileCards() {
   const el = document.getElementById('mobileCardList');
   if (!el) return;
-  const today = new Date(); today.setHours(0,0,0,0);
   const start = (currentPage - 1) * pageSize;
   const rows = filteredData.slice(start, start + pageSize);
+  window._mobileRows = rows; // เก็บไว้ใช้ใน onclick
 
   el.innerHTML = rows.map((d, i) => {
     const days = d.days_left;
@@ -1001,39 +1052,52 @@ function renderMobileCards() {
     if (days !== null && days < 0) {
       badge = `<span style="background:#fdecea;color:#C62828;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">เกินกำหนด</span>`;
       daysText = `<span style="font-size:11px;color:#C62828">${days} วัน</span>`;
-      rowBg = '#fff8f8';
+      rowBg = '#1a0000';
     } else if (days !== null && days <= 30) {
       badge = `<span style="background:#fff8e1;color:#F57F17;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ใกล้ครบ</span>`;
       daysText = `<span style="font-size:11px;color:#F57F17">${days} วัน</span>`;
-      rowBg = '#fffdf0';
+      rowBg = '#1a1400';
     } else {
       badge = `<span style="background:#e8f5e9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ปกติ</span>`;
       daysText = `<span style="font-size:11px;color:#2E7D32">${days !== null ? days + ' วัน' : '–'}</span>`;
+      rowBg = '#1E1E1E';
     }
     const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
     const typShort = (d.instrument_type||'–').split(' (')[0];
 
-    return `<div style="background:${rowBg||'white'};border:0.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">
+    return `<div style="background:${rowBg};border:0.5px solid #333;border-radius:12px;padding:14px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1;min-width:0;margin-right:8px">
-          <div style="font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px">${d.brand||''} · ${d.department||''}</div>
+          <div style="font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
+          <div style="font-size:12px;color:#aaa;margin-top:2px">${d.brand||''} · ${d.department||''}</div>
         </div>
         ${badge}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px">
-        <div style="font-size:11px;color:var(--text2)">🏷 <span style="color:var(--accent);font-weight:500">${d.id_code||'–'}</span></div>
-        <div style="font-size:11px;color:var(--text2)">📂 ${typShort}</div>
-        <div style="font-size:11px;color:var(--text2)">📅 ครบ: ${dueDate}</div>
+        <div style="font-size:11px;color:#aaa">🏷 <span style="color:#69F0AE;font-weight:500">${d.id_code||'–'}</span></div>
+        <div style="font-size:11px;color:#aaa">📂 ${typShort}</div>
+        <div style="font-size:11px;color:#aaa">📅 ครบ: ${dueDate}</div>
         <div style="font-size:11px">${daysText}</div>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="openInstrumentModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="flex:1;padding:8px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent);cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
-        <button onclick="openCertModal(${JSON.stringify(d.id)},'${(d.id_code||'').replace(/'/g,"\\'")}','${(d.instrument_name||'').replace(/'/g,"\\'")}','${(d.instrument_type||'').replace(/'/g,"\\'")}','${(d.cal_date||'').replace(/'/g,"\\'")}','${(d.due_date||'').replace(/'/g,"\\'")}','${(d.cal_frequency||'').replace(/'/g,"\\'")}','${(d.cert_no||'').replace(/'/g,"\\'")}')" style="flex:1;padding:8px;background:var(--green-light);border:1px solid var(--green);border-radius:8px;font-size:13px;color:var(--green);cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
+        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:13px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
+        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:13px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
       </div>
     </div>`;
-  }).join('') || `<div style="text-align:center;padding:32px;color:var(--text2)">ไม่พบข้อมูล</div>`;
+  }).join('') || `<div style="text-align:center;padding:32px;color:#888">ไม่พบข้อมูล</div>`;
 }
+
+function mobileEdit(i) {
+  const d = window._mobileRows && window._mobileRows[i];
+  if (d) openInstrumentModal(d);
+}
+
+function mobileCert(i) {
+  const d = window._mobileRows && window._mobileRows[i];
+  if (d) openCertModal(d.id, d.id_code||'', d.instrument_name||'', d.instrument_type||'', d.cal_date||'', d.due_date||'', d.cal_frequency||'', d.cert_no||'');
+}
+
+
 
 function formatDate(s) {
   if (!s) return '–';
