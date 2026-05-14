@@ -126,12 +126,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .btn-refresh:hover { background: #d8e8f5; }
 
 /* TABLE */
-.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: 600px; }
 table { width: 100%; border-collapse: collapse; table-layout: auto; }
 table td, table th { white-space: nowrap; }
 table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
 table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
-thead { background: #00897B; }
+thead { background: #00897B; position: sticky; top: 0; z-index: 3; }
 th { padding: 14px 20px; text-align: left; font-size: 16px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
 td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 18px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
@@ -250,7 +250,6 @@ tbody tr:hover { background: var(--surface2); }
         <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:8px;letter-spacing:.05em">Calibration System</div>
       </div>
       <nav class="sidebar-nav">
-        <div class="nav-item" onclick="showPage('dashboard2')" id="nav-dashboard2"><span class="nav-icon">📈</span> ภาพรวม</div>
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
@@ -272,260 +271,118 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
 
-      <!-- DASHBOARD 2 — ภาพรวมการสอบเทียบ -->
-      <div id="pageDashboard2" class="page-content" style="display:none">
-
-        <!-- STAT CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="d2StatGrid">
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px">
-            <div style="font-size:14px;color:var(--text2);margin-bottom:6px">🔧 เครื่องมือทั้งหมด</div>
-            <div style="font-size:32px;font-weight:600;color:var(--text)" id="d2Total">–</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:4px">เครื่อง</div>
-          </div>
-          <div style="background:var(--green-light);border:1px solid #b8e0bf;border-radius:10px;padding:16px">
-            <div style="font-size:14px;color:var(--green);margin-bottom:6px">✅ สอบเทียบแล้ว (ปกติ)</div>
-            <div style="font-size:32px;font-weight:600;color:var(--green)" id="d2Ok">–</div>
-            <div style="font-size:12px;color:var(--green);margin-top:4px">เครื่อง</div>
-          </div>
-          <div style="background:var(--red-light);border:1px solid #f5c6c4;border-radius:10px;padding:16px">
-            <div style="font-size:14px;color:var(--red);margin-bottom:6px">🔴 เกินกำหนดสอบเทียบ</div>
-            <div style="font-size:32px;font-weight:600;color:var(--red)" id="d2Overdue">–</div>
-            <div style="font-size:12px;color:var(--red);margin-top:4px">เครื่อง</div>
-          </div>
-          <div style="background:var(--amber-light);border:1px solid #f0d070;border-radius:10px;padding:16px">
-            <div style="font-size:14px;color:var(--amber);margin-bottom:6px">🟡 ใกล้ครบกำหนด (≤30 วัน)</div>
-            <div style="font-size:32px;font-weight:600;color:var(--amber)" id="d2Warning">–</div>
-            <div style="font-size:12px;color:var(--amber);margin-top:4px">เครื่อง</div>
-          </div>
-        </div>
-
-        <!-- MAIN GRID -->
-        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px">
-
-          <!-- แผนสอบเทียบรายเดือน -->
-          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <div style="font-size:16px;font-weight:600;color:var(--text)">แผนสอบเทียบรายเดือน</div>
-              <span style="font-size:12px;color:var(--text2)" id="d2Year">2569</span>
-            </div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
-
-            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px" id="d2MonthGrid"></div>
-
-            <div id="d2MonthDetail" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-              <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)" id="d2MonthTitle"></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:12px;color:var(--text2);margin-bottom:4px">ครบกำหนดเดือนนี้</div>
-                  <div style="font-size:22px;font-weight:600;color:var(--text)" id="d2mTotal">–</div>
-                </div>
-                <div style="background:var(--red-light);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:12px;color:var(--red);margin-bottom:4px">เกินกำหนด</div>
-                  <div style="font-size:22px;font-weight:600;color:var(--red)" id="d2mOverdue">–</div>
-                </div>
-                <div style="background:var(--green-light);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:12px;color:var(--green);margin-bottom:4px">ปกติ</div>
-                  <div style="font-size:22px;font-weight:600;color:var(--green)" id="d2mOk">–</div>
-                </div>
-              </div>
-            </div>
-
-            <div style="display:flex;gap:14px;font-size:12px;color:var(--text2);margin-top:12px">
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--green);display:inline-block"></span>ปกติ</span>
-            </div>
-          </div>
-
-          <!-- ความคืบหน้า -->
-          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-              <div style="font-size:16px;font-weight:600;color:var(--text)">สถานะภาพรวม</div>
-            </div>
-
-            <!-- Donut -->
-            <div style="display:flex;justify-content:center;margin-bottom:20px">
-              <div style="position:relative;width:140px;height:140px">
-                <canvas id="d2Donut" width="140" height="140" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สัดส่วนสถานะเครื่องมือ</canvas>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-                  <div style="font-size:26px;font-weight:600;color:var(--text)" id="d2DonutPct">–%</div>
-                  <div style="font-size:11px;color:var(--text2)">ปกติ</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Progress bars -->
-            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px" id="d2ProgressWrap">
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
-                  <span style="color:var(--text2)">สอบเทียบภายใน</span>
-                  <span style="font-weight:600;color:var(--green)" id="d2PctIn">–%</span>
-                </div>
-                <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s" id="d2BarIn"></div>
-                </div>
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
-                  <span style="color:var(--text2)">สอบเทียบภายนอก</span>
-                  <span style="font-weight:600;color:var(--accent)" id="d2PctOut">–%</span>
-                </div>
-                <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s" id="d2BarOut"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Result summary -->
-            <div style="padding-top:16px;border-top:1px solid var(--border)">
-              <div style="font-size:13px;color:var(--text2);margin-bottom:8px">สรุปสถานะ</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-                <div style="background:var(--green-light);border-radius:8px;padding:10px">
-                  <div style="font-size:22px;font-weight:600;color:var(--green)" id="d2rOk">–</div>
-                  <div style="font-size:12px;color:var(--green)">ปกติ</div>
-                </div>
-                <div style="background:var(--red-light);border-radius:8px;padding:10px">
-                  <div style="font-size:22px;font-weight:600;color:var(--red)" id="d2rOver">–</div>
-                  <div style="font-size:12px;color:var(--red)">เกินกำหนด</div>
-                </div>
-                <div style="background:var(--amber-light);border-radius:8px;padding:10px">
-                  <div style="font-size:22px;font-weight:600;color:var(--amber)" id="d2rWarn">–</div>
-                  <div style="font-size:12px;color:var(--amber)">ใกล้ครบ</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ประเภทเครื่องมือ -->
-        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
-          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:14px">ประเภทเครื่องมือ — สถานะล่าสุด</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px" id="d2TypeGrid"></div>
-        </div>
-
-        <!-- ตารางข้อมูลเครื่องมือ (sticky header) -->
-        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-size:16px;font-weight:600;color:var(--text)">รายการเครื่องมือทั้งหมด</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input id="d2Search" type="text" placeholder="🔍 ค้นหา..." oninput="d2FilterTable()"
-                style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none;width:200px">
-              <select id="d2StatusFilter" onchange="d2FilterTable()"
-                style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none">
-                <option value="">ทุกสถานะ</option>
-                <option value="overdue">เกินกำหนด</option>
-                <option value="warning">ใกล้ครบ</option>
-                <option value="ok">ปกติ</option>
-              </select>
-              <span id="d2RowCount" style="font-size:13px;color:var(--text2)"></span>
-            </div>
-          </div>
-
-          <!-- wrapper scroll แนวตั้ง max 500px -->
-          <div style="overflow-y:auto;max-height:500px;border:1px solid var(--border);border-radius:8px">
-            <table style="width:100%;border-collapse:collapse;font-size:13px">
-              <thead>
-                <tr style="background:var(--surface2);position:sticky;top:0;z-index:2">
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">#</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ประเภท</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ชื่อเครื่องมือ</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ยี่ห้อ</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">S/N</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ID Code</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">หน่วยงาน</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">วันสอบเทียบ</th>
-                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ครบกำหนด</th>
-                  <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">สถานะ</th>
-                </tr>
-              </thead>
-              <tbody id="d2TableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-            <!-- DASHBOARD -->
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 2: MONTH CARDS + PROGRESS (2 คอลัมน์) -->
+        <!-- ROW 1: KPI CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+          <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#00695C);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,137,123,0.3);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:rgba(255,255,255,.2);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔧</div>
+              <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ทั้งหมด</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:white;line-height:1" id="statTotal">–</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">เครื่องมือ</div>
+          </div>
+          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--green-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">✅</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ปกติ</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--green);line-height:1" id="statOk">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
+          </div>
+          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--red-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔴</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">เกินกำหนด</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--red);line-height:1" id="statOverdue">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
+          </div>
+          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--amber)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--amber-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🟡</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ใกล้ครบ</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--amber);line-height:1" id="statWarning">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
+          </div>
+        </div>
+
+        <!-- ROW 2: MONTH CARDS + PROGRESS -->
         <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
 
-          <!-- แผนสอบเทียบรายเดือน (ซ้าย) -->
-          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <div style="font-size:16px;font-weight:600;color:var(--text)">แผนสอบเทียบรายเดือน</div>
-              <span style="font-size:13px;color:var(--text2)">2569</span>
+          <!-- แผนสอบเทียบรายเดือน -->
+          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:15px;font-weight:600;color:var(--text)">📅 แผนสอบเทียบรายเดือน</div>
+              <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">2569</span>
             </div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
-            <div style="display:flex;gap:10px;margin-bottom:14px;font-size:12px;color:var(--text2)">
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--green);display:inline-block"></span>ปกติ</span>
+            <div style="font-size:13px;color:var(--text3);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
+            <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
             </div>
             <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
           </div>
 
-          <!-- สถานะภาพรวม (ขวา) -->
-          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
-            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px">สถานะภาพรวม</div>
+          <!-- สถานะภาพรวม -->
+          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
+            <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:18px">📊 สถานะภาพรวม</div>
 
-            <!-- 4 stat cards -->
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div class="stat-card" style="border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('')">
-                  <div class="stat-label" style="font-size:13px">✏️ เครื่องมือทั้งหมด</div>
-                  <div class="stat-num" style="font-size:28px" id="statTotal">–</div>
-                  <div class="stat-sub">เครื่อง</div>
+            <!-- Progress bars -->
+            <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+                  <span style="color:var(--text2);font-weight:500">🏭 สอบเทียบภายใน</span>
+                  <span style="font-weight:700;color:var(--green)" id="dashPctIn">–%</span>
                 </div>
-                <div class="stat-card ok" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('ok')">
-                  <div class="stat-label" style="font-size:13px">✅ สอบเทียบแล้ว (ปกติ)</div>
-                  <div class="stat-num" style="font-size:28px" id="statOk">–</div>
-                  <div class="stat-sub">เครื่อง</div>
+                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                  <div style="height:100%;background:linear-gradient(90deg,#2E7D32,#43A047);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarIn"></div>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div class="stat-card overdue" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('overdue')">
-                  <div class="stat-label" style="font-size:13px">🔴 เกินกำหนดสอบเทียบ</div>
-                  <div class="stat-num" style="font-size:28px" id="statOverdue">–</div>
-                  <div class="stat-sub">เครื่อง</div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+                  <span style="color:var(--text2);font-weight:500">🌐 สอบเทียบภายนอก</span>
+                  <span style="font-weight:700;color:var(--accent)" id="dashPctOut">–%</span>
                 </div>
-                <div class="stat-card warning" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('warning')">
-                  <div class="stat-label" style="font-size:13px">🟡 ใกล้ครบ (≤30 วัน)</div>
-                  <div class="stat-num" style="font-size:28px" id="statWarning">–</div>
-                  <div class="stat-sub">เครื่อง</div>
+                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                  <div style="height:100%;background:linear-gradient(90deg,#00897B,#26A69A);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarOut"></div>
                 </div>
               </div>
             </div>
 
-            <!-- Progress bars -->
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
-                  <span style="color:var(--text2)">สอบเทียบภายใน</span>
-                  <span style="font-weight:600;color:var(--green)" id="dashPctIn">–%</span>
+            <!-- สรุปตัวเลข -->
+            <div style="border-top:1px solid var(--border);padding-top:16px">
+              <div style="font-size:12px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">สรุปสถานะ</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+                <div style="background:var(--green-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--green)" id="statOk2">–</div>
+                  <div style="font-size:11px;color:var(--green);margin-top:2px">ปกติ</div>
                 </div>
-                <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s;width:0%" id="dashBarIn"></div>
+                <div style="background:var(--red-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--red)" id="statOverdue2">–</div>
+                  <div style="font-size:11px;color:var(--red);margin-top:2px">เกินกำหนด</div>
                 </div>
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
-                  <span style="color:var(--text2)">สอบเทียบภายนอก</span>
-                  <span style="font-weight:600;color:var(--accent)" id="dashPctOut">–%</span>
-                </div>
-                <div style="height:8px;background:var(--surface2);border-radius:4px">
-                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s;width:0%" id="dashBarOut"></div>
+                <div style="background:var(--amber-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--amber)" id="statWarning2">–</div>
+                  <div style="font-size:11px;color:var(--amber);margin-top:2px">ใกล้ครบ</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ROW 3: ประเภทเครื่องมือ — สถานะล่าสุด (เต็มแถว) -->
-        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
-          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px">ประเภทเครื่องมือ — สถานะล่าสุด</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:16px">กดการ์ดเพื่อกรองตามประเภท</div>
+        <!-- ROW 3: ประเภทเครื่องมือ -->
+        <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:var(--shadow)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">🔩 ประเภทเครื่องมือ — สถานะล่าสุด</div>
+          </div>
+          <div style="font-size:13px;color:var(--text3);margin-bottom:16px">กดการ์ดเพื่อกรองตามประเภท</div>
           <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
         </div>
 
@@ -550,7 +407,7 @@ tbody tr:hover { background: var(--surface2); }
             <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
           </select>
           <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
-          <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
+          <button class="btn-refresh" onclick="loadData(true)">↻ รีเฟรช</button>
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
           <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
         </div>
@@ -831,10 +688,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
 function getSession() {
-  try { return JSON.parse(sessionStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
+  try { return JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
 }
-function setSession(u) { sessionStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
-function clearSession() { sessionStorage.removeItem('cal_session'); currentUser = null; }
+function setSession(u) { localStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
+function clearSession() { localStorage.removeItem('cal_session'); currentUser = null; }
 
 // ====================================================
 // SHA-256
@@ -901,42 +758,14 @@ function doLogout() { clearSession(); location.reload(); }
 // ====================================================
 let allData = [], filteredData = [];
 
-async function loadData() {
-  showLoading('กำลังโหลดข้อมูล...');
-  try {
-    // ดึงข้อมูลทั้งหมด (Supabase default limit 1000 ต้องใช้ range)
-    let allRows = [];
-    const chunkSize = 1000;
-    // ดึง chunk แรกก่อน
-    let query0 = sb.from('instruments').select('*').order('id').range(0, chunkSize - 1);
-    if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
-      query0 = query0.in('instrument_type', currentUser.instrument_types);
-    }
-    const { data: first, error: err0 } = await query0;
-    if (err0) throw err0;
-    allRows = first || [];
-    // ถ้ายังมีเพิ่ม ดึงต่อ
-    if (allRows.length === chunkSize) {
-      let from = chunkSize;
-      while (true) {
-        let q = sb.from('instruments').select('*').order('id').range(from, from + chunkSize - 1);
-        if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
-          q = q.in('instrument_type', currentUser.instrument_types);
-        }
-        const { data: chunk, error: err } = await q;
-        if (err) throw err;
-        if (!chunk || chunk.length === 0) break;
-        allRows = allRows.concat(chunk);
-        if (chunk.length < chunkSize) break;
-        from += chunkSize;
-      }
-    }
-    const data = allRows;
-    const error = null;
-    if (error) throw error;
+async function loadData(forceRefresh = false) {
+  const CACHE_KEY = 'ilc_instruments_cache';
+  const CACHE_TIME_KEY = 'ilc_instruments_cache_time';
+  const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
 
+  const procesData = (rows) => {
     const today = new Date(); today.setHours(0,0,0,0);
-    allData = data.map(d => ({
+    allData = rows.map(d => ({
       ...d,
       days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
     }));
@@ -946,11 +775,83 @@ async function loadData() {
     renderTable();
     renderMonthly();
     renderCategoryCards();
+  };
+
+  // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const cachedTime = parseInt(localStorage.getItem(CACHE_TIME_KEY) || '0');
+    const age = Date.now() - cachedTime;
+    if (!forceRefresh && cached && age < CACHE_TTL) {
+      procesData(JSON.parse(cached));
+      hideLoading();
+      setDriveStatus(true, 'แคช ' + Math.round(age/1000) + 'วินาทีที่แล้ว');
+      // refresh ใน background เงียบๆ
+      fetchFromSupabase().then(rows => {
+        if (rows) {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+          procesData(rows);
+          setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
+        }
+      });
+      return;
+    }
+  } catch(e) { /* cache miss */ }
+
+  // ไม่มี cache หรือหมดอายุ → โหลดจาก Supabase ปกติ
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    const rows = await fetchFromSupabase();
+    if (!rows) return;
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+      localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+    } catch(e) { /* storage full */ }
+    procesData(rows);
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
   } finally { hideLoading(); }
+}
+
+async function fetchFromSupabase() {
+  try {
+    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark';
+    const chunkSize = 500;
+    const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
+
+    // ดึง count
+    let countQ = sb.from('instruments').select('id', { count: 'exact', head: true });
+    if (isFiltered) countQ = countQ.in('instrument_type', currentUser.instrument_types);
+    const { count, error: cErr } = await countQ;
+    if (cErr) throw cErr;
+
+    const total = count || 0;
+    const chunks = [];
+    for (let from = 0; from < total; from += chunkSize) {
+      chunks.push([from, Math.min(from + chunkSize - 1, total - 1)]);
+    }
+
+    // parallel fetch
+    const fetches = chunks.map(([from, to]) => {
+      let q = sb.from('instruments').select(COLS).order('id').range(from, to);
+      if (isFiltered) q = q.in('instrument_type', currentUser.instrument_types);
+      return q;
+    });
+    const results = await Promise.all(fetches);
+
+    let allRows = [];
+    for (const { data, error } of results) {
+      if (error) throw error;
+      if (data) allRows = allRows.concat(data);
+    }
+    return allRows;
+  } catch(e) {
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+    return null;
+  }
 }
 
 // ====================================================
@@ -971,14 +872,22 @@ function updateStats() {
     else if (d.days_left <= 30) wa++;
     else ok++;
   });
-  document.getElementById('statOverdue').textContent = ov;
-  document.getElementById('statWarning').textContent = wa;
+  document.getElementById('statOverdue').textContent = ov.toLocaleString();
+  document.getElementById('statWarning').textContent = wa.toLocaleString();
 
   // อัพเดท total และ ok
   const elTotal = document.getElementById('statTotal');
   const elOk = document.getElementById('statOk');
   if (elTotal) elTotal.textContent = allData.length.toLocaleString();
   if (elOk) elOk.textContent = (allData.length - ov - wa).toLocaleString();
+
+  // sync กับ element ใน summary box ใหม่
+  const el2Ok = document.getElementById('statOk2');
+  const el2Ov = document.getElementById('statOverdue2');
+  const el2Wa = document.getElementById('statWarning2');
+  if (el2Ok) el2Ok.textContent = (allData.length - ov - wa).toLocaleString();
+  if (el2Ov) el2Ov.textContent = ov.toLocaleString();
+  if (el2Wa) el2Wa.textContent = wa.toLocaleString();
 
   // Donut
   const okCount = allData.length - ov - wa;
@@ -1925,491 +1834,44 @@ function calcDueDate(calDate, frequency) {
 
 
 // ====================================================
-// DASHBOARD 2 — ภาพรวมการสอบเทียบ
+// PAGE NAVIGATION
 // ====================================================
-let d2Chart = null;
-const MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-
-async function loadDashboard2() {
-  // populate type filter
-  const sel = document.getElementById('d2TypeFilter');
-  if (sel.options.length <= 1 && allData.length) {
-    const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
-    types.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t; opt.textContent = t;
-      sel.appendChild(opt);
-    });
-  }
-  renderDashboard2();
-}
-
-function renderDashboard2() {
-  const typeFilter = document.getElementById('d2TypeFilter')?.value || '';
-  const data = typeFilter ? allData.filter(d => d.instrument_type === typeFilter) : allData;
-  const today = new Date();
-
-  // update time
-  document.getElementById('d2UpdateTime').textContent = 'อัพเดต: ' + today.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('d2MonthLabel').textContent = MONTH_FULL[today.getMonth()] + ' ' + (today.getFullYear()+543);
-
-  // stats
-  let total = data.length, pass = 0, overdue = 0, warning = 0;
-  data.forEach(d => {
-    if (d.days_left === null) return;
-    if (d.days_left < 0) overdue++;
-    else if (d.days_left <= 30) warning++;
-    else pass++;
-  });
-
-  document.getElementById('d2Total').textContent = total.toLocaleString();
-  document.getElementById('d2Pass').textContent = pass.toLocaleString();
-  document.getElementById('d2Overdue').textContent = overdue.toLocaleString();
-  document.getElementById('d2Warning').textContent = warning.toLocaleString();
-  document.getElementById('d2rPass').textContent = pass.toLocaleString();
-  document.getElementById('d2rOver').textContent = overdue.toLocaleString();
-  document.getElementById('d2rWarn').textContent = warning.toLocaleString();
-
-  // pct
-  const pct = total > 0 ? Math.round(pass / total * 100) : 0;
-  document.getElementById('d2PctNum').textContent = pct + '%';
-
-  // donut
-  if (d2Chart) d2Chart.destroy();
-  d2Chart = new Chart(document.getElementById('d2Donut'), {
-    type: 'doughnut',
-    data: { datasets: [{ data: [pct, 100-pct], backgroundColor: ['#00897B','#e0f4f1'], borderWidth: 0 }] },
-    options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
-  });
-
-  // progress bars by cal_type
-  const calTypes = { 'ภายใน': 0, 'ภายนอก': 0 };
-  const calTotal = { 'ภายใน': 0, 'ภายนอก': 0 };
-  data.forEach(d => {
-    const ct = d.cal_type;
-    if (!ct) return;
-    if (ct.includes('ภายใน') && !ct.includes('ภายนอก')) { calTotal['ภายใน']++; if(d.days_left >= 0) calTypes['ภายใน']++; }
-    else if (ct.includes('ภายนอก')) { calTotal['ภายนอก']++; if(d.days_left >= 0) calTypes['ภายนอก']++; }
-  });
-  const pWrap = document.getElementById('d2Progress');
-  pWrap.innerHTML = ['ภายใน','ภายนอก'].map((ct,i) => {
-    const p = calTotal[ct] > 0 ? Math.round(calTypes[ct]/calTotal[ct]*100) : 0;
-    const color = i===0 ? '#00897B' : '#185FA5';
-    return `<div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px;color:var(--text2)">
-        <span>สอบเทียบ${ct}</span><span style="font-weight:600;color:${color}">${p}%</span>
-      </div>
-      <div style="height:8px;background:var(--border);border-radius:4px">
-        <div style="width:${p}%;height:100%;background:${color};border-radius:4px"></div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // month grid
-  const byMonth = {};
-  for (let i=0;i<12;i++) byMonth[i] = {total:0,ok:0,overdue:0,warning:0};
-  data.forEach(d => {
-    if (!d.due_date) return;
-    const m = new Date(d.due_date).getMonth();
-    byMonth[m].total++;
-    if (d.days_left < 0) byMonth[m].overdue++;
-    else if (d.days_left <= 30) byMonth[m].warning++;
-    else byMonth[m].ok++;
-  });
-
-  const mgrid = document.getElementById('d2MonthGrid');
-  mgrid.innerHTML = '';
-  for (let i=0;i<12;i++) {
-    const m = byMonth[i];
-    const color = m.overdue > 0 ? 'var(--red)' : m.warning > 0 ? 'var(--amber)' : m.total > 0 ? 'var(--green)' : 'var(--text3)';
-    const barColor = m.overdue > 0 ? '#E24B4A' : m.warning > 0 ? '#BA7517' : '#00897B';
-    const pct = m.total > 0 ? Math.round(m.ok/m.total*100) : 0;
-    const card = document.createElement('div');
-    card.style.cssText = `border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:${m.total?'pointer':'default'};transition:all .15s`;
-    card.innerHTML = `
-      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${MONTH_SHORT[i]}</div>
-      <div style="font-size:18px;font-weight:600;color:${color}">${m.total}</div>
-      <div style="height:3px;background:var(--border);border-radius:2px;margin:4px 2px 3px">
-        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px"></div>
-      </div>
-      <div style="font-size:10px;color:${color}">${m.ok}</div>`;
-    if (m.total) {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('#d2MonthGrid > div').forEach(c => c.style.border = '1px solid var(--border)');
-        const det = document.getElementById('d2MonthDetail');
-        if (d2ActiveMonth === i) { d2ActiveMonth = null; det.style.display = 'none'; return; }
-        d2ActiveMonth = i;
-        card.style.border = '2px solid var(--accent)';
-        document.getElementById('d2MonthTitle').textContent = MONTH_FULL[i] + ' ' + (new Date().getFullYear()+543);
-        document.getElementById('d2dPlan').textContent = m.total;
-        document.getElementById('d2dOk').textContent = m.ok;
-        document.getElementById('d2dOver').textContent = m.overdue;
-        det.style.display = 'block';
-      });
-    }
-    mgrid.appendChild(card);
-  }
-
-  // type grid
-  const typeCount = {};
-  data.forEach(d => {
-    const t = d.instrument_type || 'อื่นๆ';
-    if (!typeCount[t]) typeCount[t] = {total:0,ok:0,overdue:0,warning:0};
-    typeCount[t].total++;
-    if (d.days_left < 0) typeCount[t].overdue++;
-    else if (d.days_left <= 30) typeCount[t].warning++;
-    else typeCount[t].ok++;
-  });
-  const tgrid = document.getElementById('d2TypeGrid');
-  tgrid.innerHTML = Object.entries(typeCount)
-    .sort((a,b) => b[1].total - a[1].total)
-    .slice(0,12)
-    .map(([name, m]) => {
-      const pct = m.total > 0 ? Math.round(m.ok/m.total*100) : 0;
-      const color = m.overdue > 0 ? '#E24B4A' : m.warning > 0 ? '#BA7517' : '#00897B';
-      return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${name}</div>
-        <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px">${m.total} <span style="font-size:12px;font-weight:400;color:var(--text2)">เครื่อง</span></div>
-        <div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:4px">
-          <div style="width:${pct}%;height:100%;background:${color};border-radius:2px"></div>
-        </div>
-        <div style="font-size:12px;color:${color}">${pct}% ปกติ</div>
-      </div>`;
-    }).join('');
-}
-
-
-// ====================================================
-// DASHBOARD 2 — ภาพรวมการสอบเทียบ
-// ====================================================
-let d2DonutChart = null;
-let d2ActiveMonth = null;
-
-function renderDashboard2() {
-  if (!allData.length) { setTimeout(renderDashboard2, 500); return; }
-
-  const today = new Date();
-  const currentYear = today.getFullYear() + 543;
-  document.getElementById('d2Year').textContent = currentYear;
-
-  // Stats
-  let total = allData.length, ok = 0, overdue = 0, warning = 0;
-  allData.forEach(d => {
-    if (d.days_left === null) return;
-    if (d.days_left < 0) overdue++;
-    else if (d.days_left <= 30) warning++;
-    else ok++;
-  });
-  document.getElementById('d2Total').textContent = total.toLocaleString();
-  document.getElementById('d2Ok').textContent = ok.toLocaleString();
-  document.getElementById('d2Overdue').textContent = overdue.toLocaleString();
-  document.getElementById('d2Warning').textContent = warning.toLocaleString();
-  document.getElementById('d2rOk').textContent = ok;
-  document.getElementById('d2rOver').textContent = overdue;
-  document.getElementById('d2rWarn').textContent = warning;
-
-  // Donut
-  const pct = total > 0 ? Math.round(ok/total*100) : 0;
-  document.getElementById('d2DonutPct').textContent = pct + '%';
-  if (d2DonutChart) d2DonutChart.destroy();
-  d2DonutChart = new Chart(document.getElementById('d2Donut'), {
-    type: 'doughnut',
-    data: { datasets: [{ data: [ok, overdue, warning], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
-    options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
-  });
-
-  // Progress bars (ภายใน vs ภายนอก)
-  const internal = allData.filter(d => d.cal_type === 'ภายใน');
-  const external = allData.filter(d => d.cal_type === 'ภายนอก');
-  const inOk = internal.filter(d => d.days_left !== null && d.days_left >= 0).length;
-  const exOk = external.filter(d => d.days_left !== null && d.days_left >= 0).length;
-  const inPct = internal.length ? Math.round(inOk/internal.length*100) : 0;
-  const exPct = external.length ? Math.round(exOk/external.length*100) : 0;
-  document.getElementById('d2PctIn').textContent = inPct + '%';
-  document.getElementById('d2PctOut').textContent = exPct + '%';
-  document.getElementById('d2BarIn').style.width = inPct + '%';
-  document.getElementById('d2BarOut').style.width = exPct + '%';
-
-  // Month cards
-  const byMonth = {};
-  for (let i=0; i<12; i++) byMonth[i] = [];
-  allData.forEach(d => {
-    if (!d.due_date) return;
-    byMonth[new Date(d.due_date).getMonth()].push(d);
-  });
-  const grid = document.getElementById('d2MonthGrid');
-  grid.innerHTML = '';
-  const mnames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  for (let i=0; i<12; i++) {
-    const items = byMonth[i];
-    const cnt = items.length;
-    const ov = items.filter(d => d.days_left < 0).length;
-    const wa = items.filter(d => d.days_left >= 0 && d.days_left <= 30).length;
-    const barColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
-    const numColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text2)';
-    const card = document.createElement('div');
-    card.id = 'd2mc' + i;
-    card.style.cssText = `border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
-    card.innerHTML = `
-      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${mnames[i]}</div>
-      <div style="font-size:17px;font-weight:600;color:${numColor}">${cnt}</div>
-      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:4px 2px 3px">
-        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
-      </div>
-      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
-    if (cnt) card.addEventListener('click', () => showD2MonthDetail(i, items, card));
-    grid.appendChild(card);
-  }
-
-  // Type grid
-  const typeCounts = {};
-  allData.forEach(d => {
-    const t = d.instrument_type || 'อื่นๆ';
-    if (!typeCounts[t]) typeCounts[t] = {total:0, ok:0};
-    typeCounts[t].total++;
-    if (d.days_left !== null && d.days_left >= 0) typeCounts[t].ok++;
-  });
-  const tgrid = document.getElementById('d2TypeGrid');
-  tgrid.innerHTML = '';
-  Object.entries(typeCounts).sort((a,b) => b[1].total - a[1].total).slice(0, 14).forEach(([name, data]) => {
-    const pct = data.total ? Math.round(data.ok/data.total*100) : 0;
-    const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
-    tgrid.innerHTML += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${name}</div>
-      <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px">${data.total} <span style="font-size:12px;font-weight:400;color:var(--text2)">เครื่อง</span></div>
-      <div style="height:4px;background:var(--surface2);border-radius:2px;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:${color};border-radius:2px"></div>
-      </div>
-      <div style="font-size:12px;color:${color}">${pct}% ยังไม่ครบ/ปกติ</div>
-    </div>`;
-  });
-
-  // render ตารางข้อมูล sticky header
-  d2RenderTable();
-}
-
-function showD2MonthDetail(monthIdx, items, card) {
-  if (d2ActiveMonth === card) {
-    d2ActiveMonth.style.border = '1px solid var(--border)';
-    d2ActiveMonth = null;
-    document.getElementById('d2MonthDetail').style.display = 'none';
-    return;
-  }
-  if (d2ActiveMonth) d2ActiveMonth.style.border = '1px solid var(--border)';
-  d2ActiveMonth = card;
-  card.style.border = '2px solid var(--accent)';
-  const mFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  document.getElementById('d2MonthTitle').textContent = mFull[monthIdx];
-  document.getElementById('d2mTotal').textContent = items.length;
-  document.getElementById('d2mOverdue').textContent = items.filter(d => d.days_left < 0).length;
-  document.getElementById('d2mOk').textContent = items.filter(d => d.days_left >= 0).length;
-  document.getElementById('d2MonthDetail').style.display = 'block';
-}
-
-
-function filterByStatus(status) {
-  document.getElementById('statusFilter').value = status;
-  filterData();
-  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const MONTH_NAMES_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-let activeMonthCard = null;
-
-function renderMonthly() {
-  if (!allData.length) { setTimeout(renderMonthly, 500); return; }
-  const byMonth = {};
-  for (let i=0;i<12;i++) byMonth[i] = [];
-  allData.forEach(d => {
-    if (!d.due_date) return;
-    byMonth[new Date(d.due_date).getMonth()].push(d);
-  });
-  const grid = document.getElementById('monthGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  for (let i=0;i<12;i++) {
-    const items = byMonth[i];
-    const cnt = items.length;
-    const hasOverdue = items.some(d => d.days_left < 0);
-    const hasWarning = items.some(d => d.days_left >= 0 && d.days_left <= 30);
-    let bg, color, border;
-    if (hasOverdue) { bg='var(--red-light)'; color='var(--red)'; border='#f5c6c4'; }
-    else if (hasWarning) { bg='var(--amber-light)'; color='var(--amber)'; border='#f0d070'; }
-    else if (cnt > 0) { bg='var(--green-light)'; color='var(--green)'; border='#b8e0bf'; }
-    else { bg='var(--surface2)'; color='var(--text2)'; border='var(--border)'; }
-    const card = document.createElement('div');
-    card.id = `mcard-${i}`;
-    const MONTH_EN_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const MONTH_EN_F = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:12px;padding:16px 12px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
-    const MONTH_TH_F = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
-        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
-      </div>
-      <div style="font-size:20px;font-weight:700;color:${color};line-height:1.2;margin-bottom:3px">${MONTH_TH_F[i]}</div>
-      <div style="font-size:13px;color:${color};opacity:.7;margin-bottom:10px">${MONTH_EN_F[i]}</div>
-      <div style="font-size:28px;font-weight:700;color:${color};line-height:1">${cnt}</div>
-      <div style="font-size:13px;color:${color};opacity:.7;margin-top:3px">เครื่อง</div>`;
-    if (cnt) card.addEventListener('click', () => filterByMonth(i, card));
-    grid.appendChild(card);
-  }
-}
-
-function filterByMonth(monthIdx, card) {
-  if (activeMonthCard === card) {
-    activeMonthCard.style.boxShadow = '';
-    activeMonthCard.style.transform = '';
-    activeMonthCard = null;
-    document.getElementById('monthFilter').value = '';
-    filterData();
-    return;
-  }
-  if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; }
-  activeMonthCard = card;
-  card.style.boxShadow = '0 0 0 3px #00897B';
-  card.style.transform = 'translateY(-3px)';
-  document.getElementById('monthFilter').value = String(monthIdx + 1);
-  filterData();
-  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
-}
-
 function showPage(page) {
-  document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
-  document.getElementById('pageDashboard2').style.display = page === 'dashboard2' ? 'block' : 'none';
-  document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
-  document.getElementById('pageAudit').style.display = page === 'audit' ? 'block' : 'none';
+  const pages = ['dashboard','audit','admin','monthly'];
+  pages.forEach(p => {
+    const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.style.display = page === p ? 'block' : 'none';
+  });
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('nav-' + page)?.classList.add('active');
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+
   const titles = {
     dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
-    dashboard2: ['ภาพรวมการสอบเทียบ','สถิติและแผนสอบเทียบ'],
-    admin: ['จัดการผู้ใช้','Admin Panel'],
-    monthly: ['รายเดือน','สรุปการครบกำหนดแต่ละเดือน'],
-    audit: ['Audit Log','ประวัติการแก้ไขข้อมูล']
+    audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
+    admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
+    monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
   };
-  document.getElementById('topbarTitle').textContent = titles[page][0];
-  document.getElementById('topbarSub').textContent = titles[page][1];
-  if (page === 'admin') loadUsers();
-  if (page === 'audit') loadAuditLogs();
-  if (page === 'dashboard2') renderDashboard2();
-  if (page === 'dashboard2') loadDashboard2();
+  const t = titles[page] || ['',''];
+  const tb = document.getElementById('topbarTitle');
+  const ts = document.getElementById('topbarSub');
+  if (tb) tb.textContent = t[0];
+  if (ts) ts.textContent = t[1];
+
   if (page === 'monthly') renderMonthly();
 }
 
 // ====================================================
-// UI HELPERS
-// ====================================================
-function showLoading(text) { document.getElementById('loadingText').textContent = text || 'กำลังโหลด...'; document.getElementById('loadingOverlay').classList.add('show'); }
-function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
-function setDriveStatus(ok, text) {
-  document.getElementById('statusDot').className = 'status-dot ' + (ok ? 'ok' : 'error');
-  document.getElementById('statusText').textContent = text;
-}
-let toastTimer;
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show' + (type ? ' '+type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
-}
-
-document.getElementById('certModal').addEventListener('click', function(e) { if (e.target === this) closeCertModal(); });
-document.getElementById('instrumentModal').addEventListener('click', function(e) { if (e.target === this) closeInstrumentModal(); });
-document.getElementById('userModal').addEventListener('click', function(e) { if (e.target === this) closeUserModal(); });
-document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('searchInput').addEventListener('input', filterData);
-document.getElementById('typeFilter').addEventListener('change', filterData);
-document.getElementById('unitFilter').addEventListener('change', filterData);
-document.getElementById('statusFilter').addEventListener('change', filterData);
-document.getElementById('monthFilter').addEventListener('change', filterData);
-
-// ====================================================
-// INIT
+// INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
 (function init() {
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-    document.getElementById('loginPage').innerHTML = `
-      <div style="text-align:center;color:white;padding:40px">
-        <div style="font-size:48px;margin-bottom:16px">⚙️</div>
-        <h2 style="margin-bottom:8px">ยังไม่ได้ตั้งค่า Supabase</h2>
-        <p style="opacity:.7">กรุณาใส่ SUPABASE_URL และ SUPABASE_KEY ในโค้ดก่อนใช้งาน</p>
-      </div>`;
-    return;
-  }
   const session = getSession();
-  if (session) { currentUser = session; enterApp(session); }
+  if (session) {
+    currentUser = session;
+    enterApp(session);
+  }
 })();
 
-// ====================================================
-// DASHBOARD2 TABLE — sticky header
-// ====================================================
-let d2Filtered = [];
-
-function d2RenderTable() {
-  const tbody = document.getElementById('d2TableBody');
-  if (!tbody) return;
-
-  const search = (document.getElementById('d2Search')?.value || '').toLowerCase();
-  const statusF = document.getElementById('d2StatusFilter')?.value || '';
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  d2Filtered = allData.filter(d => {
-    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
-    let status = 'ok';
-    if (days === null) status = 'ok';
-    else if (days < 0) status = 'overdue';
-    else if (days <= 30) status = 'warning';
-
-    if (statusF && status !== statusF) return false;
-    if (search) {
-      const hay = [d.instrument_type, d.instrument_name, d.brand, d.serial_no, d.id_code, d.department, d.cert_no].join(' ').toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
-
-  const count = document.getElementById('d2RowCount');
-  if (count) count.textContent = `${d2Filtered.length.toLocaleString()} รายการ`;
-
-  tbody.innerHTML = d2Filtered.map((d, i) => {
-    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
-    let status = 'ok', badge = '', rowBg = '';
-    if (days !== null && days < 0) {
-      status = 'overdue';
-      badge = `<span style="background:var(--red-light);color:var(--red);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">เกินกำหนด</span>`;
-      rowBg = 'background:#fff8f8';
-    } else if (days !== null && days <= 30) {
-      status = 'warning';
-      badge = `<span style="background:var(--amber-light);color:var(--amber);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ใกล้ครบ ${days} วัน</span>`;
-      rowBg = 'background:#fffdf0';
-    } else {
-      badge = `<span style="background:var(--green-light);color:var(--green);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ปกติ</span>`;
-    }
-    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-    const border = 'border-bottom:1px solid var(--border)';
-    const cell = `padding:9px 12px;${border};white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis`;
-    const typShort = (d.instrument_type||'–').split(' (')[0];
-    return `<tr style="${rowBg}">
-      <td style="${cell};color:var(--text2);font-size:12px">${i+1}</td>
-      <td style="${cell};color:var(--text2);font-size:12px" title="${d.instrument_type||''}">${typShort}</td>
-      <td style="${cell};font-weight:500" title="${d.instrument_name||''}">${d.instrument_name||'–'}</td>
-      <td style="${cell};color:var(--text2)">${d.brand||'–'}</td>
-      <td style="${cell};color:var(--text2);font-family:monospace">${d.serial_no||'–'}</td>
-      <td style="${cell};color:var(--accent);font-weight:500">${d.id_code||'–'}</td>
-      <td style="${cell};color:var(--text2)">${d.department||'–'}</td>
-      <td style="${cell};color:var(--text2)">${calDate}</td>
-      <td style="${cell};color:var(--text2)">${dueDate}</td>
-      <td style="padding:9px 12px;${border};text-align:center">${badge}</td>
-    </tr>`;
-  }).join('');
-}
-
-function d2FilterTable() { d2RenderTable(); }
 </script>
 
 <script>
