@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบสอบเทียบเครื่องมือ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calibration">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="theme-color" content="#1a2f4a">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #f0f7f6;
+  --surface: #ffffff;
+  --surface2: #f5faf9;
+  --border: #d0e8e4;
+  --text: #1a2e2c;
+  --text2: #4a6b67;
+  --text3: #8aaba7;
+  --accent: #00897B;
+  --accent-light: #e0f4f1;
+  --red: #E53935;
+  --red-light: #fdecea;
+  --amber: #F57F17;
+  --amber-light: #fff8e1;
+  --green: #2E7D32;
+  --green-light: #e8f5e9;
+  --purple: #6A1B9A;
+  --purple-light: #f3e5f5;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,137,123,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,137,123,0.15);
+  --font: 'IBM Plex Sans Thai', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+/* LOGIN */
+#loginPage { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(145deg, #004D40 0%, #00897B 50%, #00695C 100%); padding: 20px; }
+.login-card { background: white; border-radius: 16px; border-top: 4px solid var(--accent); padding: 48px 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo .icon { width: 64px; height: 64px; background: var(--accent); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px; }
+.login-logo h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.login-logo p { font-size: 13px; color: var(--text2); }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+.form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 14px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+.btn-primary { width: 100%; padding: 13px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity .2s; }
+.btn-primary:hover { opacity: .9; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; display: none; }
+.alert-error { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c4; }
+.alert-success { background: var(--green-light); color: var(--green); border: 1px solid #b8e0bf; }
+
+/* APP */
+#app { display: none; }
+.app-layout { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: #00695C; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+.sidebar-brand { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,.15); }
+.sidebar-brand h2 { font-size: 18px; font-weight: 600; }
+.sidebar-brand p { font-size: 11px; opacity: .5; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 18px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+.nav-item:hover { background: rgba(255,255,255,.05); color: white; }
+.nav-item.active { background: rgba(255,255,255,.15); color: white; border-left-color: #80CBC4; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 32px; height: 32px; background: #004D40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-info .name { font-size: 16px; font-weight: 500; color: white; }
+.user-info .role { font-size: 14px; color: rgba(255,255,255,.5); text-transform: uppercase; }
+.btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 16px; padding: 4px; transition: color .15s; }
+.btn-logout:hover { color: white; }
+.main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; }
+.topbar { background: white; border-bottom: 2px solid var(--accent); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-title { font-size: 24px; font-weight: 600; }
+.topbar-sub { font-size: 17px; color: var(--text2); margin-top: 1px; }
+.page-content { padding: 24px 28px; }
+.db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+.status-dot.ok { background: #00897B; }
+.status-dot.error { background: var(--red); }
+
+/* LOADING */
+#loadingOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: white; font-size: 18px; }
+#loadingOverlay.show { display: flex; }
+.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); border-left: 4px solid var(--border); }
+.stat-card.overdue { border-left-color: var(--red); }
+.stat-card.warning { border-left-color: var(--amber); }
+.stat-card.ok { border-left-color: var(--green); }
+.stat-card.total { border-left-color: var(--accent); }
+.stat-card.total .stat-num { color: var(--accent); }
+.stat-label { font-size: 18px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
+.stat-num { font-size: 48px; font-weight: 600; line-height: 1; }
+.stat-card.overdue .stat-num { color: var(--red); }
+.stat-card.warning .stat-num { color: var(--amber); }
+.stat-card.ok .stat-num { color: var(--green); }
+.stat-card.total .stat-num { color: var(--accent); }
+.stat-sub { font-size: 16px; color: var(--text3); margin-top: 4px; }
+
+/* CONTROLS */
+.controls-bar { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.controls-bar input, .controls-bar select { padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 18px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.controls-bar input:focus, .controls-bar select:focus { border-color: var(--accent); }
+.controls-bar input[type="text"] { flex: 1; min-width: 200px; }
+.btn-reset { padding: 11px 18px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text2); cursor: pointer; transition: all .15s; }
+.btn-reset:hover { border-color: var(--text2); color: var(--text); }
+.btn-refresh { padding: 11px 18px; background: var(--accent-light); border: 1.5px solid #c5d9ef; border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--accent); cursor: pointer; transition: all .15s; font-weight: 500; }
+.btn-refresh:hover { background: #d8e8f5; }
+
+/* TABLE */
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; table-layout: auto; }
+table td, table th { white-space: nowrap; }
+table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
+table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
+thead { background: #00897B; }
+th { padding: 14px 20px; text-align: left; font-size: 16px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 18px; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; font-size: 17px; font-weight: 500; white-space: nowrap; }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-amber { background: var(--amber-light); color: var(--amber); }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+.badge-purple { background: var(--purple-light); color: var(--purple); }
+.badge-gray { background: #f4f4f0; color: var(--text2); }
+.days-chip { font-family: var(--mono); font-size: 18px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
+.id-code { font-family: var(--mono); font-size: 18px; color: var(--text2); }
+.btn-cert { padding: 10px 18px; border-radius: 6px; font-family: var(--font); font-size: 18px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
+.btn-cert-has { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
+.btn-cert-has:hover { background: #d8e8f5; }
+.btn-cert-empty { background: var(--surface2); color: var(--text2); border-color: var(--border); }
+.btn-cert-empty:hover { border-color: var(--text2); color: var(--text); }
+.no-data { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: white; border-radius: 14px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modalIn .2s ease; }
+@keyframes modalIn { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white; z-index: 1; }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.btn-close { background: none; border: none; font-size: 20px; color: var(--text3); cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all .15s; line-height: 1; }
+.btn-close:hover { background: var(--bg); color: var(--text); }
+.modal-body { padding: 24px; }
+.meta-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.meta-item label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.meta-item span { font-size: 13px; color: var(--text); font-weight: 500; }
+.upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all .2s; background: var(--surface2); }
+.upload-area:hover { border-color: var(--accent); background: var(--accent-light); }
+.upload-area.dragover { border-color: var(--accent); background: var(--accent-light); }
+.upload-area .upload-icon { font-size: 32px; margin-bottom: 8px; }
+.upload-area p { color: var(--text2); font-size: 13px; }
+.upload-area span { color: var(--text3); font-size: 12px; }
+.file-list-section { margin-top: 16px; }
+.file-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
+.file-item-icon { font-size: 20px; flex-shrink: 0; }
+.file-item-info { flex: 1; min-width: 0; }
+.file-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.file-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-view, .btn-del { padding: 8px 16px; border-radius: 6px; font-size: 17px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
+.btn-view { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
+.btn-view:hover { background: #d8e8f5; }
+.btn-del { background: var(--red-light); color: var(--red); border-color: #f5c6c4; }
+.btn-del:hover { background: #fae0df; }
+
+/* ADMIN */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.section-header h2 { font-size: 18px; font-weight: 600; }
+.btn-add { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.btn-add:hover { opacity: .9; }
+.users-table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .3s; max-width: 320px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+
+@media (max-width: 1100px) {
+  #dashRow2 { grid-template-columns: 1fr 1fr !important; }
+  #dashRow2 > div:last-child { grid-column: span 2; }
+}
+@media (max-width: 768px) {
+  .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
+  .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
+  .sidebar-nav { display: none; }
+  .sidebar-user { border: none; padding: 0; }
+  .main-content { margin-left: 0; padding-top: 60px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .meta-row { grid-template-columns: 1fr; }
+  #dashRow2 { grid-template-columns: 1fr !important; }
+  #dashRow2 > div:last-child { grid-column: span 1; }
+}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spinner"></div><span id="loadingText">กำลังโหลด...</span></div>
+<div id="toast" class="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:160px;margin-bottom:16px;border-radius:12px">
+      <h1>ระบบสอบเทียบเครื่องมือ</h1>
+      <p>Calibration Management System</p>
+    </div>
+    <div class="alert alert-error" id="loginError">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+    <div class="form-group">
+      <label>ชื่อผู้ใช้</label>
+      <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">ติดต่อ Admin หากต้องการสิทธิ์เข้าใช้งาน</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-brand" style="padding:16px 12px;text-align:center;border-bottom:1px solid rgba(255,255,255,.15)">
+        <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:100%;max-width:180px;border-radius:10px;object-fit:contain">
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:8px;letter-spacing:.05em">Calibration System</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item" onclick="showPage('dashboard2')" id="nav-dashboard2"><span class="nav-icon">📈</span> ภาพรวม</div>
+        <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
+        <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
+      </nav>
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebarInitial">A</div>
+        <div class="user-info"><div class="name" id="sidebarName">Admin</div><div class="role" id="sidebarRole">admin</div></div>
+        <button class="btn-logout" onclick="doLogout()" title="ออกจากระบบ">↩</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div>
+            <div class="topbar-title" id="topbarTitle">Dashboard</div>
+            <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
+          </div>
+        <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+      </div>
+
+
+      <!-- DASHBOARD 2 — ภาพรวมการสอบเทียบ -->
+      <div id="pageDashboard2" class="page-content" style="display:none">
+
+        <!-- STAT CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="d2StatGrid">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font-size:14px;color:var(--text2);margin-bottom:6px">🔧 เครื่องมือทั้งหมด</div>
+            <div style="font-size:32px;font-weight:600;color:var(--text)" id="d2Total">–</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">เครื่อง</div>
+          </div>
+          <div style="background:var(--green-light);border:1px solid #b8e0bf;border-radius:10px;padding:16px">
+            <div style="font-size:14px;color:var(--green);margin-bottom:6px">✅ สอบเทียบแล้ว (ปกติ)</div>
+            <div style="font-size:32px;font-weight:600;color:var(--green)" id="d2Ok">–</div>
+            <div style="font-size:12px;color:var(--green);margin-top:4px">เครื่อง</div>
+          </div>
+          <div style="background:var(--red-light);border:1px solid #f5c6c4;border-radius:10px;padding:16px">
+            <div style="font-size:14px;color:var(--red);margin-bottom:6px">🔴 เกินกำหนดสอบเทียบ</div>
+            <div style="font-size:32px;font-weight:600;color:var(--red)" id="d2Overdue">–</div>
+            <div style="font-size:12px;color:var(--red);margin-top:4px">เครื่อง</div>
+          </div>
+          <div style="background:var(--amber-light);border:1px solid #f0d070;border-radius:10px;padding:16px">
+            <div style="font-size:14px;color:var(--amber);margin-bottom:6px">🟡 ใกล้ครบกำหนด (≤30 วัน)</div>
+            <div style="font-size:32px;font-weight:600;color:var(--amber)" id="d2Warning">–</div>
+            <div style="font-size:12px;color:var(--amber);margin-top:4px">เครื่อง</div>
+          </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px">
+
+          <!-- แผนสอบเทียบรายเดือน -->
+          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div style="font-size:16px;font-weight:600;color:var(--text)">แผนสอบเทียบรายเดือน</div>
+              <span style="font-size:12px;color:var(--text2)" id="d2Year">2569</span>
+            </div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
+
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px" id="d2MonthGrid"></div>
+
+            <div id="d2MonthDetail" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+              <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)" id="d2MonthTitle"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:12px;color:var(--text2);margin-bottom:4px">ครบกำหนดเดือนนี้</div>
+                  <div style="font-size:22px;font-weight:600;color:var(--text)" id="d2mTotal">–</div>
+                </div>
+                <div style="background:var(--red-light);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:12px;color:var(--red);margin-bottom:4px">เกินกำหนด</div>
+                  <div style="font-size:22px;font-weight:600;color:var(--red)" id="d2mOverdue">–</div>
+                </div>
+                <div style="background:var(--green-light);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:12px;color:var(--green);margin-bottom:4px">ปกติ</div>
+                  <div style="font-size:22px;font-weight:600;color:var(--green)" id="d2mOk">–</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--text2);margin-top:12px">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:4px;border-radius:2px;background:var(--green);display:inline-block"></span>ปกติ</span>
+            </div>
+          </div>
+
+          <!-- ความคืบหน้า -->
+          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <div style="font-size:16px;font-weight:600;color:var(--text)">สถานะภาพรวม</div>
+            </div>
+
+            <!-- Donut -->
+            <div style="display:flex;justify-content:center;margin-bottom:20px">
+              <div style="position:relative;width:140px;height:140px">
+                <canvas id="d2Donut" width="140" height="140" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สัดส่วนสถานะเครื่องมือ</canvas>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+                  <div style="font-size:26px;font-weight:600;color:var(--text)" id="d2DonutPct">–%</div>
+                  <div style="font-size:11px;color:var(--text2)">ปกติ</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress bars -->
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px" id="d2ProgressWrap">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
+                  <span style="color:var(--text2)">สอบเทียบภายใน</span>
+                  <span style="font-weight:600;color:var(--green)" id="d2PctIn">–%</span>
+                </div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px">
+                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s" id="d2BarIn"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
+                  <span style="color:var(--text2)">สอบเทียบภายนอก</span>
+                  <span style="font-weight:600;color:var(--accent)" id="d2PctOut">–%</span>
+                </div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px">
+                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s" id="d2BarOut"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Result summary -->
+            <div style="padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:13px;color:var(--text2);margin-bottom:8px">สรุปสถานะ</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+                <div style="background:var(--green-light);border-radius:8px;padding:10px">
+                  <div style="font-size:22px;font-weight:600;color:var(--green)" id="d2rOk">–</div>
+                  <div style="font-size:12px;color:var(--green)">ปกติ</div>
+                </div>
+                <div style="background:var(--red-light);border-radius:8px;padding:10px">
+                  <div style="font-size:22px;font-weight:600;color:var(--red)" id="d2rOver">–</div>
+                  <div style="font-size:12px;color:var(--red)">เกินกำหนด</div>
+                </div>
+                <div style="background:var(--amber-light);border-radius:8px;padding:10px">
+                  <div style="font-size:22px;font-weight:600;color:var(--amber)" id="d2rWarn">–</div>
+                  <div style="font-size:12px;color:var(--amber)">ใกล้ครบ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ประเภทเครื่องมือ -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:14px">ประเภทเครื่องมือ — สถานะล่าสุด</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px" id="d2TypeGrid"></div>
+        </div>
+
+        <!-- ตารางข้อมูลเครื่องมือ (sticky header) -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:16px;font-weight:600;color:var(--text)">รายการเครื่องมือทั้งหมด</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="d2Search" type="text" placeholder="🔍 ค้นหา..." oninput="d2FilterTable()"
+                style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none;width:200px">
+              <select id="d2StatusFilter" onchange="d2FilterTable()"
+                style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none">
+                <option value="">ทุกสถานะ</option>
+                <option value="overdue">เกินกำหนด</option>
+                <option value="warning">ใกล้ครบ</option>
+                <option value="ok">ปกติ</option>
+              </select>
+              <span id="d2RowCount" style="font-size:13px;color:var(--text2)"></span>
+            </div>
+          </div>
+
+          <!-- wrapper scroll แนวตั้ง max 500px -->
+          <div style="overflow-y:auto;max-height:500px;border:1px solid var(--border);border-radius:8px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface2);position:sticky;top:0;z-index:2">
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">#</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ประเภท</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ชื่อเครื่องมือ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ยี่ห้อ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">S/N</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ID Code</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">หน่วยงาน</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">วันสอบเทียบ</th>
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">ครบกำหนด</th>
+                  <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="d2TableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+            <!-- DASHBOARD -->
+      <div id="pageDashboard" class="page-content">
+
+        <!-- ROW 2: MONTH CARDS + PROGRESS (2 คอลัมน์) -->
+        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+
+          <!-- แผนสอบเทียบรายเดือน (ซ้าย) -->
+          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div style="font-size:16px;font-weight:600;color:var(--text)">แผนสอบเทียบรายเดือน</div>
+              <span style="font-size:13px;color:var(--text2)">2569</span>
+            </div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
+            <div style="display:flex;gap:10px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;border-radius:2px;background:var(--green);display:inline-block"></span>ปกติ</span>
+            </div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+          </div>
+
+          <!-- สถานะภาพรวม (ขวา) -->
+          <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px">สถานะภาพรวม</div>
+
+            <!-- 4 stat cards -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="stat-card" style="border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('')">
+                  <div class="stat-label" style="font-size:13px">✏️ เครื่องมือทั้งหมด</div>
+                  <div class="stat-num" style="font-size:28px" id="statTotal">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+                <div class="stat-card ok" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('ok')">
+                  <div class="stat-label" style="font-size:13px">✅ สอบเทียบแล้ว (ปกติ)</div>
+                  <div class="stat-num" style="font-size:28px" id="statOk">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="stat-card overdue" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('overdue')">
+                  <div class="stat-label" style="font-size:13px">🔴 เกินกำหนดสอบเทียบ</div>
+                  <div class="stat-num" style="font-size:28px" id="statOverdue">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+                <div class="stat-card warning" style="border-radius:10px;padding:14px;cursor:pointer" onclick="filterByStatus('warning')">
+                  <div class="stat-label" style="font-size:13px">🟡 ใกล้ครบ (≤30 วัน)</div>
+                  <div class="stat-num" style="font-size:28px" id="statWarning">–</div>
+                  <div class="stat-sub">เครื่อง</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress bars -->
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
+                  <span style="color:var(--text2)">สอบเทียบภายใน</span>
+                  <span style="font-weight:600;color:var(--green)" id="dashPctIn">–%</span>
+                </div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px">
+                  <div style="height:100%;background:var(--green);border-radius:4px;transition:width .5s;width:0%" id="dashBarIn"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px">
+                  <span style="color:var(--text2)">สอบเทียบภายนอก</span>
+                  <span style="font-weight:600;color:var(--accent)" id="dashPctOut">–%</span>
+                </div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px">
+                  <div style="height:100%;background:var(--accent);border-radius:4px;transition:width .5s;width:0%" id="dashBarOut"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 3: ประเภทเครื่องมือ — สถานะล่าสุด (เต็มแถว) -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px">ประเภทเครื่องมือ — สถานะล่าสุด</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:16px">กดการ์ดเพื่อกรองตามประเภท</div>
+          <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+        </div>
+
+        <!-- ROW 4: FILTER + TABLE -->
+        <div class="controls-bar">
+          <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT..." oninput="filterData()">
+          <select id="typeFilter" onchange="filterData()"><option value="">ทุกประเภท</option></select>
+          <select id="unitFilter" onchange="filterData()"><option value="">ทุกหน่วยงาน</option></select>
+          <select id="statusFilter" onchange="filterData()">
+            <option value="">ทุกสถานะ</option>
+            <option value="overdue">เลยกำหนด</option>
+            <option value="warning">ใกล้ครบ</option>
+            <option value="ok">ปกติ</option>
+          </select>
+          <select id="monthFilter" onchange="filterData()">
+            <option value="">ทุกเดือน (ครบกำหนด)</option>
+            <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+            <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+            <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+            <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+            <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+            <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+          </select>
+          <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
+          <button class="btn-refresh" onclick="loadData()">↻ รีเฟรช</button>
+          <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
+          <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
+        </div>
+
+        <!-- PAGINATION -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:15px;color:var(--text2)" id="paginationInfo">–</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:15px;color:var(--text2)">แสดง</span>
+            <select id="pageSizeSelect" onchange="changePageSize()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:15px;outline:none">
+              <option value="50">50 แถว</option>
+              <option value="100" selected>100 แถว</option>
+              <option value="200">200 แถว</option>
+            </select>
+            <button onclick="goPage(-1)" id="btnPrev" class="btn-reset" style="padding:7px 14px">◀ ก่อนหน้า</button>
+            <span id="pageNum" style="font-size:15px;font-weight:600;color:var(--accent)">หน้า 1</span>
+            <button onclick="goPage(1)" id="btnNext" class="btn-reset" style="padding:7px 14px">ถัดไป ▶</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ประเภทเครื่องมือ</th>
+                <th>ชื่อเครื่องจักร</th>
+                <th>สถานที่ใช้งาน</th>
+                <th>เครื่องมือ</th>
+                <th>ยี่ห้อ</th>
+                <th>Range</th>
+                <th>Tolerance (±)</th>
+                <th>S/N</th>
+                <th>หน่วยงาน</th>
+                <th>ID Code</th>
+                <th>CERT.</th>
+                <th>วันสอบเทียบ</th>
+                <th>ครบกำหนด</th>
+                <th>เหลือ</th>
+                <th>ความถี่สอบเทียบ</th>
+                <th>ภายใน/ภายนอก</th>
+                <th>สถานะ</th>
+                <th>ไฟล์</th>
+                <th>Remark</th>
+                <th id="thManage" style="display:none">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="dataTable"><tr><td colspan="21" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+            <!-- AUDIT LOG -->
+      <div id="pageAudit" class="page-content" style="display:none">
+        <div class="section-header">
+          <h2>Audit Log — ประวัติการแก้ไข</h2>
+          <button class="btn-refresh" onclick="loadAuditLogs()">↻ รีเฟรช</button>
+        </div>
+        <div class="controls-bar" style="margin-bottom:16px">
+          <input type="text" id="auditSearch" placeholder="🔍 ค้นหา ผู้ใช้, ID Code, การกระทำ..." style="flex:1;min-width:200px" oninput="filterAuditLogs()">
+          <select id="auditActionFilter" onchange="filterAuditLogs()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
+            <option value="">ทุกการกระทำ</option>
+            <option value="เพิ่ม">เพิ่ม</option>
+            <option value="แก้ไข">แก้ไข</option>
+            <option value="ลบ">ลบ</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>เวลา</th>
+                <th>ผู้ใช้</th>
+                <th>การกระทำ</th>
+                <th>ID Code</th>
+                <th>เครื่องมือ</th>
+                <th>รายละเอียด</th>
+              </tr>
+            </thead>
+            <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div id="pageAdmin" class="page-content" style="display:none">
+        <div class="section-header">
+          <h2>จัดการผู้ใช้งาน</h2>
+          <button class="btn-add" onclick="openUserModal()">+ เพิ่มผู้ใช้</button>
+        </div>
+        <div class="users-table-wrap">
+          <table>
+            <thead><tr><th>ชื่อ</th><th>Username</th><th>Role</th><th>สถานะ</th><th>ประเภทที่ดูแล</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
+            <tbody id="usersTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px;padding:16px 20px;background:var(--amber-light);border:1px solid #f0d070;border-radius:var(--radius);font-size:13px;color:var(--amber);">
+          ⚠️ รหัสผ่านถูก hash ด้วย SHA-256 ก่อนบันทึก — Admin ไม่สามารถดูรหัสผ่านจริงได้
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INSTRUMENT MODAL -->
+<div class="modal-overlay" id="instrumentModal">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h3 id="instrumentModalTitle">เพิ่มเครื่องมือ</h3>
+      <button class="btn-close" onclick="closeInstrumentModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        
+        <div class="form-group">
+          <label>ประเภทเครื่องมือ</label>
+          <select id="iCategory" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+            <option value="">-- เลือกกลุ่ม --</option>
+            <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
+            <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
+            <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
+            <option value="ความดัน/สุญญากาศ (Pressure/Vacuum)">ความดัน/สุญญากาศ (Pressure/Vacuum)</option>
+            <option value="ความเร็วรอบ (Speed/Rotation)">ความเร็วรอบ (Speed/Rotation)</option>
+            <option value="เวลา (Time)">เวลา (Time)</option>
+            <option value="เคมี/ความเข้มข้น (Chemical/Concentration)">เคมี/ความเข้มข้น (Chemical/Concentration)</option>
+            <option value="ความหนืด/ความหนาแน่น (Viscosity/Density)">ความหนืด/ความหนาแน่น (Viscosity/Density)</option>
+            <option value="ไฟฟ้า (Electrical)">ไฟฟ้า (Electrical)</option>
+            <option value="การไหล/ปริมาตร (Flow/Volume)">การไหล/ปริมาตร (Flow/Volume)</option>
+            <option value="แสง/เสียง (Light/Sound)">แสง/เสียง (Light/Sound)</option>
+            <option value="ความปลอดภัย (Safety)">ความปลอดภัย (Safety)</option>
+            <option value="แรงบิด/แรงกด (Torque/Force)">แรงบิด/แรงกด (Torque/Force)</option>
+            <option value="อื่นๆ (Others)">อื่นๆ (Others)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ชื่อเครื่องมือ</label>
+          <input type="text" id="iName" placeholder="เช่น Electronic Balance">
+        </div>
+        <div class="form-group">
+          <label>ยี่ห้อ / รุ่น</label>
+          <input type="text" id="iBrand" placeholder="เช่น AND / GF-3000">
+        </div>
+        <div class="form-group">
+          <label>Range</label>
+          <input type="text" id="iRange" placeholder="เช่น 30 kg">
+        </div>
+        <div class="form-group">
+          <label>Tolerance (±)</label>
+          <input type="text" id="iTolerance" placeholder="เช่น 0.01 g">
+        </div>
+        <div class="form-group">
+          <label>Serial No. (S/N)</label>
+          <input type="text" id="iSerial" placeholder="หมายเลขซีเรียล">
+        </div>
+        <div class="form-group">
+          <label>หน่วยงาน</label>
+          <input type="text" id="iDept" placeholder="เช่น PMP1">
+        </div>
+        <div class="form-group">
+          <label>ID Code</label>
+          <input type="text" id="iIdCode" placeholder="เช่น PMP1BB01-WI01">
+        </div>
+        <div class="form-group">
+          <label>เลขที่ Certificate</label>
+          <input type="text" id="iCertNo" placeholder="เช่น 25B001-0">
+        </div>
+        <div class="form-group">
+          <label>วันที่สอบเทียบ</label>
+          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value)">
+        </div>
+        <div class="form-group">
+          <label>วันครบกำหนด</label>
+          <input type="date" id="iDueDate">
+        </div>
+        <div class="form-group">
+          <label>ชื่อเครื่องจักร</label>
+          <input type="text" id="iMachineName" placeholder="เช่น MIX 1000L">
+        </div>
+        <div class="form-group">
+          <label>สถานที่ใช้งาน</label>
+          <input type="text" id="iLocation" placeholder="เช่น ตึก 5/1">
+        </div>
+        <div class="form-group">
+          <label>ความถี่สอบเทียบ</label>
+          <input type="text" id="iCalFrequency" placeholder="เช่น 1 ครั้ง/ปี" onchange="calcDueDate(document.getElementById('iCalDate').value, this.value)" onblur="calcDueDate(document.getElementById('iCalDate').value, this.value)">
+        </div>
+        <div class="form-group">
+          <label>ภายใน / ภายนอก</label>
+          <select id="iCalType" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
+            <option value="">-- เลือก --</option>
+            <option value="ภายใน">🏭 ภายใน</option>
+            <option value="ภายนอก">🌐 ภายนอก</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label>Remark</label>
+          <input type="text" id="iRemark" placeholder="หมายเหตุ">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn-primary" id="saveInstrumentBtn" onclick="saveInstrument()">บันทึก</button>
+        <button class="btn-reset" onclick="closeInstrumentModal()" style="flex:none;padding:13px 20px">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CERT MODAL -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>📄 ไฟล์ Certificate</h3><button class="btn-close" onclick="closeCertModal()">×</button></div>
+    <div class="modal-body">
+      <div class="meta-row">
+        <div class="meta-item"><label>ID Code</label><span id="mIdCode">–</span></div>
+        <div class="meta-item"><label>CERT.</label><span id="mCertNo">–</span></div>
+        <div class="meta-item"><label>เครื่องมือ</label><span id="mEquipment">–</span></div>
+      </div>
+      <div id="uploadSection">
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📁</div>
+          <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
+          <span>รองรับ PDF, JPG, PNG (สูงสุด 50MB)</span>
+          <input type="file" id="fileInput" style="display:none" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleFileSelect(this.files)">
+        </div>
+      </div>
+      <div class="file-list-section" id="fileListSection"></div>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header"><h3 id="userModalTitle">เพิ่มผู้ใช้</h3><button class="btn-close" onclick="closeUserModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>ชื่อ-นามสกุล</label><input type="text" id="uName" placeholder="ชื่อที่แสดง"></div>
+      <div class="form-group"><label>Username</label><input type="text" id="uUsername" placeholder="ตัวเล็ก ไม่มีเว้นวรรค"></div>
+      <div class="form-group">
+        <label id="uPasswordLabel">รหัสผ่าน</label>
+        <input type="password" id="uPassword" placeholder="อย่างน้อย 6 ตัวอักษร">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="uPasswordHint"></div>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="uRole">
+          <option value="viewer">Viewer — ดูข้อมูลอย่างเดียว</option>
+          <option value="editor">Editor — แก้ไขข้อมูล + อัพโหลด cert</option>
+          <option value="admin">Admin — จัดการทุกอย่าง</option>
+        </select>
+      </div>
+      <div class="form-group" id="uActiveGroup" style="display:none">
+        <label>สถานะ</label>
+        <select id="uActive"><option value="true">เปิดใช้งาน</option><option value="false">ปิดใช้งาน</option></select>
+      </div>
+      <div class="form-group" id="uTypesGroup">
+        <label>ประเภทเครื่องมือที่รับผิดชอบ <span style="font-size:12px;color:var(--text3)">(Admin เห็นทั้งหมด ไม่ต้องกำหนด)</span></label>
+        <div id="uTypesContainer" style="border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;max-height:200px;overflow-y:auto;background:var(--surface2)">
+          <div style="color:var(--text3);font-size:13px">กำลังโหลดประเภทเครื่องมือ...</div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">ถ้าไม่เลือก = เห็นทุกประเภท</div>
+      </div>
+      <button class="btn-primary" id="saveUserBtn" onclick="saveUser()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================================================
+// SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
+// ====================================================
+const SUPABASE_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ====================================================
+// SESSION
+// ====================================================
+let currentUser = null;
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('cal_session') || 'null'); } catch(e) { return null; }
+}
+function setSession(u) { sessionStorage.setItem('cal_session', JSON.stringify(u)); currentUser = u; }
+function clearSession() { sessionStorage.removeItem('cal_session'); currentUser = null; }
+
+// ====================================================
+// SHA-256
+// ====================================================
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ====================================================
+// LOGIN
+// ====================================================
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!username || !password) return;
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+  document.getElementById('loginError').style.display = 'none';
+
+  try {
+    const hash = await sha256(password);
+    const { data, error } = await sb.from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', hash)
+      .eq('active', true)
+      .single();
+
+    if (error || !data) {
+      document.getElementById('loginError').style.display = 'block';
+    } else {
+      setSession(data);
+      enterApp(data);
+    }
+  } catch(e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+  }
+}
+
+function enterApp(user) {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('sidebarName').textContent = user.name;
+  document.getElementById('sidebarRole').textContent = user.role;
+  document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
+  if (user.role === 'admin') {
+    document.getElementById('nav-admin').style.display = 'flex';
+    document.getElementById('nav-audit').style.display = 'flex';
+  }
+  if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
+  if (user.role === 'admin' || user.role === 'editor') toggleManageColumns(true);
+  setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
+  loadData();
+}
+
+function doLogout() { clearSession(); location.reload(); }
+
+// ====================================================
+// DATA
+// ====================================================
+let allData = [], filteredData = [];
+
+async function loadData() {
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    // ดึงข้อมูลทั้งหมด (Supabase default limit 1000 ต้องใช้ range)
+    let allRows = [];
+    const chunkSize = 1000;
+    // ดึง chunk แรกก่อน
+    let query0 = sb.from('instruments').select('*').order('id').range(0, chunkSize - 1);
+    if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
+      query0 = query0.in('instrument_type', currentUser.instrument_types);
+    }
+    const { data: first, error: err0 } = await query0;
+    if (err0) throw err0;
+    allRows = first || [];
+    // ถ้ายังมีเพิ่ม ดึงต่อ
+    if (allRows.length === chunkSize) {
+      let from = chunkSize;
+      while (true) {
+        let q = sb.from('instruments').select('*').order('id').range(from, from + chunkSize - 1);
+        if (currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0) {
+          q = q.in('instrument_type', currentUser.instrument_types);
+        }
+        const { data: chunk, error: err } = await q;
+        if (err) throw err;
+        if (!chunk || chunk.length === 0) break;
+        allRows = allRows.concat(chunk);
+        if (chunk.length < chunkSize) break;
+        from += chunkSize;
+      }
+    }
+    const data = allRows;
+    const error = null;
+    if (error) throw error;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    allData = data.map(d => ({
+      ...d,
+      days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
+    }));
+    filteredData = [...allData];
+    populateFilters();
+    updateStats();
+    renderTable();
+    renderMonthly();
+    renderCategoryCards();
+    setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
+  } catch(e) {
+    setDriveStatus(false, 'โหลดไม่สำเร็จ');
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+  } finally { hideLoading(); }
+}
+
+// ====================================================
+// DASHBOARD
+// ====================================================
+function populateFilters() {
+  const types = [...new Set(allData.map(d => d.instrument_type))].filter(Boolean).sort();
+  const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
+  document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join('');
+  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option>${u}</option>`).join('');
+}
+
+function updateStats() {
+  let ov = 0, wa = 0, ok = 0;
+  filteredData.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) ov++;
+    else if (d.days_left <= 30) wa++;
+    else ok++;
+  });
+  document.getElementById('statOverdue').textContent = ov;
+  document.getElementById('statWarning').textContent = wa;
+
+  // อัพเดท total และ ok
+  const elTotal = document.getElementById('statTotal');
+  const elOk = document.getElementById('statOk');
+  if (elTotal) elTotal.textContent = allData.length.toLocaleString();
+  if (elOk) elOk.textContent = (allData.length - ov - wa).toLocaleString();
+
+  // Donut
+  const okCount = allData.length - ov - wa;
+  const pct = allData.length > 0 ? Math.round(okCount/allData.length*100) : 0;
+  const pctEl = document.getElementById('dashDonutPct');
+  if (pctEl) pctEl.textContent = pct + '%';
+  const donutCanvas = document.getElementById('dashDonut');
+  if (donutCanvas) {
+    if (window._dashDonut) window._dashDonut.destroy();
+    window._dashDonut = new Chart(donutCanvas, {
+      type: 'doughnut',
+      data: { datasets: [{ data: [okCount, ov, wa], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
+    });
+  }
+  // Progress
+  const internal = allData.filter(d => d.cal_type === 'ภายใน');
+  const external = allData.filter(d => d.cal_type === 'ภายนอก');
+  const inOk = internal.filter(d => d.days_left !== null && d.days_left >= 0).length;
+  const exOk = external.filter(d => d.days_left !== null && d.days_left >= 0).length;
+  const inPct = internal.length ? Math.round(inOk/internal.length*100) : 0;
+  const exPct = external.length ? Math.round(exOk/external.length*100) : 0;
+  const pIn = document.getElementById('dashPctIn');
+  const pOut = document.getElementById('dashPctOut');
+  const bIn = document.getElementById('dashBarIn');
+  const bOut = document.getElementById('dashBarOut');
+  if (pIn) pIn.textContent = inPct + '%';
+  if (pOut) pOut.textContent = exPct + '%';
+  if (bIn) bIn.style.width = inPct + '%';
+  if (bOut) bOut.style.width = exPct + '%';
+  // Summary
+  const sOk = document.getElementById('dashSumOk');
+  const sOv = document.getElementById('dashSumOver');
+  const sWa = document.getElementById('dashSumWarn');
+  if (sOk) sOk.textContent = okCount;
+  if (sOv) sOv.textContent = ov;
+  if (sWa) sWa.textContent = wa;
+  document.getElementById('statOk').textContent = ok;
+  document.getElementById('statTotal').textContent = filteredData.length;
+}
+
+function filterData() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const type = document.getElementById('typeFilter').value;
+  const unit = document.getElementById('unitFilter').value;
+  const status = document.getElementById('statusFilter').value;
+
+  const month = document.getElementById('monthFilter').value;
+  filteredData = allData.filter(d => {
+    if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
+    if (type && d.instrument_type !== type) return false;
+    if (unit && d.department !== unit) return false;
+    if (status && d.days_left !== null) {
+      if (status === 'overdue' && d.days_left >= 0) return false;
+      if (status === 'warning' && (d.days_left < 0 || d.days_left > 30)) return false;
+      if (status === 'ok' && d.days_left <= 30) return false;
+    }
+    if (month && d.due_date) {
+      const m = new Date(d.due_date).getMonth() + 1;
+      if (String(m) !== month) return false;
+    }
+    return true;
+  });
+  currentPage = 1;
+  updateStats(); renderTable();
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('unitFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('monthFilter').value = '';
+
+  activeCategory = 'all';
+  renderCategoryCards();
+  if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
+  filteredData = [...allData];
+  currentPage = 1;
+  updateStats(); renderTable();
+}
+
+function formatDate(s) {
+  if (!s) return '–';
+  return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function typeBadge(t) {
+  if (!t) return '<span class="badge badge-gray">–</span>';
+  const map = {
+    'มวล/น้ำหนัก (Mass/Weight)': 'badge-blue',
+    'ความยาว/มิติ (Length/Dimension)': 'badge-purple',
+    'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'badge-amber',
+    'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'badge-gray',
+    'ความเร็วรอบ (Speed/Rotation)': 'badge-green',
+    'เวลา (Time)': 'badge-gray',
+    'เคมี/ความเข้มข้น (Chemical/Concentration)': 'badge-green',
+    'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'badge-blue',
+    'ไฟฟ้า (Electrical)': 'badge-amber',
+    'การไหล/ปริมาตร (Flow/Volume)': 'badge-blue',
+    'แสง/เสียง (Light/Sound)': 'badge-amber',
+    'ความปลอดภัย (Safety)': 'badge-red',
+    'แรงบิด/แรงกด (Torque/Force)': 'badge-purple',
+  };
+  return `<span class="badge ${map[t]||'badge-gray'}" style="font-size:13px">${t}</span>`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('dataTable');
+  if (!filteredData.length) { 
+    tbody.innerHTML = '<tr><td colspan="21" class="no-data">ไม่พบข้อมูล</td></tr>';
+    updatePaginationUI();
+    return; 
+  }
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * pageSize;
+  const pageData = filteredData.slice(start, start + pageSize);
+  updatePaginationUI();
+  tbody.innerHTML = pageData.map((d, i) => {
+  const rowNum = start + i + 1;
+    const days = d.days_left;
+    let statusBadge, daysClass;
+    if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysClass = 'badge-gray'; }
+    else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysClass = 'badge-red'; }
+    else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysClass = 'badge-amber'; }
+    else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
+    return `<tr>
+      <td>${rowNum}</td>
+      <td>${typeBadge(d.instrument_type)}</td>
+      <td>${d.machine_name||'–'}</td>
+      <td>${d.location||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${d.brand||'–'}</td>
+      <td>${d.range_val||'–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
+      <td><strong>${d.department||'–'}</strong></td>
+      <td class="id-code">${d.id_code||'–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
+      <td>${formatDate(d.cal_date)}</td>
+      <td>${formatDate(d.due_date)}</td>
+      <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
+      <td>${d.cal_frequency||'–'}</td>
+      <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
+      <td>${statusBadge}</td>
+      <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\'")}')" >📎 ไฟล์</button></td>
+      <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
+      <td style="white-space:nowrap" class="td-manage"></td>
+    </tr>`;
+  }).join('');
+
+  // ใส่ปุ่มจัดการถ้าเป็น Admin/Editor
+  if (currentUser?.role === 'admin' || currentUser?.role === 'editor') {
+    const start = (currentPage - 1) * pageSize;
+    document.querySelectorAll('.td-manage').forEach((td, i) => {
+      const d = filteredData[start + i];
+      if (!d) return;
+      const name = (d.instrument_name||'').replace(/'/g, "\\'");
+      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
+    });
+  }
+}
+
+// ====================================================
+// CERT MODAL — Supabase Storage
+// ====================================================
+let currentInstrumentId = null;
+
+async function openCertModal(instrumentId, idCode, certNo, equipment) {
+  currentInstrumentId = instrumentId;
+  document.getElementById('mIdCode').textContent = idCode;
+  document.getElementById('mCertNo').textContent = certNo;
+  document.getElementById('mEquipment').textContent = equipment;
+  document.getElementById('certModal').classList.add('open');
+  document.getElementById('fileListSection').innerHTML = '<p style="color:var(--text3);font-size:13px">กำลังโหลดไฟล์...</p>';
+  await loadCertFiles(instrumentId, idCode);
+}
+
+async function loadCertFiles(instrumentId, idCode) {
+  try {
+    const folder = `cert_${instrumentId}_${idCode}`;
+    const { data, error } = await sb.storage.from('certificates').list(folder);
+    if (error) throw error;
+    renderFileList(data || [], folder);
+
+    // อัพเดทปุ่มในตาราง
+    const btn = document.querySelector(`button[onclick*="openCertModal(${instrumentId},"]`);
+    if (btn) {
+      if (data && data.length > 0) { btn.className = 'btn-cert btn-cert-has'; btn.innerHTML = `📎 ${data.length} ไฟล์`; }
+      else { btn.className = 'btn-cert btn-cert-empty'; btn.innerHTML = '📎 ไฟล์'; }
+    }
+  } catch(e) {
+    document.getElementById('fileListSection').innerHTML = '<p style="color:var(--red);font-size:13px">โหลดไฟล์ไม่สำเร็จ</p>';
+  }
+}
+
+function renderFileList(files, folder) {
+  const section = document.getElementById('fileListSection');
+  const validFiles = files.filter(f => f.name !== '.emptyFolderPlaceholder');
+  if (!validFiles.length) { section.innerHTML = '<p style="color:var(--text3);font-size:13px;margin-top:12px;text-align:center">ยังไม่มีไฟล์</p>'; return; }
+
+  section.innerHTML = validFiles.map(f => {
+    const icon = f.name.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️';
+    const size = f.metadata?.size ? (f.metadata.size/1024).toFixed(0) + ' KB' : '';
+    const canEdit = currentUser?.role !== 'viewer';
+    return `<div class="file-item">
+      <div class="file-item-icon">${icon}</div>
+      <div class="file-item-info">
+        <div class="file-item-name">${f.name}</div>
+        <div class="file-item-meta">${size}</div>
+      </div>
+      <div class="file-item-actions">
+        <button class="btn-view" onclick="viewFile('${folder}','${f.name}')">ดู</button>
+        ${canEdit ? `<button class="btn-del" onclick="deleteFile('${folder}','${f.name}')">ลบ</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function viewFile(folder, name) {
+  const { data } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${name}`, 300);
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+}
+
+async function deleteFile(folder, name) {
+  if (!confirm('ต้องการลบไฟล์นี้?')) return;
+  const { error } = await sb.storage.from('certificates').remove([`${folder}/${name}`]);
+  if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
+  showToast('ลบไฟล์แล้ว', 'success');
+  const idCode = document.getElementById('mIdCode').textContent;
+  await loadCertFiles(currentInstrumentId, idCode);
+}
+
+async function handleFileSelect(files) {
+  if (!currentInstrumentId) return;
+  if (currentUser?.role === 'viewer') { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
+  const idCode = document.getElementById('mIdCode').textContent;
+  const folder = `cert_${currentInstrumentId}_${idCode}`;
+  showLoading('กำลังอัพโหลด...');
+  try {
+    for (const file of files) {
+      const { error } = await sb.storage.from('certificates').upload(`${folder}/${file.name}`, file, { upsert: true });
+      if (error) throw error;
+    }
+    showToast('อัพโหลดสำเร็จ', 'success');
+    await loadCertFiles(currentInstrumentId, idCode);
+  } catch(e) { showToast('อัพโหลดไม่สำเร็จ: ' + e.message, 'error'); }
+  finally { hideLoading(); }
+}
+
+function closeCertModal() { document.getElementById('certModal').classList.remove('open'); currentInstrumentId = null; }
+
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); handleFileSelect(e.dataTransfer.files); });
+
+// ====================================================
+// ADMIN
+// ====================================================
+let usersData = [];
+
+async function loadUsers() {
+  const { data } = await sb.from('users').select('*').order('created_at');
+  usersData = data || [];
+  renderUsersTable();
+}
+
+function renderUsersTable() {
+  const tbody = document.getElementById('usersTable');
+  const roleMap = { admin: ['badge-purple','Admin'], editor: ['badge-blue','Editor'], viewer: ['badge-gray','Viewer'] };
+  tbody.innerHTML = usersData.map(u => {
+    const [cls, label] = roleMap[u.role] || ['badge-gray', u.role];
+    const activeBadge = u.active ? '<span class="badge badge-green">เปิด</span>' : '<span class="badge badge-red">ปิด</span>';
+    const date = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH') : '–';
+    const isSelf = currentUser?.id === u.id;
+    return `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td style="font-family:var(--mono);font-size:20px">${u.username}</td>
+      <td><span class="badge ${cls}">${label}</span></td>
+      <td>${activeBadge}</td>
+      <td>${date}</td>
+      <td>
+        <button class="btn-view" style="margin-right:6px" onclick="openUserModal('${u.id}')">แก้ไข</button>
+        ${!isSelf ? `<button class="btn-del" onclick="deleteUser('${u.id}')">ลบ</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+let editingUserId = null;
+
+async function loadInstrumentTypesForModal(selectedTypes) {
+  const container = document.getElementById('uTypesContainer');
+  // ดึงประเภทเครื่องมือทั้งหมดจาก allData
+  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  if (!types.length) {
+    // ถ้ายังไม่มีข้อมูล ดึงจาก Supabase
+    const { data } = await sb.from('instruments').select('instrument_type');
+    const dbTypes = [...new Set((data||[]).map(d => d.instrument_type).filter(Boolean))].sort();
+    renderTypeCheckboxes(container, dbTypes, selectedTypes);
+  } else {
+    renderTypeCheckboxes(container, types, selectedTypes);
+  }
+}
+
+function renderTypeCheckboxes(container, types, selectedTypes) {
+  const selected = selectedTypes || [];
+  container.innerHTML = types.map(t => `
+    <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;font-size:14px;border-radius:6px" 
+           onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${t}" ${selected.includes(t) ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
+      <span>${t}</span>
+    </label>
+  `).join('');
+}
+
+function openUserModal(userId) {
+  editingUserId = userId || null;
+  document.getElementById('userModalTitle').textContent = userId ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้';
+  document.getElementById('uActiveGroup').style.display = userId ? 'block' : 'none';
+  if (userId) {
+    const u = usersData.find(x => x.id === userId);
+    if (!u) return;
+    document.getElementById('uName').value = u.name;
+    document.getElementById('uUsername').value = u.username;
+    document.getElementById('uPassword').value = '';
+    document.getElementById('uPasswordHint').textContent = 'เว้นว่างถ้าไม่ต้องการเปลี่ยนรหัสผ่าน';
+    document.getElementById('uPasswordLabel').textContent = 'รหัสผ่านใหม่';
+    document.getElementById('uRole').value = u.role;
+    document.getElementById('uActive').value = String(u.active);
+  } else {
+    document.getElementById('uName').value = '';
+    document.getElementById('uUsername').value = '';
+    document.getElementById('uPassword').value = '';
+    document.getElementById('uPasswordHint').textContent = '';
+    document.getElementById('uPasswordLabel').textContent = 'รหัสผ่าน';
+    document.getElementById('uRole').value = 'viewer';
+  }
+  document.getElementById('userModal').classList.add('open');
+  // โหลด checkboxes ประเภทเครื่องมือ
+  const selectedTypes = userId ? (usersData.find(x => x.id === userId)?.instrument_types || []) : [];
+  loadInstrumentTypesForModal(selectedTypes);
+}
+
+function closeUserModal() { document.getElementById('userModal').classList.remove('open'); editingUserId = null; }
+
+async function saveUser() {
+  const name = document.getElementById('uName').value.trim();
+  const username = document.getElementById('uUsername').value.trim().toLowerCase();
+  const password = document.getElementById('uPassword').value;
+  const role = document.getElementById('uRole').value;
+  const active = document.getElementById('uActive').value === 'true';
+
+  if (!name || !username) { showToast('กรุณากรอกชื่อและ username', 'error'); return; }
+  if (!editingUserId && !password) { showToast('กรุณากรอกรหัสผ่าน', 'error'); return; }
+  if (password && password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัว', 'error'); return; }
+
+  const btn = document.getElementById('saveUserBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    // เก็บประเภทที่เลือก
+    const checkedTypes = [...document.querySelectorAll('#uTypesContainer input[type=checkbox]:checked')].map(el => el.value);
+    const payload = { name, username, role, active, instrument_types: checkedTypes.length > 0 ? checkedTypes : null };
+    if (password) payload.password = await sha256(password);
+
+    if (editingUserId) {
+      const { error } = await sb.from('users').update(payload).eq('id', editingUserId);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('users').insert({ ...payload, active: true });
+      if (error) throw error;
+    }
+    await loadUsers();
+    closeUserModal();
+    showToast('บันทึกสำเร็จ', 'success');
+  } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
+}
+
+async function deleteUser(userId) {
+  if (!confirm('ต้องการลบผู้ใช้นี้?')) return;
+  const { error } = await sb.from('users').delete().eq('id', userId);
+  if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
+  await loadUsers();
+  showToast('ลบผู้ใช้แล้ว', 'success');
+}
+
+// ====================================================
+// PAGES
+// ====================================================
+
+// ====================================================
+// INSTRUMENT CRUD
+// ====================================================
+let editingInstrumentId = null;
+
+function openInstrumentModal(instrumentId) {
+  editingInstrumentId = instrumentId || null;
+  document.getElementById('instrumentModalTitle').textContent = instrumentId ? 'แก้ไขเครื่องมือ' : 'เพิ่มเครื่องมือ';
+
+  if (instrumentId) {
+    const d = allData.find(x => x.id === instrumentId);
+    if (!d) return;
+
+    document.getElementById('iCategory').value = d.category || '';
+    document.getElementById('iName').value = d.instrument_name || '';
+    document.getElementById('iBrand').value = d.brand || '';
+    document.getElementById('iRange').value = d.range_val || '';
+    document.getElementById('iTolerance').value = d.tolerance || '';
+    document.getElementById('iMachineName').value = d.machine_name || '';
+    document.getElementById('iLocation').value = d.location || '';
+    document.getElementById('iCalFrequency').value = d.cal_frequency || '';
+    document.getElementById('iCalType').value = d.cal_type || '';
+    document.getElementById('iRemark').value = d.remark || '';
+    document.getElementById('iSerial').value = d.serial_no || '';
+    document.getElementById('iDept').value = d.department || '';
+    document.getElementById('iIdCode').value = d.id_code || '';
+    document.getElementById('iCertNo').value = d.cert_no || '';
+    document.getElementById('iCalDate').value = d.cal_date || '';
+    document.getElementById('iDueDate').value = d.due_date || '';
+  } else {
+    ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  }
+  document.getElementById('instrumentModal').classList.add('open');
+}
+
+function closeInstrumentModal() {
+  document.getElementById('instrumentModal').classList.remove('open');
+  editingInstrumentId = null;
+}
+
+async function saveInstrument() {
+  const payload = {
+    instrument_type: document.getElementById('iCategory').value || null,
+    category: document.getElementById('iCategory').value || null,
+    instrument_name: document.getElementById('iName').value.trim(),
+    brand: document.getElementById('iBrand').value.trim(),
+    range_val: document.getElementById('iRange').value.trim(),
+    tolerance: document.getElementById('iTolerance').value.trim() || null,
+    serial_no: document.getElementById('iSerial').value.trim(),
+    department: document.getElementById('iDept').value.trim(),
+    id_code: document.getElementById('iIdCode').value.trim(),
+    cert_no: document.getElementById('iCertNo').value.trim(),
+    cal_date: document.getElementById('iCalDate').value || null,
+    due_date: document.getElementById('iDueDate').value || null,
+    machine_name: document.getElementById('iMachineName').value.trim() || null,
+    location: document.getElementById('iLocation').value.trim() || null,
+    cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,
+    cal_type: document.getElementById('iCalType').value || null,
+    remark: document.getElementById('iRemark').value.trim() || null,
+  };
+
+  if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
+
+  const btn = document.getElementById('saveInstrumentBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    if (editingInstrumentId) {
+      const original = allData.find(x => x.id === editingInstrumentId);
+      const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
+      if (error) throw error;
+      const diff = original ? getDiff(original, {...original, ...payload}) : null;
+      await logAudit('แก้ไข', {...payload, id: editingInstrumentId}, diff);
+      showToast('แก้ไขเครื่องมือแล้ว', 'success');
+    } else {
+      const { data: inserted, error } = await sb.from('instruments').insert(payload).select().single();
+      if (error) throw error;
+      await logAudit('เพิ่ม', inserted, null);
+      showToast('เพิ่มเครื่องมือแล้ว', 'success');
+    }
+    closeInstrumentModal();
+    await loadData();
+    // scroll ไปหาแถวที่แก้ไข/เพิ่ม
+    if (editingInstrumentId) {
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#dataTable tr');
+        rows.forEach(row => {
+          if (row.textContent.includes(payload.id_code || '')) {
+            row.style.background = '#e0f4f1';
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { row.style.background = ''; }, 2500);
+          }
+        });
+      }, 500);
+    }
+  } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
+}
+
+async function deleteInstrument(id, name) {
+  if (!confirm(`ต้องการลบ "${name}" ออกจากระบบ?`)) return;
+  try {
+    const instrument = allData.find(x => x.id === id);
+    const { error } = await sb.from('instruments').delete().eq('id', id);
+    if (error) throw error;
+    await logAudit('ลบ', instrument || {id, instrument_name: name, id_code: ''}, null);
+    showToast('ลบเครื่องมือแล้ว', 'success');
+    await loadData();
+  } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
+}
+
+function toggleManageColumns(show) {
+  document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
+  document.getElementById('thManage').style.display = show ? '' : 'none';
+}
+
+
+// ====================================================
+// PRINT / PDF REPORT
+// ====================================================
+function printReport() {
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
+  const year = today.getFullYear() + 543;
+
+  let ov=0, wa=0, ok=0;
+  filteredData.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) ov++;
+    else if (d.days_left <= 30) wa++;
+    else ok++;
+  });
+
+  // สร้างแถวตาราง
+  const rows = filteredData.map((d, i) => {
+    const days = d.days_left;
+    let statusText, statusColor;
+    if (days === null) { statusText = '–'; statusColor = '#666'; }
+    else if (days < 0) { statusText = 'เลยกำหนด'; statusColor = '#c0392b'; }
+    else if (days <= 30) { statusText = 'ใกล้ครบ'; statusColor = '#b8860b'; }
+    else { statusText = 'ปกติ'; statusColor = '#1e7e34'; }
+    const due = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    const cal = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    return `<tr>
+      <td>${rowNum}</td>
+      <td>${d.instrument_type||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${d.brand||'–'}</td>
+      <td>${d.range_val||'–'}</td>
+      <td>${d.department||'–'}</td>
+      <td>${d.id_code||'–'}</td>
+      <td>${d.cert_no||'–'}</td>
+      <td>${cal}</td>
+      <td>${due}</td>
+      <td style="color:${statusColor};font-weight:600">${statusText}</td>
+    </tr>`;
+  }).join('');
+
+  // ชื่อ filter ที่เลือก
+  const filterInfo = [];
+  const tf = document.getElementById('typeFilter').value;
+  const uf = document.getElementById('unitFilter').value;
+  const sf = document.getElementById('statusFilter').value;
+  const mf = document.getElementById('monthFilter').value;
+  const mfNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  if (tf) filterInfo.push(`ประเภท: ${tf}`);
+  if (uf) filterInfo.push(`หน่วยงาน: ${uf}`);
+  if (sf) filterInfo.push(`สถานะ: ${sf==='overdue'?'เลยกำหนด':sf==='warning'?'ใกล้ครบ':'ปกติ'}`);
+  if (mf) filterInfo.push(`เดือน: ${mfNames[parseInt(mf)]}`);
+
+  const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>รายงานสอบเทียบเครื่องมือ</title>
+<style>
+  @page { size: A4 landscape; margin: 15mm 12mm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 9pt; color: #222; }
+  .header { text-align:center; margin-bottom: 12px; border-bottom: 2px solid #1a2f4a; padding-bottom: 10px; }
+  .header h1 { font-size: 16pt; color: #1a2f4a; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 9pt; color: #555; }
+  .summary { display: flex; gap: 12px; margin-bottom: 12px; }
+  .sum-card { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; text-align: center; }
+  .sum-card .num { font-size: 20pt; font-weight: 700; line-height: 1.2; }
+  .sum-card .lbl { font-size: 8pt; color: #666; margin-top: 2px; }
+  .sum-card.ov { border-color: #e74c3c; }
+  .sum-card.ov .num { color: #e74c3c; }
+  .sum-card.wa { border-color: #f39c12; }
+  .sum-card.wa .num { color: #f39c12; }
+  .sum-card.ok { border-color: #27ae60; }
+  .sum-card.ok .num { color: #27ae60; }
+  .sum-card.tt .num { color: #1a2f4a; }
+  .filter-info { font-size: 8pt; color: #555; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; }
+table td, table th { white-space: nowrap; }
+table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
+table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
+  th { background: #1a2f4a; color: white; padding: 6px 5px; text-align: left; font-size: 8pt; font-weight: 600; }
+  td { padding: 5px; border-bottom: 0.5px solid #e0e0e0; font-size: 8pt; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  tr:last-child td { border-bottom: none; }
+  .footer { margin-top: 12px; font-size: 8pt; color: #888; text-align: right; border-top: 1px solid #ddd; padding-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔧 รายงานสถานะการสอบเทียบเครื่องมือ</h1>
+    <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length} รายการ</p>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card ov"><div class="num">${ov}</div><div class="lbl">🔴 เลยกำหนด</div></div>
+    <div class="sum-card wa"><div class="num">${wa}</div><div class="lbl">🟡 ใกล้ครบ (≤30 วัน)</div></div>
+    <div class="sum-card ok"><div class="num">${ok}</div><div class="lbl">🟢 ปกติ</div></div>
+    <div class="sum-card tt"><div class="num">${filteredData.length}</div><div class="lbl">📦 ทั้งหมด</div></div>
+  </div>
+
+  ${filterInfo.length ? `<div class="filter-info">⚙️ Filter: ${filterInfo.join(' | ')}</div>` : ''}
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>ประเภท</th>
+        <th>เครื่องมือ</th>
+        <th>ยี่ห้อ / รุ่น</th>
+        <th>Range</th>
+        <th>หน่วยงาน</th>
+        <th>ID Code</th>
+        <th>CERT.</th>
+        <th>วันสอบเทียบ</th>
+        <th>ครบกำหนด</th>
+        <th>สถานะ</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="footer">
+    รายงานนี้สร้างจากระบบสอบเทียบเครื่องมือ &nbsp;|&nbsp; พิมพ์วันที่ ${todayStr}
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
+}
+
+
+// ====================================================
+// CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)
+// ====================================================
+const CATEGORY_ICONS = {
+  'มวล/น้ำหนัก (Mass/Weight)': 'ti-weight',
+  'ความยาว/มิติ (Length/Dimension)': 'ti-ruler',
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'ti-temperature',
+  'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'ti-gauge',
+  'ความเร็วรอบ (Speed/Rotation)': 'ti-rotate-clockwise',
+  'เวลา (Time)': 'ti-clock',
+  'เคมี/ความเข้มข้น (Chemical/Concentration)': 'ti-flask',
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'ti-droplet',
+  'ไฟฟ้า (Electrical)': 'ti-bolt',
+  'การไหล/ปริมาตร (Flow/Volume)': 'ti-wave-sine',
+  'แสง/เสียง (Light/Sound)': 'ti-bulb',
+  'ความปลอดภัย (Safety)': 'ti-shield',
+  'แรงบิด/แรงกด (Torque/Force)': 'ti-arrows-transfer-down',
+  'อื่นๆ (Others)': 'ti-dots-circle-horizontal',
+};
+
+let activeCategory = 'all';
+
+function renderCategoryCards() {
+  const grid = document.getElementById('categoryGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const CAT_14 = [
+    ['มวล/น้ำหนัก (Mass/Weight)', 'Mass/Weight'],
+    ['ความยาว/มิติ (Length/Dimension)', 'Length/Dimension'],
+    ['อุณหภูมิ/ความชื้น (Temperature/Humidity)', 'Temperature/Humidity'],
+    ['ความดัน/สุญญากาศ (Pressure/Vacuum)', 'Pressure/Vacuum'],
+    ['ความเร็วรอบ (Speed/Rotation)', 'Speed/Rotation'],
+    ['เวลา (Time)', 'Time'],
+    ['เคมี/ความเข้มข้น (Chemical/Concentration)', 'Chemical/Concentration'],
+    ['ความหนืด/ความหนาแน่น (Viscosity/Density)', 'Viscosity/Density'],
+    ['ไฟฟ้า (Electrical)', 'Electrical'],
+    ['การไหล/ปริมาตร (Flow/Volume)', 'Flow/Volume'],
+    ['แสง/เสียง (Light/Sound)', 'Light/Sound'],
+    ['ความปลอดภัย (Safety)', 'Safety'],
+    ['แรงบิด/แรงกด (Torque/Force)', 'Torque/Force'],
+    ['อื่นๆ (Others)', 'Others'],
+  ];
+
+  const today = new Date();
+
+  // นับจำนวนและสถานะจาก allData
+  const stats = {};
+  allData.forEach(d => {
+    const t = d.instrument_type || 'อื่นๆ (Others)';
+    if (!stats[t]) stats[t] = { total: 0, overdue: 0, warning: 0, ok: 0 };
+    stats[t].total++;
+    const due = d.due_date ? new Date(d.due_date) : null;
+    if (!due) { stats[t].ok++; return; }
+    const diff = Math.ceil((due - today) / 86400000);
+    if (diff < 0) stats[t].overdue++;
+    else if (diff <= 30) stats[t].warning++;
+    else stats[t].ok++;
+  });
+
+  CAT_14.forEach(([fullName, enName]) => {
+    const s = stats[fullName] || { total: 0, overdue: 0, warning: 0, ok: 0 };
+    const cnt = s.total;
+    const thName = fullName.split(' (')[0];
+    const isActive = activeCategory === fullName;
+
+    // คำนวณ % ที่ยังไม่ครบ/ปกติ = overdue+warning / total
+    const notOkPct = cnt > 0 ? Math.round((s.overdue + s.warning) / cnt * 100) : 0;
+    const okPct = 100 - notOkPct;
+
+    // สีตามสถานะ
+    let barColor, statusText, statusColor;
+    if (s.overdue > 0) {
+      barColor = 'var(--red)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--red)';
+    } else if (s.warning > 0) {
+      barColor = 'var(--amber)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--amber)';
+    } else {
+      barColor = 'var(--green)'; statusText = `${okPct}% ปกติ`; statusColor = 'var(--green)';
+    }
+
+    // สี card
+    const cardBg = isActive ? '#e8f5e9' : (cnt === 0 ? 'var(--surface2)' : 'white');
+    const cardBorder = isActive ? 'var(--green)' : (cnt === 0 ? 'var(--border)' : 'var(--border)');
+    const boxShadow = isActive ? '0 0 0 2px var(--green)' : 'none';
+
+    const card = document.createElement('div');
+    card.style.cssText = `background:${cardBg};border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:12px;padding:16px;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:2px">${thName}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">(${enName})</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px">${cnt > 0 ? cnt : '–'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">เครื่อง</div>
+      ${cnt > 0 ? `
+      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden">
+        <div style="height:100%;width:${okPct}%;background:${barColor};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <div style="font-size:12px;color:${statusColor};font-weight:500">${statusText}</div>
+      ` : `<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
+
+    if (cnt) {
+      card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = 'var(--green)'; card.style.transform = 'translateY(-1px)'; });
+      card.addEventListener('mouseleave', () => { if (activeCategory !== fullName) card.style.borderColor = cardBorder; card.style.transform = ''; });
+      card.addEventListener('click', () => {
+        activeCategory = (activeCategory === fullName) ? 'all' : fullName;
+        renderCategoryCards();
+        filterData();
+      });
+    }
+    grid.appendChild(card);
+  });
+}
+
+
+function selectCategory(cat) {
+  activeCategory = (activeCategory === cat) ? 'all' : cat;
+  currentPage = 1;
+  filterData();
+  renderCategoryCards();
+}
+
+// ====================================================
+// PAGINATION
+// ====================================================
+let currentPage = 1;
+let pageSize = 100;
+
+function changePageSize() {
+  pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+  currentPage = 1;
+  renderTable();
+}
+
+function goPage(dir) {
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  currentPage = Math.max(1, Math.min(currentPage + dir, totalPages));
+  renderTable();
+  document.querySelector('.table-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function updatePaginationUI() {
+  const total = filteredData.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, total);
+  document.getElementById('paginationInfo').textContent = `แสดง ${start.toLocaleString()}–${end.toLocaleString()} จาก ${total.toLocaleString()} รายการ`;
+  document.getElementById('pageNum').textContent = `หน้า ${currentPage} / ${totalPages}`;
+  document.getElementById('btnPrev').disabled = currentPage <= 1;
+  document.getElementById('btnNext').disabled = currentPage >= totalPages;
+}
+
+
+// ====================================================
+// AUDIT LOG
+// ====================================================
+let auditData = [];
+let auditFiltered = [];
+
+async function logAudit(action, instrument, changes) {
+  try {
+    await sb.from('audit_logs').insert({
+      user_id: currentUser?.id || null,
+      username: currentUser?.name || 'Unknown',
+      action,
+      instrument_id: instrument?.id || null,
+      id_code: instrument?.id_code || null,
+      instrument_name: instrument?.instrument_name || instrument?.instrument_type || null,
+      changes: changes || null,
+    });
+  } catch(e) { console.warn('Audit log failed:', e); }
+}
+
+function getDiff(original, updated) {
+  const changes = {};
+  const fields = {
+    instrument_type: 'ประเภท',
+    instrument_name: 'เครื่องมือ',
+    brand: 'ยี่ห้อ',
+    range_val: 'Range',
+    tolerance: 'Tolerance',
+    serial_no: 'S/N',
+    department: 'หน่วยงาน',
+    id_code: 'ID Code',
+    cert_no: 'CERT.',
+    cal_date: 'วันสอบเทียบ',
+    due_date: 'ครบกำหนด',
+    machine_name: 'ชื่อเครื่องจักร',
+    location: 'สถานที่',
+    cal_frequency: 'ความถี่',
+    cal_type: 'ภายใน/ภายนอก',
+    remark: 'Remark',
+    category: 'กลุ่ม',
+  };
+  for (const [key, label] of Object.entries(fields)) {
+    const oldVal = String(original[key] || '');
+    const newVal = String(updated[key] || '');
+    if (oldVal !== newVal) {
+      changes[label] = { from: oldVal || '–', to: newVal || '–' };
+    }
+  }
+  return Object.keys(changes).length > 0 ? changes : null;
+}
+
+async function loadAuditLogs() {
+  const tbody = document.getElementById('auditTable');
+  tbody.innerHTML = '<tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr>';
+  try {
+    const { data, error } = await sb.from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    auditData = data || [];
+    auditFiltered = [...auditData];
+    renderAuditTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">โหลดไม่สำเร็จ</td></tr>';
+  }
+}
+
+function filterAuditLogs() {
+  const search = document.getElementById('auditSearch').value.toLowerCase();
+  const action = document.getElementById('auditActionFilter').value;
+  auditFiltered = auditData.filter(d => {
+    if (action && d.action !== action) return false;
+    if (search && !['username','id_code','instrument_name','action'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
+    return true;
+  });
+  renderAuditTable();
+}
+
+function renderAuditTable() {
+  const tbody = document.getElementById('auditTable');
+  if (!auditFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
+    return;
+  }
+  tbody.innerHTML = auditFiltered.map(d => {
+    const actionBadge = d.action === 'เพิ่ม' 
+      ? '<span class="badge badge-green">➕ เพิ่ม</span>'
+      : d.action === 'แก้ไข'
+      ? '<span class="badge badge-amber">✏️ แก้ไข</span>'
+      : '<span class="badge badge-red">🗑️ ลบ</span>';
+    
+    const dt = d.created_at ? new Date(d.created_at).toLocaleString('th-TH', {
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    }) : '–';
+
+    let details = '–';
+    if (d.changes && typeof d.changes === 'object') {
+      details = Object.entries(d.changes).map(([field, val]) =>
+        `<div style="font-size:22px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
+      ).join('');
+    }
+
+    return `<tr>
+      <td style="white-space:nowrap">${dt}</td>
+      <td><strong>${d.username||'–'}</strong></td>
+      <td>${actionBadge}</td>
+      <td style="font-family:var(--mono)">${d.id_code||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td>${details}</td>
+    </tr>`;
+  }).join('');
+}
+
+
+function calcDueDate(calDate, frequency) {
+  if (!calDate || !frequency) return;
+  const d = new Date(calDate);
+  if (isNaN(d)) return;
+  const f = frequency.toLowerCase();
+
+  if (f.includes('6') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 6);
+  } else if (f.includes('3') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 3);
+  } else if (f.includes('2') && (f.includes('ปี') || f.includes('year'))) {
+    d.setFullYear(d.getFullYear() + 2);
+  } else if (f.includes('1') && (f.includes('ปี') || f.includes('year'))) {
+    d.setFullYear(d.getFullYear() + 1);
+  } else if (f.includes('ปี') || f.includes('year') || f.includes('/ปี') || f.includes('/year')) {
+    d.setFullYear(d.getFullYear() + 1);
+  } else if (f.includes('เดือน') || f.includes('month')) {
+    d.setMonth(d.getMonth() + 6);
+  } else {
+    return; // ไม่รู้ความถี่ ไม่คำนวณ
+  }
+
+  // set วันครบกำหนด
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  document.getElementById('iDueDate').value = `${yyyy}-${mm}-${dd}`;
+}
+
+
+// ====================================================
+// DASHBOARD 2 — ภาพรวมการสอบเทียบ
+// ====================================================
+let d2Chart = null;
+const MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+async function loadDashboard2() {
+  // populate type filter
+  const sel = document.getElementById('d2TypeFilter');
+  if (sel.options.length <= 1 && allData.length) {
+    const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+  renderDashboard2();
+}
+
+function renderDashboard2() {
+  const typeFilter = document.getElementById('d2TypeFilter')?.value || '';
+  const data = typeFilter ? allData.filter(d => d.instrument_type === typeFilter) : allData;
+  const today = new Date();
+
+  // update time
+  document.getElementById('d2UpdateTime').textContent = 'อัพเดต: ' + today.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('d2MonthLabel').textContent = MONTH_FULL[today.getMonth()] + ' ' + (today.getFullYear()+543);
+
+  // stats
+  let total = data.length, pass = 0, overdue = 0, warning = 0;
+  data.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) overdue++;
+    else if (d.days_left <= 30) warning++;
+    else pass++;
+  });
+
+  document.getElementById('d2Total').textContent = total.toLocaleString();
+  document.getElementById('d2Pass').textContent = pass.toLocaleString();
+  document.getElementById('d2Overdue').textContent = overdue.toLocaleString();
+  document.getElementById('d2Warning').textContent = warning.toLocaleString();
+  document.getElementById('d2rPass').textContent = pass.toLocaleString();
+  document.getElementById('d2rOver').textContent = overdue.toLocaleString();
+  document.getElementById('d2rWarn').textContent = warning.toLocaleString();
+
+  // pct
+  const pct = total > 0 ? Math.round(pass / total * 100) : 0;
+  document.getElementById('d2PctNum').textContent = pct + '%';
+
+  // donut
+  if (d2Chart) d2Chart.destroy();
+  d2Chart = new Chart(document.getElementById('d2Donut'), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [pct, 100-pct], backgroundColor: ['#00897B','#e0f4f1'], borderWidth: 0 }] },
+    options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
+  });
+
+  // progress bars by cal_type
+  const calTypes = { 'ภายใน': 0, 'ภายนอก': 0 };
+  const calTotal = { 'ภายใน': 0, 'ภายนอก': 0 };
+  data.forEach(d => {
+    const ct = d.cal_type;
+    if (!ct) return;
+    if (ct.includes('ภายใน') && !ct.includes('ภายนอก')) { calTotal['ภายใน']++; if(d.days_left >= 0) calTypes['ภายใน']++; }
+    else if (ct.includes('ภายนอก')) { calTotal['ภายนอก']++; if(d.days_left >= 0) calTypes['ภายนอก']++; }
+  });
+  const pWrap = document.getElementById('d2Progress');
+  pWrap.innerHTML = ['ภายใน','ภายนอก'].map((ct,i) => {
+    const p = calTotal[ct] > 0 ? Math.round(calTypes[ct]/calTotal[ct]*100) : 0;
+    const color = i===0 ? '#00897B' : '#185FA5';
+    return `<div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:14px;color:var(--text2)">
+        <span>สอบเทียบ${ct}</span><span style="font-weight:600;color:${color}">${p}%</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px">
+        <div style="width:${p}%;height:100%;background:${color};border-radius:4px"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // month grid
+  const byMonth = {};
+  for (let i=0;i<12;i++) byMonth[i] = {total:0,ok:0,overdue:0,warning:0};
+  data.forEach(d => {
+    if (!d.due_date) return;
+    const m = new Date(d.due_date).getMonth();
+    byMonth[m].total++;
+    if (d.days_left < 0) byMonth[m].overdue++;
+    else if (d.days_left <= 30) byMonth[m].warning++;
+    else byMonth[m].ok++;
+  });
+
+  const mgrid = document.getElementById('d2MonthGrid');
+  mgrid.innerHTML = '';
+  for (let i=0;i<12;i++) {
+    const m = byMonth[i];
+    const color = m.overdue > 0 ? 'var(--red)' : m.warning > 0 ? 'var(--amber)' : m.total > 0 ? 'var(--green)' : 'var(--text3)';
+    const barColor = m.overdue > 0 ? '#E24B4A' : m.warning > 0 ? '#BA7517' : '#00897B';
+    const pct = m.total > 0 ? Math.round(m.ok/m.total*100) : 0;
+    const card = document.createElement('div');
+    card.style.cssText = `border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:${m.total?'pointer':'default'};transition:all .15s`;
+    card.innerHTML = `
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${MONTH_SHORT[i]}</div>
+      <div style="font-size:18px;font-weight:600;color:${color}">${m.total}</div>
+      <div style="height:3px;background:var(--border);border-radius:2px;margin:4px 2px 3px">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px"></div>
+      </div>
+      <div style="font-size:10px;color:${color}">${m.ok}</div>`;
+    if (m.total) {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('#d2MonthGrid > div').forEach(c => c.style.border = '1px solid var(--border)');
+        const det = document.getElementById('d2MonthDetail');
+        if (d2ActiveMonth === i) { d2ActiveMonth = null; det.style.display = 'none'; return; }
+        d2ActiveMonth = i;
+        card.style.border = '2px solid var(--accent)';
+        document.getElementById('d2MonthTitle').textContent = MONTH_FULL[i] + ' ' + (new Date().getFullYear()+543);
+        document.getElementById('d2dPlan').textContent = m.total;
+        document.getElementById('d2dOk').textContent = m.ok;
+        document.getElementById('d2dOver').textContent = m.overdue;
+        det.style.display = 'block';
+      });
+    }
+    mgrid.appendChild(card);
+  }
+
+  // type grid
+  const typeCount = {};
+  data.forEach(d => {
+    const t = d.instrument_type || 'อื่นๆ';
+    if (!typeCount[t]) typeCount[t] = {total:0,ok:0,overdue:0,warning:0};
+    typeCount[t].total++;
+    if (d.days_left < 0) typeCount[t].overdue++;
+    else if (d.days_left <= 30) typeCount[t].warning++;
+    else typeCount[t].ok++;
+  });
+  const tgrid = document.getElementById('d2TypeGrid');
+  tgrid.innerHTML = Object.entries(typeCount)
+    .sort((a,b) => b[1].total - a[1].total)
+    .slice(0,12)
+    .map(([name, m]) => {
+      const pct = m.total > 0 ? Math.round(m.ok/m.total*100) : 0;
+      const color = m.overdue > 0 ? '#E24B4A' : m.warning > 0 ? '#BA7517' : '#00897B';
+      return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${name}</div>
+        <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px">${m.total} <span style="font-size:12px;font-weight:400;color:var(--text2)">เครื่อง</span></div>
+        <div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:4px">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:2px"></div>
+        </div>
+        <div style="font-size:12px;color:${color}">${pct}% ปกติ</div>
+      </div>`;
+    }).join('');
+}
+
+
+// ====================================================
+// DASHBOARD 2 — ภาพรวมการสอบเทียบ
+// ====================================================
+let d2DonutChart = null;
+let d2ActiveMonth = null;
+
+function renderDashboard2() {
+  if (!allData.length) { setTimeout(renderDashboard2, 500); return; }
+
+  const today = new Date();
+  const currentYear = today.getFullYear() + 543;
+  document.getElementById('d2Year').textContent = currentYear;
+
+  // Stats
+  let total = allData.length, ok = 0, overdue = 0, warning = 0;
+  allData.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) overdue++;
+    else if (d.days_left <= 30) warning++;
+    else ok++;
+  });
+  document.getElementById('d2Total').textContent = total.toLocaleString();
+  document.getElementById('d2Ok').textContent = ok.toLocaleString();
+  document.getElementById('d2Overdue').textContent = overdue.toLocaleString();
+  document.getElementById('d2Warning').textContent = warning.toLocaleString();
+  document.getElementById('d2rOk').textContent = ok;
+  document.getElementById('d2rOver').textContent = overdue;
+  document.getElementById('d2rWarn').textContent = warning;
+
+  // Donut
+  const pct = total > 0 ? Math.round(ok/total*100) : 0;
+  document.getElementById('d2DonutPct').textContent = pct + '%';
+  if (d2DonutChart) d2DonutChart.destroy();
+  d2DonutChart = new Chart(document.getElementById('d2Donut'), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [ok, overdue, warning], backgroundColor: ['#1e7e34','#c0392b','#b8860b'], borderWidth: 0 }] },
+    options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
+  });
+
+  // Progress bars (ภายใน vs ภายนอก)
+  const internal = allData.filter(d => d.cal_type === 'ภายใน');
+  const external = allData.filter(d => d.cal_type === 'ภายนอก');
+  const inOk = internal.filter(d => d.days_left !== null && d.days_left >= 0).length;
+  const exOk = external.filter(d => d.days_left !== null && d.days_left >= 0).length;
+  const inPct = internal.length ? Math.round(inOk/internal.length*100) : 0;
+  const exPct = external.length ? Math.round(exOk/external.length*100) : 0;
+  document.getElementById('d2PctIn').textContent = inPct + '%';
+  document.getElementById('d2PctOut').textContent = exPct + '%';
+  document.getElementById('d2BarIn').style.width = inPct + '%';
+  document.getElementById('d2BarOut').style.width = exPct + '%';
+
+  // Month cards
+  const byMonth = {};
+  for (let i=0; i<12; i++) byMonth[i] = [];
+  allData.forEach(d => {
+    if (!d.due_date) return;
+    byMonth[new Date(d.due_date).getMonth()].push(d);
+  });
+  const grid = document.getElementById('d2MonthGrid');
+  grid.innerHTML = '';
+  const mnames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  for (let i=0; i<12; i++) {
+    const items = byMonth[i];
+    const cnt = items.length;
+    const ov = items.filter(d => d.days_left < 0).length;
+    const wa = items.filter(d => d.days_left >= 0 && d.days_left <= 30).length;
+    const barColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
+    const numColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text2)';
+    const card = document.createElement('div');
+    card.id = 'd2mc' + i;
+    card.style.cssText = `border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.innerHTML = `
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${mnames[i]}</div>
+      <div style="font-size:17px;font-weight:600;color:${numColor}">${cnt}</div>
+      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:4px 2px 3px">
+        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
+      </div>
+      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
+    if (cnt) card.addEventListener('click', () => showD2MonthDetail(i, items, card));
+    grid.appendChild(card);
+  }
+
+  // Type grid
+  const typeCounts = {};
+  allData.forEach(d => {
+    const t = d.instrument_type || 'อื่นๆ';
+    if (!typeCounts[t]) typeCounts[t] = {total:0, ok:0};
+    typeCounts[t].total++;
+    if (d.days_left !== null && d.days_left >= 0) typeCounts[t].ok++;
+  });
+  const tgrid = document.getElementById('d2TypeGrid');
+  tgrid.innerHTML = '';
+  Object.entries(typeCounts).sort((a,b) => b[1].total - a[1].total).slice(0, 14).forEach(([name, data]) => {
+    const pct = data.total ? Math.round(data.ok/data.total*100) : 0;
+    const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+    tgrid.innerHTML += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${name}</div>
+      <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px">${data.total} <span style="font-size:12px;font-weight:400;color:var(--text2)">เครื่อง</span></div>
+      <div style="height:4px;background:var(--surface2);border-radius:2px;margin-bottom:4px">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:2px"></div>
+      </div>
+      <div style="font-size:12px;color:${color}">${pct}% ยังไม่ครบ/ปกติ</div>
+    </div>`;
+  });
+
+  // render ตารางข้อมูล sticky header
+  d2RenderTable();
+}
+
+function showD2MonthDetail(monthIdx, items, card) {
+  if (d2ActiveMonth === card) {
+    d2ActiveMonth.style.border = '1px solid var(--border)';
+    d2ActiveMonth = null;
+    document.getElementById('d2MonthDetail').style.display = 'none';
+    return;
+  }
+  if (d2ActiveMonth) d2ActiveMonth.style.border = '1px solid var(--border)';
+  d2ActiveMonth = card;
+  card.style.border = '2px solid var(--accent)';
+  const mFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  document.getElementById('d2MonthTitle').textContent = mFull[monthIdx];
+  document.getElementById('d2mTotal').textContent = items.length;
+  document.getElementById('d2mOverdue').textContent = items.filter(d => d.days_left < 0).length;
+  document.getElementById('d2mOk').textContent = items.filter(d => d.days_left >= 0).length;
+  document.getElementById('d2MonthDetail').style.display = 'block';
+}
+
+
+function filterByStatus(status) {
+  document.getElementById('statusFilter').value = status;
+  filterData();
+  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_NAMES_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let activeMonthCard = null;
+
+function renderMonthly() {
+  if (!allData.length) { setTimeout(renderMonthly, 500); return; }
+  const byMonth = {};
+  for (let i=0;i<12;i++) byMonth[i] = [];
+  allData.forEach(d => {
+    if (!d.due_date) return;
+    byMonth[new Date(d.due_date).getMonth()].push(d);
+  });
+  const grid = document.getElementById('monthGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let i=0;i<12;i++) {
+    const items = byMonth[i];
+    const cnt = items.length;
+    const hasOverdue = items.some(d => d.days_left < 0);
+    const hasWarning = items.some(d => d.days_left >= 0 && d.days_left <= 30);
+    let bg, color, border;
+    if (hasOverdue) { bg='var(--red-light)'; color='var(--red)'; border='#f5c6c4'; }
+    else if (hasWarning) { bg='var(--amber-light)'; color='var(--amber)'; border='#f0d070'; }
+    else if (cnt > 0) { bg='var(--green-light)'; color='var(--green)'; border='#b8e0bf'; }
+    else { bg='var(--surface2)'; color='var(--text2)'; border='var(--border)'; }
+    const card = document.createElement('div');
+    card.id = `mcard-${i}`;
+    const MONTH_EN_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_EN_F = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    card.style.cssText = `background:${bg};border:2px solid ${border};border-radius:12px;padding:16px 12px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    const MONTH_TH_F = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:${border};display:block;opacity:.7"></span>
+      </div>
+      <div style="font-size:20px;font-weight:700;color:${color};line-height:1.2;margin-bottom:3px">${MONTH_TH_F[i]}</div>
+      <div style="font-size:13px;color:${color};opacity:.7;margin-bottom:10px">${MONTH_EN_F[i]}</div>
+      <div style="font-size:28px;font-weight:700;color:${color};line-height:1">${cnt}</div>
+      <div style="font-size:13px;color:${color};opacity:.7;margin-top:3px">เครื่อง</div>`;
+    if (cnt) card.addEventListener('click', () => filterByMonth(i, card));
+    grid.appendChild(card);
+  }
+}
+
+function filterByMonth(monthIdx, card) {
+  if (activeMonthCard === card) {
+    activeMonthCard.style.boxShadow = '';
+    activeMonthCard.style.transform = '';
+    activeMonthCard = null;
+    document.getElementById('monthFilter').value = '';
+    filterData();
+    return;
+  }
+  if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; }
+  activeMonthCard = card;
+  card.style.boxShadow = '0 0 0 3px #00897B';
+  card.style.transform = 'translateY(-3px)';
+  document.getElementById('monthFilter').value = String(monthIdx + 1);
+  filterData();
+  document.querySelector('.controls-bar').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function showPage(page) {
+  document.getElementById('pageDashboard').style.display = page === 'dashboard' ? 'block' : 'none';
+  document.getElementById('pageDashboard2').style.display = page === 'dashboard2' ? 'block' : 'none';
+  document.getElementById('pageAdmin').style.display = page === 'admin' ? 'block' : 'none';
+  document.getElementById('pageAudit').style.display = page === 'audit' ? 'block' : 'none';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page)?.classList.add('active');
+  const titles = {
+    dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
+    dashboard2: ['ภาพรวมการสอบเทียบ','สถิติและแผนสอบเทียบ'],
+    admin: ['จัดการผู้ใช้','Admin Panel'],
+    monthly: ['รายเดือน','สรุปการครบกำหนดแต่ละเดือน'],
+    audit: ['Audit Log','ประวัติการแก้ไขข้อมูล']
+  };
+  document.getElementById('topbarTitle').textContent = titles[page][0];
+  document.getElementById('topbarSub').textContent = titles[page][1];
+  if (page === 'admin') loadUsers();
+  if (page === 'audit') loadAuditLogs();
+  if (page === 'dashboard2') renderDashboard2();
+  if (page === 'dashboard2') loadDashboard2();
+  if (page === 'monthly') renderMonthly();
+}
+
+// ====================================================
+// UI HELPERS
+// ====================================================
+function showLoading(text) { document.getElementById('loadingText').textContent = text || 'กำลังโหลด...'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function setDriveStatus(ok, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + (ok ? 'ok' : 'error');
+  document.getElementById('statusText').textContent = text;
+}
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+document.getElementById('certModal').addEventListener('click', function(e) { if (e.target === this) closeCertModal(); });
+document.getElementById('instrumentModal').addEventListener('click', function(e) { if (e.target === this) closeInstrumentModal(); });
+document.getElementById('userModal').addEventListener('click', function(e) { if (e.target === this) closeUserModal(); });
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('searchInput').addEventListener('input', filterData);
+document.getElementById('typeFilter').addEventListener('change', filterData);
+document.getElementById('unitFilter').addEventListener('change', filterData);
+document.getElementById('statusFilter').addEventListener('change', filterData);
+document.getElementById('monthFilter').addEventListener('change', filterData);
+
+// ====================================================
+// INIT
+// ====================================================
+(function init() {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    document.getElementById('loginPage').innerHTML = `
+      <div style="text-align:center;color:white;padding:40px">
+        <div style="font-size:48px;margin-bottom:16px">⚙️</div>
+        <h2 style="margin-bottom:8px">ยังไม่ได้ตั้งค่า Supabase</h2>
+        <p style="opacity:.7">กรุณาใส่ SUPABASE_URL และ SUPABASE_KEY ในโค้ดก่อนใช้งาน</p>
+      </div>`;
+    return;
+  }
+  const session = getSession();
+  if (session) { currentUser = session; enterApp(session); }
+})();
+
+// ====================================================
+// DASHBOARD2 TABLE — sticky header
+// ====================================================
+let d2Filtered = [];
+
+function d2RenderTable() {
+  const tbody = document.getElementById('d2TableBody');
+  if (!tbody) return;
+
+  const search = (document.getElementById('d2Search')?.value || '').toLowerCase();
+  const statusF = document.getElementById('d2StatusFilter')?.value || '';
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  d2Filtered = allData.filter(d => {
+    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
+    let status = 'ok';
+    if (days === null) status = 'ok';
+    else if (days < 0) status = 'overdue';
+    else if (days <= 30) status = 'warning';
+
+    if (statusF && status !== statusF) return false;
+    if (search) {
+      const hay = [d.instrument_type, d.instrument_name, d.brand, d.serial_no, d.id_code, d.department, d.cert_no].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const count = document.getElementById('d2RowCount');
+  if (count) count.textContent = `${d2Filtered.length.toLocaleString()} รายการ`;
+
+  tbody.innerHTML = d2Filtered.map((d, i) => {
+    const days = d.due_date ? Math.ceil((new Date(d.due_date) - today) / 86400000) : null;
+    let status = 'ok', badge = '', rowBg = '';
+    if (days !== null && days < 0) {
+      status = 'overdue';
+      badge = `<span style="background:var(--red-light);color:var(--red);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">เกินกำหนด</span>`;
+      rowBg = 'background:#fff8f8';
+    } else if (days !== null && days <= 30) {
+      status = 'warning';
+      badge = `<span style="background:var(--amber-light);color:var(--amber);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ใกล้ครบ ${days} วัน</span>`;
+      rowBg = 'background:#fffdf0';
+    } else {
+      badge = `<span style="background:var(--green-light);color:var(--green);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap">ปกติ</span>`;
+    }
+    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const border = 'border-bottom:1px solid var(--border)';
+    const cell = `padding:9px 12px;${border};white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis`;
+    const typShort = (d.instrument_type||'–').split(' (')[0];
+    return `<tr style="${rowBg}">
+      <td style="${cell};color:var(--text2);font-size:12px">${i+1}</td>
+      <td style="${cell};color:var(--text2);font-size:12px" title="${d.instrument_type||''}">${typShort}</td>
+      <td style="${cell};font-weight:500" title="${d.instrument_name||''}">${d.instrument_name||'–'}</td>
+      <td style="${cell};color:var(--text2)">${d.brand||'–'}</td>
+      <td style="${cell};color:var(--text2);font-family:monospace">${d.serial_no||'–'}</td>
+      <td style="${cell};color:var(--accent);font-weight:500">${d.id_code||'–'}</td>
+      <td style="${cell};color:var(--text2)">${d.department||'–'}</td>
+      <td style="${cell};color:var(--text2)">${calDate}</td>
+      <td style="${cell};color:var(--text2)">${dueDate}</td>
+      <td style="padding:9px 12px;${border};text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function d2FilterTable() { d2RenderTable(); }
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
