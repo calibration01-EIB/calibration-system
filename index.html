@@ -1821,6 +1821,17 @@ function showPage(page) {
   if (page === 'monthly') renderMonthly();
 }
 
+// ====================================================
+// INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
+// ====================================================
+(function init() {
+  const session = getSession();
+  if (session) {
+    currentUser = session;
+    enterApp(session);
+  }
+})();
+
 </script>
 
 <script>
