@@ -328,41 +328,36 @@ tbody tr:hover { background: var(--surface2); }
         </div>
 
         <!-- KPI DESKTOP (ซ่อนบนมือถือ) -->
-        <div class="kpi-grid-desktop" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-          <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#00695C);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,137,123,0.3);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="background:rgba(255,255,255,.2);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔧</div>
-              <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ทั้งหมด</span>
+        <div class="kpi-grid-desktop" style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+          <div onclick="filterByStatus('')" style="background:#00695C;border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">ทั้งหมด</div>
+            <div style="font-size:38px;font-weight:700;color:white;line-height:1" id="statTotalD">–</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px">เครื่องมือ</div>
+            <div style="margin-top:14px;height:3px;background:rgba(255,255,255,.2);border-radius:2px">
+              <div style="height:100%;background:rgba(255,255,255,.6);border-radius:2px;transition:width .6s" id="kpiTotalBar" style="width:0%"></div>
             </div>
-            <div style="font-size:36px;font-weight:700;color:white;line-height:1" id="statTotalD">–</div>
-            <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">เครื่องมือ</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px" id="kpiTotalPct">สอบเทียบแล้ว –%</div>
           </div>
-          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="background:var(--green-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">✅</div>
-              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ปกติ</span>
-            </div>
-            <div style="font-size:36px;font-weight:700;color:var(--green);line-height:1" id="statOkD">–</div>
-            <div style="font-size:13px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
+            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">ปกติ</div>
+            <div style="font-size:34px;font-weight:700;color:var(--green);line-height:1" id="statOkD">–</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
+            <div style="margin-top:12px;display:inline-block;background:var(--green-light);color:var(--green);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiOkPct">–%</div>
           </div>
-          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red)"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="background:var(--red-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔴</div>
-              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">เกินกำหนด</span>
-            </div>
-            <div style="font-size:36px;font-weight:700;color:var(--red);line-height:1" id="statOverdueD">–</div>
-            <div style="font-size:13px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
+            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">เกินกำหนด</div>
+            <div style="font-size:34px;font-weight:700;color:var(--red);line-height:1" id="statOverdueD">–</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
+            <div style="margin-top:12px;display:inline-block;background:var(--red-light);color:var(--red);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiOvPct">–%</div>
           </div>
-          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--amber)"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="background:var(--amber-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🟡</div>
-              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ใกล้ครบ</span>
-            </div>
-            <div style="font-size:36px;font-weight:700;color:var(--amber);line-height:1" id="statWarningD">–</div>
-            <div style="font-size:13px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
+            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">ใกล้ครบ</div>
+            <div style="font-size:34px;font-weight:700;color:var(--amber);line-height:1" id="statWarningD">–</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
+            <div style="margin-top:12px;display:inline-block;background:var(--amber-light);color:var(--amber);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiWaPct">–%</div>
           </div>
         </div>
 
@@ -995,6 +990,24 @@ function updateStats() {
   if (elOD) elOD.textContent = okCount.toLocaleString();
   if (elVD) elVD.textContent = ov.toLocaleString();
   if (elWD) elWD.textContent = wa.toLocaleString();
+
+  // badge % และ progress bar ใน KPI cards
+  const allTotal = allData.length;
+  if (allTotal > 0) {
+    const okPct  = Math.round(okCount / allTotal * 100);
+    const ovPct  = Math.round(ov / allTotal * 100);
+    const waPct  = Math.round(wa / allTotal * 100);
+    const okEl = document.getElementById('kpiOkPct');
+    const ovEl = document.getElementById('kpiOvPct');
+    const waEl = document.getElementById('kpiWaPct');
+    const barEl = document.getElementById('kpiTotalBar');
+    const pctEl = document.getElementById('kpiTotalPct');
+    if (okEl) okEl.textContent = okPct + '%';
+    if (ovEl) ovEl.textContent = ovPct + '%';
+    if (waEl) waEl.textContent = waPct + '%';
+    if (barEl) barEl.style.width = okPct + '%';
+    if (pctEl) pctEl.textContent = `สอบเทียบแล้ว ${okPct}%`;
+  }
 
   // summary box
   const el2Ok = document.getElementById('statOk2');
