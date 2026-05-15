@@ -376,7 +376,7 @@ tbody tr:hover { background: var(--surface2); }
               <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
               <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
             </div>
-            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px"></div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
           </div>
 
           <!-- สถานะภาพรวม -->
@@ -2145,10 +2145,8 @@ function renderDonut() {
     else ok++;
   });
   const total = allData.length;
-  document.getElementById('donutTotal').textContent = total.toLocaleString();
-  document.getElementById('donutOkLbl').textContent = ok.toLocaleString();
-  document.getElementById('donutOvLbl').textContent = ov.toLocaleString();
-  document.getElementById('donutWaLbl').textContent = wa.toLocaleString();
+  const elTotal = document.getElementById('donutTotal');
+  if (elTotal) elTotal.textContent = total.toLocaleString();
 
   if (_dashDonut) _dashDonut.destroy();
   _dashDonut = new Chart(canvas, {
