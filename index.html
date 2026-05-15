@@ -394,7 +394,7 @@ tbody tr:hover { background: var(--surface2); }
 
             <!-- แจ้งเตือน 7 วัน -->
             <div style="border-top:1px solid var(--border);padding-top:12px">
-              <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⚠️ ครบกำหนดใน 7 วัน</div>
+              <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🔔 แจ้งเตือนวางแผน & สอบเทียบ</div>
               <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
                 <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลด...</div>
               </div>
@@ -2248,26 +2248,83 @@ function renderDonut() {
 function renderAlerts() {
   const el = document.getElementById('alertList');
   if (!el) return;
-  const alerts = allData
-    .filter(d => d.days_left !== null && d.days_left >= -1 && d.days_left <= 7)
-    .sort((a, b) => a.days_left - b.days_left)
-    .slice(0, 8);
 
-  if (!alerts.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ไม่มีเครื่องมือที่ใกล้ครบกำหนด</div>`;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // คำนวณสถานะแจ้งเตือนใหม่ตาม logic วางแผน
+  // Due Date = D
+  // ช่วงสอบ  = วันที่ 1 ของเดือนก่อน D ถึง D  (≈ 30 วันก่อน D)
+  // ช่วงวางแผน = วันที่ 1-15 ของเดือนก่อนช่วงสอบ (≈ 60-45 วันก่อน D)
+  // แจ้งเตือนล่วงหน้า = 60-75 วันก่อน D (ใกล้ถึงเวลาวางแผน)
+
+  const items = allData
+    .filter(d => d.due_date && d.days_left !== null)
+    .map(d => {
+      const due = new Date(d.due_date); due.setHours(0,0,0,0);
+      const days = d.days_left;
+
+      // เดือนก่อน due = เดือนช่วงสอบ
+      const calMonth = new Date(due.getFullYear(), due.getMonth() - 1, 1);
+      // ช่วงสอบ: วันที่ 1 ของเดือนก่อน ถึง due
+      const calStart = calMonth; // 1 พ.ย.
+      // ช่วงวางแผน: วันที่ 1-15 ของเดือนก่อนช่วงสอบ
+      const planStart = new Date(due.getFullYear(), due.getMonth() - 2, 1);  // 1 ต.ค.
+      const planEnd   = new Date(due.getFullYear(), due.getMonth() - 2, 15); // 15 ต.ค.
+
+      let alertType = null;
+      if (days < 0) {
+        alertType = 'overdue'; // เกินกำหนดแล้ว
+      } else if (today >= calStart && today <= due) {
+        alertType = 'cal_now'; // อยู่ในช่วงสอบแล้ว
+      } else if (today >= planStart && today <= planEnd) {
+        alertType = 'plan_now'; // ต้องวางแผนทันที (1-15 ของเดือน 2 เดือนก่อน due)
+      } else if (days <= 75 && days > 45) {
+        alertType = 'plan_soon'; // ใกล้ถึงเวลาวางแผน
+      }
+
+      return { ...d, alertType, planStart, planEnd, calStart, due };
+    })
+    .filter(d => d.alertType)
+    .sort((a,b) => {
+      const order = {overdue:0, cal_now:1, plan_now:2, plan_soon:3};
+      return (order[a.alertType]??9) - (order[b.alertType]??9) || a.days_left - b.days_left;
+    })
+    .slice(0, 10);
+
+  if (!items.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">✅ ไม่มีเครื่องมือที่ต้องดำเนินการ</div>`;
     return;
   }
-  el.innerHTML = alerts.map(d => {
-    const isOver = d.days_left < 0;
-    const bg = isOver ? 'var(--red-light)' : 'var(--amber-light)';
-    const color = isOver ? 'var(--red)' : 'var(--amber)';
-    const label = isOver ? 'เกินกำหนดแล้ว' : `เหลือ ${d.days_left} วัน`;
-    return `<div onclick="filterByStatus('${isOver?'overdue':'warning'}')" style="background:${bg};border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <div style="min-width:0">
-        <div style="font-size:12px;font-weight:600;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:1px">${d.id_code||'–'} · ${d.department||'–'}</div>
+
+  const fmtDate = d => d ? d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '–';
+
+  el.innerHTML = items.map(d => {
+    let bg, color, icon, label, sub;
+    if (d.alertType === 'overdue') {
+      bg='var(--red-light)'; color='var(--red)'; icon='🔴';
+      label='เกินกำหนดแล้ว';
+      sub=`Due: ${fmtDate(d.due)}`;
+    } else if (d.alertType === 'cal_now') {
+      bg='#fff3e0'; color='var(--amber)'; icon='🟡';
+      label='อยู่ในช่วงสอบเทียบ';
+      sub=`สอบได้ถึง ${fmtDate(d.due)}`;
+    } else if (d.alertType === 'plan_now') {
+      bg='#fce4ec'; color='#c62828'; icon='📋';
+      label='⚡ ต้องวางแผนทันที!';
+      sub=`วางแผน: ${fmtDate(d.planStart)}–${fmtDate(d.planEnd)} | สอบ: ${fmtDate(d.calStart)}–${fmtDate(d.due)}`;
+    } else {
+      bg='var(--accent-light)'; color='var(--accent2)'; icon='📌';
+      label=`วางแผนได้เลย (อีก ${d.days_left} วัน)`;
+      sub=`กำหนดวางแผน: ${fmtDate(d.planStart)}–${fmtDate(d.planEnd)}`;
+    }
+    return `<div style="background:${bg};border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
+      <span style="font-size:14px;flex-shrink:0;margin-top:1px">${icon}</span>
+      <div style="min-width:0;flex:1">
+        <div style="font-size:12px;font-weight:600;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.id_code||'–'} · ${d.department||'–'}</div>
+        <div style="font-size:10px;color:${color};margin-top:2px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div>
       </div>
-      <span style="font-size:10px;color:${color};white-space:nowrap;font-weight:600">${label}</span>
     </div>`;
   }).join('');
 }
