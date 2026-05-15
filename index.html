@@ -83,11 +83,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .user-info .role { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
 .btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 14px; padding: 4px; transition: color .15s; }
 .btn-logout:hover { color: white; }
-.main-content { flex: 1; margin-left: 180px; display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
+.main-content { flex: 1; margin-left: 180px; display: flex; flex-direction: column; min-width: 0; overflow-x: auto; }
 .topbar { background: white; border-bottom: 2px solid var(--accent); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
 .topbar-title { font-size: 17px; font-weight: 600; }
 .topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-.page-content { padding: 24px 28px; min-width: 0; overflow-x: hidden; }
+.page-content { padding: 24px 28px; min-width: 0; overflow-x: auto; }
 .db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
 .status-dot.ok { background: #00897B; }
@@ -2044,7 +2044,7 @@ function renderAuditTable() {
     tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
     return;
   }
-  tbody.innerHTML = auditFiltered.map(d => {
+  tbody.innerHTML = auditFiltered.filter(d => d.created_at && (d.id_code || d.username)).map(d => {
     const actionBadge = d.action === 'เพิ่ม' 
       ? '<span class="badge badge-green">➕ เพิ่ม</span>'
       : d.action === 'แก้ไข'
