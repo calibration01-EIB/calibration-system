@@ -385,47 +385,75 @@ tbody tr:hover { background: var(--surface2); }
           </div>
 
           <!-- สถานะภาพรวม -->
-          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
-            <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:18px">📊 สถานะภาพรวม</div>
+          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px">
 
             <!-- Progress bars -->
-            <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
-                  <span style="color:var(--text2);font-weight:500">🏭 สอบเทียบภายใน</span>
-                  <span style="font-weight:700;color:var(--green)" id="dashPctIn">–%</span>
+            <div>
+              <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px">📊 สถานะภาพรวม</div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
+                    <span style="color:var(--text2);font-weight:500">🏭 สอบเทียบภายใน</span>
+                    <span style="font-weight:700;color:var(--green)" id="dashPctIn">–%</span>
+                  </div>
+                  <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                    <div style="height:100%;background:linear-gradient(90deg,#2E7D32,#43A047);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarIn"></div>
+                  </div>
                 </div>
-                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
-                  <div style="height:100%;background:linear-gradient(90deg,#2E7D32,#43A047);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarIn"></div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
+                    <span style="color:var(--text2);font-weight:500">🌐 สอบเทียบภายนอก</span>
+                    <span style="font-weight:700;color:var(--accent)" id="dashPctOut">–%</span>
+                  </div>
+                  <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                    <div style="height:100%;background:linear-gradient(90deg,#00897B,#26A69A);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarOut"></div>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Donut chart + แจ้งเตือน -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border-top:1px solid var(--border);padding-top:16px">
+
+              <!-- Donut -->
               <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
-                  <span style="color:var(--text2);font-weight:500">🌐 สอบเทียบภายนอก</span>
-                  <span style="font-weight:700;color:var(--accent)" id="dashPctOut">–%</span>
+                <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">สัดส่วนสถานะ</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:11px">
+                  <span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#2E7D32;display:inline-block"></span><span style="color:var(--text2)">ปกติ <strong id="donutOkLbl">–</strong></span></span>
+                  <span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#C62828;display:inline-block"></span><span style="color:var(--text2)">เกิน <strong id="donutOvLbl">–</strong></span></span>
+                  <span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#F57F17;display:inline-block"></span><span style="color:var(--text2)">ใกล้ครบ <strong id="donutWaLbl">–</strong></span></span>
                 </div>
-                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
-                  <div style="height:100%;background:linear-gradient(90deg,#00897B,#26A69A);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarOut"></div>
+                <div style="position:relative;width:100%;height:140px">
+                  <canvas id="dashDonutChart" role="img" aria-label="สัดส่วนสถานะเครื่องมือ">สถานะเครื่องมือ</canvas>
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+                    <div style="font-size:20px;font-weight:700;color:var(--text)" id="donutTotal">–</div>
+                    <div style="font-size:10px;color:var(--text3)">เครื่อง</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- แจ้งเตือน 7 วัน -->
+              <div>
+                <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⚠️ ครบกำหนดใน 7 วัน</div>
+                <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto">
+                  <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลด...</div>
                 </div>
               </div>
             </div>
 
             <!-- สรุปตัวเลข -->
-            <div style="border-top:1px solid var(--border);padding-top:16px">
-              <div style="font-size:12px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">สรุปสถานะ</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-                <div style="background:var(--green-light);border-radius:10px;padding:10px 6px">
-                  <div style="font-size:22px;font-weight:700;color:var(--green)" id="statOk2">–</div>
-                  <div style="font-size:11px;color:var(--green);margin-top:2px">ปกติ</div>
-                </div>
-                <div style="background:var(--red-light);border-radius:10px;padding:10px 6px">
-                  <div style="font-size:22px;font-weight:700;color:var(--red)" id="statOverdue2">–</div>
-                  <div style="font-size:11px;color:var(--red);margin-top:2px">เกินกำหนด</div>
-                </div>
-                <div style="background:var(--amber-light);border-radius:10px;padding:10px 6px">
-                  <div style="font-size:22px;font-weight:700;color:var(--amber)" id="statWarning2">–</div>
-                  <div style="font-size:11px;color:var(--amber);margin-top:2px">ใกล้ครบ</div>
-                </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;border-top:1px solid var(--border);padding-top:14px">
+              <div style="background:var(--green-light);border-radius:10px;padding:10px 6px;cursor:pointer" onclick="filterByStatus('ok')">
+                <div style="font-size:22px;font-weight:700;color:var(--green)" id="statOk2">–</div>
+                <div style="font-size:11px;color:var(--green);margin-top:2px">ปกติ</div>
+              </div>
+              <div style="background:var(--red-light);border-radius:10px;padding:10px 6px;cursor:pointer" onclick="filterByStatus('overdue')">
+                <div style="font-size:22px;font-weight:700;color:var(--red)" id="statOverdue2">–</div>
+                <div style="font-size:11px;color:var(--red);margin-top:2px">เกินกำหนด</div>
+              </div>
+              <div style="background:var(--amber-light);border-radius:10px;padding:10px 6px;cursor:pointer" onclick="filterByStatus('warning')">
+                <div style="font-size:22px;font-weight:700;color:var(--amber)" id="statWarning2">–</div>
+                <div style="font-size:11px;color:var(--amber);margin-top:2px">ใกล้ครบ</div>
               </div>
             </div>
           </div>
@@ -852,6 +880,8 @@ async function loadData(forceRefresh = false) {
     renderTable();
     renderMonthly();
     renderCategoryCards();
+    renderDonut();
+    renderAlerts();
   };
 
   // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
@@ -2089,6 +2119,81 @@ function showToast(msg, type) {
   t.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// ====================================================
+// DONUT CHART + ALERTS
+// ====================================================
+let _dashDonut = null;
+
+function renderDonut() {
+  const canvas = document.getElementById('dashDonutChart');
+  if (!canvas) return;
+  let ov = 0, wa = 0, ok = 0;
+  allData.forEach(d => {
+    if (d.days_left === null) return;
+    if (d.days_left < 0) ov++;
+    else if (d.days_left <= 30) wa++;
+    else ok++;
+  });
+  const total = allData.length;
+  document.getElementById('donutTotal').textContent = total.toLocaleString();
+  document.getElementById('donutOkLbl').textContent = ok.toLocaleString();
+  document.getElementById('donutOvLbl').textContent = ov.toLocaleString();
+  document.getElementById('donutWaLbl').textContent = wa.toLocaleString();
+
+  if (_dashDonut) _dashDonut.destroy();
+  _dashDonut = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['ปกติ','เกินกำหนด','ใกล้ครบ'],
+      datasets: [{
+        data: [ok, ov, wa],
+        backgroundColor: ['#2E7D32','#C62828','#F57F17'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} เครื่อง`
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alertList');
+  if (!el) return;
+  const alerts = allData
+    .filter(d => d.days_left !== null && d.days_left >= -1 && d.days_left <= 7)
+    .sort((a, b) => a.days_left - b.days_left)
+    .slice(0, 8);
+
+  if (!alerts.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ไม่มีเครื่องมือที่ใกล้ครบกำหนด</div>`;
+    return;
+  }
+  el.innerHTML = alerts.map(d => {
+    const isOver = d.days_left < 0;
+    const bg = isOver ? 'var(--red-light)' : 'var(--amber-light)';
+    const color = isOver ? 'var(--red)' : 'var(--amber)';
+    const label = isOver ? 'เกินกำหนดแล้ว' : `เหลือ ${d.days_left} วัน`;
+    return `<div onclick="filterByStatus('${isOver?'overdue':'warning'}')" style="background:${bg};border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:600;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">${d.id_code||'–'} · ${d.department||'–'}</div>
+      </div>
+      <span style="font-size:10px;color:${color};white-space:nowrap;font-weight:600">${label}</span>
+    </div>`;
+  }).join('');
 }
 
 // ====================================================
