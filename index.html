@@ -1198,12 +1198,34 @@ function renderTable() {
       td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
     });
   }
+
+  // โหลดจำนวนไฟล์ทุก record แบบ batch
+  updateAllCertButtons(pageData);
 }
 
 // ====================================================
 // CERT MODAL — Supabase Storage
 // ====================================================
 let currentInstrumentId = null;
+
+async function updateAllCertButtons(pageData) {
+  await Promise.all(pageData.map(async d => {
+    const btn = document.querySelector(`button[onclick*="openCertModal(${d.id},"]`);
+    if (!btn) return;
+    try {
+      const folder = `cert_${d.id}_${d.id_code||''}`;
+      const { data } = await sb.storage.from('certificates').list(folder);
+      const validFiles = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
+      if (validFiles.length > 0) {
+        btn.className = 'btn-cert btn-cert-has';
+        btn.innerHTML = `📎 ${validFiles.length} ไฟล์`;
+      } else {
+        btn.className = 'btn-cert btn-cert-empty';
+        btn.innerHTML = '📎 ไฟล์';
+      }
+    } catch(e) {}
+  }));
+}
 
 async function openCertModal(instrumentId, idCode, certNo, equipment) {
   currentInstrumentId = instrumentId;
