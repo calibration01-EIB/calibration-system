@@ -510,7 +510,7 @@ tbody tr:hover { background: var(--surface2); }
             <!-- AUDIT LOG -->
       <div id="pageAudit" class="page-content" style="display:none">
         <div class="section-header">
-          <h2>Audit Log — ประวัติการแก้ไข</h2>
+          <h2 style="font-size:22px;font-weight:700;letter-spacing:.01em">Audit Log — ประวัติการแก้ไข</h2>
           <button class="btn-refresh" onclick="loadAuditLogs()">↻ รีเฟรช</button>
         </div>
         <div class="controls-bar" style="margin-bottom:16px">
@@ -2059,7 +2059,7 @@ function renderAuditTable() {
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
       details = Object.entries(d.changes).map(([field, val]) =>
-        `<div style="font-size:22px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
+        `<div style="font-size:13px;line-height:1.7"><strong style="color:var(--text2)">${field}:</strong> <span style="color:var(--red);font-weight:500">${val.from ?? '–'}</span> <span style="color:var(--text3)">→</span> <span style="color:var(--green);font-weight:500">${val.to ?? '–'}</span></div>`
       ).join('');
     }
 
