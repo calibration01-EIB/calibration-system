@@ -1777,9 +1777,11 @@ function renderMonthly() {
     const waPct = cnt > 0 ? Math.round(wa/cnt*100) : 0;
     const okPct2 = cnt > 0 ? 100 - ovPct - waPct : 0;
 
+    const ok2 = cnt - ov - wa;
     card.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1px">${MONTH_NAMES_FULL[i]}</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${MONTH_EN[i]}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.4">
+        ${MONTH_NAMES_FULL[i]} <span style="font-weight:400;color:var(--text3);font-size:10px">/ ${MONTH_EN[i]}</span>
+      </div>
       <div style="font-size:22px;font-weight:700;color:${numColor};line-height:1;margin-bottom:6px">${cnt||'–'}</div>
       <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;margin:0 2px 5px">
         ${cnt > 0 ? `
@@ -1788,11 +1790,12 @@ function renderMonthly() {
           <div style="width:${okPct2}%;background:#2E7D32;"></div>
         ` : `<div style="width:100%;background:var(--surface2);"></div>`}
       </div>
-      <div style="display:flex;justify-content:center;gap:6px;font-size:9px">
-        ${ov > 0 ? `<span style="color:#C62828">🔴${ov}</span>` : ''}
-        ${wa > 0 ? `<span style="color:#F57F17">🟡${wa}</span>` : ''}
-        ${cnt > 0 && ov === 0 && wa === 0 ? `<span style="color:#2E7D32">🟢${cnt}</span>` : ''}
-        ${cnt === 0 ? `<span style="color:var(--text3)">–</span>` : ''}
+      <div style="display:flex;justify-content:center;gap:6px;font-size:9px;flex-wrap:wrap">
+        ${cnt === 0 ? `<span style="color:var(--text3)">–</span>` : `
+          ${ov > 0 ? `<span style="color:#C62828">&#x1F534; ${ov}</span>` : ''}
+          ${wa > 0 ? `<span style="color:#F57F17">&#x1F7E1; ${wa}</span>` : ''}
+          ${ok2 > 0 ? `<span style="color:#2E7D32">&#x1F7E2; ${ok2}</span>` : ''}
+        `}
       </div>`;
 
     if (cnt) {
