@@ -361,25 +361,10 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
 
-        <!-- ROW 2: MONTH CARDS + PROGRESS -->
-        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- ROW 2: PROGRESS + MONTH CARDS -->
+        <div id="dashRow2" style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:16px">
 
-          <!-- แผนสอบเทียบรายเดือน -->
-          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <div style="font-size:15px;font-weight:600;color:var(--text)">📅 แผนสอบเทียบรายเดือน</div>
-              <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">2569</span>
-            </div>
-            <div style="font-size:13px;color:var(--text3);margin-bottom:10px">กดการ์ดเดือนเพื่อกรองข้อมูล</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2)">
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
-            </div>
-            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-          </div>
-
-          <!-- สถานะภาพรวม -->
+          <!-- สถานะภาพรวม (ซ้าย) -->
           <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px">
 
             <!-- Progress bars -->
@@ -409,8 +394,6 @@ tbody tr:hover { background: var(--surface2); }
 
             <!-- Donut chart + แจ้งเตือน -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border-top:1px solid var(--border);padding-top:16px">
-
-              <!-- Donut -->
               <div>
                 <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">สัดส่วนสถานะ</div>
                 <div style="position:relative;width:100%;height:140px">
@@ -421,8 +404,6 @@ tbody tr:hover { background: var(--surface2); }
                   </div>
                 </div>
               </div>
-
-              <!-- แจ้งเตือน 7 วัน -->
               <div>
                 <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⚠️ ครบกำหนดใน 7 วัน</div>
                 <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto">
@@ -446,6 +427,21 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="font-size:11px;color:var(--amber);margin-top:2px">ใกล้ครบ</div>
               </div>
             </div>
+          </div>
+
+          <!-- แผนสอบเทียบรายเดือน (ขวา) -->
+          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:15px;font-weight:600;color:var(--text)">📅 แผนสอบเทียบรายเดือน</div>
+              <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">2569</span>
+            </div>
+            <div style="font-size:13px;color:var(--text3);margin-bottom:10px">กดการ์ดเดือนเพื่อกรองข้อมูล</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2)">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
+            </div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
           </div>
         </div>
 
