@@ -532,9 +532,10 @@ tbody tr:hover { background: var(--surface2); }
                 <th>ID Code</th>
                 <th>เครื่องมือ</th>
                 <th>รายละเอียด</th>
+                <th>ไฟล์แนบ</th>
               </tr>
             </thead>
-            <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
+            <tbody id="auditTable"><tr><td colspan="7" class="no-data">กำลังโหลด...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2063,7 +2064,7 @@ function filterAuditLogs() {
 function renderAuditTable() {
   const tbody = document.getElementById('auditTable');
   if (!auditFiltered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">ไม่พบข้อมูล</td></tr>';
     return;
   }
   tbody.innerHTML = auditFiltered.filter(d => d.created_at && (d.id_code || d.username)).map(d => {
@@ -2085,17 +2086,65 @@ function renderAuditTable() {
       ).join('');
     }
 
+    const instrId = d.instrument_id || '';
+    const idCode = d.id_code || '';
+    const fileCell = instrId
+      ? `<div id="audit-files-${instrId}" style="font-size:12px;color:var(--text3)">กำลังโหลด...</div>`
+      : `<span style="color:var(--text3);font-size:12px">–</span>`;
+
     return `<tr>
       <td style="white-space:nowrap">${dt}</td>
       <td><strong>${d.username||'–'}</strong></td>
       <td>${actionBadge}</td>
-      <td style="font-family:var(--mono)">${d.id_code||'–'}</td>
+      <td style="font-family:var(--mono)">${idCode||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${details}</td>
+      <td style="min-width:120px">${fileCell}</td>
     </tr>`;
   }).join('');
+
+  // โหลดไฟล์แนบแต่ละ record
+  auditFiltered.filter(d => d.created_at && (d.id_code || d.username) && d.instrument_id).forEach(d => {
+    loadAuditFiles(d.instrument_id, d.id_code||'');
+  });
 }
 
+async function loadAuditFiles(instrumentId, idCode) {
+  const cell = document.getElementById(`audit-files-${instrumentId}`);
+  if (!cell) return;
+  try {
+    const folder = `cert_${instrumentId}_${idCode}`;
+    const { data } = await sb.storage.from('certificates').list(folder);
+    const files = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
+    if (!files.length) {
+      cell.innerHTML = `<span style="color:var(--text3);font-size:12px">ไม่มีไฟล์</span>`;
+      return;
+    }
+    cell.innerHTML = files.map(f => `
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <button onclick="viewFile('${folder}','${f.name}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent-light);color:var(--accent);cursor:pointer;white-space:nowrap">📄 ${f.name.length>18?f.name.slice(0,16)+'…':f.name}</button>
+        ${currentUser?.role==='admin'?`<button onclick="deleteAuditFile('${folder}','${f.name}',${instrumentId},'${idCode}')" style="font-size:11px;padding:2px 6px;border:1px solid var(--red);border-radius:4px;background:var(--red-light);color:var(--red);cursor:pointer">🗑️</button>`:''}
+      </div>`).join('');
+  } catch(e) {
+    cell.innerHTML = `<span style="color:var(--text3);font-size:12px">–</span>`;
+  }
+}
+
+async function deleteAuditFile(folder, fileName, instrumentId, idCode) {
+  if (!confirm(`ลบไฟล์ "${fileName}" ใช่ไหม?`)) return;
+  try {
+    await sb.storage.from('certificates').remove([`${folder}/${fileName}`]);
+    showToast('ลบไฟล์แล้ว', 'success');
+    loadAuditFiles(instrumentId, idCode);
+    const btn = document.querySelector(`button[onclick*="openCertModal(${instrumentId},"]`);
+    if (btn) {
+      const { data } = await sb.storage.from('certificates').list(folder);
+      const files = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
+      if (files.length > 0) { btn.className='btn-cert btn-cert-has'; btn.innerHTML=`📎 ${files.length} ไฟล์`; }
+      else { btn.className='btn-cert btn-cert-empty'; btn.innerHTML='📎 ไฟล์'; }
+    }
+  } catch(e) { showToast('ลบไม่สำเร็จ','error'); }
+}
 
 function calcDueDate(calDate, frequency) {
   if (!calDate || !frequency) return;
