@@ -895,6 +895,7 @@ async function loadData(forceRefresh = false) {
     }));
     filteredData = [...allData];
     populateFilters();
+    fileCountCache = {};
     updateStats();
     renderTable();
     renderMonthly();
@@ -1138,7 +1139,7 @@ function renderTable() {
       <td>${d.cal_frequency||'–'}</td>
       <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
       <td>${statusBadge}</td>
-      <td><button class="btn-cert btn-cert-empty" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\'")}')" >📎 ไฟล์</button></td>
+      <td><button class="bid="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
       <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
@@ -1153,6 +1154,24 @@ function renderTable() {
       const name = (d.instrument_name||'').replace(/'/g, "\\'");
       td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
     });
+  }
+  updateFileCounts(pageData);
+}
+
+async function updateFileCounts(pageItems) {
+  for (const d of pageItems) {
+    if (fileCountCache[d.id] !== undefined) continue;
+    try {
+      const folder = 'cert_' + d.id + '_' + (d.id_code||'');
+      const { data } = await sb.storage.from('certificates').list(folder);
+      const cnt = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder').length;
+      fileCountCache[d.id] = cnt;
+      const btn = document.getElementById('certbtn-' + d.id);
+      if (btn) {
+        btn.className = cnt > 0 ? 'btn-cert btn-cert-has' : 'btn-cert btn-cert-empty';
+        btn.innerHTML = cnt > 0 ? '📎 ' + cnt + ' ไฟล์' : '📎 ไฟล์';
+      }
+    } catch(e) {}
   }
 }
 
@@ -1693,13 +1712,21 @@ function renderMonthly() {
     const numColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
     const card = document.createElement('div');
     card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
+    const ok = cnt - ov - wa;
     card.innerHTML = `
       <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500">${MONTH_NAMES_SHORT[i]}</div>
       <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
-      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px">
-        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
+      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
+        ${ov>0?`<div style="flex:${ov};background:var(--red);border-radius:2px"></div>`:''}
+        ${wa>0?`<div style="flex:${wa};background:var(--amber);border-radius:2px"></div>`:''}
+        ${ok>0?`<div style="flex:${ok};background:var(--green);border-radius:2px"></div>`:''}
       </div>
-      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
+      <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+        ${ov>0?`<span style="font-size:10px;color:var(--red)">🔴 ${ov}</span>`:''}
+        ${wa>0?`<span style="font-size:10px;color:var(--amber)">🟡 ${wa}</span>`:''}
+        ${ok>0&&cnt>0?`<span style="font-size:10px;color:var(--green)">🟢 ${ok}</span>`:''}
+        ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
+      </div>`;
     if (cnt) {
       card.addEventListener('mouseenter', () => { card.style.borderColor = barColor; card.style.transform = 'translateY(-1px)'; });
       card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = 'var(--border)'; card.style.transform = ''; } });
@@ -1777,14 +1804,7 @@ function renderCategoryCards() {
     const okPct = 100 - notOkPct;
 
     // สีตามสถานะ
-    let barColor, statusText, statusColor;
-    if (s.overdue > 0) {
-      barColor = 'var(--red)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--red)';
-    } else if (s.warning > 0) {
-      barColor = 'var(--amber)'; statusText = `${notOkPct}% ยังไม่ครบ/ปกติ`; statusColor = 'var(--amber)';
-    } else {
-      barColor = 'var(--green)'; statusText = `${okPct}% ปกติ`; statusColor = 'var(--green)';
-    }
+    const mainColor = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : 'var(--green)';
 
     // สี card
     const cardBg = isActive ? '#e8f5e9' : (cnt === 0 ? 'var(--surface2)' : 'white');
@@ -1799,14 +1819,20 @@ function renderCategoryCards() {
       <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px">${cnt > 0 ? cnt : '–'}</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px">เครื่อง</div>
       ${cnt > 0 ? `
-      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden">
-        <div style="height:100%;width:${okPct}%;background:${barColor};border-radius:3px;transition:width .5s"></div>
+      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden;display:flex;gap:1px">
+        ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red);border-radius:3px;transition:flex .5s"></div>`:''}
+        ${s.warning>0?`<div style="flex:${s.warning};background:var(--amber);border-radius:3px;transition:flex .5s"></div>`:''}
+        ${s.ok>0?`<div style="flex:${s.ok};background:var(--green);border-radius:3px;transition:flex .5s"></div>`:''}
       </div>
-      <div style="font-size:12px;color:${statusColor};font-weight:500">${statusText}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${s.overdue>0?`<span style="font-size:11px;color:var(--red);font-weight:500">🔴 ${s.overdue} เกินกำหนด</span>`:''}
+        ${s.warning>0?`<span style="font-size:11px;color:var(--amber);font-weight:500">🟡 ${s.warning} ใกล้ครบ</span>`:''}
+        ${s.ok>0?`<span style="font-size:11px;color:var(--green)">🟢 ${s.ok} ปกติ</span>`:''}
+      </div>
       ` : `<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
 
     if (cnt) {
-      card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = 'var(--green)'; card.style.transform = 'translateY(-1px)'; });
+      card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = mainColor; card.style.transform = 'translateY(-1px)'; });
       card.addEventListener('mouseleave', () => { if (activeCategory !== fullName) card.style.borderColor = cardBorder; card.style.transform = ''; });
       card.addEventListener('click', () => {
         activeCategory = (activeCategory === fullName) ? 'all' : fullName;
@@ -2315,7 +2341,8 @@ function notifGoAll() {
 // ====================================================
 const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-let planSchedule = {}; // { id: 'YYYY-MM-DD' }
+let planSchedule = {};
+let fileCountCache = {}; // { instrumentId: count } // { id: 'YYYY-MM-DD' }
 
 function initPlanPage() {
   // Set default month/year to current
@@ -2463,13 +2490,17 @@ function exportFRMEIB04() {
   const PAGE_CELL_COL_0     = 43;  // AR column index
 
   // Load template workbook from embedded base64
-  const tmplWb = XLSX.read(BOOK1_TEMPLATE_B64, {
-    type: 'base64', cellStyles: true, cellDates: true, sheetStubs: true
-  });
-  const tmplSheet = tmplWb.Sheets[tmplWb.SheetNames[0]];
-
-  // Deep-clone the template sheet
-  const ws = JSON.parse(JSON.stringify(tmplSheet));
+  let tmplWb, tmplSheet, ws;
+  try {
+    tmplWb = XLSX.read(BOOK1_TEMPLATE_B64, {
+      type: 'base64', cellStyles: true, sheetStubs: true
+    });
+    tmplSheet = tmplWb.Sheets[tmplWb.SheetNames[0]];
+    ws = JSON.parse(JSON.stringify(tmplSheet));
+  } catch(e) {
+    showToast('โหลด template ไม่สำเร็จ: ' + e.message, 'error');
+    return;
+  }
 
   // Set cell value while preserving existing style
   function setVal(r, c, v, numFmt) {
