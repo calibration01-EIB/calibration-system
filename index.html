@@ -192,6 +192,27 @@ tbody tr:hover { background: var(--surface2); }
 .btn-add:hover { opacity: .9; }
 .users-table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
+
+/* NOTIFICATION BELL */
+.notif-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:8px; color:rgba(255,255,255,.7); font-size:20px; transition:all .15s; display:flex; align-items:center; }
+.notif-btn:hover { background:rgba(255,255,255,.1); color:white; }
+.notif-badge { position:absolute; top:2px; right:2px; background:var(--red); color:white; border-radius:10px; min-width:17px; height:17px; font-size:10px; font-weight:700; display:none; align-items:center; justify-content:center; padding:0 4px; border:2px solid #00695C; }
+.notif-wrapper { position:relative; }
+.notif-dropdown { display:none; position:absolute; top:calc(100% + 10px); right:0; width:360px; background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.18); z-index:500; border:1px solid var(--border); overflow:hidden; }
+.notif-dropdown::before { content:''; position:absolute; top:-6px; right:18px; width:12px; height:12px; background:white; border-left:1px solid var(--border); border-top:1px solid var(--border); transform:rotate(45deg); }
+
+/* PLAN PAGE */
+.plan-controls { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; background:white; border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; }
+.plan-controls label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:6px; }
+.plan-controls select, .plan-controls input[type=number] { padding:10px 14px; border:1.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:14px; color:var(--text); background:var(--surface); outline:none; transition:border-color .2s; }
+.plan-controls select:focus, .plan-controls input[type=number]:focus { border-color:var(--accent); }
+.plan-day-input { width:110px; padding:9px 10px; border:1.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:13px; color:var(--text); outline:none; transition:border-color .2s; }
+.plan-day-input:focus { border-color:var(--accent); }
+.plan-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.plan-sum-card { background:white; border:1px solid var(--border); border-radius:12px; padding:14px 18px; }
+.plan-sum-card .num { font-size:28px; font-weight:700; line-height:1; }
+.plan-sum-card .lbl { font-size:12px; color:var(--text3); margin-top:3px; }
+
 /* TOAST */
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .3s; max-width: 320px; }
 .toast.show { transform: translateY(0); opacity: 1; }
@@ -252,6 +273,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="showPage('plan')" id="nav-plan"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
       </nav>
@@ -268,7 +290,16 @@ tbody tr:hover { background: var(--surface2); }
             <div class="topbar-title" id="topbarTitle">Dashboard</div>
             <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
           </div>
-        <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="notif-wrapper" id="notifWrapper">
+            <button class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน">
+              🔔
+              <span class="notif-badge" id="notifBadge"><span id="notifCount">0</span></span>
+            </button>
+            <div class="notif-dropdown" id="notifDropdown"></div>
+          </div>
+          <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+        </div>
       </div>
 
 
@@ -492,6 +523,96 @@ tbody tr:hover { background: var(--surface2); }
             </thead>
             <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+
+      <!-- PLAN PAGE -->
+      <div id="pagePlan" class="page-content" style="display:none">
+
+        <!-- Controls -->
+        <div class="plan-controls">
+          <div>
+            <label>เดือน</label>
+            <select id="planMonth">
+              <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+              <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+              <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+              <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+              <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+            </select>
+          </div>
+          <div>
+            <label>ปี (พ.ศ.)</label>
+            <input type="number" id="planYear" style="width:100px" min="2560" max="2600">
+          </div>
+          <div>
+            <label>หน่วยงาน</label>
+            <select id="planDept" style="min-width:160px"><option value="">ทุกหน่วยงาน</option></select>
+          </div>
+          <div>
+            <label>ประเภทเครื่องมือ</label>
+            <select id="planType" style="min-width:200px"><option value="">ทุกประเภท</option></select>
+          </div>
+          <div>
+            <label>ภายใน/ภายนอก</label>
+            <select id="planCalType" style="min-width:140px">
+              <option value="">ทั้งหมด</option>
+              <option value="ภายใน">🏭 ภายใน</option>
+              <option value="ภายนอก">🌐 ภายนอก</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="renderPlanTable()" style="padding:10px 18px;width:auto">🔍 ค้นหา</button>
+          <button onclick="exportFRMEIB04()" style="padding:10px 18px;background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:#2E7D32;cursor:pointer">📊 Export FRM-EIB04</button>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="plan-summary" id="planSummary" style="display:none">
+          <div class="plan-sum-card" style="border-left:4px solid var(--accent)">
+            <div class="num" id="planSumTotal" style="color:var(--accent)">–</div>
+            <div class="lbl">เครื่องมือในแผน</div>
+          </div>
+          <div class="plan-sum-card" style="border-left:4px solid var(--green)">
+            <div class="num" id="planSumSched" style="color:var(--green)">–</div>
+            <div class="lbl">นัดหมายแล้ว</div>
+          </div>
+          <div class="plan-sum-card" style="border-left:4px solid var(--amber)">
+            <div class="num" id="planSumPending" style="color:var(--amber)">–</div>
+            <div class="lbl">ยังไม่ได้นัด</div>
+          </div>
+          <div class="plan-sum-card" style="border-left:4px solid var(--red)">
+            <div class="num" id="planSumOverdue" style="color:var(--red)">–</div>
+            <div class="lbl">เลยกำหนดแล้ว</div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="planTableWrap" style="max-height:calc(100vh - 380px)">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>ID Code</th>
+                <th>ชื่อเครื่องมือ</th>
+                <th>ยี่ห้อ</th>
+                <th>หน่วยงาน</th>
+                <th>สถานที่</th>
+                <th>วันครบกำหนด</th>
+                <th>เหลือ (วัน)</th>
+                <th>ภายใน/ภายนอก</th>
+                <th>สถานะ</th>
+                <th style="min-width:150px">📅 วันนัดสอบเทียบ</th>
+              </tr>
+            </thead>
+            <tbody id="planTableBody">
+              <tr><td colspan="11" class="no-data">เลือกเดือนและกด "ค้นหา" เพื่อดูแผน</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="planEmpty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:14px">
+          ไม่มีเครื่องมือที่ครบกำหนดในเดือนนี้
         </div>
       </div>
 
@@ -778,6 +899,7 @@ async function loadData(forceRefresh = false) {
     renderTable();
     renderMonthly();
     renderCategoryCards();
+    updateNotificationBell();
   };
 
   // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
@@ -2079,6 +2201,14 @@ async function confirmImport() {
   }
 }
 
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('notifWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const ia = document.getElementById('importUploadArea');
   if (!ia) return;
@@ -2089,10 +2219,404 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ====================================================
+// NOTIFICATION BELL
+// ====================================================
+function updateNotificationBell() {
+  if (!currentUser) return;
+  const userTypes = currentUser.instrument_types;
+  const relevant = (userTypes && userTypes.length > 0)
+    ? allData.filter(d => userTypes.includes(d.instrument_type))
+    : allData;
+
+  const overdue = relevant.filter(d => d.days_left !== null && d.days_left < 0);
+  const warning = relevant.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30);
+  const total = overdue.length + warning.length;
+
+  const badge = document.getElementById('notifBadge');
+  const countEl = document.getElementById('notifCount');
+  if (badge) { badge.style.display = total > 0 ? 'flex' : 'none'; }
+  if (countEl) countEl.textContent = total > 99 ? '99+' : total;
+  window._notifItems = { overdue, warning };
+}
+
+function toggleNotifDropdown() {
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  renderNotifDropdown();
+  dd.style.display = 'block';
+}
+
+function renderNotifDropdown() {
+  const { overdue = [], warning = [] } = window._notifItems || {};
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  const total = overdue.length + warning.length;
+
+  if (total === 0) {
+    dd.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">✅ ไม่มีรายการที่ต้องดำเนินการ</div>';
+    return;
+  }
+
+  const items = [...overdue.slice(0,8).map(d => ({...d,_t:'ov'})), ...warning.slice(0,5).map(d => ({...d,_t:'wa'}))];
+  dd.innerHTML = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">🔔 การแจ้งเตือน</span>
+      <span style="font-size:11px;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:10px;font-weight:600">${total} รายการ</span>
+    </div>
+    ${items.map(d => {
+      const isOv = d._t === 'ov';
+      const color = isOv ? 'var(--red)' : 'var(--amber)';
+      const bg    = isOv ? 'var(--red-light)' : 'var(--amber-light)';
+      const icon  = isOv ? '🔴' : '🟡';
+      const label = isOv ? `เลยกำหนด ${Math.abs(d.days_left)} วัน` : `ครบในอีก ${d.days_left} วัน`;
+      const name  = (d.instrument_name || d.id_code || '–').substring(0, 22);
+      return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s"
+                   onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''"
+                   onclick="notifGoTo('${(d.id_code||'').replace(/'/g,"\\'")}')">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:14px">${icon}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+          <span style="font-size:10px;color:${color};font-weight:600;background:${bg};padding:2px 7px;border-radius:10px;white-space:nowrap">${label}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-left:22px;font-family:var(--mono)">${d.id_code || '–'} &nbsp;·&nbsp; ${d.department || '–'}</div>
+      </div>`;
+    }).join('')}
+    ${total > items.length ? `<div style="padding:10px 16px;text-align:center;font-size:12px;color:var(--accent);cursor:pointer;font-weight:500" onclick="notifGoAll()">ดูทั้งหมด ${total} รายการ →</div>` : ''}
+  `;
+}
+
+function notifGoTo(idCode) {
+  document.getElementById('notifDropdown').style.display = 'none';
+  showPage('dashboard');
+  document.getElementById('searchInput').value = idCode;
+  filterData();
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#dataTable tr');
+    rows.forEach(row => {
+      if (row.textContent.includes(idCode)) {
+        row.style.background = '#e0f4f1';
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { row.style.background = ''; }, 2500);
+      }
+    });
+  }, 200);
+}
+
+function notifGoAll() {
+  document.getElementById('notifDropdown').style.display = 'none';
+  showPage('dashboard');
+  document.getElementById('statusFilter').value = 'overdue';
+  filterData();
+}
+
+// ====================================================
+// PLAN PAGE
+// ====================================================
+const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                         'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let planSchedule = {}; // { id: 'YYYY-MM-DD' }
+
+function initPlanPage() {
+  // Set default month/year to current
+  const now = new Date();
+  const planMonth = document.getElementById('planMonth');
+  const planYear  = document.getElementById('planYear');
+  if (planMonth && !planMonth.dataset.init) {
+    planMonth.value = now.getMonth() + 1;
+    const buddhistYear = now.getFullYear() + 543;
+    planYear.value = buddhistYear;
+    planMonth.dataset.init = '1';
+  }
+  // Populate dept/type filters
+  const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
+  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const planDept = document.getElementById('planDept');
+  const planType = document.getElementById('planType');
+  if (planDept && planDept.options.length <= 1) {
+    depts.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; planDept.appendChild(o); });
+  }
+  if (planType && planType.options.length <= 1) {
+    types.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t.split(' (')[0]; planType.appendChild(o); });
+  }
+}
+
+function getPlanData() {
+  const month  = parseInt(document.getElementById('planMonth').value);
+  const yearBE = parseInt(document.getElementById('planYear').value);
+  const yearCE = yearBE - 543;
+  const dept   = document.getElementById('planDept').value;
+  const type   = document.getElementById('planType').value;
+  const calType= document.getElementById('planCalType').value;
+
+  return allData.filter(d => {
+    if (!d.due_date) return false;
+    const dd = new Date(d.due_date);
+    if (dd.getFullYear() !== yearCE || dd.getMonth() + 1 !== month) return false;
+    if (dept && d.department !== dept) return false;
+    if (type && d.instrument_type !== type) return false;
+    if (calType && d.cal_type !== calType) return false;
+    return true;
+  });
+}
+
+function renderPlanTable() {
+  const data = getPlanData();
+  const tbody = document.getElementById('planTableBody');
+  const summary = document.getElementById('planSummary');
+  const empty   = document.getElementById('planEmpty');
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="no-data">ไม่มีเครื่องมือที่ครบกำหนดในช่วงนี้</td></tr>';
+    summary.style.display = 'none';
+    empty.style.display   = 'block';
+    return;
+  }
+  empty.style.display   = 'none';
+  summary.style.display = 'grid';
+
+  tbody.innerHTML = data.map((d, i) => {
+    const days = d.days_left;
+    let badge, daysColor;
+    if (days === null)   { badge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; }
+    else if (days < 0)   { badge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysColor = 'var(--red)'; }
+    else if (days <= 30) { badge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysColor = 'var(--amber)'; }
+    else                 { badge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysColor = 'var(--green)'; }
+
+    const scheduled = planSchedule[d.id] || '';
+    return `<tr id="planRow_${d.id}">
+      <td style="color:var(--text3);font-size:13px">${i+1}</td>
+      <td style="font-family:var(--mono);font-size:13px;font-weight:600">${d.id_code||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td style="font-size:13px;color:var(--text2)">${d.brand||'–'}</td>
+      <td><strong>${d.department||'–'}</strong></td>
+      <td style="font-size:13px;color:var(--text2)">${d.location||'–'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${formatDate(d.due_date)}</td>
+      <td><span style="font-family:var(--mono);font-size:13px;font-weight:600;color:${daysColor}">${days !== null ? days : '–'}</span></td>
+      <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
+      <td>${badge}</td>
+      <td>
+        <input type="date" class="plan-day-input" value="${scheduled}"
+               onchange="setPlanSchedule(${d.id}, this.value)"
+               title="เลือกวันนัดสอบเทียบ">
+      </td>
+    </tr>`;
+  }).join('');
+
+  updatePlanSummary(data);
+}
+
+function setPlanSchedule(id, dateVal) {
+  if (dateVal) planSchedule[id] = dateVal;
+  else delete planSchedule[id];
+  updatePlanSummaryFromCurrent();
+}
+
+function updatePlanSummaryFromCurrent() {
+  const data = getPlanData();
+  updatePlanSummary(data);
+}
+
+function updatePlanSummary(data) {
+  const total   = data.length;
+  const sched   = data.filter(d => planSchedule[d.id]).length;
+  const pending = total - sched;
+  const overdue = data.filter(d => d.days_left !== null && d.days_left < 0).length;
+  document.getElementById('planSumTotal').textContent   = total;
+  document.getElementById('planSumSched').textContent   = sched;
+  document.getElementById('planSumPending').textContent = pending;
+  document.getElementById('planSumOverdue').textContent = overdue;
+}
+
+// ====================================================
+// EXPORT FRM-EIB04
+// ====================================================
+function exportFRMEIB04() {
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
+
+  const data   = getPlanData();
+  if (!data.length) { showToast('ไม่มีข้อมูลในแผน กรุณาค้นหาก่อน', 'error'); return; }
+
+  const monthNum = parseInt(document.getElementById('planMonth').value);
+  const yearBE   = parseInt(document.getElementById('planYear').value);
+  const yearCE   = yearBE - 543;
+  const monthName= MONTH_NAMES_TH[monthNum - 1];
+  const monthNameEN = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'][monthNum - 1];
+  const daysInMonth = new Date(yearCE, monthNum, 0).getDate();
+
+  const dept  = document.getElementById('planDept').value || '–';
+  const iType = document.getElementById('planType').value || '';
+  const typeName = iType ? iType.split(' (')[1]?.replace(')','') || iType : 'ALL';
+
+  const calTypeVal = document.getElementById('planCalType').value;
+  const isInternal = calTypeVal === 'ภายใน';
+  const isExternal = calTypeVal === 'ภายนอก';
+
+  // Build AOA (array of arrays)
+  const aoa = [];
+
+  // Row 1-2: empty
+  aoa.push(Array(45).fill(null));
+  aoa.push(Array(45).fill(null));
+
+  // Row 3: Title
+  const r3 = Array(45).fill(null);
+  r3[0] = 'Equipment Calibration Plan';
+  aoa.push(r3);
+
+  // Row 4: Month / Year
+  const r4 = Array(45).fill(null);
+  r4[15] = 'Month';
+  r4[18] = monthNameEN;
+  r4[24] = 'Year';
+  r4[26] = yearCE;
+  aoa.push(r4);
+
+  // Row 5: Group, Category, หน่วยงาน, แผนก
+  const r5 = Array(45).fill(null);
+  r5[0] = 'กลุ่มเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ (Inspection, measuring and testing instruments group)';
+  r5[20] = typeName.toUpperCase();
+  r5[30] = 'หน่วยงาน (Unit)';
+  r5[36] = dept;
+  r5[40] = 'แผนก (Section)';
+  r5[41] = dept;
+  aoa.push(r5);
+
+  // Row 6: Internal / External
+  const r6 = Array(45).fill(null);
+  r6[1]  = 'สอบเทียบภายใน (Internal calibration)' + (isInternal ? ' ✓' : '');
+  r6[5]  = 'สอบเทียบภายนอก (External calibration)' + (isExternal ? ' ✓' : '');
+  aoa.push(r6);
+
+  // Row 7: Column headers
+  const r7 = Array(45).fill(null);
+  r7[0] = 'Item';
+  r7[1] = 'Name of Inspection, measuring and testing instruments';
+  r7[2] = 'ID CODE';
+  r7[3] = 'Location';
+  r7[4] = 'Due Date';
+  r7[5] = 'Month';
+  r7[36] = 'Action by Calibration Laboratory (EIB)';
+  aoa.push(r7);
+
+  // Row 8: Day numbers 1–31 (cols 5-35) + action sub-headers
+  const r8 = Array(45).fill(null);
+  for (let d = 1; d <= 31; d++) r8[4 + d] = d;
+  r8[36] = 'Certification No.';
+  r8[37] = 'Calibration Date';
+  r8[38] = 'Agency';
+  r8[39] = 'Recorded by';
+  r8[42] = 'Reviewed by (Supervisor level and above)';
+  aoa.push(r8);
+
+  // Row 9: Signed / Date
+  const r9 = Array(45).fill(null);
+  r9[39] = 'Signed'; r9[40] = 'Date';
+  r9[42] = 'Signed'; r9[43] = 'Date';
+  aoa.push(r9);
+
+  // Data rows (Row 10+)
+  data.forEach((d, idx) => {
+    const row = Array(45).fill(null);
+    row[0] = idx + 1;
+    row[1] = d.instrument_name || '';
+    row[2] = d.id_code || '';
+    row[3] = d.location || '';
+    row[4] = d.due_date ? new Date(d.due_date) : null;
+    // Mark planned day
+    const sched = planSchedule[d.id];
+    if (sched) {
+      const schedDate = new Date(sched);
+      const schedDay  = schedDate.getDate();
+      const schedMonth= schedDate.getMonth() + 1;
+      const schedYear = schedDate.getFullYear();
+      if (schedMonth === monthNum && schedYear === yearCE && schedDay >= 1 && schedDay <= 31) {
+        row[4 + schedDay] = '✓';
+      }
+    }
+    aoa.push(row);
+  });
+
+  // Empty rows to pad
+  const dataEnd = aoa.length;
+  for (let i = 0; i < 3; i++) aoa.push(Array(45).fill(null));
+
+  // Footer row: Prepared / Approved / Acknowledged
+  const rFoot = Array(45).fill(null);
+  rFoot[0] = 'Prepared by :___________(EIB)  Date _____________   Approved by :____________(EIB)  Date ________________ Acknowledge by _____________(Owner) Date _____________';
+  rFoot[36] = 'The owner accepts the work by ___________ Date _____________';
+  aoa.push(rFoot);
+
+  const rLevel = Array(45).fill(null);
+  rLevel[4]  = '  ระดับแผนกขึ้นไป ( Section manager level and above)';
+  rLevel[20] = 'ระดับหน่วยขึ้นไป ( Supervisor level and above)';
+  rLevel[36] = 'ระดับหน่วยขึ้นไป ( Supervisor level and above)';
+  aoa.push(rLevel);
+
+  aoa.push(Array(45).fill(null));
+
+  // Form number row
+  const rForm = Array(45).fill(null);
+  rForm[0]  = 'FRM-EIB04 (TP) Rev.03';
+  rForm[19] = 'Effective Date: 31/03/2025 (5Y)';
+  rForm[43] = 'Page 1 of 1';
+  aoa.push(rForm);
+
+  // Build worksheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa, { dateNF: 'DD/MM/YYYY' });
+
+  // Column widths
+  const wscols = [
+    {wch:5},{wch:40},{wch:18},{wch:16},{wch:14},
+    ...Array(31).fill({wch:3.5}),
+    {wch:18},{wch:16},{wch:14},{wch:14},{wch:5},{wch:5},{wch:30},{wch:12}
+  ];
+  ws['!cols'] = wscols;
+
+  // Merges
+  ws['!merges'] = [
+    // Title
+    {s:{r:2,c:0}, e:{r:2,c:14}},
+    // Month label
+    {s:{r:3,c:18}, e:{r:3,c:23}},
+    // Group name
+    {s:{r:4,c:0}, e:{r:4,c:19}},
+    // Category
+    {s:{r:4,c:20}, e:{r:4,c:29}},
+    // หน่วยงาน value
+    {s:{r:4,c:36}, e:{r:4,c:39}},
+    // แผนก value
+    {s:{r:4,c:41}, e:{r:4,c:44}},
+    // Internal/External
+    {s:{r:5,c:1}, e:{r:5,c:4}},
+    {s:{r:5,c:5}, e:{r:5,c:19}},
+    // Month header (days)
+    {s:{r:6,c:5}, e:{r:6,c:35}},
+    // Action header
+    {s:{r:6,c:36}, e:{r:6,c:44}},
+    // Reviewed by header
+    {s:{r:7,c:42}, e:{r:7,c:44}},
+    // Footer
+    {s:{r:dataEnd+2,c:0}, e:{r:dataEnd+2,c:35}},
+    {s:{r:dataEnd+2,c:36}, e:{r:dataEnd+2,c:44}},
+  ];
+
+  const sheetName = monthNameEN.substring(0,3) + '_' + yearBE;
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `FRM-EIB04_${dept.replace(/[^a-zA-Z0-9ก-ฮ]/g,'_')}_${monthName}${yearBE}_${today}.xlsx`);
+  showToast(`✅ Export FRM-EIB04 สำเร็จ — ${data.length} รายการ`, 'success');
+}
+
+
+// ====================================================
 // PAGE NAVIGATION
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','audit','admin','monthly'];
+  const pages = ['dashboard','audit','admin','monthly','plan'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -2106,6 +2630,7 @@ function showPage(page) {
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
     monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
+    plan: ['📅 วางแผนสอบเทียบ','กำหนดตารางและ Export FRM-EIB04'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -2116,6 +2641,7 @@ function showPage(page) {
   if (page === 'monthly') renderMonthly();
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
+  if (page === 'plan') initPlanPage();
 }
 
 // ====================================================
