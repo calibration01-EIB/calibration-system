@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #f0f7f6;
@@ -67,27 +68,27 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 /* APP */
 #app { display: none; }
 .app-layout { display: flex; min-height: 100vh; overflow-x: hidden; }
-.sidebar { width: 180px; background: #00695C; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
-.sidebar-brand { padding: 14px 14px 12px; border-bottom: 1px solid rgba(255,255,255,.15); text-align:center; }
-.sidebar-brand h2 { font-size: 13px; font-weight: 600; }
-.sidebar-brand p { font-size: 10px; opacity: .5; margin-top: 2px; }
-.sidebar-nav { flex: 1; padding: 8px 0; }
-.nav-item { display: flex; align-items: center; gap: 8px; padding: 9px 14px; font-size: 13px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+.sidebar { width: 220px; background: #00695C; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+.sidebar-brand { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,.15); }
+.sidebar-brand h2 { font-size: 18px; font-weight: 600; }
+.sidebar-brand p { font-size: 11px; opacity: .5; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 18px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
 .nav-item:hover { background: rgba(255,255,255,.05); color: white; }
 .nav-item.active { background: rgba(255,255,255,.15); color: white; border-left-color: #80CBC4; }
-.nav-icon { font-size: 14px; width: 18px; text-align: center; }
-.sidebar-user { padding: 10px 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 8px; }
-.user-avatar { width: 28px; height: 28px; background: #004D40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-user { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 32px; height: 32px; background: #004D40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .user-info { flex: 1; min-width: 0; }
-.user-info .name { font-size: 12px; font-weight: 500; color: white; }
-.user-info .role { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
-.btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 14px; padding: 4px; transition: color .15s; }
+.user-info .name { font-size: 16px; font-weight: 500; color: white; }
+.user-info .role { font-size: 14px; color: rgba(255,255,255,.5); text-transform: uppercase; }
+.btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 16px; padding: 4px; transition: color .15s; }
 .btn-logout:hover { color: white; }
-.main-content { flex: 1; margin-left: 180px; display: flex; flex-direction: column; min-width: 0; overflow-x: auto; }
+.main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
 .topbar { background: white; border-bottom: 2px solid var(--accent); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-.topbar-title { font-size: 17px; font-weight: 600; }
-.topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-.page-content { padding: 24px 28px; min-width: 0; overflow-x: auto; }
+.topbar-title { font-size: 24px; font-weight: 600; }
+.topbar-sub { font-size: 17px; color: var(--text2); margin-top: 1px; }
+.page-content { padding: 24px 28px; min-width: 0; overflow-x: hidden; }
 .db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
 .status-dot.ok { background: #00897B; }
@@ -107,17 +108,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .stat-card.ok { border-left-color: var(--green); }
 .stat-card.total { border-left-color: var(--accent); }
 .stat-card.total .stat-num { color: var(--accent); }
-.stat-label { font-size: 13px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
-.stat-num { font-size: 32px; font-weight: 600; line-height: 1; }
+.stat-label { font-size: 18px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
+.stat-num { font-size: 48px; font-weight: 600; line-height: 1; }
 .stat-card.overdue .stat-num { color: var(--red); }
 .stat-card.warning .stat-num { color: var(--amber); }
 .stat-card.ok .stat-num { color: var(--green); }
 .stat-card.total .stat-num { color: var(--accent); }
-.stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.stat-sub { font-size: 16px; color: var(--text3); margin-top: 4px; }
 
 /* CONTROLS */
 .controls-bar { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.controls-bar input, .controls-bar select { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.controls-bar input, .controls-bar select { padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 18px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
 .controls-bar input:focus, .controls-bar select:focus { border-color: var(--accent); }
 .controls-bar input[type="text"] { flex: 1; min-width: 200px; }
 .btn-reset { padding: 11px 18px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text2); cursor: pointer; transition: all .15s; }
@@ -126,17 +127,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .btn-refresh:hover { background: #d8e8f5; }
 
 /* TABLE */
-.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 280px); min-height: 300px; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 420px); min-height: 300px; }
 table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: auto; }
 table td, table th { white-space: nowrap; }
-table td { font-size: 13px !important; padding: 10px 14px !important; color: #1a2e2c !important; font-weight: 500; }
-table th { font-size: 14px !important; padding: 10px 14px !important; color: #ffffff !important; font-weight: 700 !important; letter-spacing: .04em !important; text-shadow: 0 1px 2px rgba(0,0,0,.15) !important; }
+table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
+table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
 thead { background: #00897B; position: sticky; top: 0; z-index: 3; }
-th { padding: 10px 14px; text-align: left; font-size: 14px; font-weight: 700; color: #ffffff; white-space: nowrap; border-bottom: 1.5px solid rgba(255,255,255,.2); letter-spacing: .04em; }
-td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+th { padding: 14px 20px; text-align: left; font-size: 16px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 18px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; font-size: 17px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
 .badge-green { background: var(--green-light); color: var(--green); }
@@ -202,30 +203,15 @@ tbody tr:hover { background: var(--surface2); }
   #dashRow2 > div:last-child { grid-column: span 2; }
 }
 @media (max-width: 768px) {
-  .sidebar { display: none !important; }
-  .main-content { margin-left: 0 !important; padding-top: 0 !important; padding-bottom: 70px !important; }
-  .page-content { padding: 12px !important; background:#121212 !important; min-height: 100vh; }
+  .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
+  .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
+  .sidebar-nav { display: none; }
+  .sidebar-user { border: none; padding: 0; }
+  .main-content { margin-left: 0; padding-top: 60px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .meta-row { grid-template-columns: 1fr; }
-  #dashRow2 { display: none !important; }
-  #categoryGrid { display: none !important; }
-  .topbar { display: none !important; }
-  #mobileTopbar { display: block !important; }
-  .kpi-grid-mobile { display: grid !important; }
-  .kpi-grid-desktop { display: none !important; }
-  .table-wrap { display: none !important; }
-  .mobile-card-list { display: block !important; }
-  .controls-bar { flex-wrap: wrap; gap: 6px !important; background:#1E1E1E !important; border-radius:12px; padding:10px !important; }
-  .controls-bar input { width: 100% !important; background:#2A2A2A !important; color:white !important; border-color:#444 !important; }
-  .controls-bar select { background:#2A2A2A !important; color:white !important; border-color:#444 !important; }
-  .bottom-nav { display: flex !important; background:#1E1E1E !important; border-top: 1px solid #333 !important; }
-  #categoryGrid { grid-template-columns: repeat(2,1fr) !important; }
-  .month-card-mobile { background:#1E1E1E !important; border-radius:12px; padding:12px; margin-bottom:12px; }
-}
-@media (min-width: 769px) {
-  .kpi-grid-mobile { display: none !important; }
-  .mobile-card-list { display: none !important; }
-  .bottom-nav { display: none !important; }
+  #dashRow2 { grid-template-columns: 1fr !important; }
+  #dashRow2 > div:last-child { grid-column: span 1; }
 }
 </style>
 </head>
@@ -238,7 +224,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="loginPage">
   <div class="login-card">
     <div class="login-logo">
-      <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:140px;margin-bottom:16px;border-radius:12px">
+      <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:160px;margin-bottom:16px;border-radius:12px">
       <h1>ระบบสอบเทียบเครื่องมือ</h1>
       <p>Calibration Management System</p>
     </div>
@@ -261,7 +247,7 @@ tbody tr:hover { background: var(--surface2); }
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-brand" style="padding:16px 12px;text-align:center;border-bottom:1px solid rgba(255,255,255,.15)">
-        <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:70px;border-radius:8px;object-fit:contain">
+        <img src="data:image/jpeg;base64,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" alt="ILC Logo" style="width:100%;max-width:180px;border-radius:10px;object-fit:contain">
         <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:8px;letter-spacing:.05em">Calibration System</div>
       </div>
       <nav class="sidebar-nav">
@@ -277,22 +263,6 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <div class="main-content">
-
-      <!-- MOBILE TOPBAR (มองเห็นเฉพาะมือถือ) -->
-      <div id="mobileTopbar" style="display:none;background:#004D40;padding:0">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="background:#00897B;border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;color:white;letter-spacing:.05em">ILC</div>
-            <span style="color:white;font-size:15px;font-weight:600">Calibration System</span>
-          </div>
-          <span style="font-size:22px;cursor:pointer">🔔</span>
-        </div>
-        <div style="background:#00695C;padding:10px 16px">
-          <div style="color:white;font-size:16px;font-weight:600" id="mobilePageTitle">Dashboard</div>
-          <div style="color:rgba(255,255,255,.65);font-size:12px" id="mobilePageSub">ภาพรวมสถานะเครื่องมือ</div>
-        </div>
-      </div>
-
       <div class="topbar">
         <div>
             <div class="topbar-title" id="topbarTitle">Dashboard</div>
@@ -301,126 +271,110 @@ tbody tr:hover { background: var(--surface2); }
         <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
       </div>
 
+
       <div id="pageDashboard" class="page-content">
 
-        <!-- KPI MOBILE 2x2 (มองเห็นเฉพาะมือถือ) -->
-        <div class="kpi-grid-mobile" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-          <div onclick="filterByStatus('')" style="background:#1B4332;border:1.5px solid #2E7D32;border-radius:14px;padding:16px 14px;cursor:pointer">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ทั้งหมด</div>
-            <div style="font-size:30px;font-weight:700;color:white;line-height:1" id="statTotal">–</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">เครื่องมือ</div>
-          </div>
-          <div onclick="filterByStatus('ok')" style="background:#1B4332;border:1.5px solid #43A047;border-radius:14px;padding:16px 14px;cursor:pointer">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ปกติ</div>
-            <div style="font-size:30px;font-weight:700;color:#69F0AE;line-height:1" id="statOk">–</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">สอบเทียบแล้ว</div>
-          </div>
-          <div onclick="filterByStatus('overdue')" style="background:#3E1212;border:1.5px solid #E53935;border-radius:14px;padding:16px 14px;cursor:pointer">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">เกินกำหนด</div>
-            <div style="font-size:30px;font-weight:700;color:#FF5252;line-height:1" id="statOverdue">–</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">ต้องดำเนินการ</div>
-          </div>
-          <div onclick="filterByStatus('warning')" style="background:#3E2A00;border:1.5px solid #F57F17;border-radius:14px;padding:16px 14px;cursor:pointer">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">ใกล้ครบ</div>
-            <div style="font-size:30px;font-weight:700;color:#FFD740;line-height:1" id="statWarning">–</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">ภายใน 30 วัน</div>
-          </div>
-        </div>
-
-        <!-- KPI DESKTOP (ซ่อนบนมือถือ) -->
-        <div class="kpi-grid-desktop" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-          <div onclick="filterByStatus('')" style="background:#00695C;border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">ทั้งหมด</div>
-            <div style="font-size:28px;font-weight:700;color:white;line-height:1" id="statTotalD">–</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px">เครื่องมือ</div>
-            <div style="margin-top:10px;height:3px;background:rgba(255,255,255,.2);border-radius:2px">
-              <div style="height:100%;background:rgba(255,255,255,.6);border-radius:2px;transition:width .6s;width:0%" id="kpiTotalBar"></div>
+        <!-- ROW 1: KPI CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+          <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#00695C);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,137,123,0.3);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:rgba(255,255,255,.2);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔧</div>
+              <span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ทั้งหมด</span>
             </div>
-            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px" id="kpiTotalPct">สอบเทียบแล้ว –%</div>
+            <div style="font-size:36px;font-weight:700;color:white;line-height:1" id="statTotal">–</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">เครื่องมือ</div>
           </div>
-          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)"></div>
-            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">ปกติ</div>
-            <div style="font-size:34px;font-weight:700;color:var(--green);line-height:1" id="statOkD">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
-            <div style="margin-top:12px;display:inline-block;background:var(--green-light);color:var(--green);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiOkPct">–%</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--green-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">✅</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ปกติ</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--green);line-height:1" id="statOk">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">สอบเทียบแล้ว</div>
           </div>
-          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red)"></div>
-            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">เกินกำหนด</div>
-            <div style="font-size:34px;font-weight:700;color:var(--red);line-height:1" id="statOverdueD">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
-            <div style="margin-top:12px;display:inline-block;background:var(--red-light);color:var(--red);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiOvPct">–%</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--red-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔴</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">เกินกำหนด</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--red);line-height:1" id="statOverdue">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">ต้องดำเนินการ</div>
           </div>
-          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;position:relative;overflow:hidden" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--amber)"></div>
-            <div style="font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">ใกล้ครบ</div>
-            <div style="font-size:34px;font-weight:700;color:var(--amber);line-height:1" id="statWarningD">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
-            <div style="margin-top:12px;display:inline-block;background:var(--amber-light);color:var(--amber);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px" id="kpiWaPct">–%</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="background:var(--amber-light);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🟡</div>
+              <span style="font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.05em;text-transform:uppercase">ใกล้ครบ</span>
+            </div>
+            <div style="font-size:36px;font-weight:700;color:var(--amber);line-height:1" id="statWarning">–</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">ภายใน 30 วัน</div>
           </div>
         </div>
 
-        <!-- ROW 2: PROGRESS + MONTH CARDS -->
-        <div id="dashRow2" style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:16px;align-items:stretch">
+        <!-- ROW 2: MONTH CARDS + PROGRESS -->
+        <div id="dashRow2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
 
-          <!-- สถานะภาพรวม (ซ้าย) -->
-          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
-
-            <!-- Progress bars -->
-            <div>
-              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">📊 สถานะภาพรวม</div>
-              <div style="display:flex;flex-direction:column;gap:8px">
-                <div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
-                    <span style="color:var(--text2)">🏭 สอบเทียบภายใน <span id="dashCntIn" style="color:var(--text3);font-weight:400"></span></span>
-                    <span style="font-weight:700;color:var(--green)" id="dashPctIn">–%</span>
-                  </div>
-                  <div style="height:8px;background:var(--surface2);border-radius:6px;overflow:hidden">
-                    <div style="height:100%;background:linear-gradient(90deg,#2E7D32,#43A047);border-radius:6px;transition:width .6s ease;width:0%" id="dashBarIn"></div>
-                  </div>
-                </div>
-                <div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
-                    <span style="color:var(--text2)">🌐 สอบเทียบภายนอก <span id="dashCntOut" style="color:var(--text3);font-weight:400"></span></span>
-                    <span style="font-weight:700;color:var(--accent)" id="dashPctOut">–%</span>
-                  </div>
-                  <div style="height:8px;background:var(--surface2);border-radius:6px;overflow:hidden">
-                    <div style="height:100%;background:linear-gradient(90deg,#00897B,#26A69A);border-radius:6px;transition:width .6s ease;width:0%" id="dashBarOut"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- แจ้งเตือน 7 วัน -->
-            <div style="border-top:1px solid var(--border);padding-top:12px">
-              <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🔔 แจ้งเตือนวางแผน & สอบเทียบ</div>
-              <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
-                <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลด...</div>
-              </div>
-            </div>
-
-            <!-- IDs สำหรับ updateStats (hidden) -->
-            <div style="display:none">
-              <span id="statOk2"></span>
-              <span id="statOverdue2"></span>
-              <span id="statWarning2"></span>
-            </div>
-          </div>
-
-          <!-- แผนสอบเทียบรายเดือน (ขวา) -->
+          <!-- แผนสอบเทียบรายเดือน -->
           <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
               <div style="font-size:15px;font-weight:600;color:var(--text)">📅 แผนสอบเทียบรายเดือน</div>
               <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">2569</span>
             </div>
-            <div style="font-size:13px;color:var(--text3);margin-bottom:10px">กดการ์ดเดือนเพื่อกรองข้อมูล</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2)">
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
-              <span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
+            <div style="font-size:13px;color:var(--text3);margin-bottom:14px">กดการ์ดเดือนเพื่อดูรายละเอียด</div>
+            <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>เกินกำหนด</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block"></span>ใกล้ครบ</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>ปกติ</span>
             </div>
-            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+          </div>
+
+          <!-- สถานะภาพรวม -->
+          <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)">
+            <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:18px">📊 สถานะภาพรวม</div>
+
+            <!-- Progress bars -->
+            <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+                  <span style="color:var(--text2);font-weight:500">🏭 สอบเทียบภายใน</span>
+                  <span style="font-weight:700;color:var(--green)" id="dashPctIn">–%</span>
+                </div>
+                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                  <div style="height:100%;background:linear-gradient(90deg,#2E7D32,#43A047);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarIn"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+                  <span style="color:var(--text2);font-weight:500">🌐 สอบเทียบภายนอก</span>
+                  <span style="font-weight:700;color:var(--accent)" id="dashPctOut">–%</span>
+                </div>
+                <div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden">
+                  <div style="height:100%;background:linear-gradient(90deg,#00897B,#26A69A);border-radius:8px;transition:width .6s ease;width:0%" id="dashBarOut"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- สรุปตัวเลข -->
+            <div style="border-top:1px solid var(--border);padding-top:16px">
+              <div style="font-size:12px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">สรุปสถานะ</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+                <div style="background:var(--green-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--green)" id="statOk2">–</div>
+                  <div style="font-size:11px;color:var(--green);margin-top:2px">ปกติ</div>
+                </div>
+                <div style="background:var(--red-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--red)" id="statOverdue2">–</div>
+                  <div style="font-size:11px;color:var(--red);margin-top:2px">เกินกำหนด</div>
+                </div>
+                <div style="background:var(--amber-light);border-radius:10px;padding:10px 6px">
+                  <div style="font-size:22px;font-weight:700;color:var(--amber)" id="statWarning2">–</div>
+                  <div style="font-size:11px;color:var(--amber);margin-top:2px">ใกล้ครบ</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -430,7 +384,7 @@ tbody tr:hover { background: var(--surface2); }
             <div style="font-size:15px;font-weight:600;color:var(--text)">🔩 ประเภทเครื่องมือ — สถานะล่าสุด</div>
           </div>
           <div style="font-size:13px;color:var(--text3);margin-bottom:16px">กดการ์ดเพื่อกรองตามประเภท</div>
-          <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px"></div>
+          <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
         </div>
 
         <!-- ROW 4: FILTER + TABLE -->
@@ -457,6 +411,8 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn-refresh" onclick="loadData(true)">↻ รีเฟรช</button>
           <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
           <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
+          <button class="btn-refresh" onclick="exportExcel()" style="background:#e8f5e9;border-color:#a5d6a7;color:#2E7D32;font-weight:500">📊 Excel</button>
+          <button class="btn-add" id="btnImportExcel" onclick="openImportModal()" style="display:none;background:#5C6BC0;border-color:#3949AB">⬆️ Import Excel</button>
         </div>
 
         <!-- PAGINATION -->
@@ -510,7 +466,7 @@ tbody tr:hover { background: var(--surface2); }
             <!-- AUDIT LOG -->
       <div id="pageAudit" class="page-content" style="display:none">
         <div class="section-header">
-          <h2 style="font-size:22px;font-weight:700;letter-spacing:.01em">Audit Log — ประวัติการแก้ไข</h2>
+          <h2>Audit Log — ประวัติการแก้ไข</h2>
           <button class="btn-refresh" onclick="loadAuditLogs()">↻ รีเฟรช</button>
         </div>
         <div class="controls-bar" style="margin-bottom:16px">
@@ -532,10 +488,9 @@ tbody tr:hover { background: var(--surface2); }
                 <th>ID Code</th>
                 <th>เครื่องมือ</th>
                 <th>รายละเอียด</th>
-                <th>ไฟล์แนบ</th>
               </tr>
             </thead>
-            <tbody id="auditTable"><tr><td colspan="7" class="no-data">กำลังโหลด...</td></tr></tbody>
+            <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -722,29 +677,6 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
-<!-- BOTTOM NAV (mobile only) -->
-<div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1E1E1E;border-top:1px solid #333;z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
-  <div onclick="showPage('dashboard')" id="bnav-dashboard" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📊</div>
-    <div style="font-size:10px;color:#69F0AE;font-weight:600">Dashboard</div>
-  </div>
-  <div onclick="showPage('admin')" id="bnav-admin" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
-    <div style="font-size:22px">👥</div>
-    <div style="font-size:10px;color:#888">ผู้ใช้</div>
-  </div>
-  <div onclick="showPage('audit')" id="bnav-audit" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none">
-    <div style="font-size:22px">📋</div>
-    <div style="font-size:10px;color:#888">Audit Log</div>
-  </div>
-  <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">↩️</div>
-    <div style="font-size:10px;color:#888">ออกจากระบบ</div>
-  </div>
-</div>
-
-<!-- MOBILE CARD LIST -->
-<div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
-
 <script>
 // ====================================================
 // SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
@@ -846,8 +778,6 @@ async function loadData(forceRefresh = false) {
     renderTable();
     renderMonthly();
     renderCategoryCards();
-    renderDonut();
-    renderAlerts();
   };
 
   // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
@@ -952,33 +882,6 @@ function updateStats() {
   document.getElementById('statOk').textContent = okCount.toLocaleString();
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
-  // sync desktop IDs
-  const elTD = document.getElementById('statTotalD');
-  const elOD = document.getElementById('statOkD');
-  const elVD = document.getElementById('statOverdueD');
-  const elWD = document.getElementById('statWarningD');
-  if (elTD) elTD.textContent = total.toLocaleString();
-  if (elOD) elOD.textContent = okCount.toLocaleString();
-  if (elVD) elVD.textContent = ov.toLocaleString();
-  if (elWD) elWD.textContent = wa.toLocaleString();
-
-  // badge % และ progress bar ใน KPI cards
-  const allTotal = allData.length;
-  if (allTotal > 0) {
-    const okPct  = Math.round(okCount / allTotal * 100);
-    const ovPct  = Math.round(ov / allTotal * 100);
-    const waPct  = Math.round(wa / allTotal * 100);
-    const okEl = document.getElementById('kpiOkPct');
-    const ovEl = document.getElementById('kpiOvPct');
-    const waEl = document.getElementById('kpiWaPct');
-    const barEl = document.getElementById('kpiTotalBar');
-    const pctEl = document.getElementById('kpiTotalPct');
-    if (okEl) okEl.textContent = okPct + '%';
-    if (ovEl) ovEl.textContent = ovPct + '%';
-    if (waEl) waEl.textContent = waPct + '%';
-    if (barEl) barEl.style.width = okPct + '%';
-    if (pctEl) pctEl.textContent = `สอบเทียบแล้ว ${okPct}%`;
-  }
 
   // summary box
   const el2Ok = document.getElementById('statOk2');
@@ -1003,10 +906,6 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
-  const cIn = document.getElementById('dashCntIn');
-  const cOut = document.getElementById('dashCntOut');
-  if (cIn) cIn.textContent = internal.length ? `(${inOk.toLocaleString()}/${internal.length.toLocaleString()} เครื่อง)` : '';
-  if (cOut) cOut.textContent = external.length ? `(${exOk.toLocaleString()}/${external.length.toLocaleString()} เครื่อง)` : '';
 }
 
 function filterData() {
@@ -1028,7 +927,7 @@ function filterData() {
       if (status === 'ok' && d.days_left <= 30) return false;
     }
     if (month && d.due_date) {
-      const m = parseInt(d.due_date.slice(5, 7), 10); // YYYY-MM-DD ไม่ผ่าน timezone
+      const m = new Date(d.due_date).getMonth() + 1;
       if (String(m) !== month) return false;
     }
     return true;
@@ -1051,71 +950,6 @@ function resetFilters() {
   currentPage = 1;
   updateStats(); renderTable();
 }
-
-function formatDate(s) {
-  if (!s) return '–';
-  return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
-}
-
-function renderMobileCards() {
-  const el = document.getElementById('mobileCardList');
-  if (!el) return;
-  const start = (currentPage - 1) * pageSize;
-  const rows = filteredData.slice(start, start + pageSize);
-  window._mobileRows = rows; // เก็บไว้ใช้ใน onclick
-
-  el.innerHTML = rows.map((d, i) => {
-    const days = d.days_left;
-    let badge = '', rowBg = '', daysText = '';
-    if (days !== null && days < 0) {
-      badge = `<span style="background:#fdecea;color:#C62828;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">เกินกำหนด</span>`;
-      daysText = `<span style="font-size:11px;color:#C62828">${days} วัน</span>`;
-      rowBg = '#1a0000';
-    } else if (days !== null && days <= 30) {
-      badge = `<span style="background:#fff8e1;color:#F57F17;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ใกล้ครบ</span>`;
-      daysText = `<span style="font-size:11px;color:#F57F17">${days} วัน</span>`;
-      rowBg = '#1a1400';
-    } else {
-      badge = `<span style="background:#e8f5e9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap">ปกติ</span>`;
-      daysText = `<span style="font-size:11px;color:#2E7D32">${days !== null ? days + ' วัน' : '–'}</span>`;
-      rowBg = '#1E1E1E';
-    }
-    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-    const typShort = (d.instrument_type||'–').split(' (')[0];
-
-    return `<div style="background:${rowBg};border:0.5px solid #333;border-radius:12px;padding:14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div style="flex:1;min-width:0;margin-right:8px">
-          <div style="font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
-          <div style="font-size:12px;color:#aaa;margin-top:2px">${d.brand||''} · ${d.department||''}</div>
-        </div>
-        ${badge}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px">
-        <div style="font-size:11px;color:#aaa">🏷 <span style="color:#69F0AE;font-weight:500">${d.id_code||'–'}</span></div>
-        <div style="font-size:11px;color:#aaa">📂 ${typShort}</div>
-        <div style="font-size:11px;color:#aaa">📅 ครบ: ${dueDate}</div>
-        <div style="font-size:11px">${daysText}</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:13px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
-        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:13px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
-      </div>
-    </div>`;
-  }).join('') || `<div style="text-align:center;padding:32px;color:#888">ไม่พบข้อมูล</div>`;
-}
-
-function mobileEdit(i) {
-  const d = window._mobileRows && window._mobileRows[i];
-  if (d) openInstrumentModal(d.id);
-}
-
-function mobileCert(i) {
-  const d = window._mobileRows && window._mobileRows[i];
-  if (d) openCertModal(d.id, d.id_code||'', d.cert_no||'', d.instrument_name||'');
-}
-
-
 
 function formatDate(s) {
   if (!s) return '–';
@@ -1155,7 +989,6 @@ function renderTable() {
   const start = (currentPage - 1) * pageSize;
   const pageData = filteredData.slice(start, start + pageSize);
   updatePaginationUI();
-  renderMobileCards();
   tbody.innerHTML = pageData.map((d, i) => {
   const rowNum = start + i + 1;
     const days = d.days_left;
@@ -1172,11 +1005,11 @@ function renderTable() {
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
       <td>${d.range_val||'–'}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.serial_no||'–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
       <td class="id-code">${d.id_code||'–'}</td>
-      <td style="font-family:var(--mono);font-size:13px">${d.cert_no||'–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
       <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
@@ -1199,34 +1032,12 @@ function renderTable() {
       td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
     });
   }
-
-  // โหลดจำนวนไฟล์ทุก record แบบ batch
-  updateAllCertButtons(pageData);
 }
 
 // ====================================================
 // CERT MODAL — Supabase Storage
 // ====================================================
 let currentInstrumentId = null;
-
-async function updateAllCertButtons(pageData) {
-  await Promise.all(pageData.map(async d => {
-    const btn = document.querySelector(`button[onclick*="openCertModal(${d.id},"]`);
-    if (!btn) return;
-    try {
-      const folder = `cert_${d.id}_${d.id_code||''}`;
-      const { data } = await sb.storage.from('certificates').list(folder);
-      const validFiles = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
-      if (validFiles.length > 0) {
-        btn.className = 'btn-cert btn-cert-has';
-        btn.innerHTML = `📎 ${validFiles.length} ไฟล์`;
-      } else {
-        btn.className = 'btn-cert btn-cert-empty';
-        btn.innerHTML = '📎 ไฟล์';
-      }
-    } catch(e) {}
-  }));
-}
 
 async function openCertModal(instrumentId, idCode, certNo, equipment) {
   currentInstrumentId = instrumentId;
@@ -1281,18 +1092,7 @@ function renderFileList(files, folder) {
 
 async function viewFile(folder, name) {
   const { data } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${name}`, 300);
-  if (data?.signedUrl) {
-    // ใช้ anchor tag แทน window.open เพื่อหลีกเลี่ยงการ block บนมือถือ
-    const a = document.createElement('a');
-    a.href = data.signedUrl;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } else {
-    showToast('ไม่สามารถเปิดไฟล์ได้', 'error');
-  }
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
 }
 
 async function deleteFile(folder, name) {
@@ -1347,11 +1147,15 @@ function renderUsersTable() {
     const activeBadge = u.active ? '<span class="badge badge-green">เปิด</span>' : '<span class="badge badge-red">ปิด</span>';
     const date = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH') : '–';
     const isSelf = currentUser?.id === u.id;
+    const typesList = (u.instrument_types && u.instrument_types.length > 0)
+      ? u.instrument_types.map(t => t.split(' (')[0]).join(', ')
+      : '<span style="color:var(--text3);font-size:12px">ทุกประเภท</span>';
     return `<tr>
       <td><strong>${u.name}</strong></td>
-      <td style="font-family:var(--mono);font-size:13px">${u.username}</td>
+      <td style="font-family:var(--mono);font-size:20px">${u.username}</td>
       <td><span class="badge ${cls}">${label}</span></td>
       <td>${activeBadge}</td>
+      <td style="font-size:13px;max-width:220px;white-space:normal;line-height:1.5">${typesList}</td>
       <td>${date}</td>
       <td>
         <button class="btn-view" style="margin-right:6px" onclick="openUserModal('${u.id}')">แก้ไข</button>
@@ -1477,7 +1281,7 @@ function openInstrumentModal(instrumentId) {
     const d = allData.find(x => x.id === instrumentId);
     if (!d) return;
 
-    document.getElementById('iCategory').value = d.category || '';
+    document.getElementById('iCategory').value = d.instrument_type || '';
     document.getElementById('iName').value = d.instrument_name || '';
     document.getElementById('iBrand').value = d.brand || '';
     document.getElementById('iRange').value = d.range_val || '';
@@ -1579,6 +1383,8 @@ async function deleteInstrument(id, name) {
 function toggleManageColumns(show) {
   document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
   document.getElementById('thManage').style.display = show ? '' : 'none';
+  const btnImp = document.getElementById('btnImportExcel');
+  if (btnImp) btnImp.style.display = show ? 'flex' : 'none';
 }
 
 
@@ -1588,6 +1394,7 @@ function toggleManageColumns(show) {
 function printReport() {
   const today = new Date();
   const todayStr = today.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
+  const year = today.getFullYear() + 543;
 
   let ov=0, wa=0, ok=0;
   filteredData.forEach(d => {
@@ -1597,6 +1404,7 @@ function printReport() {
     else ok++;
   });
 
+  // สร้างแถวตาราง
   const rows = filteredData.map((d, i) => {
     const rowNum = i + 1;
     const days = d.days_left;
@@ -1605,17 +1413,16 @@ function printReport() {
     else if (days < 0) { statusText = 'เลยกำหนด'; statusColor = '#c0392b'; }
     else if (days <= 30) { statusText = 'ใกล้ครบ'; statusColor = '#b8860b'; }
     else { statusText = 'ปกติ'; statusColor = '#1e7e34'; }
-    const due = d.due_date ? d.due_date.slice(0,10).split('-').reverse().join('/') : '–';
-    const cal = d.cal_date ? d.cal_date.slice(0,10).split('-').reverse().join('/') : '–';
-    const rowBg = i % 2 === 0 ? '' : 'background:#f8f9fa';
-    return `<tr style="${rowBg}">
+    const due = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    const cal = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit'}) : '–';
+    return `<tr>
       <td>${rowNum}</td>
-      <td>${(d.instrument_type||'–').split(' (')[0]}</td>
+      <td>${d.instrument_type||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${d.brand||'–'}</td>
       <td>${d.range_val||'–'}</td>
       <td>${d.department||'–'}</td>
-      <td style="color:#00695C;font-weight:600">${d.id_code||'–'}</td>
+      <td>${d.id_code||'–'}</td>
       <td>${d.cert_no||'–'}</td>
       <td>${cal}</td>
       <td>${due}</td>
@@ -1623,17 +1430,17 @@ function printReport() {
     </tr>`;
   }).join('');
 
+  // ชื่อ filter ที่เลือก
   const filterInfo = [];
   const tf = document.getElementById('typeFilter').value;
   const uf = document.getElementById('unitFilter').value;
   const sf = document.getElementById('statusFilter').value;
   const mf = document.getElementById('monthFilter').value;
   const mfNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  if (tf) filterInfo.push(`ประเภท: ${tf.split(' (')[0]}`);
+  if (tf) filterInfo.push(`ประเภท: ${tf}`);
   if (uf) filterInfo.push(`หน่วยงาน: ${uf}`);
   if (sf) filterInfo.push(`สถานะ: ${sf==='overdue'?'เลยกำหนด':sf==='warning'?'ใกล้ครบ':'ปกติ'}`);
-  if (mf) filterInfo.push(`เดือนครบกำหนด: ${mfNames[parseInt(mf)]}`);
-  if (activeCategory && activeCategory !== 'all') filterInfo.push(`กลุ่ม: ${activeCategory.split(' (')[0]}`);
+  if (mf) filterInfo.push(`เดือน: ${mfNames[parseInt(mf)]}`);
 
   const html = `<!DOCTYPE html>
 <html lang="th">
@@ -1641,67 +1448,55 @@ function printReport() {
 <meta charset="UTF-8">
 <title>รายงานสอบเทียบเครื่องมือ</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm 10mm; }
-  @page { margin-top: 8mm; }
-  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4 landscape; margin: 15mm 12mm; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Sarabun','Segoe UI',Tahoma,sans-serif; font-size: 8pt; color: #222; }
-  .header { text-align:center; margin-bottom:12px; border-bottom:2px solid #00695C; padding-bottom:10px; }
-  .logo-box { display:inline-block; background:#00695C; color:white; font-size:22pt; font-weight:700; padding:8px 18px; border-radius:8px; letter-spacing:.08em; margin-bottom:8px; }
-  .header h1 { font-size:16pt; color:#00695C; font-weight:700; margin-bottom:3px; }
-  .header p { font-size:8.5pt; color:#555; }
-  .summary { display:flex; gap:10px; margin-bottom:10px; }
-  .sum-card { flex:1; border-radius:6px; padding:8px 10px; text-align:center; }
-  .sum-card .num { font-size:18pt; font-weight:700; line-height:1.2; }
-  .sum-card .lbl { font-size:7pt; margin-top:2px; }
-  .sum-card.ov { background:#fdecea; color:#c0392b; }
-  .sum-card.wa { background:#fff8e1; color:#b8860b; }
-  .sum-card.ok { background:#e8f5e9; color:#1e7e34; }
-  .sum-card.tt { background:#e3f2fd; color:#1565C0; }
-  .filter-info { font-size:7.5pt; color:#555; margin-bottom:8px; background:#f5f5f5; padding:4px 8px; border-radius:4px; border-left:3px solid #00695C; }
-  table { width:100%; border-collapse:collapse; table-layout:fixed; }
-  th { background:#00695C; color:white; padding:4px 3px; text-align:left; font-size:6.5pt; font-weight:700; white-space:normal; word-break:break-word; }
-  td { padding:3px 3px; border-bottom:0.5px solid #e0e0e0; font-size:6.5pt; vertical-align:middle; white-space:normal; word-break:break-word; overflow:hidden; }
-  tr:nth-child(even) td { background:#f8f9fa; }
-  .footer { margin-top:10px; font-size:7pt; color:#888; border-top:1px solid #ddd; padding-top:5px; display:flex; justify-content:space-between; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 9pt; color: #222; }
+  .header { text-align:center; margin-bottom: 12px; border-bottom: 2px solid #1a2f4a; padding-bottom: 10px; }
+  .header h1 { font-size: 16pt; color: #1a2f4a; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 9pt; color: #555; }
+  .summary { display: flex; gap: 12px; margin-bottom: 12px; }
+  .sum-card { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; text-align: center; }
+  .sum-card .num { font-size: 20pt; font-weight: 700; line-height: 1.2; }
+  .sum-card .lbl { font-size: 8pt; color: #666; margin-top: 2px; }
+  .sum-card.ov { border-color: #e74c3c; }
+  .sum-card.ov .num { color: #e74c3c; }
+  .sum-card.wa { border-color: #f39c12; }
+  .sum-card.wa .num { color: #f39c12; }
+  .sum-card.ok { border-color: #27ae60; }
+  .sum-card.ok .num { color: #27ae60; }
+  .sum-card.tt .num { color: #1a2f4a; }
+  .filter-info { font-size: 8pt; color: #555; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; }
+table td, table th { white-space: nowrap; }
+  th { background: #1a2f4a; color: white; padding: 6px 5px; text-align: left; font-size: 8pt; font-weight: 600; }
+  td { padding: 5px; border-bottom: 0.5px solid #e0e0e0; font-size: 8pt; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  tr:last-child td { border-bottom: none; }
+  .footer { margin-top: 12px; font-size: 8pt; color: #888; text-align: right; border-top: 1px solid #ddd; padding-top: 6px; }
 </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo-box">ILC</div>
-    <h1>รายงานสถานะการสอบเทียบเครื่องมือ</h1>
-    <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length.toLocaleString()} รายการ &nbsp;|&nbsp; International Laboratories Corp.,Ltd.</p>
+    <h1>🔧 รายงานสถานะการสอบเทียบเครื่องมือ</h1>
+    <p>พิมพ์วันที่ ${todayStr} &nbsp;|&nbsp; ทั้งหมด ${filteredData.length} รายการ</p>
   </div>
 
   <div class="summary">
-    <div class="sum-card ov"><div class="num">${ov.toLocaleString()}</div><div class="lbl">🔴 เลยกำหนด</div></div>
-    <div class="sum-card wa"><div class="num">${wa.toLocaleString()}</div><div class="lbl">🟡 ใกล้ครบ (≤30 วัน)</div></div>
-    <div class="sum-card ok"><div class="num">${ok.toLocaleString()}</div><div class="lbl">🟢 ปกติ</div></div>
-    <div class="sum-card tt"><div class="num">${filteredData.length.toLocaleString()}</div><div class="lbl">📦 ทั้งหมด</div></div>
+    <div class="sum-card ov"><div class="num">${ov}</div><div class="lbl">🔴 เลยกำหนด</div></div>
+    <div class="sum-card wa"><div class="num">${wa}</div><div class="lbl">🟡 ใกล้ครบ (≤30 วัน)</div></div>
+    <div class="sum-card ok"><div class="num">${ok}</div><div class="lbl">🟢 ปกติ</div></div>
+    <div class="sum-card tt"><div class="num">${filteredData.length}</div><div class="lbl">📦 ทั้งหมด</div></div>
   </div>
 
-  ${filterInfo.length ? `<div class="filter-info">⚙️ กรองข้อมูล: ${filterInfo.join(' | ')}</div>` : ''}
+  ${filterInfo.length ? `<div class="filter-info">⚙️ Filter: ${filterInfo.join(' | ')}</div>` : ''}
 
   <table>
-    <colgroup>
-      <col style="width:2%">
-      <col style="width:8%">
-      <col style="width:13%">
-      <col style="width:13%">
-      <col style="width:7%">
-      <col style="width:6%">
-      <col style="width:11%">
-      <col style="width:8%">
-      <col style="width:10%">
-      <col style="width:10%">
-      <col style="width:7%">
-    </colgroup>
     <thead>
       <tr>
-        <th style="width:30px">#</th>
+        <th>#</th>
         <th>ประเภท</th>
-        <th>ชื่อเครื่องมือ</th>
-        <th>ยี่ห้อ</th>
+        <th>เครื่องมือ</th>
+        <th>ยี่ห้อ / รุ่น</th>
         <th>Range</th>
         <th>หน่วยงาน</th>
         <th>ID Code</th>
@@ -1715,29 +1510,15 @@ function printReport() {
   </table>
 
   <div class="footer">
-    <span>Calibration (EIB)</span>
-    <span>พิมพ์วันที่ ${todayStr}</span>
+    รายงานนี้สร้างจากระบบสอบเทียบเครื่องมือ &nbsp;|&nbsp; พิมพ์วันที่ ${todayStr}
   </div>
-  <script>
-    window.onload = function() {
-      // แจ้งให้ปิด Headers and Footers ก่อนพิมพ์
-      document.title = ' '; // ล้าง title เพื่อไม่ให้ browser แสดงชื่อ
-      setTimeout(() => window.print(), 300);
-    };
-  <\/script>
 </body>
 </html>`;
 
-  // ใช้ Blob + anchor แทน window.open เพื่อหลีกเลี่ยง popup block
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
 }
 
 
@@ -1774,57 +1555,29 @@ function renderMonthly() {
   if (!allData.length) { setTimeout(renderMonthly, 500); return; }
   const byMonth = {};
   for (let i = 0; i < 12; i++) byMonth[i] = [];
-
-  // ใช้ string slice เพื่อหลีกเลี่ยง timezone offset
   allData.forEach(d => {
     if (!d.due_date) return;
-    const mIdx = parseInt(d.due_date.slice(5, 7), 10) - 1; // 0-11
-    byMonth[mIdx].push(d);
+    byMonth[new Date(d.due_date).getMonth()].push(d);
   });
-
   const grid = document.getElementById('monthGrid');
   if (!grid) return;
   grid.innerHTML = '';
-
   for (let i = 0; i < 12; i++) {
     const items = byMonth[i];
     const cnt = items.length;
-    // นับ ov/wa จาก days_left ซึ่งบอกสถานะปัจจุบัน
-    const ov = items.filter(d => d.days_left !== null && d.days_left < 0).length;
-    const wa = items.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
-    const barColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
-    const numColor = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
-
-    const MONTH_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const ov  = items.filter(d => d.days_left !== null && d.days_left < 0).length;
+    const wa  = items.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
+    const barColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
+    const numColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
     const card = document.createElement('div');
-    card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white;overflow:hidden`;
-
-    // คำนวณ % แต่ละสี
-    const ovPct = cnt > 0 ? Math.round(ov/cnt*100) : 0;
-    const waPct = cnt > 0 ? Math.round(wa/cnt*100) : 0;
-    const okPct2 = cnt > 0 ? 100 - ovPct - waPct : 0;
-
-    const ok2 = cnt - ov - wa;
+    card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
     card.innerHTML = `
-      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.4">
-        ${MONTH_NAMES_FULL[i]} <span style="font-weight:400;color:var(--text3);font-size:10px">/ ${MONTH_EN[i]}</span>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500">${MONTH_NAMES_SHORT[i]}</div>
+      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
+      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px">
+        <div style="width:${cnt?Math.min(100,Math.round((ov+wa)/cnt*100+10)):0}%;height:100%;background:${barColor};border-radius:2px"></div>
       </div>
-      <div style="font-size:22px;font-weight:700;color:${numColor};line-height:1;margin-bottom:6px">${cnt||'–'}</div>
-      <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;margin:0 2px 5px">
-        ${cnt > 0 ? `
-          <div style="width:${ovPct}%;background:#C62828;"></div>
-          <div style="width:${waPct}%;background:#F57F17;"></div>
-          <div style="width:${okPct2}%;background:#2E7D32;"></div>
-        ` : `<div style="width:100%;background:var(--surface2);"></div>`}
-      </div>
-      <div style="display:flex;justify-content:center;gap:6px;font-size:9px;flex-wrap:wrap">
-        ${cnt === 0 ? `<span style="color:var(--text3)">–</span>` : `
-          ${ov > 0 ? `<span style="color:#C62828">&#x1F534; ${ov}</span>` : ''}
-          ${wa > 0 ? `<span style="color:#F57F17">&#x1F7E1; ${wa}</span>` : ''}
-          ${ok2 > 0 ? `<span style="color:#2E7D32">&#x1F7E2; ${ok2}</span>` : ''}
-        `}
-      </div>`;
-
+      <div style="font-size:10px;color:${barColor}">${ov>0?'🔴 '+ov:wa>0?'🟡 '+wa:cnt>0?'🟢':'–'}</div>`;
     if (cnt) {
       card.addEventListener('mouseenter', () => { card.style.borderColor = barColor; card.style.transform = 'translateY(-1px)'; });
       card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = 'var(--border)'; card.style.transform = ''; } });
@@ -1917,18 +1670,18 @@ function renderCategoryCards() {
     const boxShadow = isActive ? '0 0 0 2px var(--green)' : 'none';
 
     const card = document.createElement('div');
-    card.style.cssText = `background:${cardBg};border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:10px;padding:12px;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.style.cssText = `background:${cardBg};border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:12px;padding:16px;cursor:${cnt?'pointer':'default'};transition:all .15s`;
     card.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:1px">${thName}</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">(${enName})</div>
-      <div style="font-size:20px;font-weight:700;color:var(--text);line-height:1;margin-bottom:1px">${cnt > 0 ? cnt : '–'}</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">เครื่อง</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:2px">${thName}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">(${enName})</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px">${cnt > 0 ? cnt : '–'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">เครื่อง</div>
       ${cnt > 0 ? `
-      <div style="height:4px;background:var(--surface2);border-radius:2px;margin-bottom:4px;overflow:hidden">
-        <div style="height:100%;width:${okPct}%;background:${barColor};border-radius:2px;transition:width .5s"></div>
+      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden">
+        <div style="height:100%;width:${okPct}%;background:${barColor};border-radius:3px;transition:width .5s"></div>
       </div>
-      <div style="font-size:11px;color:${statusColor};font-weight:500">${statusText}</div>
-      ` : `<div style="font-size:11px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
+      <div style="font-size:12px;color:${statusColor};font-weight:500">${statusText}</div>
+      ` : `<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
 
     if (cnt) {
       card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = 'var(--green)'; card.style.transform = 'translateY(-1px)'; });
@@ -2064,10 +1817,10 @@ function filterAuditLogs() {
 function renderAuditTable() {
   const tbody = document.getElementById('auditTable');
   if (!auditFiltered.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-data">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
     return;
   }
-  tbody.innerHTML = auditFiltered.filter(d => d.created_at && (d.id_code || d.username)).map(d => {
+  tbody.innerHTML = auditFiltered.map(d => {
     const actionBadge = d.action === 'เพิ่ม' 
       ? '<span class="badge badge-green">➕ เพิ่ม</span>'
       : d.action === 'แก้ไข'
@@ -2082,69 +1835,21 @@ function renderAuditTable() {
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
       details = Object.entries(d.changes).map(([field, val]) =>
-        `<div style="font-size:13px;line-height:1.7"><strong style="color:var(--text2)">${field}:</strong> <span style="color:var(--red);font-weight:500">${val.from ?? '–'}</span> <span style="color:var(--text3)">→</span> <span style="color:var(--green);font-weight:500">${val.to ?? '–'}</span></div>`
+        `<div style="font-size:22px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
       ).join('');
     }
-
-    const instrId = d.instrument_id || '';
-    const idCode = d.id_code || '';
-    const fileCell = instrId
-      ? `<div id="audit-files-${instrId}" style="font-size:12px;color:var(--text3)">กำลังโหลด...</div>`
-      : `<span style="color:var(--text3);font-size:12px">–</span>`;
 
     return `<tr>
       <td style="white-space:nowrap">${dt}</td>
       <td><strong>${d.username||'–'}</strong></td>
       <td>${actionBadge}</td>
-      <td style="font-family:var(--mono)">${idCode||'–'}</td>
+      <td style="font-family:var(--mono)">${d.id_code||'–'}</td>
       <td>${d.instrument_name||'–'}</td>
       <td>${details}</td>
-      <td style="min-width:120px">${fileCell}</td>
     </tr>`;
   }).join('');
-
-  // โหลดไฟล์แนบแต่ละ record
-  auditFiltered.filter(d => d.created_at && (d.id_code || d.username) && d.instrument_id).forEach(d => {
-    loadAuditFiles(d.instrument_id, d.id_code||'');
-  });
 }
 
-async function loadAuditFiles(instrumentId, idCode) {
-  const cell = document.getElementById(`audit-files-${instrumentId}`);
-  if (!cell) return;
-  try {
-    const folder = `cert_${instrumentId}_${idCode}`;
-    const { data } = await sb.storage.from('certificates').list(folder);
-    const files = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
-    if (!files.length) {
-      cell.innerHTML = `<span style="color:var(--text3);font-size:12px">ไม่มีไฟล์</span>`;
-      return;
-    }
-    cell.innerHTML = files.map(f => `
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <button onclick="viewFile('${folder}','${f.name}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent-light);color:var(--accent);cursor:pointer;white-space:nowrap">📄 ${f.name.length>18?f.name.slice(0,16)+'…':f.name}</button>
-        ${currentUser?.role==='admin'?`<button onclick="deleteAuditFile('${folder}','${f.name}',${instrumentId},'${idCode}')" style="font-size:11px;padding:2px 6px;border:1px solid var(--red);border-radius:4px;background:var(--red-light);color:var(--red);cursor:pointer">🗑️</button>`:''}
-      </div>`).join('');
-  } catch(e) {
-    cell.innerHTML = `<span style="color:var(--text3);font-size:12px">–</span>`;
-  }
-}
-
-async function deleteAuditFile(folder, fileName, instrumentId, idCode) {
-  if (!confirm(`ลบไฟล์ "${fileName}" ใช่ไหม?`)) return;
-  try {
-    await sb.storage.from('certificates').remove([`${folder}/${fileName}`]);
-    showToast('ลบไฟล์แล้ว', 'success');
-    loadAuditFiles(instrumentId, idCode);
-    const btn = document.querySelector(`button[onclick*="openCertModal(${instrumentId},"]`);
-    if (btn) {
-      const { data } = await sb.storage.from('certificates').list(folder);
-      const files = (data||[]).filter(f => f.name !== '.emptyFolderPlaceholder');
-      if (files.length > 0) { btn.className='btn-cert btn-cert-has'; btn.innerHTML=`📎 ${files.length} ไฟล์`; }
-      else { btn.className='btn-cert btn-cert-empty'; btn.innerHTML='📎 ไฟล์'; }
-    }
-  } catch(e) { showToast('ลบไม่สำเร็จ','error'); }
-}
 
 function calcDueDate(calDate, frequency) {
   if (!calDate || !frequency) return;
@@ -2199,135 +1904,189 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
 }
 
-// ====================================================
-// DONUT CHART + ALERTS
-// ====================================================
-let _dashDonut = null;
 
-function renderDonut() {
-  const canvas = document.getElementById('dashDonutChart');
-  if (!canvas) return;
-  let ov = 0, wa = 0, ok = 0;
-  allData.forEach(d => {
-    if (d.days_left === null) return;
-    if (d.days_left < 0) ov++;
-    else if (d.days_left <= 30) wa++;
-    else ok++;
-  });
-  const total = allData.length;
-  const elTotal = document.getElementById('donutTotal');
-  if (elTotal) elTotal.textContent = total.toLocaleString();
+// ====================================================
+// EXPORT EXCEL
+// ====================================================
+function exportExcel() {
+  if (!filteredData.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
 
-  if (_dashDonut) _dashDonut.destroy();
-  _dashDonut = new Chart(canvas, {
-    type: 'doughnut',
-    data: {
-      labels: ['ปกติ','เกินกำหนด','ใกล้ครบ'],
-      datasets: [{
-        data: [ok, ov, wa],
-        backgroundColor: ['#2E7D32','#C62828','#F57F17'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '70%',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} เครื่อง`
-          }
-        }
-      }
-    }
+  const headers = ['#','ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
+    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','หน่วยงาน','ID Code','CERT.',
+    'วันสอบเทียบ','วันครบกำหนด','เหลือ (วัน)','ความถี่สอบเทียบ','ภายใน/ภายนอก','สถานะ','Remark'];
+
+  const rows = filteredData.map((d, i) => {
+    const days = d.days_left;
+    const status = days === null ? '–' : days < 0 ? 'เลยกำหนด' : days <= 30 ? 'ใกล้ครบ' : 'ปกติ';
+    return [i+1, d.instrument_type||'', d.machine_name||'', d.location||'', d.instrument_name||'',
+      d.brand||'', d.range_val||'', d.tolerance ? '±'+d.tolerance : '', d.serial_no||'',
+      d.department||'', d.id_code||'', d.cert_no||'', d.cal_date||'', d.due_date||'',
+      days !== null ? days : '', d.cal_frequency||'', d.cal_type||'', status, d.remark||''];
   });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:4},{wch:32},{wch:20},{wch:16},{wch:24},{wch:20},{wch:12},{wch:14},
+    {wch:16},{wch:12},{wch:20},{wch:16},{wch:14},{wch:14},{wch:10},{wch:20},{wch:14},{wch:12},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws, 'เครื่องมือ');
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, 'calibration_' + today + '.xlsx');
+  showToast('✅ Export ' + filteredData.length + ' รายการสำเร็จ', 'success');
 }
 
-function renderAlerts() {
-  const el = document.getElementById('alertList');
-  if (!el) return;
+// ====================================================
+// IMPORT EXCEL
+// ====================================================
+let importRows = [];
 
-  const today = new Date(); today.setHours(0,0,0,0);
+const IMPORT_COL_MAP = {
+  'ประเภทเครื่องมือ':'instrument_type','instrument_type':'instrument_type',
+  'ชื่อเครื่องจักร':'machine_name','machine_name':'machine_name',
+  'สถานที่ใช้งาน':'location','สถานที่':'location','location':'location',
+  'ชื่อเครื่องมือ':'instrument_name','เครื่องมือ':'instrument_name','instrument_name':'instrument_name',
+  'ยี่ห้อ/รุ่น':'brand','ยี่ห้อ':'brand','brand':'brand',
+  'range':'range_val','range_val':'range_val',
+  'tolerance (±)':'tolerance','tolerance':'tolerance',
+  's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
+  'หน่วยงาน':'department','department':'department',
+  'id code':'id_code','id_code':'id_code','idcode':'id_code',
+  'cert.':'cert_no','cert_no':'cert_no','เลขที่ certificate':'cert_no',
+  'วันสอบเทียบ':'cal_date','วันที่สอบเทียบ':'cal_date','cal_date':'cal_date',
+  'วันครบกำหนด':'due_date','ครบกำหนด':'due_date','due_date':'due_date',
+  'ความถี่สอบเทียบ':'cal_frequency','ความถี่':'cal_frequency','cal_frequency':'cal_frequency',
+  'ภายใน/ภายนอก':'cal_type','cal_type':'cal_type',
+  'remark':'remark','หมายเหตุ':'remark',
+};
 
-  // คำนวณสถานะแจ้งเตือนใหม่ตาม logic วางแผน
-  // Due Date = D
-  // ช่วงสอบ  = วันที่ 1 ของเดือนก่อน D ถึง D  (≈ 30 วันก่อน D)
-  // ช่วงวางแผน = วันที่ 1-15 ของเดือนก่อนช่วงสอบ (≈ 60-45 วันก่อน D)
-  // แจ้งเตือนล่วงหน้า = 60-75 วันก่อน D (ใกล้ถึงเวลาวางแผน)
+function downloadTemplate() {
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
+  const headers = ['ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
+    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','หน่วยงาน','ID Code','CERT.',
+    'วันสอบเทียบ','วันครบกำหนด','ความถี่สอบเทียบ','ภายใน/ภายนอก','Remark'];
+  const example = ['มวล/น้ำหนัก (Mass/Weight)','MIX 1000L','ตึก 5/1','Electronic Balance',
+    'AND/GF-3000','30 kg','0.01 g','A1234567','PMP1','PMP1BB01-WI01','25B001-0',
+    '2025-01-15','2026-01-15','1 ครั้ง/ปี','ภายนอก',''];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  ws['!cols'] = headers.map(() => ({ wch: 22 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Template');
+  XLSX.writeFile(wb, 'import_template.xlsx');
+}
 
-  const items = allData
-    .filter(d => d.due_date && d.days_left !== null)
-    .map(d => {
-      const due = new Date(d.due_date); due.setHours(0,0,0,0);
-      const days = d.days_left;
+function openImportModal() { resetImport(); document.getElementById('importModal').classList.add('open'); }
+function closeImportModal() { document.getElementById('importModal').classList.remove('open'); resetImport(); }
 
-      // เดือนก่อน due = เดือนช่วงสอบ
-      const calMonth = new Date(due.getFullYear(), due.getMonth() - 1, 1);
-      // ช่วงสอบ: วันที่ 1 ของเดือนก่อน ถึง due
-      const calStart = calMonth; // 1 พ.ย.
-      // ช่วงวางแผน: วันที่ 1-15 ของเดือนก่อนช่วงสอบ
-      const planStart = new Date(due.getFullYear(), due.getMonth() - 2, 1);  // 1 ต.ค.
-      const planEnd   = new Date(due.getFullYear(), due.getMonth() - 2, 15); // 15 ต.ค.
+function resetImport() {
+  importRows = [];
+  document.getElementById('importStep1').style.display = 'block';
+  document.getElementById('importStep2').style.display = 'none';
+  document.getElementById('importProgress').style.display = 'none';
+  const fi = document.getElementById('importFileInput');
+  if (fi) fi.value = '';
+}
 
-      let alertType = null;
-      if (days < 0) {
-        alertType = 'overdue'; // เกินกำหนดแล้ว
-      } else if (today >= calStart && today <= due) {
-        alertType = 'cal_now'; // อยู่ในช่วงสอบแล้ว
-      } else if (today >= planStart && today <= planEnd) {
-        alertType = 'plan_now'; // ต้องวางแผนทันที (1-15 ของเดือน 2 เดือนก่อน due)
-      } else if (days <= 75 && days > 45) {
-        alertType = 'plan_soon'; // ใกล้ถึงเวลาวางแผน
-      }
+function handleImportFile(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (raw.length < 2) { showToast('ไม่พบข้อมูลในไฟล์', 'error'); return; }
 
-      return { ...d, alertType, planStart, planEnd, calStart, due };
-    })
-    .filter(d => d.alertType)
-    .sort((a,b) => {
-      const order = {overdue:0, cal_now:1, plan_now:2, plan_soon:3};
-      return (order[a.alertType]??9) - (order[b.alertType]??9) || a.days_left - b.days_left;
-    })
-    .slice(0, 10);
+      const excelHeaders = raw[0].map(h => String(h).trim());
+      const fieldMap = {};
+      excelHeaders.forEach((h, i) => {
+        const key = h.toLowerCase();
+        if (IMPORT_COL_MAP[key]) fieldMap[i] = IMPORT_COL_MAP[key];
+      });
 
-  if (!items.length) {
-    el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">✅ ไม่มีเครื่องมือที่ต้องดำเนินการ</div>`;
-    return;
+      const errors = [];
+      importRows = raw.slice(1).filter(r => r.some(c => c !== '')).map((r, rowIdx) => {
+        const obj = {};
+        Object.entries(fieldMap).forEach(([ci, field]) => {
+          let val = r[ci];
+          if (val instanceof Date) {
+            const y = val.getFullYear(), m = String(val.getMonth()+1).padStart(2,'0'), d = String(val.getDate()).padStart(2,'0');
+            val = y+'-'+m+'-'+d;
+          } else { val = String(val || '').trim(); }
+          if (val) obj[field] = val;
+        });
+        if (obj.instrument_type) obj.category = obj.instrument_type;
+        if (!obj.id_code) errors.push('แถว '+(rowIdx+2)+': ไม่มี ID Code');
+        return obj;
+      }).filter(o => Object.keys(o).length > 0);
+
+      const previewCols = excelHeaders.filter((_, i) => fieldMap[i]);
+      const previewFields = previewCols.map(h => fieldMap[excelHeaders.indexOf(h)]);
+      document.getElementById('importPreviewHead').innerHTML =
+        '<tr>'+previewCols.map(h => '<th style="padding:8px 12px;white-space:nowrap;text-align:left;font-size:12px">'+h+'</th>').join('')+'</tr>';
+      document.getElementById('importPreviewBody').innerHTML =
+        importRows.slice(0,5).map(r =>
+          '<tr>'+previewFields.map(f => '<td style="padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:12px">'+(r[f]||'–')+'</td>').join('')+'</tr>'
+        ).join('');
+
+      const validRows = importRows.filter(r => r.id_code);
+      document.getElementById('importSummary').innerHTML =
+        '📋 พบ <strong>'+importRows.length+'</strong> แถว &nbsp;|&nbsp; ✅ Valid: <strong>'+validRows.length+'</strong> &nbsp;|&nbsp; ❌ ข้าม: <strong>'+(importRows.length-validRows.length)+'</strong> (ไม่มี ID Code)';
+      const errEl = document.getElementById('importErrors');
+      if (errors.length) {
+        errEl.style.display = 'block';
+        errEl.innerHTML = '⚠️ '+errors.slice(0,5).join('<br>')+(errors.length>5?'<br>...และอีก '+(errors.length-5)+' แถว':'');
+      } else { errEl.style.display = 'none'; }
+      document.getElementById('confirmImportBtn').disabled = validRows.length === 0;
+      document.getElementById('importStep1').style.display = 'none';
+      document.getElementById('importStep2').style.display = 'block';
+    } catch(e) { showToast('อ่านไฟล์ไม่สำเร็จ: '+e.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmImport() {
+  const validRows = importRows.filter(r => r.id_code);
+  if (!validRows.length) return;
+  document.getElementById('importStep2').style.display = 'none';
+  document.getElementById('importProgress').style.display = 'block';
+  document.getElementById('confirmImportBtn').disabled = true;
+  const CHUNK = 50;
+  let done = 0, success = 0, failed = 0;
+  try {
+    for (let i = 0; i < validRows.length; i += CHUNK) {
+      const chunk = validRows.slice(i, i + CHUNK);
+      const { error } = await sb.from('instruments').upsert(chunk, { onConflict: 'id_code', ignoreDuplicates: false });
+      if (error) {
+        const { error: insErr } = await sb.from('instruments').insert(chunk);
+        if (insErr) failed += chunk.length; else success += chunk.length;
+      } else { success += chunk.length; }
+      done += chunk.length;
+      const pct = Math.round(done/validRows.length*100);
+      document.getElementById('importProgressBar').style.width = pct+'%';
+      document.getElementById('importProgressText').textContent = 'กำลัง import... '+done+'/'+validRows.length+' แถว';
+      await new Promise(r => setTimeout(r, 30));
+    }
+    await logAudit('เพิ่ม', { id_code: 'IMPORT_BATCH', instrument_name: 'Import batch '+success+' รายการ' }, null);
+    showToast('✅ Import สำเร็จ '+success+' รายการ'+(failed?' / ล้มเหลว '+failed+' รายการ':''), 'success');
+    closeImportModal();
+    await loadData(true);
+  } catch(e) {
+    showToast('Import ไม่สำเร็จ: '+e.message, 'error');
+    document.getElementById('importStep2').style.display = 'block';
+    document.getElementById('importProgress').style.display = 'none';
+    document.getElementById('confirmImportBtn').disabled = false;
   }
-
-  const fmtDate = d => d ? d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '–';
-
-  el.innerHTML = items.map(d => {
-    let bg, color, icon, label, sub;
-    if (d.alertType === 'overdue') {
-      bg='var(--red-light)'; color='var(--red)'; icon='🔴';
-      label='เกินกำหนดแล้ว';
-      sub=`Due: ${fmtDate(d.due)}`;
-    } else if (d.alertType === 'cal_now') {
-      bg='#fff3e0'; color='var(--amber)'; icon='🟡';
-      label='อยู่ในช่วงสอบเทียบ';
-      sub=`สอบได้ถึง ${fmtDate(d.due)}`;
-    } else if (d.alertType === 'plan_now') {
-      bg='#fce4ec'; color='#c62828'; icon='📋';
-      label='⚡ ต้องวางแผนทันที!';
-      sub=`วางแผน: ${fmtDate(d.planStart)}–${fmtDate(d.planEnd)} | สอบ: ${fmtDate(d.calStart)}–${fmtDate(d.due)}`;
-    } else {
-      bg='var(--accent-light)'; color='var(--accent2)'; icon='📌';
-      label=`วางแผนได้เลย (อีก ${d.days_left} วัน)`;
-      sub=`กำหนดวางแผน: ${fmtDate(d.planStart)}–${fmtDate(d.planEnd)}`;
-    }
-    return `<div style="background:${bg};border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px">
-      <span style="font-size:14px;flex-shrink:0;margin-top:1px">${icon}</span>
-      <div style="min-width:0;flex:1">
-        <div style="font-size:12px;font-weight:600;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
-        <div style="font-size:11px;font-weight:600;color:var(--text);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.id_code||'–'} · ${d.department||'–'}</div>
-        <div style="font-size:10px;color:${color};margin-top:2px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div>
-      </div>
-    </div>`;
-  }).join('');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ia = document.getElementById('importUploadArea');
+  if (!ia) return;
+  ia.addEventListener('dragover', e => { e.preventDefault(); ia.classList.add('dragover'); });
+  ia.addEventListener('dragleave', () => ia.classList.remove('dragover'));
+  ia.addEventListener('drop', e => { e.preventDefault(); ia.classList.remove('dragover'); handleImportFile(e.dataTransfer.files[0]); });
+});
+
 
 // ====================================================
 // PAGE NAVIGATION
@@ -2371,6 +2130,51 @@ function showPage(page) {
 })();
 
 </script>
+
+<!-- IMPORT EXCEL MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box" style="max-width:780px">
+    <div class="modal-header">
+      <h3>⬆️ Import เครื่องมือจาก Excel</h3>
+      <button class="btn-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="importStep1">
+        <div style="background:var(--amber-light);border:1px solid #f0d070;border-radius:var(--radius);padding:12px 16px;font-size:13px;color:#7a5f00;margin-bottom:16px">
+          ⚠️ ระบบใช้ <strong>id_code</strong> เป็น key — ถ้ามีอยู่แล้วจะอัพเดท ถ้าไม่มีจะเพิ่มใหม่
+        </div>
+        <button onclick="downloadTemplate()" style="margin-bottom:14px;padding:9px 16px;background:var(--accent-light);border:1.5px solid var(--accent);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--accent);cursor:pointer;font-weight:500">📥 ดาวน์โหลด Template Excel</button>
+        <div class="upload-area" id="importUploadArea" onclick="document.getElementById('importFileInput').click()">
+          <div class="upload-icon">📂</div>
+          <p><strong>คลิกหรือลากไฟล์ Excel มาวาง</strong></p>
+          <span>รองรับ .xlsx, .xls</span>
+          <input type="file" id="importFileInput" style="display:none" accept=".xlsx,.xls" onchange="handleImportFile(this.files[0])">
+        </div>
+      </div>
+      <div id="importStep2" style="display:none">
+        <div id="importSummary" style="margin-bottom:12px;padding:12px 16px;background:var(--accent-light);border-radius:var(--radius);font-size:13px;color:var(--accent)"></div>
+        <div id="importErrors" style="display:none;margin-bottom:12px;padding:12px 16px;background:var(--red-light);border-radius:var(--radius);font-size:13px;color:var(--red)"></div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ตัวอย่างข้อมูล (5 แถวแรก):</div>
+        <div style="overflow-x:auto;max-height:240px;border:1px solid var(--border);border-radius:var(--radius)">
+          <table id="importPreviewTable" style="width:max-content;min-width:100%;border-collapse:collapse">
+            <thead id="importPreviewHead" style="background:var(--accent);color:white;position:sticky;top:0"></thead>
+            <tbody id="importPreviewBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn-primary" id="confirmImportBtn" onclick="confirmImport()">✅ ยืนยัน Import</button>
+          <button class="btn-reset" onclick="resetImport()" style="padding:13px 20px">← เลือกไฟล์ใหม่</button>
+        </div>
+      </div>
+      <div id="importProgress" style="display:none;margin-top:16px">
+        <div style="height:8px;background:var(--surface2);border-radius:6px;overflow:hidden;margin-bottom:8px">
+          <div id="importProgressBar" style="height:100%;background:var(--accent);border-radius:6px;transition:width .3s;width:0%"></div>
+        </div>
+        <div id="importProgressText" style="font-size:13px;color:var(--text2);text-align:center">กำลัง import...</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) {
