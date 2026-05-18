@@ -1454,6 +1454,10 @@ async function deleteFile(folder, name) {
   if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
   showToast('ลบไฟล์แล้ว', 'success');
   const idCode = document.getElementById('mIdCode').textContent;
+  const inst = allData.find(d => d.id === currentInstrumentId);
+  await logAudit('ลบไฟล์', inst || { id: currentInstrumentId, id_code: idCode }, {
+    file: name,
+  });
   await loadCertFiles(currentInstrumentId, idCode);
 }
 
@@ -1464,11 +1468,17 @@ async function handleFileSelect(files) {
   const folder = `cert_${currentInstrumentId}_${idCode}`;
   showLoading('กำลังอัพโหลด...');
   try {
+    const uploadedNames = [];
     for (const file of files) {
       const { error } = await sb.storage.from('certificates').upload(`${folder}/${file.name}`, file, { upsert: true });
       if (error) throw error;
+      uploadedNames.push(file.name);
     }
     showToast('อัพโหลดสำเร็จ', 'success');
+    const inst = allData.find(d => d.id === currentInstrumentId);
+    await logAudit('อัพโหลดไฟล์', inst || { id: currentInstrumentId, id_code: idCode }, {
+      files: uploadedNames.join(', '),
+    });
     await loadCertFiles(currentInstrumentId, idCode);
   } catch(e) { showToast('อัพโหลดไม่สำเร็จ: ' + e.message, 'error'); }
   finally { hideLoading(); }
@@ -3044,6 +3054,13 @@ function setPlanSchedule(id, dateVal) {
   if (dateVal) planSchedule[id] = dateVal;
   else delete planSchedule[id];
   updatePlanSummaryFromCurrent();
+  // Audit log
+  const inst = allData.find(d => d.id == id);
+  if (dateVal) {
+    logAudit('วางแผนสอบเทียบ', inst || { id, id_code: String(id) }, { วันที่นัด: dateVal });
+  } else {
+    logAudit('ยกเลิกแผน', inst || { id, id_code: String(id) }, null);
+  }
 }
 
 function updatePlanSummaryFromCurrent() {
