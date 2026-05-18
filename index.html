@@ -273,7 +273,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
-        <div class="nav-item" onclick="showPage('plan')" id="nav-plan"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</div>
+        <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
       </nav>
@@ -530,100 +530,152 @@ tbody tr:hover { background: var(--surface2); }
       <!-- PLAN PAGE -->
       <div id="pagePlan" class="page-content" style="display:none">
 
-        <!-- Controls -->
-        <div class="plan-controls">
-          <div>
-            <label>เดือน</label>
-            <select id="planMonth">
-              <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-              <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-              <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-              <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-              <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-            </select>
+        <!-- TABS -->
+        <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:4px;width:fit-content">
+          <button onclick="switchPlanTab('new')" id="planTab-new" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;background:#00695C;color:white;transition:all .15s">+ สร้างแผนใหม่</button>
+          <button onclick="switchPlanTab('list')" id="planTab-list" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">แผนทั้งหมด</button>
+          <button onclick="switchPlanTab('confirm')" id="planTab-confirm" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;display:none" id="planTab-confirm">รอยืนยัน <span id="planConfirmBadge" style="background:#E53935;color:white;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:4px;display:none">0</span></button>
+        </div>
+
+        <!-- TAB: สร้างแผนใหม่ -->
+        <div id="planTabNew">
+          <!-- Step indicator -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+            <div id="stepBadge1" style="width:28px;height:28px;border-radius:50%;background:#00695C;color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">1</div>
+            <span style="font-size:13px;font-weight:600;color:#00695C">เลือกเครื่องมือ</span>
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+            <div id="stepBadge2" style="width:28px;height:28px;border-radius:50%;background:var(--surface2);color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">2</div>
+            <span id="stepLabel2" style="font-size:13px;font-weight:500;color:var(--text3)">แนบไฟล์แผน</span>
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+            <div id="stepBadge3" style="width:28px;height:28px;border-radius:50%;background:var(--surface2);color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">3</div>
+            <span id="stepLabel3" style="font-size:13px;font-weight:500;color:var(--text3)">ส่งให้ Admin</span>
           </div>
-          <div>
-            <label>ปี (พ.ศ.)</label>
-            <input type="number" id="planYear" style="width:100px" min="2560" max="2600">
+
+          <!-- STEP 1: เลือกเครื่องมือ -->
+          <div id="planStep1">
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px">
+              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">กรองเครื่องมือ</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+                <div>
+                  <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">ประเภทเครื่องมือ</label>
+                  <select id="planFilterType" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;min-width:200px;outline:none">
+                    <option value="">ทุกประเภท</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">หน่วยงาน</label>
+                  <select id="planFilterDept" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;min-width:160px;outline:none">
+                    <option value="">ทุกหน่วยงาน</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">สถานะ</label>
+                  <select id="planFilterStatus" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
+                    <option value="">ทั้งหมด</option>
+                    <option value="overdue">เกินกำหนด</option>
+                    <option value="warning">ใกล้ครบ (≤30 วัน)</option>
+                    <option value="ok">ปกติ</option>
+                  </select>
+                </div>
+                <button onclick="filterPlanInstruments()" style="padding:8px 16px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">🔍 กรอง</button>
+                <button onclick="selectAllPlanItems()" style="padding:8px 16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer">เลือกทั้งหมด</button>
+                <button onclick="clearPlanSelection()" style="padding:8px 16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer">ล้างการเลือก</button>
+              </div>
+            </div>
+
+            <!-- ตารางเลือกเครื่องมือ -->
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px">
+              <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:13px;color:var(--text2)" id="planSelectCount">เลือก 0 รายการ</span>
+                <span style="font-size:12px;color:var(--text3)" id="planFilterCount"></span>
+              </div>
+              <div style="overflow:auto;max-height:400px">
+                <table style="width:100%;border-collapse:collapse;font-size:13px">
+                  <thead>
+                    <tr style="background:#00897B;position:sticky;top:0;z-index:2">
+                      <th style="padding:10px 12px;color:white;width:40px;text-align:center"><input type="checkbox" id="planCheckAll" onchange="toggleAllPlanCheck(this)"></th>
+                      <th style="padding:10px 12px;color:white;text-align:left">ID Code</th>
+                      <th style="padding:10px 12px;color:white;text-align:left">ชื่อเครื่องมือ</th>
+                      <th style="padding:10px 12px;color:white;text-align:left">ประเภท</th>
+                      <th style="padding:10px 12px;color:white;text-align:left">หน่วยงาน</th>
+                      <th style="padding:10px 12px;color:white;text-align:left">ครบกำหนด</th>
+                      <th style="padding:10px 12px;color:white;text-align:center">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="planInstrumentBody">
+                    <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">กำลังโหลดข้อมูล...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end">
+              <button onclick="goToPlanStep2()" style="padding:10px 24px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer">ถัดไป: แนบไฟล์แผน →</button>
+            </div>
           </div>
-          <div>
-            <label>หน่วยงาน</label>
-            <select id="planDept" style="min-width:160px"><option value="">ทุกหน่วยงาน</option></select>
-          </div>
-          <div>
-            <label>ประเภทเครื่องมือ</label>
-            <select id="planType" style="min-width:200px"><option value="">ทุกประเภท</option></select>
-          </div>
-          <div>
-            <label>ภายใน/ภายนอก</label>
-            <select id="planCalType" style="min-width:140px">
-              <option value="">ทั้งหมด</option>
-              <option value="ภายใน">🏭 ภายใน</option>
-              <option value="ภายนอก">🌐 ภายนอก</option>
-            </select>
-          </div>
-          <button class="btn-primary" onclick="renderPlanTable()" style="padding:10px 18px;width:auto">🔍 ค้นหา</button>
-          <div style="display:flex;gap:6px;align-items:center;position:relative" id="exportBtnGroup">
-            <button onclick="exportFRMEIB04()" style="padding:10px 18px;background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:#2E7D32;cursor:pointer">📊 Export FRM-EIB04</button>
-            <button onclick="exportScheduleJSON()" title="บันทึก schedule.json สำหรับ generate_frm.py" style="padding:10px 12px;background:#fff8e1;border:1.5px solid #ffe082;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:#e65100;cursor:pointer" onmouseenter="document.getElementById('pythonHint').style.display='block'" onmouseleave="document.getElementById('pythonHint').style.display='none'">📋 JSON</button>
-            <div id="pythonHint" style="display:none;position:absolute;top:110%;left:0;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:12px;color:#555;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:99;line-height:1.8">
-              <strong>ใช้ generate_frm.py (Excel เหมือนต้นแบบ 100%):</strong><br>
-              1. กด 📋 JSON → บันทึก schedule.json ไว้ที่ Desktop/Claude<br>
-              2. เปิด Terminal แล้วรัน:<br>
-              <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:11px">python3 generate_frm.py --month M --year YYYY --schedule schedule.json</code>
+
+          <!-- STEP 2: แนบไฟล์แผน -->
+          <div id="planStep2" style="display:none">
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px">
+              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">รายละเอียดแผน</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+                <div>
+                  <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">ชื่อแผน <span style="color:var(--red)">*</span></label>
+                  <input type="text" id="planTitle" placeholder="เช่น แผนสอบเทียบ พ.ค. 2569 - PFC3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">วันที่นัดสอบ <span style="color:var(--red)">*</span></label>
+                  <input type="date" id="planDate" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;box-sizing:border-box">
+                </div>
+              </div>
+
+              <!-- เครื่องมือที่เลือก -->
+              <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">เครื่องมือที่เลือก (<span id="planStep2Count">0</span> รายการ)</div>
+                <div id="planSelectedList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+              </div>
+
+              <!-- Upload ไฟล์ -->
+              <div>
+                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">แนบไฟล์แผน (PDF/JPG/PNG) <span style="color:var(--red)">*</span></label>
+                <div id="planDropZone" onclick="document.getElementById('planFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='#00897B'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handlePlanDrop(event)"
+                  style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s">
+                  <div style="font-size:32px;margin-bottom:8px">📎</div>
+                  <div style="font-size:13px;color:var(--text2)">คลิกหรือลากไฟล์มาวางที่นี่</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px">รองรับ PDF, JPG, PNG (สูงสุด 50MB)</div>
+                  <input type="file" id="planFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handlePlanFileSelect(this)">
+                </div>
+                <div id="planFilePreview" style="display:none;margin-top:10px;padding:10px 14px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:13px">
+                  <span style="font-size:20px">📄</span>
+                  <span id="planFileName" style="flex:1;color:var(--green);font-weight:500"></span>
+                  <button onclick="clearPlanFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px">×</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between">
+              <button onclick="backToPlanStep1()" style="padding:10px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer">← ย้อนกลับ</button>
+              <button onclick="submitPlan()" style="padding:10px 24px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer">📤 ส่งแผนให้ Admin ตรวจสอบ</button>
             </div>
           </div>
         </div>
 
-        <!-- Summary cards -->
-        <div class="plan-summary" id="planSummary" style="display:none">
-          <div class="plan-sum-card" style="border-left:4px solid var(--accent)">
-            <div class="num" id="planSumTotal" style="color:var(--accent)">–</div>
-            <div class="lbl">เครื่องมือในแผน</div>
-          </div>
-          <div class="plan-sum-card" style="border-left:4px solid var(--green)">
-            <div class="num" id="planSumSched" style="color:var(--green)">–</div>
-            <div class="lbl">นัดหมายแล้ว</div>
-          </div>
-          <div class="plan-sum-card" style="border-left:4px solid var(--amber)">
-            <div class="num" id="planSumPending" style="color:var(--amber)">–</div>
-            <div class="lbl">ยังไม่ได้นัด</div>
-          </div>
-          <div class="plan-sum-card" style="border-left:4px solid var(--red)">
-            <div class="num" id="planSumOverdue" style="color:var(--red)">–</div>
-            <div class="lbl">เลยกำหนดแล้ว</div>
+        <!-- TAB: แผนทั้งหมด -->
+        <div id="planTabList" style="display:none">
+          <div id="planListContainer" style="display:flex;flex-direction:column;gap:12px">
+            <div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>
           </div>
         </div>
 
-        <!-- Table -->
-        <div class="table-wrap" id="planTableWrap" style="max-height:calc(100vh - 380px)">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:40px">#</th>
-                <th>ID Code</th>
-                <th>ชื่อเครื่องมือ</th>
-                <th>ยี่ห้อ</th>
-                <th>หน่วยงาน</th>
-                <th>สถานที่</th>
-                <th>วันครบกำหนด</th>
-                <th>เหลือ (วัน)</th>
-                <th>ภายใน/ภายนอก</th>
-                <th>สถานะ</th>
-                <th style="min-width:150px">📅 วันนัดสอบเทียบ</th>
-              </tr>
-            </thead>
-            <tbody id="planTableBody">
-              <tr><td colspan="11" class="no-data">เลือกเดือนและกด "ค้นหา" เพื่อดูแผน</td></tr>
-            </tbody>
-          </table>
+        <!-- TAB: รอยืนยัน (Admin/Editor) -->
+        <div id="planTabConfirm" style="display:none">
+          <div id="planConfirmContainer" style="display:flex;flex-direction:column;gap:12px">
+            <div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>
+          </div>
         </div>
 
-        <div id="planEmpty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:14px">
-          ไม่มีเครื่องมือที่ครบกำหนดในเดือนนี้
-        </div>
       </div>
+
 
       <!-- ADMIN -->
       <div id="pageAdmin" class="page-content" style="display:none">
@@ -645,7 +697,28 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
-<!-- INSTRUMENT MODAL -->
+<!-- ATTACH CERT MODAL -->
+<div class="modal-overlay" id="attachCertModal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>แนบไฟล์หลังสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeAttachCertModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">แนบไฟล์แผนที่เซ็นรับรองแล้ว (PDF/JPG/PNG) เพื่อส่งให้ Admin ยืนยันการสอบเทียบ</p>
+      <div class="form-group">
+        <label>ไฟล์แผนที่เซ็นแล้ว <span style="color:var(--red)">*</span></label>
+        <input type="file" id="certAttachFile" accept=".pdf,.jpg,.jpeg,.png" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;width:100%;font-family:var(--font);font-size:13px">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeAttachCertModal()" class="btn-secondary">ยกเลิก</button>
+      <button onclick="submitAttachCert()" class="btn-primary">📤 ส่งให้ Admin ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="instrumentModal">
   <div class="modal-box" style="max-width:620px">
     <div class="modal-header">
@@ -885,6 +958,84 @@ function enterApp(user) {
 }
 
 function doLogout() { clearSession(); location.reload(); }
+
+// ====================================================
+// MOBILE CARDS
+// ====================================================
+function renderMobileCards() {
+  const el = document.getElementById('mobileCardList');
+  if (!el) return;
+  const start = (currentPage - 1) * pageSize;
+  const rows = filteredData.slice(start, start + pageSize);
+  window._mobileRows = rows;
+  el.innerHTML = rows.map((d, i) => {
+    const days = d.days_left;
+    let badge = '', rowBg = '', daysText = '';
+    if (days !== null && days < 0) {
+      badge = `<span style="background:#fdecea;color:#C62828;font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
+      daysText = `<span style="font-size:11px;color:#C62828">${days} วัน</span>`;
+      rowBg = '#1a0000';
+    } else if (days !== null && days <= 30) {
+      badge = `<span style="background:#fff8e1;color:#F57F17;font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ</span>`;
+      daysText = `<span style="font-size:11px;color:#F57F17">${days} วัน</span>`;
+      rowBg = '#1a1400';
+    } else {
+      badge = `<span style="background:#e8f5e9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:20px">ปกติ</span>`;
+      daysText = `<span style="font-size:11px;color:#2E7D32">${days !== null ? days + ' วัน' : '–'}</span>`;
+      rowBg = '#1E1E1E';
+    }
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const typShort = (d.instrument_type||'–').split(' (')[0];
+    return `<div style="background:${rowBg};border:0.5px solid #333;border-radius:12px;padding:14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="flex:1;min-width:0;margin-right:8px">
+          <div style="font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
+          <div style="font-size:12px;color:#aaa;margin-top:2px">${d.brand||''} · ${d.department||''}</div>
+        </div>${badge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px">
+        <div style="font-size:11px;color:#aaa">🏷 <span style="color:#69F0AE;font-weight:500">${d.id_code||'–'}</span></div>
+        <div style="font-size:11px;color:#aaa">📂 ${typShort}</div>
+        <div style="font-size:11px;color:#aaa">📅 ครบ: ${dueDate}</div>
+        <div style="font-size:11px">${daysText}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:13px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
+        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:13px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
+      </div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;padding:32px;color:#888">ไม่พบข้อมูล</div>`;
+}
+function mobileEdit(i) { const d = window._mobileRows?.[i]; if (d) openInstrumentModal(d.id); }
+function mobileCert(i) { const d = window._mobileRows?.[i]; if (d) openCertModal(d.id, d.id_code||'', d.cert_no||'', d.instrument_name||''); }
+
+// ====================================================
+// DONUT + ALERTS
+// ====================================================
+let _dashDonut = null;
+function renderDonut() {
+  const canvas = document.getElementById('dashDonutChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  let ov = 0, wa = 0, ok = 0;
+  allData.forEach(d => { if (d.days_left === null) return; if (d.days_left < 0) ov++; else if (d.days_left <= 30) wa++; else ok++; });
+  const elTotal = document.getElementById('donutTotal');
+  if (elTotal) elTotal.textContent = allData.length.toLocaleString();
+  if (_dashDonut) _dashDonut.destroy();
+  _dashDonut = new Chart(canvas, { type:'doughnut', data:{ labels:['ปกติ','เกินกำหนด','ใกล้ครบ'], datasets:[{ data:[ok,ov,wa], backgroundColor:['#2E7D32','#C62828','#F57F17'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} เครื่อง` } } } } });
+}
+function renderAlerts() {
+  const el = document.getElementById('alertList');
+  if (!el) return;
+  const alerts = allData.filter(d => d.days_left !== null && d.days_left >= -1 && d.days_left <= 7).sort((a,b) => a.days_left - b.days_left).slice(0,8);
+  if (!alerts.length) { el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ไม่มีเครื่องมือที่ใกล้ครบกำหนด</div>`; return; }
+  el.innerHTML = alerts.map(d => {
+    const isOver = d.days_left < 0;
+    const bg = isOver ? 'var(--red-light)' : 'var(--amber-light)';
+    const color = isOver ? 'var(--red)' : 'var(--amber)';
+    const label = isOver ? 'เกินกำหนดแล้ว' : `เหลือ ${d.days_left} วัน`;
+    return `<div onclick="filterByStatus('${isOver?'overdue':'warning'}')" style="background:${bg};border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="min-width:0"><div style="font-size:12px;font-weight:600;color:${color};overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div><div style="font-size:10px;color:var(--text3)">${d.id_code||'–'} · ${d.department||'–'}</div></div><span style="font-size:10px;color:${color};white-space:nowrap;font-weight:600">${label}</span></div>`;
+  }).join('');
+}
 
 // ====================================================
 // DATA
@@ -2063,8 +2214,392 @@ function showToast(msg, type) {
 
 
 // ====================================================
-// EXPORT EXCEL
+// CALIBRATION PLAN — WORKFLOW
 // ====================================================
+let planSelectedItems = []; // เครื่องมือที่เลือก
+let planFilteredItems = []; // เครื่องมือที่กรองแล้ว
+let planFileObj = null;     // ไฟล์ที่แนบ
+
+// --- Switch tabs ---
+function switchPlanTab(tab) {
+  ['new','list','confirm'].forEach(t => {
+    document.getElementById('planTab-' + t).style.background = t === tab ? '#00695C' : 'transparent';
+    document.getElementById('planTab-' + t).style.color = t === tab ? 'white' : 'var(--text2)';
+    document.getElementById('planTab-' + t).style.fontWeight = t === tab ? '600' : '500';
+  });
+  document.getElementById('planTabNew').style.display = tab === 'new' ? 'block' : 'none';
+  document.getElementById('planTabList').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('planTabConfirm').style.display = tab === 'confirm' ? 'block' : 'none';
+  if (tab === 'list') loadPlanList();
+  if (tab === 'confirm') loadPlanConfirm();
+}
+
+// --- Init plan page ---
+function initPlanPage() {
+  // populate filters
+  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
+  const tSel = document.getElementById('planFilterType');
+  const dSel = document.getElementById('planFilterDept');
+  if (tSel) { tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join(''); }
+  if (dSel) { dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option>${d}</option>`).join(''); }
+  filterPlanInstruments();
+
+  // แสดง tab confirm เฉพาะ admin
+  const role = currentUser?.role;
+  if (role === 'admin') {
+    document.getElementById('planTab-confirm').style.display = 'inline-flex';
+    loadPlanConfirmBadge();
+  }
+  // แสดง tab new เฉพาะ editor/admin
+  const canCreate = role === 'admin' || role === 'editor';
+  document.getElementById('planTab-new').style.display = canCreate ? 'inline-flex' : 'none';
+}
+
+// --- Filter เครื่องมือ ---
+function filterPlanInstruments() {
+  const type = document.getElementById('planFilterType')?.value || '';
+  const dept = document.getElementById('planFilterDept')?.value || '';
+  const status = document.getElementById('planFilterStatus')?.value || '';
+  planFilteredItems = allData.filter(d => {
+    if (type && d.instrument_type !== type) return false;
+    if (dept && d.department !== dept) return false;
+    if (status) {
+      const days = d.days_left;
+      if (status === 'overdue' && (days === null || days >= 0)) return false;
+      if (status === 'warning' && (days === null || days < 0 || days > 30)) return false;
+      if (status === 'ok' && (days === null || days <= 30)) return false;
+    }
+    return true;
+  });
+  renderPlanInstrumentTable();
+}
+
+function renderPlanInstrumentTable() {
+  const tbody = document.getElementById('planInstrumentBody');
+  if (!tbody) return;
+  document.getElementById('planFilterCount').textContent = `แสดง ${planFilteredItems.length.toLocaleString()} รายการ`;
+  if (!planFilteredItems.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">ไม่พบข้อมูล</td></tr>';
+    return;
+  }
+  const bd = 'border-bottom:1px solid var(--border)';
+  tbody.innerHTML = planFilteredItems.map((d, i) => {
+    const days = d.days_left;
+    const checked = planSelectedItems.some(s => s.id === d.id) ? 'checked' : '';
+    let badge = '';
+    if (days !== null && days < 0) badge = `<span style="background:var(--red-light);color:var(--red);font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
+    else if (days !== null && days <= 30) badge = `<span style="background:var(--amber-light);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
+    else badge = `<span style="background:var(--green-light);color:var(--green);font-size:11px;padding:2px 8px;border-radius:20px">ปกติ</span>`;
+    const due = d.due_date ? d.due_date.slice(0,10).split('-').reverse().join('/') : '–';
+    const typShort = (d.instrument_type||'–').split(' (')[0];
+    return `<tr>
+      <td style="padding:8px 12px;${bd};text-align:center"><input type="checkbox" ${checked} onchange="togglePlanItem(${i}, this)"></td>
+      <td style="padding:8px 12px;${bd};color:var(--accent);font-weight:600">${d.id_code||'–'}</td>
+      <td style="padding:8px 12px;${bd};font-weight:500">${d.instrument_name||'–'}</td>
+      <td style="padding:8px 12px;${bd};color:var(--text2);font-size:12px">${typShort}</td>
+      <td style="padding:8px 12px;${bd};color:var(--text2)">${d.department||'–'}</td>
+      <td style="padding:8px 12px;${bd};color:var(--text2)">${due}</td>
+      <td style="padding:8px 12px;${bd};text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+  updatePlanSelectCount();
+}
+
+function togglePlanItem(idx, cb) {
+  const d = planFilteredItems[idx];
+  if (cb.checked) {
+    if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d);
+  } else {
+    planSelectedItems = planSelectedItems.filter(s => s.id !== d.id);
+  }
+  updatePlanSelectCount();
+}
+
+function toggleAllPlanCheck(cb) {
+  if (cb.checked) {
+    planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d); });
+  } else {
+    const ids = planFilteredItems.map(d => d.id);
+    planSelectedItems = planSelectedItems.filter(s => !ids.includes(s.id));
+  }
+  renderPlanInstrumentTable();
+}
+
+function selectAllPlanItems() {
+  planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d); });
+  renderPlanInstrumentTable();
+}
+
+function clearPlanSelection() {
+  planSelectedItems = [];
+  renderPlanInstrumentTable();
+}
+
+function updatePlanSelectCount() {
+  const el = document.getElementById('planSelectCount');
+  if (el) el.textContent = `เลือก ${planSelectedItems.length} รายการ`;
+}
+
+// --- Step 2 ---
+function goToPlanStep2() {
+  if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
+  document.getElementById('planStep1').style.display = 'none';
+  document.getElementById('planStep2').style.display = 'block';
+  // update step badges
+  document.getElementById('stepBadge2').style.background = '#00695C';
+  document.getElementById('stepBadge2').style.color = 'white';
+  document.getElementById('stepLabel2').style.color = '#00695C';
+  // แสดงรายการเครื่องมือที่เลือก
+  document.getElementById('planStep2Count').textContent = planSelectedItems.length;
+  document.getElementById('planSelectedList').innerHTML = planSelectedItems.map(d =>
+    `<span style="background:var(--green-light);color:var(--green);font-size:11px;padding:3px 10px;border-radius:20px">${d.id_code||d.instrument_name}</span>`
+  ).join('');
+}
+
+function backToPlanStep1() {
+  document.getElementById('planStep2').style.display = 'none';
+  document.getElementById('planStep1').style.display = 'block';
+  document.getElementById('stepBadge2').style.background = 'var(--surface2)';
+  document.getElementById('stepBadge2').style.color = 'var(--text3)';
+  document.getElementById('stepLabel2').style.color = 'var(--text3)';
+}
+
+// --- File handling ---
+function handlePlanFileSelect(input) {
+  if (input.files[0]) setPlanFile(input.files[0]);
+}
+
+function handlePlanDrop(e) {
+  e.preventDefault();
+  document.getElementById('planDropZone').style.borderColor = 'var(--border)';
+  if (e.dataTransfer.files[0]) setPlanFile(e.dataTransfer.files[0]);
+}
+
+function setPlanFile(file) {
+  planFileObj = file;
+  document.getElementById('planDropZone').style.display = 'none';
+  const prev = document.getElementById('planFilePreview');
+  prev.style.display = 'flex';
+  document.getElementById('planFileName').textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+}
+
+function clearPlanFile() {
+  planFileObj = null;
+  document.getElementById('planDropZone').style.display = 'block';
+  document.getElementById('planFilePreview').style.display = 'none';
+  document.getElementById('planFileInput').value = '';
+}
+
+// --- Submit plan ---
+async function submitPlan() {
+  const title = document.getElementById('planTitle').value.trim();
+  const date = document.getElementById('planDate').value;
+  if (!title) { showToast('กรุณากรอกชื่อแผน', 'error'); return; }
+  if (!date) { showToast('กรุณาเลือกวันที่นัดสอบ', 'error'); return; }
+  if (!planFileObj) { showToast('กรุณาแนบไฟล์แผน', 'error'); return; }
+
+  showLoading('กำลังอัพโหลดไฟล์...');
+  try {
+    // upload file
+    const ext = planFileObj.name.split('.').pop();
+    const fileName = `plan_${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('calibration-plans').upload(fileName, planFileObj);
+    if (upErr) throw upErr;
+
+    const { data: urlData } = sb.storage.from('calibration-plans').getPublicUrl(fileName);
+
+    // create plan record
+    const { data: plan, error: pErr } = await sb.from('calibration_plans').insert({
+      title, planned_date: date,
+      created_by: currentUser.username,
+      plan_file_url: urlData?.publicUrl || fileName,
+      status: 'pending_plan'
+    }).select().single();
+    if (pErr) throw pErr;
+
+    // create plan items
+    const items = planSelectedItems.map(d => ({
+      plan_id: plan.id,
+      instrument_id: d.id,
+      instrument_type: d.instrument_type,
+      department: d.department,
+      instrument_name: d.instrument_name,
+      id_code: d.id_code
+    }));
+    const { error: iErr } = await sb.from('calibration_plan_items').insert(items);
+    if (iErr) throw iErr;
+
+    hideLoading();
+    showToast('✅ ส่งแผนให้ Admin เรียบร้อยแล้ว', 'success');
+
+    // reset
+    planSelectedItems = [];
+    planFileObj = null;
+    document.getElementById('planTitle').value = '';
+    document.getElementById('planDate').value = '';
+    clearPlanFile();
+    backToPlanStep1();
+    filterPlanInstruments();
+
+    // update badge
+    loadPlanConfirmBadge();
+
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// --- Load plan list ---
+async function loadPlanList() {
+  const el = document.getElementById('planListContainer');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
+  const { data, error } = await sb.from('calibration_plans')
+    .select('*, calibration_plan_items(count)')
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
+  if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ยังไม่มีแผนการสอบเทียบ</div>'; return; }
+
+  const statusLabel = {
+    pending_plan: ['🟡 รอ Admin ยืนยันแผน', '#F57F17', '#fff8e1'],
+    planned: ['✅ วางแผนแล้ว', '#2E7D32', '#e8f5e9'],
+    pending_cert: ['🔵 รอ Admin ยืนยันสอบ', '#1565C0', '#e3f2fd'],
+    completed: ['🏆 สอบเทียบแล้ว', '#00695C', '#e0f2f1'],
+  };
+
+  el.innerHTML = data.map(p => {
+    const [lbl, color, bg] = statusLabel[p.status] || ['–','#888','#f5f5f5'];
+    const cnt = p.calibration_plan_items?.[0]?.count || 0;
+    const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
+    const created = p.created_at ? new Date(p.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const canAttachCert = p.status === 'planned' && (currentUser?.role === 'editor' || currentUser?.role === 'admin');
+    return `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${p.title}</div>
+          <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; สร้างโดย: ${p.created_by} &nbsp;|&nbsp; ${created}</div>
+        </div>
+        <span style="background:${bg};color:${color};font-size:12px;padding:4px 12px;border-radius:20px;white-space:nowrap;font-weight:500">${lbl}</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
+        ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:6px 14px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
+        ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" style="padding:6px 14px;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#1565C0;font-weight:600">📎 แนบไฟล์หลังสอบ</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// --- Load confirm list (Admin) ---
+async function loadPlanConfirm() {
+  const el = document.getElementById('planConfirmContainer');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
+  const { data, error } = await sb.from('calibration_plans')
+    .select('*, calibration_plan_items(count)')
+    .in('status', ['pending_plan', 'pending_cert'])
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
+  if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ไม่มีรายการรอยืนยัน ✅</div>'; return; }
+
+  el.innerHTML = data.map(p => {
+    const cnt = p.calibration_plan_items?.[0]?.count || 0;
+    const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
+    const isPendingPlan = p.status === 'pending_plan';
+    const isPendingCert = p.status === 'pending_cert';
+    const badgeLbl = isPendingPlan ? '🟡 รอยืนยันแผน' : '🔵 รอยืนยันสอบ';
+    const badgeBg = isPendingPlan ? '#fff8e1' : '#e3f2fd';
+    const badgeColor = isPendingPlan ? '#F57F17' : '#1565C0';
+    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;padding:16px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${p.title}</div>
+          <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+        </div>
+        <span style="background:${badgeBg};color:${badgeColor};font-size:12px;padding:4px 12px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
+        ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:6px 14px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
+        ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:6px 16px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
+        ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:6px 16px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
+        <button onclick="confirmPlan('${p.id}','rejected')" style="padding:6px 14px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// --- Confirm plan ---
+async function confirmPlan(planId, newStatus) {
+  showLoading('กำลังอัพเดทสถานะ...');
+  try {
+    const updateData = { status: newStatus };
+    if (newStatus === 'planned') updateData.plan_confirmed_by = currentUser.username;
+    if (newStatus === 'completed') updateData.cert_confirmed_by = currentUser.username;
+    const { error } = await sb.from('calibration_plans').update(updateData).eq('id', planId);
+    if (error) throw error;
+    hideLoading();
+    showToast('✅ อัพเดทสถานะเรียบร้อย', 'success');
+    loadPlanConfirm();
+    loadPlanConfirmBadge();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// --- Attach cert after calibration ---
+let attachCertPlanId = null;
+function openAttachCertModal(planId) {
+  attachCertPlanId = planId;
+  document.getElementById('attachCertModal').classList.add('open');
+}
+function closeAttachCertModal() {
+  document.getElementById('attachCertModal').classList.remove('open');
+  attachCertPlanId = null;
+  document.getElementById('certAttachFile').value = '';
+}
+async function submitAttachCert() {
+  const file = document.getElementById('certAttachFile').files[0];
+  if (!file) { showToast('กรุณาเลือกไฟล์', 'error'); return; }
+  showLoading('กำลังอัพโหลด...');
+  try {
+    const ext = file.name.split('.').pop();
+    const fileName = `cert_${attachCertPlanId}_${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('calibration-plans').upload(fileName, file);
+    if (upErr) throw upErr;
+    const { data: urlData } = sb.storage.from('calibration-plans').getPublicUrl(fileName);
+    const { error } = await sb.from('calibration_plans').update({
+      cert_file_url: urlData?.publicUrl || fileName,
+      status: 'pending_cert'
+    }).eq('id', attachCertPlanId);
+    if (error) throw error;
+    hideLoading();
+    showToast('✅ ส่งไฟล์ให้ Admin ยืนยันแล้ว', 'success');
+    closeAttachCertModal();
+    loadPlanList();
+    loadPlanConfirmBadge();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// --- Badge notification ---
+async function loadPlanConfirmBadge() {
+  if (currentUser?.role !== 'admin') return;
+  const { count } = await sb.from('calibration_plans')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['pending_plan', 'pending_cert']);
+  const badge = document.getElementById('planConfirmBadge');
+  const navBadge = document.getElementById('navPlanBadge');
+  if (badge) { badge.textContent = count || 0; badge.style.display = count > 0 ? 'inline' : 'none'; }
+  if (navBadge) { navBadge.textContent = count || 0; navBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
+}
+
+
 function exportExcel() {
   if (!filteredData.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
   if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
@@ -2831,7 +3366,7 @@ function showPage(page) {
   if (tb) tb.textContent = t[0];
   if (ts) ts.textContent = t[1];
 
-  if (page === 'monthly') renderMonthly();
+  if (page === 'plan') { loadPlanConfirmBadge(); initPlanPage(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
   if (page === 'plan') initPlanPage();
