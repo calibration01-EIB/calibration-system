@@ -213,6 +213,11 @@ tbody tr:hover { background: var(--surface2); }
 .plan-sum-card .num { font-size:28px; font-weight:700; line-height:1; }
 .plan-sum-card .lbl { font-size:12px; color:var(--text3); margin-top:3px; }
 
+/* MODAL FOOTER */
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface2); border-radius: 0 0 14px 14px; }
+.btn-secondary { padding: 10px 20px; background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text2); transition: all .15s; }
+.btn-secondary:hover { border-color: var(--text2); color: var(--text); }
+
 /* TOAST */
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all .3s; max-width: 320px; }
 .toast.show { transform: translateY(0); opacity: 1; }
@@ -1051,7 +1056,7 @@ function renderDonut() {
 function renderAlerts() {
   const el = document.getElementById('alertList');
   if (!el) return;
-  const alerts = allData.filter(d => d.days_left !== null && d.days_left >= -1 && d.days_left <= 7).sort((a,b) => a.days_left - b.days_left).slice(0,8);
+  const alerts = allData.filter(d => d.days_left !== null && d.days_left <= 7).sort((a,b) => a.days_left - b.days_left).slice(0,8);
   if (!alerts.length) { el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ไม่มีเครื่องมือที่ใกล้ครบกำหนด</div>`; return; }
   el.innerHTML = alerts.map(d => {
     const isOver = d.days_left < 0;
@@ -1066,6 +1071,7 @@ function renderAlerts() {
 // DATA
 // ====================================================
 let allData = [], filteredData = [];
+let fileCountCache = {};
 
 async function loadData(forceRefresh = false) {
   const CACHE_KEY = 'ilc_instruments_cache';
@@ -1324,7 +1330,7 @@ function renderTable() {
       <td>${d.cal_frequency||'–'}</td>
       <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
       <td>${statusBadge}</td>
-      <td><button class="bid="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${d.id_code||''}','${d.cert_no||''}','${(d.instrument_name||'').replace(/'/g,"\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
+      <td><button id="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${(d.id_code||'')}','${(d.cert_no||'')}','${(d.instrument_name||'').replace(/'/g,"\\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
       <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
@@ -1383,10 +1389,12 @@ async function loadCertFiles(instrumentId, idCode) {
     renderFileList(data || [], folder);
 
     // อัพเดทปุ่มในตาราง
-    const btn = document.querySelector(`button[onclick*="openCertModal(${instrumentId},"]`);
+    const validCnt = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder').length;
+    fileCountCache[instrumentId] = validCnt;
+    const btn = document.getElementById('certbtn-' + instrumentId);
     if (btn) {
-      if (data && data.length > 0) { btn.className = 'btn-cert btn-cert-has'; btn.innerHTML = `📎 ${data.length} ไฟล์`; }
-      else { btn.className = 'btn-cert btn-cert-empty'; btn.innerHTML = '📎 ไฟล์'; }
+      btn.className = validCnt > 0 ? 'btn-cert btn-cert-has' : 'btn-cert btn-cert-empty';
+      btn.innerHTML = validCnt > 0 ? `📎 ${validCnt} ไฟล์` : '📎 ไฟล์';
     }
   } catch(e) {
     document.getElementById('fileListSection').innerHTML = '<p style="color:var(--red);font-size:13px">โหลดไฟล์ไม่สำเร็จ</p>';
@@ -1675,20 +1683,21 @@ async function saveInstrument() {
       await logAudit('เพิ่ม', inserted, null);
       showToast('เพิ่มเครื่องมือแล้ว', 'success');
     }
+    const highlightCode = payload.id_code || '';
     closeInstrumentModal();
-    await loadData();
+    await loadData(true);
     // scroll ไปหาแถวที่แก้ไข/เพิ่ม
-    if (editingInstrumentId) {
+    if (highlightCode) {
       setTimeout(() => {
         const rows = document.querySelectorAll('#dataTable tr');
         rows.forEach(row => {
-          if (row.textContent.includes(payload.id_code || '')) {
+          if (row.textContent.includes(highlightCode)) {
             row.style.background = '#e0f4f1';
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => { row.style.background = ''; }, 2500);
           }
         });
-      }, 500);
+      }, 800);
     }
   } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
@@ -2923,12 +2932,12 @@ function notifGoAll() {
 const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 let planSchedule = {};
-let fileCountCache = {}; // { instrumentId: count } // { id: 'YYYY-MM-DD' }
 
 function initOldPlanPage() {
   const planMonth = document.getElementById('planMonth');
   const planYear  = document.getElementById('planYear');
   if (planMonth && !planMonth.dataset.init) {
+    const now = new Date();
     planMonth.value = now.getMonth() + 1;
     const buddhistYear = now.getFullYear() + 543;
     planYear.value = buddhistYear;
@@ -3409,6 +3418,15 @@ function showPage(page) {
 // ====================================================
 // INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
+
+function filterByStatus(status) {
+  const sel = document.getElementById('statusFilter');
+  if (sel) sel.value = status;
+  filterData();
+  const tbl = document.getElementById('dataTable');
+  if (tbl) tbl.closest('section, .page, [id^="page"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 (function init() {
   const session = getSession();
   if (session) {
