@@ -2236,39 +2236,51 @@ function switchPlanTab(tab) {
 
 // --- Init plan page ---
 function initPlanPage() {
+  if (!allData.length) { setTimeout(initPlanPage, 500); return; }
+
   // populate filters
   const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
   const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
   const tSel = document.getElementById('planFilterType');
   const dSel = document.getElementById('planFilterDept');
-  if (tSel) { tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join(''); }
-  if (dSel) { dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option>${d}</option>`).join(''); }
+  if (tSel && tSel.options.length <= 1) {
+    tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${t}">${t.split(' (')[0]}</option>`).join('');
+  }
+  if (dSel && dSel.options.length <= 1) {
+    dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+  }
+
+  // default: แสดงเกินกำหนด+ใกล้ครบ
+  const sSel = document.getElementById('planFilterStatus');
+  if (sSel && !sSel.value) sSel.value = '';
+
   filterPlanInstruments();
 
   // แสดง tab confirm เฉพาะ admin
   const role = currentUser?.role;
-  if (role === 'admin') {
-    document.getElementById('planTab-confirm').style.display = 'inline-flex';
-    loadPlanConfirmBadge();
-  }
+  const confirmTab = document.getElementById('planTab-confirm');
+  if (confirmTab) confirmTab.style.display = role === 'admin' ? 'inline-flex' : 'none';
+  if (role === 'admin') loadPlanConfirmBadge();
+
   // แสดง tab new เฉพาะ editor/admin
-  const canCreate = role === 'admin' || role === 'editor';
-  document.getElementById('planTab-new').style.display = canCreate ? 'inline-flex' : 'none';
+  const newTab = document.getElementById('planTab-new');
+  if (newTab) newTab.style.display = (role === 'admin' || role === 'editor') ? 'inline-flex' : 'none';
 }
 
 // --- Filter เครื่องมือ ---
 function filterPlanInstruments() {
-  const type = document.getElementById('planFilterType')?.value || '';
-  const dept = document.getElementById('planFilterDept')?.value || '';
-  const status = document.getElementById('planFilterStatus')?.value || '';
+  const type   = document.getElementById('planFilterType')?.value?.trim() || '';
+  const dept   = document.getElementById('planFilterDept')?.value?.trim() || '';
+  const status = document.getElementById('planFilterStatus')?.value?.trim() || '';
+
   planFilteredItems = allData.filter(d => {
     if (type && d.instrument_type !== type) return false;
     if (dept && d.department !== dept) return false;
     if (status) {
       const days = d.days_left;
-      if (status === 'overdue' && (days === null || days >= 0)) return false;
-      if (status === 'warning' && (days === null || days < 0 || days > 30)) return false;
-      if (status === 'ok' && (days === null || days <= 30)) return false;
+      if (status === 'overdue' && !(days !== null && days < 0)) return false;
+      if (status === 'warning' && !(days !== null && days >= 0 && days <= 30)) return false;
+      if (status === 'ok'      && !(days !== null && days > 30)) return false;
     }
     return true;
   });
