@@ -511,9 +511,13 @@ tbody tr:hover { background: var(--surface2); }
           <input type="text" id="auditSearch" placeholder="🔍 ค้นหา ผู้ใช้, ID Code, การกระทำ..." style="flex:1;min-width:200px" oninput="filterAuditLogs()">
           <select id="auditActionFilter" onchange="filterAuditLogs()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
             <option value="">ทุกการกระทำ</option>
-            <option value="เพิ่ม">เพิ่ม</option>
-            <option value="แก้ไข">แก้ไข</option>
-            <option value="ลบ">ลบ</option>
+            <option value="เพิ่ม">➕ เพิ่ม</option>
+            <option value="แก้ไข">✏️ แก้ไข</option>
+            <option value="ลบ">🗑️ ลบ</option>
+            <option value="อัพโหลดไฟล์">📎 อัพโหลดไฟล์</option>
+            <option value="ลบไฟล์">🗂️ ลบไฟล์</option>
+            <option value="วางแผนสอบเทียบ">📅 วางแผนสอบเทียบ</option>
+            <option value="ยกเลิกแผน">❌ ยกเลิกแผน</option>
           </select>
         </div>
         <div class="table-wrap">
@@ -1555,7 +1559,7 @@ async function deleteFile(folder, name) {
   const idCode = document.getElementById('mIdCode').textContent;
   const inst = allData.find(d => d.id === currentInstrumentId);
   await logAudit('ลบไฟล์', inst || { id: currentInstrumentId, id_code: idCode }, {
-    file: name,
+    ไฟล์: { from: name, to: '(ลบแล้ว)' },
   });
   await loadCertFiles(currentInstrumentId, idCode);
 }
@@ -1576,7 +1580,7 @@ async function handleFileSelect(files) {
     showToast('อัพโหลดสำเร็จ', 'success');
     const inst = allData.find(d => d.id === currentInstrumentId);
     await logAudit('อัพโหลดไฟล์', inst || { id: currentInstrumentId, id_code: idCode }, {
-      files: uploadedNames.join(', '),
+      ไฟล์: { from: '–', to: uploadedNames.join(', ') },
     });
     await loadCertFiles(currentInstrumentId, idCode);
   } catch(e) { showToast('อัพโหลดไม่สำเร็จ: ' + e.message, 'error'); }
@@ -2291,11 +2295,21 @@ function renderAuditTable() {
     return;
   }
   tbody.innerHTML = auditFiltered.map(d => {
-    const actionBadge = d.action === 'เพิ่ม' 
+    const actionBadge = d.action === 'เพิ่ม'
       ? '<span class="badge badge-green">➕ เพิ่ม</span>'
       : d.action === 'แก้ไข'
       ? '<span class="badge badge-amber">✏️ แก้ไข</span>'
-      : '<span class="badge badge-red">🗑️ ลบ</span>';
+      : d.action === 'ลบ'
+      ? '<span class="badge badge-red">🗑️ ลบ</span>'
+      : d.action === 'อัพโหลดไฟล์'
+      ? '<span class="badge" style="background:#e0f0ff;color:#0066cc">📎 อัพโหลดไฟล์</span>'
+      : d.action === 'ลบไฟล์'
+      ? '<span class="badge" style="background:#fce8e8;color:#cc2200">🗂️ ลบไฟล์</span>'
+      : d.action === 'วางแผนสอบเทียบ'
+      ? '<span class="badge" style="background:#e8f5e9;color:#1b5e20">📅 วางแผน</span>'
+      : d.action === 'ยกเลิกแผน'
+      ? '<span class="badge" style="background:#f5f5f5;color:#555">❌ ยกเลิกแผน</span>'
+      : `<span class="badge" style="background:#f0f0f0;color:#333">${d.action}</span>`;
     
     const dt = d.created_at ? new Date(d.created_at).toLocaleString('th-TH', {
       year:'numeric', month:'2-digit', day:'2-digit',
@@ -2304,9 +2318,12 @@ function renderAuditTable() {
 
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
-      details = Object.entries(d.changes).map(([field, val]) =>
-        `<div style="font-size:22px"><strong>${field}:</strong> <span style="color:var(--red)">${val.from}</span> → <span style="color:var(--green)">${val.to}</span></div>`
-      ).join('');
+      details = Object.entries(d.changes).map(([field, val]) => {
+        if (val && typeof val === 'object' && ('from' in val || 'to' in val)) {
+          return `<div><strong>${field}:</strong> <span style="color:var(--red)">${val.from ?? '–'}</span> → <span style="color:var(--green)">${val.to ?? '–'}</span></div>`;
+        }
+        return `<div><strong>${field}:</strong> <span style="color:var(--green)">${val}</span></div>`;
+      }).join('');
     }
 
     return `<tr>
@@ -3253,7 +3270,7 @@ function setPlanSchedule(id, dateVal) {
   // Audit log
   const inst = allData.find(d => d.id == id);
   if (dateVal) {
-    logAudit('วางแผนสอบเทียบ', inst || { id, id_code: String(id) }, { วันที่นัด: dateVal });
+    logAudit('วางแผนสอบเทียบ', inst || { id, id_code: String(id) }, { วันที่นัด: { from: planSchedule[id] || '–', to: dateVal } });
   } else {
     logAudit('ยกเลิกแผน', inst || { id, id_code: String(id) }, null);
   }
