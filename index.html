@@ -1156,6 +1156,7 @@ async function loadData(forceRefresh = false) {
     renderCategoryCards();
     renderDonut();
     renderAlerts();
+    loadPlanStatusMap();
     updateNotificationBell();
   };
 
@@ -1395,7 +1396,18 @@ function renderTable() {
       <td>${d.cal_frequency||'–'}</td>
       <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
       <td>${statusBadge}</td>
-      <td>${(()=>{const pl=planSchedule[d.id];return pl?`<span style="font-size:11px;background:#e8f5e9;color:#2E7D32;border-radius:6px;padding:2px 7px;font-weight:600;white-space:nowrap">📅 ${pl}</span>`:`<span style="font-size:11px;background:#f5f5f5;color:#aaa;border-radius:6px;padding:2px 7px;white-space:nowrap">⬜ ยังไม่วางแผน</span>`})()}</td>
+      <td>${(()=>{
+        const ps = planStatusMap[d.id];
+        if (!ps) return `<button onclick="goToPlanWithItem(${d.id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        const sMap = {
+          pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#FAEEDA'],
+          planned:      ['✅ วางแผนแล้ว','#3B6D11','#EAF3DE'],
+          pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#E6F1FB'],
+          completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
+        };
+        const [lbl,color,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
+        return `<span style="font-size:11px;background:${bg};color:${color};border-radius:6px;padding:2px 8px;white-space:nowrap;font-weight:500">${lbl}</span>`;
+      })()}</td>
       <td><button id="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${(d.id_code||'')}','${(d.cert_no||'')}','${(d.instrument_name||'').replace(/'/g,"\\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
       <td style="white-space:nowrap" class="td-manage"></td>
@@ -3087,6 +3099,24 @@ function notifGoAll() {
 const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 let planSchedule = {};
+let planStatusMap = {}; // instrument_id → {status, title, planned_date}
+
+// โหลดสถานะแผนจาก Supabase เพื่อแสดงในตาราง
+async function loadPlanStatusMap() {
+  try {
+    const { data } = await sb.from('calibration_plan_items')
+      .select('instrument_id, calibration_plans!inner(status, title, planned_date)')
+      .in('calibration_plans.status', ['pending_plan','planned','pending_cert','completed']);
+    planStatusMap = {};
+    if (data) {
+      data.forEach(item => {
+        const p = item.calibration_plans;
+        planStatusMap[item.instrument_id] = { status: p.status, title: p.title, planned_date: p.planned_date };
+      });
+    }
+    renderTable(); // re-render ตารางหลัง load
+  } catch(e) { /* ignore */ }
+}
 
 function initOldPlanPage() {
   const planMonth = document.getElementById('planMonth');
