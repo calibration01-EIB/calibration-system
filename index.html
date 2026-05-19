@@ -1020,6 +1020,22 @@ function renderMobileCards() {
     }
     const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
     const typShort = (d.instrument_type||'–').split(' (')[0];
+
+    // สถานะวางแผน
+    const ps = planStatusMap[d.id];
+    const sMap = {
+      pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#2A2000'],
+      planned:      ['✅ วางแผนแล้ว','#3B6D11','#0A1A0A'],
+      pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#001020'],
+      completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#001A14'],
+    };
+    const planBadge = ps
+      ? `<span style="font-size:10px;color:${(sMap[ps.status]||['','#888'])[1]};background:${(sMap[ps.status]||['','','#333'])[2]};border-radius:4px;padding:2px 7px;font-weight:500">${(sMap[ps.status]||[ps.status])[0]}</span>`
+      : `<span style="font-size:10px;color:#888;background:#222;border-radius:4px;padding:2px 7px">📋 ยังไม่วางแผน</span>`;
+    const planBtn = ps
+      ? `<button onclick="goToPlanDetail(${d.id})" style="flex:1;padding:8px;background:#001A14;border:1px solid #0F6E56;border-radius:8px;font-size:12px;color:#34D399;cursor:pointer;font-family:var(--font)">📅 ดูแผน</button>`
+      : `<button onclick="goToPlanWithItem(${d.id})" style="flex:1;padding:8px;background:#001020;border:1px solid #185FA5;border-radius:8px;font-size:12px;color:#60A5FA;cursor:pointer;font-family:var(--font)">📋 วางแผน</button>`;
+
     return `<div style="background:${rowBg};border:0.5px solid #333;border-radius:12px;padding:14px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1;min-width:0;margin-right:8px">
@@ -1027,15 +1043,17 @@ function renderMobileCards() {
           <div style="font-size:12px;color:#aaa;margin-top:2px">${d.brand||''} · ${d.department||''}</div>
         </div>${badge}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:8px">
         <div style="font-size:11px;color:#aaa">🏷 <span style="color:#69F0AE;font-weight:500">${d.id_code||'–'}</span></div>
         <div style="font-size:11px;color:#aaa">📂 ${typShort}</div>
         <div style="font-size:11px;color:#aaa">📅 ครบ: ${dueDate}</div>
         <div style="font-size:11px">${daysText}</div>
       </div>
+      <div style="margin-bottom:8px">${planBadge}</div>
       <div style="display:flex;gap:8px">
-        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:13px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
-        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:13px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 ไฟล์ Cert</button>
+        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:12px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
+        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:12px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 Cert</button>
+        ${planBtn}
       </div>
     </div>`;
   }).join('') || `<div style="text-align:center;padding:32px;color:#888">ไม่พบข้อมูล</div>`;
@@ -1124,12 +1142,34 @@ async function renderAlerts() {
 }
 
 function goToPlanWithItem(instrumentId) {
-  // หา item โดย compare แบบ loose (รองรับทั้ง number และ string)
   const d = allData.find(x => x.id == instrumentId);
   if (d && !planSelectedItems.some(s => s.id == d.id)) {
     planSelectedItems.push(d);
   }
   showPage('plan');
+}
+
+function goToPlanDetail(instrumentId) {
+  showPage('plan');
+  setTimeout(() => {
+    switchPlanTab('list');
+    setTimeout(() => {
+      const ps = planStatusMap[instrumentId];
+      if (!ps) return;
+      const cards = document.querySelectorAll('#planListContainer > div');
+      cards.forEach(card => {
+        const titleEl = card.querySelector('span[style*="font-size:15px"]');
+        if (titleEl && titleEl.textContent.trim() === ps.title) {
+          card.style.transition = 'box-shadow .3s';
+          card.style.boxShadow = '0 0 0 3px #00897B';
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const itemDiv = card.querySelector('[id^="items_"]');
+          if (itemDiv) itemDiv.style.display = 'block';
+          setTimeout(() => { card.style.boxShadow = ''; }, 3000);
+        }
+      });
+    }, 800);
+  }, 400);
 }
 
 // ====================================================
@@ -1406,7 +1446,7 @@ function renderTable() {
           completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
         };
         const [lbl,color,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
-        return `<span style="font-size:11px;background:${bg};color:${color};border-radius:6px;padding:2px 8px;white-space:nowrap;font-weight:500">${lbl}</span>`;
+        return `<button onclick="goToPlanDetail(${d.id})" title="ดูแผน: ${ps.title}" style="font-size:11px;background:${bg};color:${color};border:1px solid ${color}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
       })()}</td>
       <td><button id="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${(d.id_code||'')}','${(d.cert_no||'')}','${(d.instrument_name||'').replace(/'/g,"\\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
