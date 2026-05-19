@@ -1060,6 +1060,7 @@ function renderDonut() {
 function renderAlerts() {
   const el = document.getElementById('alertList');
   if (!el) return;
+  if (!allData.length) { setTimeout(renderAlerts, 500); return; }
 
   // Logic: due date → เดือนสอบ = เดือนก่อน due, ช่วงวางแผน = 1-15 ของเดือนสอบ
   // แจ้งเตือนเครื่องมือที่ days_left อยู่ใน 1-60 วัน (ยังไม่เกิน due)
