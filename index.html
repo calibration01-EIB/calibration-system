@@ -1124,16 +1124,12 @@ async function renderAlerts() {
 }
 
 function goToPlanWithItem(instrumentId) {
-  const d = allData.find(x => x.id === instrumentId);
-  if (!d) { showPage('plan'); return; }
-  // เพิ่มเข้า selectedItems ก่อน
-  if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d);
+  // หา item โดย compare แบบ loose (รองรับทั้ง number และ string)
+  const d = allData.find(x => x.id == instrumentId);
+  if (d && !planSelectedItems.some(s => s.id == d.id)) {
+    planSelectedItems.push(d);
+  }
   showPage('plan');
-  // รอ initPlanPage ทำงานเสร็จแล้วค่อย render ใหม่
-  setTimeout(() => {
-    filterPlanInstruments();
-    updatePlanSelectCount();
-  }, 800);
 }
 
 // ====================================================
@@ -2364,7 +2360,14 @@ function initPlanPage() {
     dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
   }
 
-  // โหลดข้อมูลทันทีโดยไม่ reset planSelectedItems
+  // ถ้ามี planSelectedItems รอ pre-select ให้ filter ตาม type ของ item นั้น
+  if (planSelectedItems.length > 0) {
+    const firstItem = planSelectedItems[0];
+    const tSel2 = document.getElementById('planFilterType');
+    if (tSel2 && firstItem.instrument_type) tSel2.value = firstItem.instrument_type;
+  }
+
+  // โหลดข้อมูลทันที ไม่ reset planSelectedItems
   filterPlanInstruments();
 
   // แสดง tab confirm เฉพาะ admin
