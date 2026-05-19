@@ -2410,16 +2410,20 @@ function renderPlanInstrumentTable() {
     return;
   }
   const bd = 'border-bottom:1px solid var(--border)';
+  let firstSelectedIdx = -1;
   tbody.innerHTML = planFilteredItems.map((d, i) => {
     const days = d.days_left;
-    const checked = planSelectedItems.some(s => s.id == d.id) ? 'checked' : '';
+    const isSelected = planSelectedItems.some(s => s.id == d.id);
+    if (isSelected && firstSelectedIdx === -1) firstSelectedIdx = i;
+    const checked = isSelected ? 'checked' : '';
+    const rowBg = isSelected ? 'background:#e8f5e9;' : '';
     let badge = '';
     if (days !== null && days < 0) badge = `<span style="background:var(--red-light);color:var(--red);font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
     else if (days !== null && days <= 30) badge = `<span style="background:var(--amber-light);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
     else badge = `<span style="background:var(--green-light);color:var(--green);font-size:11px;padding:2px 8px;border-radius:20px">ปกติ</span>`;
     const due = d.due_date ? d.due_date.slice(0,10).split('-').reverse().join('/') : '–';
     const typShort = (d.instrument_type||'–').split(' (')[0];
-    return `<tr>
+    return `<tr style="${rowBg}" id="planRow_${i}">
       <td style="padding:8px 12px;${bd};text-align:center"><input type="checkbox" ${checked} onchange="togglePlanItem(${i}, this)"></td>
       <td style="padding:8px 12px;${bd};color:var(--accent);font-weight:600">${d.id_code||'–'}</td>
       <td style="padding:8px 12px;${bd};font-weight:500">${d.instrument_name||'–'}</td>
@@ -2430,6 +2434,14 @@ function renderPlanInstrumentTable() {
     </tr>`;
   }).join('');
   updatePlanSelectCount();
+
+  // scroll ไปหารายการที่ pre-select
+  if (firstSelectedIdx >= 0) {
+    setTimeout(() => {
+      const row = document.getElementById(`planRow_${firstSelectedIdx}`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }
 }
 
 function togglePlanItem(idx, cb) {
