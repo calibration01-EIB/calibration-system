@@ -2412,7 +2412,7 @@ function renderPlanInstrumentTable() {
   const bd = 'border-bottom:1px solid var(--border)';
   tbody.innerHTML = planFilteredItems.map((d, i) => {
     const days = d.days_left;
-    const checked = planSelectedItems.some(s => s.id === d.id) ? 'checked' : '';
+    const checked = planSelectedItems.some(s => s.id == d.id) ? 'checked' : '';
     let badge = '';
     if (days !== null && days < 0) badge = `<span style="background:var(--red-light);color:var(--red);font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
     else if (days !== null && days <= 30) badge = `<span style="background:var(--amber-light);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
@@ -2435,25 +2435,25 @@ function renderPlanInstrumentTable() {
 function togglePlanItem(idx, cb) {
   const d = planFilteredItems[idx];
   if (cb.checked) {
-    if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d);
+    if (!planSelectedItems.some(s => s.id == d.id)) planSelectedItems.push(d);
   } else {
-    planSelectedItems = planSelectedItems.filter(s => s.id !== d.id);
+    planSelectedItems = planSelectedItems.filter(s => s.id != d.id);
   }
   updatePlanSelectCount();
 }
 
 function toggleAllPlanCheck(cb) {
   if (cb.checked) {
-    planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d); });
+    planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id == d.id)) planSelectedItems.push(d); });
   } else {
     const ids = planFilteredItems.map(d => d.id);
-    planSelectedItems = planSelectedItems.filter(s => !ids.includes(s.id));
+    planSelectedItems = planSelectedItems.filter(s => !ids.map(String).includes(String(s.id)));
   }
   renderPlanInstrumentTable();
 }
 
 function selectAllPlanItems() {
-  planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id === d.id)) planSelectedItems.push(d); });
+  planFilteredItems.forEach(d => { if (!planSelectedItems.some(s => s.id == d.id)) planSelectedItems.push(d); });
   renderPlanInstrumentTable();
 }
 
