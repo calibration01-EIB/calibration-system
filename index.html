@@ -3897,7 +3897,7 @@ function renderSWTable() {
       '<td style="white-space:nowrap">' +
         (canEdit
           ? '<button onclick="openSWModal(' + w.id + ')" style="background:var(--accent-light);color:var(--accent);border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--font)">✏️ แก้ไข</button>' +
-            '<button onclick="deleteSW(' + w.id + ','' + (w.id_code || '').replace(/'/g,"\'") + '')" style="background:#fce8e8;color:var(--red);border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--font);margin-left:4px">🗑️ ลบ</button>'
+            '<button onclick="deleteSW(' + w.id + ',\'' + (w.id_code || '').replace(/'/g,"\\'") + '\')" style="background:#fce8e8;color:var(--red);border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--font);margin-left:4px">🗑️ ลบ</button>'
           : '–') +
       '</td>' +
     '</tr>';
