@@ -712,38 +712,38 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- PAGE: STANDARD WEIGHTS -->
       <div id="pageWeights" class="page-content" style="display:none">
-        <div class="section-header">
-          <h2>⚖️ Standard Weights</h2>
-          <button class="btn-add" onclick="openSWModal()">+ เพิ่มลูกตุ้ม</button>
+
+        <!-- KPI Cards -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div style="background:#00695C;border-radius:14px;padding:16px 18px;cursor:default">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ทั้งหมด</div>
+            <div style="font-size:28px;font-weight:700;color:white;line-height:1" id="swTotal">–</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px">ลูกตุ้ม</div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใช้งานได้</div>
+            <div style="font-size:28px;font-weight:700;color:var(--green);line-height:1" id="swOk">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px">✅ ปกติ</span></div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใกล้หมดอายุ</div>
+            <div style="font-size:28px;font-weight:700;color:var(--amber);line-height:1" id="swWarn">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:11px">⚠️ ≤30 วัน</span></div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">หมดอายุ</div>
+            <div style="font-size:28px;font-weight:700;color:var(--red);line-height:1" id="swExpired">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:20px;font-size:11px">❌ เกินกำหนด</span></div>
+          </div>
         </div>
 
-        <!-- Stats cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label">ทั้งหมด</div>
-            <div class="kpi-value" id="swTotal">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--green)">✅ ใช้งานได้</div>
-            <div class="kpi-value" id="swOk" style="color:var(--green)">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--amber)">⚠️ ใกล้หมดอายุ</div>
-            <div class="kpi-value" id="swWarn" style="color:var(--amber)">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--red)">❌ หมดอายุ</div>
-            <div class="kpi-value" id="swExpired" style="color:var(--red)">–</div>
-          </div>
-        </div>
-
-        <!-- Filter bar -->
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID Code, Serial, ค่าพิกัด..." 
-            style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)"
+        <!-- Filter bar + ปุ่ม -->
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID Code, Serial, ค่าพิกัด..."
+            style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none"
             oninput="filterSW()">
           <select id="swClassFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)">
+            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:120px">
             <option value="">ทุก Class</option>
             <option value="E1">E1</option>
             <option value="E2">E2</option>
@@ -754,35 +754,38 @@ tbody tr:hover { background: var(--surface2); }
             <option value="M3">M3</option>
           </select>
           <select id="swStatusFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)">
+            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:140px">
             <option value="">ทุกสถานะ</option>
             <option value="ok">✅ ใช้งานได้</option>
             <option value="warn">⚠️ ใกล้หมดอายุ</option>
             <option value="expired">❌ หมดอายุ</option>
           </select>
+          <button onclick="openSWModal()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มลูกตุ้ม</button>
         </div>
 
         <!-- Table -->
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID Code</th>
-                <th>ค่าพิกัด</th>
-                <th>ค่าจริง</th>
-                <th>Class</th>
-                <th>Serial No.</th>
-                <th>เลขที่ใบรับรอง</th>
-                <th>วันสอบเทียบ</th>
-                <th>วันสิ้นอายุ</th>
-                <th>สถานะ</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="swTableBody">
-              <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
-            </tbody>
-          </table>
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
+          <div class="table-wrap" style="max-height:calc(100vh - 380px)">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Code</th>
+                  <th>ค่าพิกัด</th>
+                  <th>ค่าจริง</th>
+                  <th>CLASS</th>
+                  <th>SERIAL NO.</th>
+                  <th>เลขที่ใบรับรอง</th>
+                  <th>วันสอบเทียบ</th>
+                  <th>วันสิ้นอายุ</th>
+                  <th>สถานะ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="swTableBody">
+                <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
