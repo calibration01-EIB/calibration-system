@@ -3819,7 +3819,7 @@ async function loadStandardWeights() {
   const tbody = document.getElementById('swTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>';
   try {
-    const { data, error } = await supabase.from('standard_weights').select('*').order('nominal_value');
+    const { data, error } = await sb.from('standard_weights').select('*').order('nominal_value');
     if (error) throw error;
     swData = data || [];
     filterSW();
@@ -3977,10 +3977,10 @@ async function saveSW() {
     const isNew = !editingSWId;
     let result;
     if (editingSWId) {
-      result = await supabase.from('standard_weights').update(payload).eq('id', editingSWId);
+      result = await sb.from('standard_weights').update(payload).eq('id', editingSWId);
     } else {
       payload.created_at = new Date().toISOString();
-      result = await supabase.from('standard_weights').insert(payload);
+      result = await sb.from('standard_weights').insert(payload);
     }
     if (result.error) throw result.error;
     const label = payload.nominal_value + ' ' + payload.unit + ' Class ' + (payload.class_grade || '–') + ' (' + (payload.id_code || 'ไม่มี ID') + ')';
@@ -4000,7 +4000,7 @@ async function deleteSW(id, idCode) {
   if (!confirm('ต้องการลบลูกตุ้ม ' + (idCode || id) + ' ใช่หรือไม่?')) return;
   try {
     showLoading('กำลังลบ...');
-    const { error } = await supabase.from('standard_weights').delete().eq('id', id);
+    const { error } = await sb.from('standard_weights').delete().eq('id', id);
     if (error) throw error;
     const fakeInst = { id, id_code: idCode, instrument_name: 'Standard Weight' };
     await logAudit('ลบ', fakeInst, { 'ลูกตุ้ม': { from: idCode || String(id), to: '(ลบแล้ว)' } });
