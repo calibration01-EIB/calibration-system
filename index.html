@@ -859,15 +859,14 @@ tbody tr:hover { background: var(--surface2); }
                 style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ความถี่การสอบเทียบ</label>
+              <label style="font-size:12px;font-weight:600;color:var(--text2)">ความถี่สอบเทียบ</label>
               <select id="swCalFrequency" onchange="autoCalcSWDue()"
                 style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);margin-top:4px">
-                <option value="1 ปี" selected>1 ปี</option>
-                <option value="2 ปี">2 ปี</option>
-                <option value="3 ปี">3 ปี</option>
-                <option value="5 ปี">5 ปี</option>
+                <option value="1">1 ปี</option>
+                <option value="2" selected>2 ปี</option>
               </select>
             </div>
+
             <div style="grid-column:span 2">
               <label style="font-size:12px;font-weight:600;color:var(--text2)">วันสิ้นอายุ (คำนวณอัตโนมัติ)</label>
               <input id="swDueDate" type="date"
@@ -3917,7 +3916,7 @@ function openSWModal(id) {
     .forEach(function(fid) { var el = document.getElementById(fid); if(el) el.value = ''; });
   var u = document.getElementById('swUnit'); if(u) u.value = 'g';
   var c = document.getElementById('swClass'); if(c) c.value = '';
-  var f = document.getElementById('swCalFrequency'); if(f) f.value = '1 ปี';
+
   if (id) {
     const w = swData.find(function(x){ return x.id === id; });
     if (w) {
@@ -3929,7 +3928,7 @@ function openSWModal(id) {
       set('swRemark', w.remark);
       var eu = document.getElementById('swUnit'); if(eu) eu.value = w.unit || 'g';
       var ec = document.getElementById('swClass'); if(ec) ec.value = w.class_grade || '';
-      var ef = document.getElementById('swCalFrequency'); if(ef) ef.value = w.cal_frequency || '1 ปี';
+
     }
   } else {
     title.textContent = '⚖️ เพิ่มลูกตุ้มมาตรฐาน';
@@ -3945,10 +3944,11 @@ function closeSWModal() {
 
 function autoCalcSWDue() {
   var cal = document.getElementById('swCalDate') && document.getElementById('swCalDate').value;
-  var freq = (document.getElementById('swCalFrequency') && document.getElementById('swCalFrequency').value) || '1 ปี';
+  var freqEl = document.getElementById('swCalFrequency');
+  var freq = freqEl ? parseInt(freqEl.value) || 2 : 2;
   if (!cal) return;
   var d = new Date(cal);
-  d.setFullYear(d.getFullYear() + (parseInt(freq) || 1));
+  d.setFullYear(d.getFullYear() + freq);
   var due = d.toISOString().slice(0, 10);
   var el = document.getElementById('swDueDate');
   if (el) el.value = due;
@@ -3970,7 +3970,7 @@ async function saveSW() {
     cert_no: get('swCertNo') || null,
     manufacturer: get('swManufacturer') || null,
     cal_date: get('swCalDate') || null,
-    cal_frequency: get('swCalFrequency') || '1 ปี',
+
     due_date: get('swDueDate') || null,
     remark: get('swRemark') || null,
     updated_at: new Date().toISOString(),
