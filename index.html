@@ -547,6 +547,7 @@ tbody tr:hover { background: var(--surface2); }
           <button onclick="switchPlanTab('new')" id="planTab-new" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;background:#00695C;color:white;transition:all .15s">+ สร้างแผนใหม่</button>
           <button onclick="switchPlanTab('list')" id="planTab-list" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">แผนทั้งหมด</button>
           <button onclick="switchPlanTab('confirm')" id="planTab-confirm" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;display:none">รอยืนยัน <span id="planConfirmBadge" style="background:#E53935;color:white;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:4px;display:none">0</span></button>
+          <button onclick="switchPlanTab('history')" id="planTab-history" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">🕐 ประวัติ</button>
         </div>
 
         <!-- TAB: สร้างแผนใหม่ -->
@@ -677,6 +678,24 @@ tbody tr:hover { background: var(--surface2); }
           <div id="planListContainer" style="display:flex;flex-direction:column;gap:12px">
             <div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>
           </div>
+        </div>
+
+        <!-- TAB: ประวัติ -->
+        <div id="planTabHistory" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📋 ประวัติการดำเนินการทั้งหมด</div>
+            <select id="historyFilterAction" onchange="loadPlanHistory()" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;outline:none">
+              <option value="">ทุกประเภท</option>
+              <option value="สร้างแผน">สร้างแผน</option>
+              <option value="แก้ไขแผน">แก้ไขแผน</option>
+              <option value="อนุมัติแผน">อนุมัติแผน</option>
+              <option value="ปฏิเสธแผน">ปฏิเสธแผน</option>
+              <option value="แนบไฟล์สอบ">แนบไฟล์สอบ</option>
+              <option value="ยืนยันสอบ">ยืนยันสอบ</option>
+              <option value="ลบแผน">ลบแผน</option>
+            </select>
+          </div>
+          <div id="planHistoryContainer" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <!-- TAB: รอยืนยัน (Admin/Editor) -->
@@ -2621,16 +2640,20 @@ let planFileObj = null;     // ไฟล์ที่แนบ
 
 // --- Switch tabs ---
 function switchPlanTab(tab) {
-  ['new','list','confirm'].forEach(t => {
-    document.getElementById('planTab-' + t).style.background = t === tab ? '#00695C' : 'transparent';
-    document.getElementById('planTab-' + t).style.color = t === tab ? 'white' : 'var(--text2)';
-    document.getElementById('planTab-' + t).style.fontWeight = t === tab ? '600' : '500';
+  ['new','list','confirm','history'].forEach(t => {
+    const el = document.getElementById('planTab-' + t);
+    if (!el) return;
+    el.style.background = t === tab ? '#00695C' : 'transparent';
+    el.style.color = t === tab ? 'white' : 'var(--text2)';
+    el.style.fontWeight = t === tab ? '600' : '500';
   });
   document.getElementById('planTabNew').style.display = tab === 'new' ? 'block' : 'none';
   document.getElementById('planTabList').style.display = tab === 'list' ? 'block' : 'none';
   document.getElementById('planTabConfirm').style.display = tab === 'confirm' ? 'block' : 'none';
+  document.getElementById('planTabHistory').style.display = tab === 'history' ? 'block' : 'none';
   if (tab === 'list') loadPlanList();
   if (tab === 'confirm') loadPlanConfirm();
+  if (tab === 'history') loadPlanHistory();
 }
 
 // --- Init plan page ---
@@ -2965,6 +2988,56 @@ function viewPlanFile(url) {
   const a = document.createElement('a');
   a.href = url; a.target = '_blank'; a.rel = 'noopener';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ─── Plan History (Tab) ──────────────────────────────────────────────────────
+
+async function loadPlanHistory() {
+  const el = document.getElementById('planHistoryContainer');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">กำลังโหลด...</div>';
+
+  const filterAction = document.getElementById('historyFilterAction')?.value || '';
+  let query = sb.from('plan_audit_log')
+    .select('*, calibration_plans(title)')
+    .order('action_at', { ascending: false })
+    .limit(100);
+  if (filterAction) query = query.eq('action', filterAction);
+
+  const { data, error } = await query;
+  if (error || !data?.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
+    return;
+  }
+
+  const actionColor = {
+    'สร้างแผน':   { bg:'#E8F5E9', color:'#2E7D32', icon:'🆕' },
+    'แก้ไขแผน':  { bg:'#FFF8E1', color:'#F57F17', icon:'✏️' },
+    'อนุมัติแผน': { bg:'#E3F2FD', color:'#1565C0', icon:'✅' },
+    'ปฏิเสธแผน': { bg:'#FCEBEB', color:'#A32D2D', icon:'❌' },
+    'แนบไฟล์สอบ':{ bg:'#F3E5F5', color:'#6A1B9A', icon:'📎' },
+    'ยืนยันสอบ':  { bg:'#E0F7FA', color:'#00695C', icon:'🏆' },
+    'ลบแผน':     { bg:'#FFEBEE', color:'#B71C1C', icon:'🗑️' },
+  };
+
+  el.innerHTML = data.map(log => {
+    const ac = actionColor[log.action] || { bg:'#F5F5F5', color:'#666', icon:'📝' };
+    const dt = new Date(log.action_at);
+    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const planTitle = log.calibration_plans?.title || '(ถูกลบแล้ว)';
+    return `<div style="background:white;border:1px solid var(--border);border-left:4px solid ${ac.color};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:12px">
+      <div style="width:30px;height:30px;background:${ac.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${ac.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:${ac.color};background:${ac.bg};padding:1px 8px;border-radius:20px">${log.action}</span>
+          <span style="font-size:12px;color:var(--text);font-weight:500">${planTitle}</span>
+        </div>
+        ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${log.note}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:600">${log.action_by}</span> &nbsp;·&nbsp; ${dateStr} ${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ─── Plan Audit Log Functions ───────────────────────────────────────────────
