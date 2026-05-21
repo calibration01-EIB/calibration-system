@@ -953,6 +953,28 @@ tbody tr:hover { background: var(--surface2); }
 </div>
 
 
+<!-- Modal ปฏิเสธแผน -->
+<div class="modal-overlay" id="rejectPlanModal" style="display:none">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h3>❌ ปฏิเสธแผนสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeRejectModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">กรุณาระบุสาเหตุที่ปฏิเสธ เพื่อให้เจ้าหน้าที่แก้ไขได้ถูกต้อง</p>
+      <input type="hidden" id="rejectPlanId">
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">สาเหตุที่ปฏิเสธ <span style="color:var(--red)">*</span></label>
+        <textarea id="rejectReason" rows="4" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="เช่น เอกสารไม่ครบ, วันที่ไม่เหมาะสม, รายการเครื่องมือไม่ถูกต้อง..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeRejectModal()" class="btn-secondary">ยกเลิก</button>
+      <button onclick="submitRejectPlan()" style="padding:9px 20px;background:#C62828;color:white;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">❌ ยืนยันการปฏิเสธ</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal แก้ไขแผน -->
 <div class="modal-overlay" id="editPlanModal">
   <div class="modal-box" style="max-width:480px">
@@ -2959,6 +2981,7 @@ async function loadPlanList() {
             <span style="background:${s.bg};color:${s.color};font-size:11px;padding:2px 10px;border-radius:20px;font-weight:500">${s.lbl}</span>
           </div>
           <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;·&nbsp; ${cnt} เครื่องมือ &nbsp;·&nbsp; สร้างโดย: ${p.created_by} &nbsp;·&nbsp; ${created}</div>
+          ${p.status === 'rejected' && p.reject_reason ? `<div style="margin-top:5px;font-size:11px;background:#FCEBEB;color:#A32D2D;padding:4px 10px;border-radius:6px;display:inline-block">⚠️ สาเหตุ: ${p.reject_reason}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           ${p.plan_file_url ? `<button onclick="viewPlanFile('${p.plan_file_url}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📄 ไฟล์แผน</button>` : ''}
@@ -3056,6 +3079,41 @@ async function logPlanAudit(planId, action, note = '') {
       note: note
     });
   } catch(e) { console.warn('audit log error:', e.message); }
+}
+
+// ─── Reject Plan ─────────────────────────────────────────────────────────────
+
+function openRejectModal(planId) {
+  document.getElementById('rejectPlanId').value = planId;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectPlanModal').style.display = 'flex';
+}
+
+function closeRejectModal() {
+  document.getElementById('rejectPlanModal').style.display = 'none';
+}
+
+async function submitRejectPlan() {
+  const planId = document.getElementById('rejectPlanId').value;
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { showToast('กรุณาระบุสาเหตุที่ปฏิเสธ', 'error'); return; }
+  showLoading('กำลังบันทึก...');
+  try {
+    const { error } = await sb.from('calibration_plans').update({
+      status: 'rejected',
+      reject_reason: reason
+    }).eq('id', planId);
+    if (error) throw error;
+    await logPlanAudit(planId, 'ปฏิเสธแผน', `สาเหตุ: ${reason}`);
+    hideLoading();
+    showToast('❌ ปฏิเสธแผนเรียบร้อย', 'success');
+    closeRejectModal();
+    loadPlanConfirm();
+    loadPlanConfirmBadge();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
 }
 
 // ─── Edit Plan ───────────────────────────────────────────────────────────────
@@ -3223,7 +3281,7 @@ async function loadPlanConfirm() {
           ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:5px 12px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
           ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:5px 14px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
           ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:5px 14px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
-          <button onclick="confirmPlan('${p.id}','rejected')" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
+          <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
           <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 12px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
         </div>
       </div>
