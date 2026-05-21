@@ -2999,13 +2999,18 @@ async function loadPlanHistory() {
 
   const filterAction = document.getElementById('historyFilterAction')?.value || '';
   let query = sb.from('plan_audit_log')
-    .select('*, calibration_plans(title)')
+    .select('id, plan_id, action, action_by, action_at, note')
     .order('action_at', { ascending: false })
-    .limit(100);
+    .limit(200);
   if (filterAction) query = query.eq('action', filterAction);
 
   const { data, error } = await query;
-  if (error || !data?.length) {
+  if (error) {
+    console.error('plan_audit_log error:', error);
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--red);font-size:12px">โหลดไม่สำเร็จ: ' + error.message + '</div>';
+    return;
+  }
+  if (!data?.length) {
     el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
     return;
   }
@@ -3025,7 +3030,7 @@ async function loadPlanHistory() {
     const dt = new Date(log.action_at);
     const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
     const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
-    const planTitle = log.calibration_plans?.title || '(ถูกลบแล้ว)';
+    const planTitle = `แผน #${log.plan_id}`;
     return `<div style="background:white;border:1px solid var(--border);border-left:4px solid ${ac.color};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:12px">
       <div style="width:30px;height:30px;background:${ac.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${ac.icon}</div>
       <div style="flex:1;min-width:0">
@@ -3099,7 +3104,7 @@ async function openAuditPlanModal(planId, planTitle) {
   document.getElementById('auditPlanModal').style.display = 'flex';
 
   const { data, error } = await sb.from('plan_audit_log')
-    .select('*')
+    .select('id, plan_id, action, action_by, action_at, note')
     .eq('plan_id', planId)
     .order('action_at', { ascending: false });
 
