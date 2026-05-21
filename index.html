@@ -3071,6 +3071,8 @@ async function deletePlan(planId) {
   if (!confirm('ลบแผนนี้? ข้อมูลและไฟล์จะถูกลบถาวร')) return;
   showLoading('กำลังลบ...');
   try {
+    // log ก่อนลบ เพราะหลังลบแล้ว record หาย
+    await logPlanAudit(planId, 'ลบแผน', 'ลบแผนสอบเทียบออกจากระบบ');
     const { error: ie } = await sb.from('calibration_plan_items').delete().eq('plan_id', planId);
     if (ie) throw ie;
     const { error: pe } = await sb.from('calibration_plans').delete().eq('id', planId);
@@ -3120,6 +3122,7 @@ async function loadPlanConfirm() {
         ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:6px 16px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
         ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:6px 16px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
         <button onclick="confirmPlan('${p.id}','rejected')" style="padding:6px 14px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
+        <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:6px 14px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
       </div>
     </div>`;
   }).join('');
