@@ -3172,36 +3172,67 @@ async function loadPlanConfirm() {
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
   const { data, error } = await sb.from('calibration_plans')
-    .select('*, calibration_plan_items(count)')
+    .select('*, calibration_plan_items(id, id_code, instrument_name, instrument_type, department, instrument_id)')
     .in('status', ['pending_plan', 'pending_cert'])
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
   if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ไม่มีรายการรอยืนยัน ✅</div>'; return; }
 
   el.innerHTML = data.map(p => {
-    const cnt = p.calibration_plan_items?.[0]?.count || 0;
+    const items = p.calibration_plan_items || [];
+    const cnt = items.length;
     const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
     const isPendingPlan = p.status === 'pending_plan';
     const isPendingCert = p.status === 'pending_cert';
     const badgeLbl = isPendingPlan ? '🟡 รอยืนยันแผน' : '🔵 รอยืนยันสอบ';
     const badgeBg = isPendingPlan ? '#fff8e1' : '#e3f2fd';
     const badgeColor = isPendingPlan ? '#F57F17' : '#1565C0';
-    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;padding:16px 20px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-        <div>
-          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${p.title}</div>
-          <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+
+    // สร้าง rows รายการเครื่องมือ
+    const itemRows = items.map((it, idx) => {
+      const inst = allData.find(d => d.id == it.instrument_id);
+      const days = inst?.days_left;
+      let badge = '';
+      if (days !== null && days !== undefined) {
+        if (days < 0) badge = `<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 6px;border-radius:20px">เกินกำหนด</span>`;
+        else if (days <= 30) badge = `<span style="background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 6px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
+        else badge = `<span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 6px;border-radius:20px">ปกติ</span>`;
+      }
+      const due = inst?.due_date ? inst.due_date.slice(0,10).split('-').reverse().join('/') : '–';
+      return `<div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:11px">
+        <span style="color:var(--text3);text-align:center">${idx+1}</span>
+        <span style="color:var(--accent);font-weight:600;font-family:var(--mono)">${it.id_code||'–'}</span>
+        <span style="color:var(--text)">${it.instrument_name||'–'} <span style="color:var(--text3)">· ${it.department||'–'}</span></span>
+        <span style="color:var(--text3)">Due: ${due}</span>
+        <span>${badge}</span>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;overflow:hidden">
+      <div style="padding:14px 18px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${p.title}</div>
+            <div style="font-size:11px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+          </div>
+          <span style="background:${badgeBg};color:${badgeColor};font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
         </div>
-        <span style="background:${badgeBg};color:${badgeColor};font-size:12px;padding:4px 12px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${cnt > 0 ? `<button onclick="togglePlanItems('confirm_items_${p.id}')" style="padding:5px 12px;background:var(--accent-light);border:1px solid #c5d9ef;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--accent);font-weight:500">📋 รายการ (${cnt})</button>` : ''}
+          ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
+          ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:5px 12px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
+          ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:5px 14px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
+          ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:5px 14px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
+          <button onclick="confirmPlan('${p.id}','rejected')" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
+          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 12px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
-        ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
-        ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:6px 14px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
-        ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:6px 16px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
-        ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:6px 16px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
-        <button onclick="confirmPlan('${p.id}','rejected')" style="padding:6px 14px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
-        <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:6px 14px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
-      </div>
+      ${cnt > 0 ? `<div id="confirm_items_${p.id}" style="display:none;border-top:1px solid var(--border);background:var(--surface2);padding:10px 18px">
+        <div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;gap:8px;padding:4px 0;margin-bottom:4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">
+          <span>#</span><span>รหัส</span><span>เครื่องมือ</span><span>Due</span><span>สถานะ</span>
+        </div>
+        ${itemRows}
+      </div>` : ''}
     </div>`;
   }).join('');
 }
