@@ -934,6 +934,49 @@ tbody tr:hover { background: var(--surface2); }
 </div>
 
 
+<!-- Modal แก้ไขแผน -->
+<div class="modal-overlay" id="editPlanModal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>✏️ แก้ไขแผนสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeEditPlanModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editPlanId">
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">ชื่อแผน <span style="color:var(--red)">*</span></label>
+        <input type="text" id="editPlanTitle" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">วันที่นัดสอบ <span style="color:var(--red)">*</span></label>
+        <input type="date" id="editPlanDate" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">หมายเหตุการแก้ไข</label>
+        <textarea id="editPlanNote" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="ระบุเหตุผลที่แก้ไข (ถ้ามี)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeEditPlanModal()" class="btn-secondary">ยกเลิก</button>
+      <button onclick="submitEditPlan()" class="btn-primary">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Audit Trail -->
+<div class="modal-overlay" id="auditPlanModal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3>📋 ประวัติการดำเนินการ</h3>
+      <button class="btn-close" onclick="closeAuditPlanModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="auditPlanTitle" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
+      <div id="auditPlanList" style="display:flex;flex-direction:column;gap:0"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="instrumentModal">
   <div class="modal-box" style="max-width:620px">
     <div class="modal-header">
@@ -2815,6 +2858,7 @@ async function submitPlan() {
     if (iErr) throw iErr;
 
     hideLoading();
+    await logPlanAudit(plan.id, 'สร้างแผน', `สร้างแผน "${title}" วันนัดสอบ ${date}`);
     showToast('✅ ส่งแผนให้ Admin เรียบร้อยแล้ว', 'success');
 
     // reset
@@ -2898,6 +2942,8 @@ async function loadPlanList() {
           ${cnt > 0 ? `<button onclick="togglePlanItems('items_${p.id}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📋 รายการ (${cnt})</button>` : ''}
           ${p.cert_file_url ? `<button onclick="viewPlanFile('${p.cert_file_url}')" style="padding:5px 10px;background:#EAF3DE;border:1px solid #C0DD97;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#3B6D11;display:flex;align-items:center;gap:4px">📋 ดูไฟล์ Cert</button>` : ''}
           ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" style="padding:5px 10px;background:#E6F1FB;border:1px solid #B5D4F4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#185FA5;font-weight:600">📎 แนบไฟล์หลังสอบ</button>` : ''}
+          ${ `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 10px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6;display:flex;align-items:center;gap:4px">🕐 ประวัติ</button>` }
+          ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" style="padding:5px 10px;background:#FFF7E6;border:1px solid #FCD34D;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#92400E;display:flex;align-items:center;gap:4px">✏️ แก้ไข</button>` : '' }
           ${isAdmin ? `<button onclick="deletePlan('${p.id}')" style="padding:5px 10px;background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#A32D2D;display:flex;align-items:center;gap:4px">🗑 ลบ</button>` : ''}
         </div>
       </div>
@@ -2921,6 +2967,106 @@ function viewPlanFile(url) {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+// ─── Plan Audit Log Functions ───────────────────────────────────────────────
+
+async function logPlanAudit(planId, action, note = '') {
+  try {
+    await sb.from('plan_audit_log').insert({
+      plan_id: planId,
+      action: action,
+      action_by: currentUser?.username || 'unknown',
+      note: note
+    });
+  } catch(e) { console.warn('audit log error:', e.message); }
+}
+
+// ─── Edit Plan ───────────────────────────────────────────────────────────────
+
+function openEditPlanModal(planId, title, date) {
+  document.getElementById('editPlanId').value = planId;
+  document.getElementById('editPlanTitle').value = title;
+  document.getElementById('editPlanDate').value = date ? date.slice(0,10) : '';
+  document.getElementById('editPlanNote').value = '';
+  document.getElementById('editPlanModal').style.display = 'flex';
+}
+
+function closeEditPlanModal() {
+  document.getElementById('editPlanModal').style.display = 'none';
+}
+
+async function submitEditPlan() {
+  const planId = document.getElementById('editPlanId').value;
+  const title  = document.getElementById('editPlanTitle').value.trim();
+  const date   = document.getElementById('editPlanDate').value;
+  const note   = document.getElementById('editPlanNote').value.trim();
+  if (!title) { showToast('กรุณากรอกชื่อแผน', 'error'); return; }
+  if (!date)  { showToast('กรุณาเลือกวันที่', 'error'); return; }
+  showLoading('กำลังบันทึก...');
+  try {
+    const { error } = await sb.from('calibration_plans').update({
+      title, planned_date: date
+    }).eq('id', planId);
+    if (error) throw error;
+    await logPlanAudit(planId, 'แก้ไขแผน', note || `แก้ไขชื่อเป็น "${title}" วันที่ ${date}`);
+    hideLoading();
+    showToast('✅ แก้ไขแผนเรียบร้อย', 'success');
+    closeEditPlanModal();
+    loadPlanList();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// ─── Audit Trail Modal ───────────────────────────────────────────────────────
+
+async function openAuditPlanModal(planId, planTitle) {
+  document.getElementById('auditPlanTitle').textContent = '📌 ' + (planTitle || '–');
+  document.getElementById('auditPlanList').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">กำลังโหลด...</div>';
+  document.getElementById('auditPlanModal').style.display = 'flex';
+
+  const { data, error } = await sb.from('plan_audit_log')
+    .select('*')
+    .eq('plan_id', planId)
+    .order('action_at', { ascending: false });
+
+  const el = document.getElementById('auditPlanList');
+  if (error || !data?.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
+    return;
+  }
+
+  const actionIcon = {
+    'สร้างแผน':    '🆕',
+    'อนุมัติแผน':  '✅',
+    'ปฏิเสธแผน':  '❌',
+    'แก้ไขแผน':   '✏️',
+    'แนบไฟล์สอบ': '📎',
+    'ยืนยันสอบ':  '🏆',
+    'ลบแผน':      '🗑️',
+  };
+
+  el.innerHTML = data.map((log, i) => {
+    const dt = new Date(log.action_at);
+    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const icon = actionIcon[log.action] || '📝';
+    const isLast = i === data.length - 1;
+    return `<div style="display:flex;gap:12px;padding:10px 0;${!isLast ? 'border-bottom:1px solid var(--border)' : ''}">
+      <div style="flex-shrink:0;width:32px;height:32px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${log.action}</div>
+        ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${log.note}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:500">${log.action_by}</span> &nbsp;·&nbsp; ${dateStr} ${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeAuditPlanModal() {
+  document.getElementById('auditPlanModal').style.display = 'none';
+}
+
 async function deletePlan(planId) {
   if (!confirm('ลบแผนนี้? ข้อมูลและไฟล์จะถูกลบถาวร')) return;
   showLoading('กำลังลบ...');
@@ -2930,6 +3076,7 @@ async function deletePlan(planId) {
     const { error: pe } = await sb.from('calibration_plans').delete().eq('id', planId);
     if (pe) throw pe;
     hideLoading();
+    // ไม่ log หลังลบเพราะ record ถูกลบแล้ว
     showToast('✅ ลบแผนเรียบร้อย', 'success');
     loadPlanList();
     loadPlanConfirmBadge();
@@ -2988,6 +3135,7 @@ async function confirmPlan(planId, newStatus) {
     const { error } = await sb.from('calibration_plans').update(updateData).eq('id', planId);
     if (error) throw error;
     hideLoading();
+    await logPlanAudit(planId, newStatus === 'planned' ? 'อนุมัติแผน' : newStatus === 'completed' ? 'ยืนยันสอบ' : 'ปฏิเสธแผน', `เปลี่ยนสถานะเป็น ${newStatus}`);
     showToast('✅ อัพเดทสถานะเรียบร้อย', 'success');
     loadPlanConfirm();
     loadPlanConfirmBadge();
@@ -3024,6 +3172,7 @@ async function submitAttachCert() {
     }).eq('id', attachCertPlanId);
     if (error) throw error;
     hideLoading();
+    await logPlanAudit(attachCertPlanId, 'แนบไฟล์สอบ', 'แนบไฟล์หลังสอบเทียบ รอ Admin ยืนยัน');
     showToast('✅ ส่งไฟล์ให้ Admin ยืนยันแล้ว', 'success');
     closeAttachCertModal();
     loadPlanList();
