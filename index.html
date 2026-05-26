@@ -2713,6 +2713,35 @@ function renderAuditTable() {
 }
 
 
+// คืนค่า string 'YYYY-MM-DD' (ใช้ใน Import ไม่ต้องแตะ DOM)
+function calcDueDateStr(calDate, frequency) {
+  if (!calDate || !frequency) return null;
+  const d = new Date(calDate);
+  if (isNaN(d)) return null;
+  const f = frequency.toLowerCase();
+  if (f.includes('2ครั้ง') || (f.includes('2') && f.includes('ครั้ง/ปี'))) {
+    d.setMonth(d.getMonth() + 6);
+  } else if (f.includes('4ครั้ง') || (f.includes('4') && f.includes('ครั้ง/ปี'))) {
+    d.setMonth(d.getMonth() + 3);
+  } else if (f.includes('3ปี') || (f.includes('3') && (f.includes('ปี') || f.includes('year')))) {
+    d.setFullYear(d.getFullYear() + 3);
+  } else if (f.includes('2ปี') || (f.includes('2') && (f.includes('ปี') || f.includes('year')))) {
+    d.setFullYear(d.getFullYear() + 2);
+  } else if (f.includes('6') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 6);
+  } else if (f.includes('3') && (f.includes('เดือน') || f.includes('month'))) {
+    d.setMonth(d.getMonth() + 3);
+  } else if (f.includes('ปี') || f.includes('year') || f.includes('/ปี') || f.includes('ครั้ง/ปี')) {
+    d.setFullYear(d.getFullYear() + 1);
+  } else if (f.includes('เดือน') || f.includes('month')) {
+    d.setMonth(d.getMonth() + 6);
+  } else { return null; }
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function calcDueDate(calDate, frequency) {
   if (!calDate || !frequency) return;
   const d = new Date(calDate);
@@ -3651,13 +3680,31 @@ async function confirmImport() {
   try {
     for (let i = 0; i < validRows.length; i += CHUNK) {
       const chunk = validRows.slice(i, i + CHUNK);
+      // clean null-string values + auto-calc due_date ก่อน upsert
+      const cleanChunk = chunk.map(row => {
+        const clean = {};
+        Object.entries(row).forEach(([k, v]) => {
+          const s = String(v||'').trim();
+          clean[k] = (s === '' || s === '–' || s === '-') ? null : s;
+        });
+        // ถ้าไม่มี due_date แต่มี cal_date + cal_frequency → คำนวณอัตโนมัติ
+        if (!clean.due_date && clean.cal_date && clean.cal_frequency) {
+          clean.due_date = calcDueDateStr(clean.cal_date, clean.cal_frequency);
+        }
+        return clean;
+      });
       const { error } = await sb.from('instruments')
-        .upsert(chunk, { onConflict: 'id_code', ignoreDuplicates: false });
+        .upsert(cleanChunk, { onConflict: 'id_code', ignoreDuplicates: false });
       if (error) {
         failed += chunk.length;
         failedCodes.push(...chunk.map(r => r.id_code));
         console.error('upsert error:', error.message, error.details, error.hint);
-        showToast('❌ Error: ' + error.message, 'error');
+        // แสดง error ชัดเจนและ restore ปุ่ม
+        document.getElementById('importProgressText').textContent = '❌ ' + error.message;
+        document.getElementById('importStep2').style.display = 'block';
+        document.getElementById('confirmImportBtn').disabled = false;
+        showToast('❌ Import ผิดพลาด: ' + error.message, 'error');
+        return;
       } else {
         success += chunk.length;
       }
@@ -3669,7 +3716,7 @@ async function confirmImport() {
     }
     await logAudit('แก้ไข', { id_code: 'IMPORT_BATCH', instrument_name: 'Import/Update batch '+success+' รายการ' }, null);
     const msg = '✅ Import สำเร็จ '+success+' รายการ' + (failed ? ' | ❌ ล้มเหลว '+failed+' รายการ' : '');
-    showToast(msg, failed ? 'error' : 'success');
+    showToast(msg, 'success');
     if (failed) console.warn('Failed id_codes:', failedCodes);
     closeImportModal();
     await loadData(true);
