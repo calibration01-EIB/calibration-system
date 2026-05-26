@@ -3404,8 +3404,14 @@ const IMPORT_COL_MAP = {
   's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
   'หน่วยงาน':'department','department':'department',
   'id code':'id_code','id_code':'id_code','idcode':'id_code',
-  'cert.':'cert_no','cert_no':'cert_no','เลขที่ certificate':'cert_no',
-  'วันสอบเทียบ':'cal_date','วันที่สอบเทียบ':'cal_date','cal_date':'cal_date',
+  // Cert ใหม่ (2026) → cert_no ปัจจุบัน
+  'cert. 2026':'cert_no','cert.2026':'cert_no',
+  // วันสอบเทียบใหม่ (2026) → cal_date ปัจจุบัน
+  'วันสอบเทียบ 2026':'cal_date','วันสอบเทียบ2026':'cal_date',
+  // Cert เก่า → prev_cert_no (ประวัติ)
+  'cert.':'prev_cert_no','cert_no':'prev_cert_no','เลขที่ certificate':'prev_cert_no',
+  // วันสอบเทียบเก่า → prev_cal_date (ประวัติ)
+  'วันสอบเทียบ':'prev_cal_date','วันที่สอบเทียบ':'prev_cal_date','cal_date':'prev_cal_date',
   'วันครบกำหนด':'due_date','ครบกำหนด':'due_date','due_date':'due_date',
   'ความถี่สอบเทียบ':'cal_frequency','ความถี่':'cal_frequency','cal_frequency':'cal_frequency',
   'ภายใน/ภายนอก':'cal_type','cal_type':'cal_type',
@@ -3505,23 +3511,30 @@ async function confirmImport() {
   document.getElementById('importProgress').style.display = 'block';
   document.getElementById('confirmImportBtn').disabled = true;
   const CHUNK = 50;
-  let done = 0, success = 0, failed = 0;
+  let done = 0, success = 0, failed = 0, failedCodes = [];
   try {
     for (let i = 0; i < validRows.length; i += CHUNK) {
       const chunk = validRows.slice(i, i + CHUNK);
-      const { error } = await sb.from('instruments').upsert(chunk, { onConflict: 'id_code', ignoreDuplicates: false });
+      const { error } = await sb.from('instruments')
+        .upsert(chunk, { onConflict: 'id_code', ignoreDuplicates: false });
       if (error) {
-        const { error: insErr } = await sb.from('instruments').insert(chunk);
-        if (insErr) failed += chunk.length; else success += chunk.length;
-      } else { success += chunk.length; }
+        // upsert ไม่สำเร็จ — บันทึก error ไว้ ไม่ insert ซ้ำ
+        failed += chunk.length;
+        failedCodes.push(...chunk.map(r => r.id_code));
+        console.error('upsert error:', error.message);
+      } else {
+        success += chunk.length;
+      }
       done += chunk.length;
       const pct = Math.round(done/validRows.length*100);
       document.getElementById('importProgressBar').style.width = pct+'%';
       document.getElementById('importProgressText').textContent = 'กำลัง import... '+done+'/'+validRows.length+' แถว';
       await new Promise(r => setTimeout(r, 30));
     }
-    await logAudit('เพิ่ม', { id_code: 'IMPORT_BATCH', instrument_name: 'Import batch '+success+' รายการ' }, null);
-    showToast('✅ Import สำเร็จ '+success+' รายการ'+(failed?' / ล้มเหลว '+failed+' รายการ':''), 'success');
+    await logAudit('แก้ไข', { id_code: 'IMPORT_BATCH', instrument_name: 'Import/Update batch '+success+' รายการ' }, null);
+    const msg = '✅ Import สำเร็จ '+success+' รายการ' + (failed ? ' | ❌ ล้มเหลว '+failed+' รายการ' : '');
+    showToast(msg, failed ? 'error' : 'success');
+    if (failed) console.warn('Failed id_codes:', failedCodes);
     closeImportModal();
     await loadData(true);
   } catch(e) {
