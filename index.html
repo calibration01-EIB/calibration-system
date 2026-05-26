@@ -2301,7 +2301,7 @@ function renderMonthly() {
     card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
     const ok = cnt - ov - wa;
     card.innerHTML = `
-      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500">${MONTH_NAMES_SHORT[i]}</div>
+      <div style="font-size:11px;color:#444;margin-bottom:4px;font-weight:600">${MONTH_NAMES_SHORT[i]}</div>
       <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
       <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
         ${ov>0?`<div style="flex:${ov};background:var(--red);border-radius:2px"></div>`:''}
