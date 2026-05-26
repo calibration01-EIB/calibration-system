@@ -1091,15 +1091,23 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="form-group">
           <label>เลขที่ Certificate</label>
-          <input type="text" id="iCertNo" placeholder="เช่น 25B001-0">
+          <input type="text" id="iCertNo" placeholder="เช่น 25B001-0" oninput="autoFillPrevCert()">
         </div>
         <div class="form-group">
           <label>วันที่สอบเทียบ</label>
-          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value)">
+          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value); autoFillPrevCert()">
         </div>
         <div class="form-group">
           <label>วันครบกำหนด</label>
           <input type="date" id="iDueDate" readonly style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
+        </div>
+        <div class="form-group">
+          <label style="color:var(--text3)">📋 Cert รอบก่อน (อัตโนมัติ)</label>
+          <input type="text" id="iPrevCertNo" readonly placeholder="–" style="background:var(--surface2);color:var(--text2);font-family:var(--mono)">
+        </div>
+        <div class="form-group">
+          <label style="color:var(--text3)">📋 วันสอบรอบก่อน (อัตโนมัติ)</label>
+          <input type="date" id="iPrevCalDate" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
         <div class="form-group">
           <label>ชื่อเครื่องจักร</label>
@@ -1427,60 +1435,82 @@ async function renderAlerts() {
   }).filter(Boolean).join("");
 }
 
-function openCalHistory(instrumentId) {
+async function openCalHistory(instrumentId) {
   const d = allData.find(x => x.id === instrumentId);
   if (!d) return;
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-  const hasPrev = d.prev_cert_no || d.prev_cal_date;
+
   document.getElementById('calHistoryTitle').textContent = d.id_code || '–';
+  document.getElementById('calHistoryBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">กำลังโหลด...</div>';
+  document.getElementById('calHistoryModal').classList.add('open');
+
+  // ดึงประวัติจาก calibration_history
+  const { data: history } = await sb.from('calibration_history')
+    .select('*')
+    .eq('instrument_id', instrumentId)
+    .order('cal_date', { ascending: false })
+    .limit(3);
+
+  const rows = history || [];
+
   document.getElementById('calHistoryBody').innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบปัจจุบัน</div>
-      <div style="background:var(--accent-light);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text3)">CERT.</div>
-          <div style="font-size:14px;font-weight:600;color:var(--accent);font-family:var(--mono)">${d.cert_no||'–'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
-          <div style="font-size:14px;font-weight:600;color:var(--accent)">${fmt(d.cal_date)}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">ครบกำหนด</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${fmt(d.due_date)}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">ความถี่</div>
-          <div style="font-size:13px;color:var(--text)">${d.cal_frequency||'–'}</div>
-        </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🟢 รอบปัจจุบัน</div>
+      <div style="background:var(--accent-light);border-radius:10px;padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:11px;color:var(--text3)">CERT.</div>
+          <div style="font-size:14px;font-weight:600;color:var(--accent);font-family:var(--mono)">${d.cert_no||'–'}</div></div>
+        <div><div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
+          <div style="font-size:13px;font-weight:600;color:var(--accent)">${fmt(d.cal_date)}</div></div>
+        <div><div style="font-size:11px;color:var(--text3)">ครบกำหนด</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${fmt(d.due_date)}</div></div>
+        <div><div style="font-size:11px;color:var(--text3)">ความถี่</div>
+          <div style="font-size:12px;color:var(--text)">${d.cal_frequency||'–'}</div></div>
       </div>
     </div>
+    ${rows.length ? `
     <div>
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบก่อนหน้า</div>
-      ${hasPrev ? `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text3)">CERT.</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);font-family:var(--mono)">${d.prev_cert_no||'–'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2)">${fmt(d.prev_cal_date)}</div>
-        </div>
-      </div>` : `
-      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--text3);font-size:13px">
-        ยังไม่มีประวัติรอบก่อนหน้า<br>
-        <span style="font-size:11px">จะบันทึกอัตโนมัติเมื่อ Import ข้อมูลใหม่</span>
-      </div>`}
-    </div>
-    <div style="margin-top:14px;padding:10px 14px;background:#f0f7f6;border-radius:8px;font-size:12px;color:var(--text2)">
-      <strong>${d.instrument_name||'–'}</strong> &nbsp;·&nbsp; ${d.department||'–'} &nbsp;·&nbsp; ${d.cal_type||'–'}
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📋 ประวัติย้อนหลัง (${rows.length} รอบ)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${rows.map((h, i) => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${i===0?'#00897B':i===1?'#80CBC4':'#B2DFDB'};border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div><div style="font-size:10px;color:var(--text3)">CERT.</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);font-family:var(--mono)">${h.cert_no||'–'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">วันสอบ</div>
+            <div style="font-size:12px;color:var(--text2)">${fmt(h.cal_date)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">ครบกำหนด</div>
+            <div style="font-size:12px;color:var(--text2)">${fmt(h.due_date)}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>` : `
+    <div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📋 ประวัติย้อนหลัง</div>
+      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;color:var(--text3);font-size:12px">
+        ยังไม่มีประวัติ<br><span style="font-size:11px">จะบันทึกอัตโนมัติเมื่อแก้ไข CERT หรือวันสอบ</span>
+      </div>
+    </div>`}
+    <div style="margin-top:12px;padding:8px 12px;background:#f0f7f6;border-radius:8px;font-size:11px;color:var(--text2)">
+      <strong>${d.instrument_name||'–'}</strong> · ${d.department||'–'} · ${d.cal_type||'–'}
     </div>`;
-  document.getElementById('calHistoryModal').classList.add('open');
 }
 
 function closeCalHistoryModal() {
   document.getElementById('calHistoryModal').classList.remove('open');
+}
+
+function autoFillPrevCert() {
+  if (!editingInstrumentId) return;
+  const original = allData.find(x => x.id === editingInstrumentId);
+  if (!original) return;
+  const newCert = document.getElementById('iCertNo').value.trim();
+  const newDate = document.getElementById('iCalDate').value;
+  // ถ้าค่าใหม่ต่างจากเดิม → แสดง prev ให้เห็น
+  if ((newCert && newCert !== original.cert_no) || (newDate && newDate !== original.cal_date)) {
+    document.getElementById('iPrevCertNo').value = original.cert_no || '–';
+    document.getElementById('iPrevCalDate').value = original.cal_date || '';
+  } else {
+    document.getElementById('iPrevCertNo').value = original.prev_cert_no || '–';
+    document.getElementById('iPrevCalDate').value = original.prev_cal_date || '';
+  }
 }
 
 function goToPlanWithItem(instrumentId) {
@@ -2101,6 +2131,8 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCertNo').value = d.cert_no || '';
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
+    document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
+    document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
     ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
@@ -2142,6 +2174,21 @@ async function saveInstrument() {
   try {
     if (editingInstrumentId) {
       const original = allData.find(x => x.id === editingInstrumentId);
+      // ถ้า cert หรือวันสอบเปลี่ยน → save prev + บันทึกลง history
+      if (original) {
+        const certChanged = original.cert_no && original.cert_no !== payload.cert_no;
+        const dateChanged = original.cal_date && original.cal_date !== payload.cal_date;
+        if (certChanged || dateChanged) {
+          payload.prev_cert_no = original.cert_no || null;
+          payload.prev_cal_date = original.cal_date || null;
+          await sb.from('calibration_history').insert({
+            instrument_id: editingInstrumentId,
+            cert_no: original.cert_no || null,
+            cal_date: original.cal_date || null,
+            due_date: original.due_date || null,
+          });
+        }
+      }
       const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
       if (error) throw error;
       const diff = original ? getDiff(original, {...original, ...payload}) : null;
