@@ -2386,37 +2386,27 @@ function renderCategoryCards() {
     const thName = fullName.split(' (')[0];
     const isActive = activeCategory === fullName;
 
-    // คำนวณ % ที่ยังไม่ครบ/ปกติ = overdue+warning / total
-    const notOkPct = cnt > 0 ? Math.round((s.overdue + s.warning) / cnt * 100) : 0;
-    const okPct = 100 - notOkPct;
-
-    // สีตามสถานะ
+    const numColor  = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
     const mainColor = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : 'var(--green)';
-
-    // สี card
-    const cardBg = isActive ? '#e8f5e9' : (cnt === 0 ? 'var(--surface2)' : 'white');
-    const cardBorder = isActive ? 'var(--green)' : (cnt === 0 ? 'var(--border)' : 'var(--border)');
-    const boxShadow = isActive ? '0 0 0 2px var(--green)' : 'none';
+    const cardBorder = isActive ? mainColor : 'var(--border)';
+    const boxShadow  = isActive ? `0 0 0 2px ${mainColor}40` : 'none';
 
     const card = document.createElement('div');
-    card.style.cssText = `background:${cardBg};border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:10px;padding:12px;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.style.cssText = `background:white;border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:10px;padding:10px 8px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
     card.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:1px">${thName}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">(${enName})</div>
-      <div style="font-size:20px;font-weight:700;color:var(--text);line-height:1;margin-bottom:1px">${cnt > 0 ? cnt : '–'}</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">เครื่อง</div>
-      ${cnt > 0 ? `
-      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-bottom:6px;overflow:hidden;display:flex;gap:1px">
-        ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red);border-radius:3px;transition:flex .5s"></div>`:''}
-        ${s.warning>0?`<div style="flex:${s.warning};background:var(--amber);border-radius:3px;transition:flex .5s"></div>`:''}
-        ${s.ok>0?`<div style="flex:${s.ok};background:var(--green);border-radius:3px;transition:flex .5s"></div>`:''}
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${thName}</div>
+      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
+      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
+        ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red);border-radius:2px"></div>`:''}
+        ${s.warning>0?`<div style="flex:${s.warning};background:var(--amber);border-radius:2px"></div>`:''}
+        ${s.ok>0?`<div style="flex:${s.ok};background:var(--green);border-radius:2px"></div>`:''}
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${s.overdue>0?`<span style="font-size:11px;color:var(--red);font-weight:500">🔴 ${s.overdue} เกินกำหนด</span>`:''}
-        ${s.warning>0?`<span style="font-size:11px;color:var(--amber);font-weight:500">🟡 ${s.warning} ใกล้ครบ</span>`:''}
-        ${s.ok>0?`<span style="font-size:11px;color:var(--green)">🟢 ${s.ok} ปกติ</span>`:''}
-      </div>
-      ` : `<div style="font-size:12px;color:var(--text3)">ไม่มีข้อมูล</div>`}`;
+      <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+        ${s.overdue>0?`<span style="font-size:10px;color:var(--red)">🔴 ${s.overdue}</span>`:''}
+        ${s.warning>0?`<span style="font-size:10px;color:var(--amber)">🟡 ${s.warning}</span>`:''}
+        ${s.ok>0&&cnt>0?`<span style="font-size:10px;color:var(--green)">🟢 ${s.ok}</span>`:''}
+        ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
+      </div>`;
 
     if (cnt) {
       card.addEventListener('mouseenter', () => { if (activeCategory !== fullName) card.style.borderColor = mainColor; card.style.transform = 'translateY(-1px)'; });
