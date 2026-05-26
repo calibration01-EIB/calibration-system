@@ -45,7 +45,7 @@
   --mono: 'IBM Plex Mono', monospace;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 12px; line-height: 1.4; min-height: 100vh; }
 
 /* LOGIN */
 #loginPage { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(145deg, #004D40 0%, #00897B 50%, #00695C 100%); padding: 20px; }
@@ -73,22 +73,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .sidebar-brand h2 { font-size: 18px; font-weight: 600; }
 .sidebar-brand p { font-size: 11px; opacity: .5; margin-top: 2px; }
 .sidebar-nav { flex: 1; padding: 12px 0; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-size: 18px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; font-size: 13px; color: rgba(255,255,255,.7); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
 .nav-item:hover { background: rgba(255,255,255,.05); color: white; }
 .nav-item.active { background: rgba(255,255,255,.15); color: white; border-left-color: #80CBC4; }
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 .sidebar-user { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
 .user-avatar { width: 32px; height: 32px; background: #004D40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .user-info { flex: 1; min-width: 0; }
-.user-info .name { font-size: 16px; font-weight: 500; color: white; }
-.user-info .role { font-size: 14px; color: rgba(255,255,255,.5); text-transform: uppercase; }
+.user-info .name { font-size: 12px; font-weight: 500; color: white; }
+.user-info .role { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
 .btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 16px; padding: 4px; transition: color .15s; }
 .btn-logout:hover { color: white; }
 .main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
-.topbar { background: white; border-bottom: 2px solid var(--accent); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-.topbar-title { font-size: 24px; font-weight: 600; }
-.topbar-sub { font-size: 17px; color: var(--text2); margin-top: 1px; }
-.page-content { padding: 24px 28px; min-width: 0; overflow-x: hidden; }
+.topbar { background: white; border-bottom: 2px solid var(--accent); padding: 7px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-title { font-size: 16px; font-weight: 600; }
+.topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.page-content { padding: 14px 20px; min-width: 0; overflow-x: hidden; }
 .db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
 .status-dot.ok { background: #00897B; }
@@ -102,51 +102,51 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: white; border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); border-left: 4px solid var(--border); }
+.stat-card { background: white; border-radius: var(--radius); padding: 12px 16px; border: 1px solid var(--border); border-left: 4px solid var(--border); }
 .stat-card.overdue { border-left-color: var(--red); }
 .stat-card.warning { border-left-color: var(--amber); }
 .stat-card.ok { border-left-color: var(--green); }
 .stat-card.total { border-left-color: var(--accent); }
 .stat-card.total .stat-num { color: var(--accent); }
-.stat-label { font-size: 18px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
-.stat-num { font-size: 48px; font-weight: 600; line-height: 1; }
+.stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+.stat-num { font-size: 28px; font-weight: 600; line-height: 1; }
 .stat-card.overdue .stat-num { color: var(--red); }
 .stat-card.warning .stat-num { color: var(--amber); }
 .stat-card.ok .stat-num { color: var(--green); }
 .stat-card.total .stat-num { color: var(--accent); }
-.stat-sub { font-size: 16px; color: var(--text3); margin-top: 4px; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
 /* CONTROLS */
-.controls-bar { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.controls-bar input, .controls-bar select { padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 18px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
+.controls-bar { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.controls-bar input, .controls-bar select { padding: 5px 8px; border: 1.5px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 12px; color: var(--text); background: var(--surface); outline: none; transition: border-color .2s; }
 .controls-bar input:focus, .controls-bar select:focus { border-color: var(--accent); }
 .controls-bar input[type="text"] { flex: 1; min-width: 200px; }
-.btn-reset { padding: 11px 18px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--text2); cursor: pointer; transition: all .15s; }
+.btn-reset { padding: 5px 10px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 12px; color: var(--text2); cursor: pointer; transition: all .15s; }
 .btn-reset:hover { border-color: var(--text2); color: var(--text); }
-.btn-refresh { padding: 11px 18px; background: var(--accent-light); border: 1.5px solid #c5d9ef; border-radius: 8px; font-family: var(--font); font-size: 13px; color: var(--accent); cursor: pointer; transition: all .15s; font-weight: 500; }
+.btn-refresh { padding: 5px 10px; background: var(--accent-light); border: 1.5px solid #c5d9ef; border-radius: 6px; font-family: var(--font); font-size: 12px; color: var(--accent); cursor: pointer; transition: all .15s; font-weight: 500; }
 .btn-refresh:hover { background: #d8e8f5; }
 
 /* TABLE */
-.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 420px); min-height: 300px; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 280px); min-height: 300px; }
 table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: auto; }
 table td, table th { white-space: nowrap; }
-table td { font-size: 22px !important; padding: 16px 20px !important; color: #1a2e2c !important; font-weight: 500; }
-table th { font-size: 18px !important; padding: 15px 20px !important; color: #ffffff !important; font-weight: 700; }
+table td { font-size: 12px !important; padding: 5px 10px !important; color: #1a2e2c !important; font-weight: 500; }
+table th { font-size: 11px !important; padding: 6px 10px !important; color: #ffffff !important; font-weight: 700; }
 thead { background: #00897B; position: sticky; top: 0; z-index: 3; }
-th { padding: 14px 20px; text-align: left; font-size: 16px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
-td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 18px; vertical-align: middle; }
+th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+td { padding: 5px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; font-size: 17px; font-weight: 500; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
 .badge-green { background: var(--green-light); color: var(--green); }
 .badge-blue { background: var(--accent-light); color: var(--accent); }
 .badge-purple { background: var(--purple-light); color: var(--purple); }
 .badge-gray { background: #f4f4f0; color: var(--text2); }
-.days-chip { font-family: var(--mono); font-size: 18px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
-.id-code { font-family: var(--mono); font-size: 18px; color: var(--text2); }
-.btn-cert { padding: 10px 18px; border-radius: 6px; font-family: var(--font); font-size: 18px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
+.days-chip { font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 4px; }
+.id-code { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+.btn-cert { padding: 3px 10px; border-radius: 5px; font-family: var(--font); font-size: 11px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; white-space: nowrap; }
 .btn-cert-has { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-cert-has:hover { background: #d8e8f5; }
 .btn-cert-empty { background: var(--surface2); color: var(--text2); border-color: var(--border); }
@@ -179,7 +179,7 @@ tbody tr:hover { background: var(--surface2); }
 .file-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .file-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.btn-view, .btn-del { padding: 8px 16px; border-radius: 6px; font-size: 17px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
+.btn-view, .btn-del { padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
 .btn-view { background: var(--accent-light); color: var(--accent); border-color: #c5d9ef; }
 .btn-view:hover { background: #d8e8f5; }
 .btn-del { background: var(--red-light); color: var(--red); border-color: #f5c6c4; }
@@ -187,8 +187,8 @@ tbody tr:hover { background: var(--surface2); }
 
 /* ADMIN */
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.section-header h2 { font-size: 18px; font-weight: 600; }
-.btn-add { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.section-header h2 { font-size: 14px; font-weight: 600; }
+.btn-add { display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--accent); color: white; border: none; border-radius: 6px; font-family: var(--font); font-size: 12px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
 .btn-add:hover { opacity: .9; }
 .users-table-wrap { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
@@ -547,6 +547,7 @@ tbody tr:hover { background: var(--surface2); }
           <button onclick="switchPlanTab('new')" id="planTab-new" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;background:#00695C;color:white;transition:all .15s">+ สร้างแผนใหม่</button>
           <button onclick="switchPlanTab('list')" id="planTab-list" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">แผนทั้งหมด</button>
           <button onclick="switchPlanTab('confirm')" id="planTab-confirm" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;display:none">รอยืนยัน <span id="planConfirmBadge" style="background:#E53935;color:white;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:4px;display:none">0</span></button>
+          <button onclick="switchPlanTab('history')" id="planTab-history" style="padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">🕐 ประวัติ</button>
         </div>
 
         <!-- TAB: สร้างแผนใหม่ -->
@@ -679,6 +680,24 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
 
+        <!-- TAB: ประวัติ -->
+        <div id="planTabHistory" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📋 ประวัติการดำเนินการทั้งหมด</div>
+            <select id="historyFilterAction" onchange="loadPlanHistory()" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;outline:none">
+              <option value="">ทุกประเภท</option>
+              <option value="สร้างแผน">สร้างแผน</option>
+              <option value="แก้ไขแผน">แก้ไขแผน</option>
+              <option value="อนุมัติแผน">อนุมัติแผน</option>
+              <option value="ปฏิเสธแผน">ปฏิเสธแผน</option>
+              <option value="แนบไฟล์สอบ">แนบไฟล์สอบ</option>
+              <option value="ยืนยันสอบ">ยืนยันสอบ</option>
+              <option value="ลบแผน">ลบแผน</option>
+            </select>
+          </div>
+          <div id="planHistoryContainer" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
         <!-- TAB: รอยืนยัน (Admin/Editor) -->
         <div id="planTabConfirm" style="display:none">
           <div id="planConfirmContainer" style="display:flex;flex-direction:column;gap:12px">
@@ -712,38 +731,38 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- PAGE: STANDARD WEIGHTS -->
       <div id="pageWeights" class="page-content" style="display:none">
-        <div class="section-header">
-          <h2>⚖️ Standard Weights</h2>
-          <button class="btn-add" onclick="openSWModal()">+ เพิ่มลูกตุ้ม</button>
+
+        <!-- KPI Cards -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div style="background:#00695C;border-radius:14px;padding:16px 18px;cursor:default">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ทั้งหมด</div>
+            <div style="font-size:28px;font-weight:700;color:white;line-height:1" id="swTotal">–</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px">ลูกตุ้ม</div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใช้งานได้</div>
+            <div style="font-size:28px;font-weight:700;color:var(--green);line-height:1" id="swOk">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px">✅ ปกติ</span></div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใกล้หมดอายุ</div>
+            <div style="font-size:28px;font-weight:700;color:var(--amber);line-height:1" id="swWarn">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:11px">⚠️ ≤30 วัน</span></div>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">หมดอายุ</div>
+            <div style="font-size:28px;font-weight:700;color:var(--red);line-height:1" id="swExpired">–</div>
+            <div style="font-size:11px;margin-top:6px"><span style="background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:20px;font-size:11px">❌ เกินกำหนด</span></div>
+          </div>
         </div>
 
-        <!-- Stats cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label">ทั้งหมด</div>
-            <div class="kpi-value" id="swTotal">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--green)">✅ ใช้งานได้</div>
-            <div class="kpi-value" id="swOk" style="color:var(--green)">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--amber)">⚠️ ใกล้หมดอายุ</div>
-            <div class="kpi-value" id="swWarn" style="color:var(--amber)">–</div>
-          </div>
-          <div class="kpi-card" style="cursor:default">
-            <div class="kpi-label" style="color:var(--red)">❌ หมดอายุ</div>
-            <div class="kpi-value" id="swExpired" style="color:var(--red)">–</div>
-          </div>
-        </div>
-
-        <!-- Filter bar -->
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID Code, Serial, ค่าพิกัด..." 
-            style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)"
+        <!-- Filter bar + ปุ่ม -->
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID Code, Serial, ค่าพิกัด..."
+            style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none"
             oninput="filterSW()">
           <select id="swClassFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)">
+            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:120px">
             <option value="">ทุก Class</option>
             <option value="E1">E1</option>
             <option value="E2">E2</option>
@@ -754,35 +773,38 @@ tbody tr:hover { background: var(--surface2); }
             <option value="M3">M3</option>
           </select>
           <select id="swStatusFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface)">
+            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:140px">
             <option value="">ทุกสถานะ</option>
             <option value="ok">✅ ใช้งานได้</option>
             <option value="warn">⚠️ ใกล้หมดอายุ</option>
             <option value="expired">❌ หมดอายุ</option>
           </select>
+          <button onclick="openSWModal()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มลูกตุ้ม</button>
         </div>
 
         <!-- Table -->
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID Code</th>
-                <th>ค่าพิกัด</th>
-                <th>ค่าจริง</th>
-                <th>Class</th>
-                <th>Serial No.</th>
-                <th>เลขที่ใบรับรอง</th>
-                <th>วันสอบเทียบ</th>
-                <th>วันสิ้นอายุ</th>
-                <th>สถานะ</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="swTableBody">
-              <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
-            </tbody>
-          </table>
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
+          <div class="table-wrap" style="max-height:calc(100vh - 380px)">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Code</th>
+                  <th>ค่าพิกัด</th>
+                  <th>ค่าจริง</th>
+                  <th>CLASS</th>
+                  <th>SERIAL NO.</th>
+                  <th>เลขที่ใบรับรอง</th>
+                  <th>วันสอบเทียบ</th>
+                  <th>วันสิ้นอายุ</th>
+                  <th>สถานะ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="swTableBody">
+                <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -856,15 +878,14 @@ tbody tr:hover { background: var(--surface2); }
                 style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ความถี่การสอบเทียบ</label>
+              <label style="font-size:12px;font-weight:600;color:var(--text2)">ความถี่สอบเทียบ</label>
               <select id="swCalFrequency" onchange="autoCalcSWDue()"
                 style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);margin-top:4px">
-                <option value="1 ปี" selected>1 ปี</option>
-                <option value="2 ปี">2 ปี</option>
-                <option value="3 ปี">3 ปี</option>
-                <option value="5 ปี">5 ปี</option>
+                <option value="1">1 ปี</option>
+                <option value="2" selected>2 ปี</option>
               </select>
             </div>
+
             <div style="grid-column:span 2">
               <label style="font-size:12px;font-weight:600;color:var(--text2)">วันสิ้นอายุ (คำนวณอัตโนมัติ)</label>
               <input id="swDueDate" type="date"
@@ -910,20 +931,6 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
-<!-- CALIBRATION HISTORY MODAL -->
-<div class="modal-overlay" id="calHistoryModal">
-  <div class="modal-box" style="max-width:440px">
-    <div class="modal-header">
-      <div>
-        <h3>📋 ประวัติสอบเทียบ</h3>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;font-family:var(--mono)" id="calHistoryTitle"></div>
-      </div>
-      <button class="btn-close" onclick="closeCalHistoryModal()">×</button>
-    </div>
-    <div class="modal-body" id="calHistoryBody"></div>
-  </div>
-</div>
-
 <!-- ATTACH CERT MODAL -->
 <div class="modal-overlay" id="attachCertModal">
   <div class="modal-box" style="max-width:480px">
@@ -945,6 +952,71 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
+
+<!-- Modal ปฏิเสธแผน -->
+<div class="modal-overlay" id="rejectPlanModal" style="display:none">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h3>❌ ปฏิเสธแผนสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeRejectModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">กรุณาระบุสาเหตุที่ปฏิเสธ เพื่อให้เจ้าหน้าที่แก้ไขได้ถูกต้อง</p>
+      <input type="hidden" id="rejectPlanId">
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">สาเหตุที่ปฏิเสธ <span style="color:var(--red)">*</span></label>
+        <textarea id="rejectReason" rows="4" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="เช่น เอกสารไม่ครบ, วันที่ไม่เหมาะสม, รายการเครื่องมือไม่ถูกต้อง..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeRejectModal()" class="btn-secondary">ยกเลิก</button>
+      <button onclick="submitRejectPlan()" style="padding:9px 20px;background:#C62828;color:white;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">❌ ยืนยันการปฏิเสธ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal แก้ไขแผน -->
+<div class="modal-overlay" id="editPlanModal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>✏️ แก้ไขแผนสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeEditPlanModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editPlanId">
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">ชื่อแผน <span style="color:var(--red)">*</span></label>
+        <input type="text" id="editPlanTitle" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">วันที่นัดสอบ <span style="color:var(--red)">*</span></label>
+        <input type="date" id="editPlanDate" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">หมายเหตุการแก้ไข</label>
+        <textarea id="editPlanNote" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="ระบุเหตุผลที่แก้ไข (ถ้ามี)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeEditPlanModal()" class="btn-secondary">ยกเลิก</button>
+      <button onclick="submitEditPlan()" class="btn-primary">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Audit Trail -->
+<div class="modal-overlay" id="auditPlanModal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3>📋 ประวัติการดำเนินการ</h3>
+      <button class="btn-close" onclick="closeAuditPlanModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="auditPlanTitle" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
+      <div id="auditPlanList" style="display:flex;flex-direction:column;gap:0"></div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="instrumentModal">
   <div class="modal-box" style="max-width:620px">
@@ -1334,62 +1406,6 @@ async function renderAlerts() {
   }).filter(Boolean).join("");
 }
 
-function openCalHistory(instrumentId) {
-  const d = allData.find(x => x.id === instrumentId);
-  if (!d) return;
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-  const hasPrev = d.prev_cert_no || d.prev_cal_date;
-  document.getElementById('calHistoryTitle').textContent = d.id_code || '–';
-  document.getElementById('calHistoryBody').innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบปัจจุบัน</div>
-      <div style="background:var(--accent-light);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text3)">CERT.</div>
-          <div style="font-size:14px;font-weight:600;color:var(--accent);font-family:var(--mono)">${d.cert_no||'–'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
-          <div style="font-size:14px;font-weight:600;color:var(--accent)">${fmt(d.cal_date)}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">ครบกำหนด</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${fmt(d.due_date)}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">ความถี่</div>
-          <div style="font-size:13px;color:var(--text)">${d.cal_frequency||'–'}</div>
-        </div>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบก่อนหน้า</div>
-      ${hasPrev ? `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text3)">CERT.</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);font-family:var(--mono)">${d.prev_cert_no||'–'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2)">${fmt(d.prev_cal_date)}</div>
-        </div>
-      </div>` : `
-      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--text3);font-size:13px">
-        ยังไม่มีประวัติรอบก่อนหน้า<br>
-        <span style="font-size:11px">จะบันทึกอัตโนมัติเมื่อแก้ไข CERT หรือวันสอบเทียบครั้งถัดไป</span>
-      </div>`}
-    </div>
-    <div style="margin-top:14px;padding:10px 14px;background:#f0f7f6;border-radius:8px;font-size:12px;color:var(--text2)">
-      <strong>${d.instrument_name||'–'}</strong> &nbsp;·&nbsp; ${d.department||'–'} &nbsp;·&nbsp; ${d.cal_type||'–'}
-    </div>`;
-  document.getElementById('calHistoryModal').classList.add('open');
-}
-
-function closeCalHistoryModal() {
-  document.getElementById('calHistoryModal').classList.remove('open');
-}
-
 function goToPlanWithItem(instrumentId) {
   const d = allData.find(x => x.id == instrumentId);
   if (d && !planSelectedItems.some(s => s.id == d.id)) {
@@ -1677,7 +1693,7 @@ function renderTable() {
       <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
       <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
-      <td><button onclick="openCalHistory(${d.id})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${d.id_code||'–'}</button></td>
+      <td class="id-code">${d.id_code||'–'}</td>
       <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
@@ -2049,15 +2065,6 @@ async function saveInstrument() {
   try {
     if (editingInstrumentId) {
       const original = allData.find(x => x.id === editingInstrumentId);
-      // ถ้า cert_no หรือ cal_date เปลี่ยน → บันทึกค่าเก่าเป็น prev
-      if (original) {
-        const certChanged = original.cert_no && original.cert_no !== payload.cert_no;
-        const dateChanged = original.cal_date && original.cal_date !== payload.cal_date;
-        if (certChanged || dateChanged) {
-          payload.prev_cert_no = original.cert_no || null;
-          payload.prev_cal_date = original.cal_date || null;
-        }
-      }
       const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
       if (error) throw error;
       const diff = original ? getDiff(original, {...original, ...payload}) : null;
@@ -2655,16 +2662,20 @@ let planFileObj = null;     // ไฟล์ที่แนบ
 
 // --- Switch tabs ---
 function switchPlanTab(tab) {
-  ['new','list','confirm'].forEach(t => {
-    document.getElementById('planTab-' + t).style.background = t === tab ? '#00695C' : 'transparent';
-    document.getElementById('planTab-' + t).style.color = t === tab ? 'white' : 'var(--text2)';
-    document.getElementById('planTab-' + t).style.fontWeight = t === tab ? '600' : '500';
+  ['new','list','confirm','history'].forEach(t => {
+    const el = document.getElementById('planTab-' + t);
+    if (!el) return;
+    el.style.background = t === tab ? '#00695C' : 'transparent';
+    el.style.color = t === tab ? 'white' : 'var(--text2)';
+    el.style.fontWeight = t === tab ? '600' : '500';
   });
   document.getElementById('planTabNew').style.display = tab === 'new' ? 'block' : 'none';
   document.getElementById('planTabList').style.display = tab === 'list' ? 'block' : 'none';
   document.getElementById('planTabConfirm').style.display = tab === 'confirm' ? 'block' : 'none';
+  document.getElementById('planTabHistory').style.display = tab === 'history' ? 'block' : 'none';
   if (tab === 'list') loadPlanList();
   if (tab === 'confirm') loadPlanConfirm();
+  if (tab === 'history') loadPlanHistory();
 }
 
 // --- Init plan page ---
@@ -2892,6 +2903,7 @@ async function submitPlan() {
     if (iErr) throw iErr;
 
     hideLoading();
+    await logPlanAudit(plan.id, 'สร้างแผน', `สร้างแผน "${title}" วันนัดสอบ ${date}`);
     showToast('✅ ส่งแผนให้ Admin เรียบร้อยแล้ว', 'success');
 
     // reset
@@ -2969,12 +2981,15 @@ async function loadPlanList() {
             <span style="background:${s.bg};color:${s.color};font-size:11px;padding:2px 10px;border-radius:20px;font-weight:500">${s.lbl}</span>
           </div>
           <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;·&nbsp; ${cnt} เครื่องมือ &nbsp;·&nbsp; สร้างโดย: ${p.created_by} &nbsp;·&nbsp; ${created}</div>
+          ${p.status === 'rejected' && p.reject_reason ? `<div style="margin-top:5px;font-size:11px;background:#FCEBEB;color:#A32D2D;padding:4px 10px;border-radius:6px;display:inline-block">⚠️ สาเหตุ: ${p.reject_reason}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           ${p.plan_file_url ? `<button onclick="viewPlanFile('${p.plan_file_url}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📄 ไฟล์แผน</button>` : ''}
           ${cnt > 0 ? `<button onclick="togglePlanItems('items_${p.id}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📋 รายการ (${cnt})</button>` : ''}
           ${p.cert_file_url ? `<button onclick="viewPlanFile('${p.cert_file_url}')" style="padding:5px 10px;background:#EAF3DE;border:1px solid #C0DD97;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#3B6D11;display:flex;align-items:center;gap:4px">📋 ดูไฟล์ Cert</button>` : ''}
           ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" style="padding:5px 10px;background:#E6F1FB;border:1px solid #B5D4F4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#185FA5;font-weight:600">📎 แนบไฟล์หลังสอบ</button>` : ''}
+          ${ `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 10px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6;display:flex;align-items:center;gap:4px">🕐 ประวัติ</button>` }
+          ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" style="padding:5px 10px;background:#FFF7E6;border:1px solid #FCD34D;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#92400E;display:flex;align-items:center;gap:4px">✏️ แก้ไข</button>` : '' }
           ${isAdmin ? `<button onclick="deletePlan('${p.id}')" style="padding:5px 10px;background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#A32D2D;display:flex;align-items:center;gap:4px">🗑 ลบ</button>` : ''}
         </div>
       </div>
@@ -2998,15 +3013,213 @@ function viewPlanFile(url) {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+// ─── Plan History (Tab) ──────────────────────────────────────────────────────
+
+async function loadPlanHistory() {
+  const el = document.getElementById('planHistoryContainer');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">กำลังโหลด...</div>';
+
+  const filterAction = document.getElementById('historyFilterAction')?.value || '';
+  // ดึงชื่อแผนทั้งหมดมา cache ก่อน
+  const { data: plansData } = await sb.from('calibration_plans').select('id, title');
+  const planMap = {};
+  (plansData || []).forEach(p => { planMap[p.id] = p.title; });
+
+  let query = sb.from('plan_audit_log')
+    .select('id, plan_id, action, action_by, action_at, note')
+    .order('action_at', { ascending: false })
+    .limit(200);
+  if (filterAction) query = query.eq('action', filterAction);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('plan_audit_log error:', error);
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--red);font-size:12px">โหลดไม่สำเร็จ: ' + error.message + '</div>';
+    return;
+  }
+  if (!data?.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
+    return;
+  }
+
+  const actionColor = {
+    'สร้างแผน':   { bg:'#E8F5E9', color:'#2E7D32', icon:'🆕' },
+    'แก้ไขแผน':  { bg:'#FFF8E1', color:'#F57F17', icon:'✏️' },
+    'อนุมัติแผน': { bg:'#E3F2FD', color:'#1565C0', icon:'✅' },
+    'ปฏิเสธแผน': { bg:'#FCEBEB', color:'#A32D2D', icon:'❌' },
+    'แนบไฟล์สอบ':{ bg:'#F3E5F5', color:'#6A1B9A', icon:'📎' },
+    'ยืนยันสอบ':  { bg:'#E0F7FA', color:'#00695C', icon:'🏆' },
+    'ลบแผน':     { bg:'#FFEBEE', color:'#B71C1C', icon:'🗑️' },
+  };
+
+  el.innerHTML = data.map(log => {
+    const ac = actionColor[log.action] || { bg:'#F5F5F5', color:'#666', icon:'📝' };
+    const dt = new Date(log.action_at);
+    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const planTitle = planMap[log.plan_id] || '(ถูกลบแล้ว)';
+    return `<div style="background:white;border:1px solid var(--border);border-left:4px solid ${ac.color};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:12px">
+      <div style="width:30px;height:30px;background:${ac.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${ac.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:${ac.color};background:${ac.bg};padding:1px 8px;border-radius:20px">${log.action}</span>
+          <span style="font-size:12px;color:var(--text);font-weight:500">${planTitle}</span>
+        </div>
+        ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${log.note}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:600">${log.action_by}</span> &nbsp;·&nbsp; ${dateStr} ${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Plan Audit Log Functions ───────────────────────────────────────────────
+
+async function logPlanAudit(planId, action, note = '') {
+  try {
+    await sb.from('plan_audit_log').insert({
+      plan_id: planId,
+      action: action,
+      action_by: currentUser?.username || 'unknown',
+      note: note
+    });
+  } catch(e) { console.warn('audit log error:', e.message); }
+}
+
+// ─── Reject Plan ─────────────────────────────────────────────────────────────
+
+function openRejectModal(planId) {
+  document.getElementById('rejectPlanId').value = planId;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectPlanModal').style.display = 'flex';
+}
+
+function closeRejectModal() {
+  document.getElementById('rejectPlanModal').style.display = 'none';
+}
+
+async function submitRejectPlan() {
+  const planId = document.getElementById('rejectPlanId').value;
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { showToast('กรุณาระบุสาเหตุที่ปฏิเสธ', 'error'); return; }
+  showLoading('กำลังบันทึก...');
+  try {
+    const { error } = await sb.from('calibration_plans').update({
+      status: 'rejected',
+      reject_reason: reason
+    }).eq('id', planId);
+    if (error) throw error;
+    await logPlanAudit(planId, 'ปฏิเสธแผน', `สาเหตุ: ${reason}`);
+    hideLoading();
+    showToast('❌ ปฏิเสธแผนเรียบร้อย', 'success');
+    closeRejectModal();
+    loadPlanConfirm();
+    loadPlanConfirmBadge();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// ─── Edit Plan ───────────────────────────────────────────────────────────────
+
+function openEditPlanModal(planId, title, date) {
+  document.getElementById('editPlanId').value = planId;
+  document.getElementById('editPlanTitle').value = title;
+  document.getElementById('editPlanDate').value = date ? date.slice(0,10) : '';
+  document.getElementById('editPlanNote').value = '';
+  document.getElementById('editPlanModal').style.display = 'flex';
+}
+
+function closeEditPlanModal() {
+  document.getElementById('editPlanModal').style.display = 'none';
+}
+
+async function submitEditPlan() {
+  const planId = document.getElementById('editPlanId').value;
+  const title  = document.getElementById('editPlanTitle').value.trim();
+  const date   = document.getElementById('editPlanDate').value;
+  const note   = document.getElementById('editPlanNote').value.trim();
+  if (!title) { showToast('กรุณากรอกชื่อแผน', 'error'); return; }
+  if (!date)  { showToast('กรุณาเลือกวันที่', 'error'); return; }
+  showLoading('กำลังบันทึก...');
+  try {
+    const { error } = await sb.from('calibration_plans').update({
+      title, planned_date: date
+    }).eq('id', planId);
+    if (error) throw error;
+    await logPlanAudit(planId, 'แก้ไขแผน', note || `แก้ไขชื่อเป็น "${title}" วันที่ ${date}`);
+    hideLoading();
+    showToast('✅ แก้ไขแผนเรียบร้อย', 'success');
+    closeEditPlanModal();
+    loadPlanList();
+  } catch(e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// ─── Audit Trail Modal ───────────────────────────────────────────────────────
+
+async function openAuditPlanModal(planId, planTitle) {
+  document.getElementById('auditPlanTitle').textContent = '📌 ' + (planTitle || '–');
+  document.getElementById('auditPlanList').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">กำลังโหลด...</div>';
+  document.getElementById('auditPlanModal').style.display = 'flex';
+
+  const { data, error } = await sb.from('plan_audit_log')
+    .select('id, plan_id, action, action_by, action_at, note')
+    .eq('plan_id', planId)
+    .order('action_at', { ascending: false });
+
+  const el = document.getElementById('auditPlanList');
+  if (error || !data?.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
+    return;
+  }
+
+  const actionIcon = {
+    'สร้างแผน':    '🆕',
+    'อนุมัติแผน':  '✅',
+    'ปฏิเสธแผน':  '❌',
+    'แก้ไขแผน':   '✏️',
+    'แนบไฟล์สอบ': '📎',
+    'ยืนยันสอบ':  '🏆',
+    'ลบแผน':      '🗑️',
+  };
+
+  el.innerHTML = data.map((log, i) => {
+    const dt = new Date(log.action_at);
+    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    const icon = actionIcon[log.action] || '📝';
+    const isLast = i === data.length - 1;
+    return `<div style="display:flex;gap:12px;padding:10px 0;${!isLast ? 'border-bottom:1px solid var(--border)' : ''}">
+      <div style="flex-shrink:0;width:32px;height:32px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${log.action}</div>
+        ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${log.note}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:500">${log.action_by}</span> &nbsp;·&nbsp; ${dateStr} ${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeAuditPlanModal() {
+  document.getElementById('auditPlanModal').style.display = 'none';
+}
+
 async function deletePlan(planId) {
   if (!confirm('ลบแผนนี้? ข้อมูลและไฟล์จะถูกลบถาวร')) return;
   showLoading('กำลังลบ...');
   try {
+    // log ก่อนลบ เพราะหลังลบแล้ว record หาย
+    await logPlanAudit(planId, 'ลบแผน', 'ลบแผนสอบเทียบออกจากระบบ');
     const { error: ie } = await sb.from('calibration_plan_items').delete().eq('plan_id', planId);
     if (ie) throw ie;
     const { error: pe } = await sb.from('calibration_plans').delete().eq('id', planId);
     if (pe) throw pe;
     hideLoading();
+    // ไม่ log หลังลบเพราะ record ถูกลบแล้ว
     showToast('✅ ลบแผนเรียบร้อย', 'success');
     loadPlanList();
     loadPlanConfirmBadge();
@@ -3022,35 +3235,67 @@ async function loadPlanConfirm() {
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
   const { data, error } = await sb.from('calibration_plans')
-    .select('*, calibration_plan_items(count)')
+    .select('*, calibration_plan_items(id, id_code, instrument_name, instrument_type, department, instrument_id)')
     .in('status', ['pending_plan', 'pending_cert'])
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
   if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ไม่มีรายการรอยืนยัน ✅</div>'; return; }
 
   el.innerHTML = data.map(p => {
-    const cnt = p.calibration_plan_items?.[0]?.count || 0;
+    const items = p.calibration_plan_items || [];
+    const cnt = items.length;
     const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
     const isPendingPlan = p.status === 'pending_plan';
     const isPendingCert = p.status === 'pending_cert';
     const badgeLbl = isPendingPlan ? '🟡 รอยืนยันแผน' : '🔵 รอยืนยันสอบ';
     const badgeBg = isPendingPlan ? '#fff8e1' : '#e3f2fd';
     const badgeColor = isPendingPlan ? '#F57F17' : '#1565C0';
-    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;padding:16px 20px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-        <div>
-          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${p.title}</div>
-          <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+
+    // สร้าง rows รายการเครื่องมือ
+    const itemRows = items.map((it, idx) => {
+      const inst = allData.find(d => d.id == it.instrument_id);
+      const days = inst?.days_left;
+      let badge = '';
+      if (days !== null && days !== undefined) {
+        if (days < 0) badge = `<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 6px;border-radius:20px">เกินกำหนด</span>`;
+        else if (days <= 30) badge = `<span style="background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 6px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
+        else badge = `<span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 6px;border-radius:20px">ปกติ</span>`;
+      }
+      const due = inst?.due_date ? inst.due_date.slice(0,10).split('-').reverse().join('/') : '–';
+      return `<div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:11px">
+        <span style="color:var(--text3);text-align:center">${idx+1}</span>
+        <span style="color:var(--accent);font-weight:600;font-family:var(--mono)">${it.id_code||'–'}</span>
+        <span style="color:var(--text)">${it.instrument_name||'–'} <span style="color:var(--text3)">· ${it.department||'–'}</span></span>
+        <span style="color:var(--text3)">Due: ${due}</span>
+        <span>${badge}</span>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;overflow:hidden">
+      <div style="padding:14px 18px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${p.title}</div>
+            <div style="font-size:11px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+          </div>
+          <span style="background:${badgeBg};color:${badgeColor};font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
         </div>
-        <span style="background:${badgeBg};color:${badgeColor};font-size:12px;padding:4px 12px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${cnt > 0 ? `<button onclick="togglePlanItems('confirm_items_${p.id}')" style="padding:5px 12px;background:var(--accent-light);border:1px solid #c5d9ef;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--accent);font-weight:500">📋 รายการ (${cnt})</button>` : ''}
+          ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
+          ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:5px 12px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
+          ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:5px 14px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
+          ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:5px 14px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
+          <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
+          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 12px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
-        ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
-        ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:6px 14px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
-        ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:6px 16px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
-        ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:6px 16px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
-        <button onclick="confirmPlan('${p.id}','rejected')" style="padding:6px 14px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
-      </div>
+      ${cnt > 0 ? `<div id="confirm_items_${p.id}" style="display:none;border-top:1px solid var(--border);background:var(--surface2);padding:10px 18px">
+        <div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;gap:8px;padding:4px 0;margin-bottom:4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">
+          <span>#</span><span>รหัส</span><span>เครื่องมือ</span><span>Due</span><span>สถานะ</span>
+        </div>
+        ${itemRows}
+      </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -3065,6 +3310,7 @@ async function confirmPlan(planId, newStatus) {
     const { error } = await sb.from('calibration_plans').update(updateData).eq('id', planId);
     if (error) throw error;
     hideLoading();
+    await logPlanAudit(planId, newStatus === 'planned' ? 'อนุมัติแผน' : newStatus === 'completed' ? 'ยืนยันสอบ' : 'ปฏิเสธแผน', `เปลี่ยนสถานะเป็น ${newStatus}`);
     showToast('✅ อัพเดทสถานะเรียบร้อย', 'success');
     loadPlanConfirm();
     loadPlanConfirmBadge();
@@ -3101,6 +3347,7 @@ async function submitAttachCert() {
     }).eq('id', attachCertPlanId);
     if (error) throw error;
     hideLoading();
+    await logPlanAudit(attachCertPlanId, 'แนบไฟล์สอบ', 'แนบไฟล์หลังสอบเทียบ รอ Admin ยืนยัน');
     showToast('✅ ส่งไฟล์ให้ Admin ยืนยันแล้ว', 'success');
     closeAttachCertModal();
     loadPlanList();
@@ -3894,8 +4141,6 @@ function exportScheduleJSON() {
 let swData = [], swFiltered = [];
 let editingSWId = null;
 
-function loadSWData() { return loadStandardWeights(); }
-
 async function loadStandardWeights() {
   const tbody = document.getElementById('swTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>';
@@ -3995,7 +4240,7 @@ function openSWModal(id) {
     .forEach(function(fid) { var el = document.getElementById(fid); if(el) el.value = ''; });
   var u = document.getElementById('swUnit'); if(u) u.value = 'g';
   var c = document.getElementById('swClass'); if(c) c.value = '';
-  var f = document.getElementById('swCalFrequency'); if(f) f.value = '1 ปี';
+
   if (id) {
     const w = swData.find(function(x){ return x.id === id; });
     if (w) {
@@ -4007,7 +4252,7 @@ function openSWModal(id) {
       set('swRemark', w.remark);
       var eu = document.getElementById('swUnit'); if(eu) eu.value = w.unit || 'g';
       var ec = document.getElementById('swClass'); if(ec) ec.value = w.class_grade || '';
-      var ef = document.getElementById('swCalFrequency'); if(ef) ef.value = w.cal_frequency || '1 ปี';
+
     }
   } else {
     title.textContent = '⚖️ เพิ่มลูกตุ้มมาตรฐาน';
@@ -4023,10 +4268,11 @@ function closeSWModal() {
 
 function autoCalcSWDue() {
   var cal = document.getElementById('swCalDate') && document.getElementById('swCalDate').value;
-  var freq = (document.getElementById('swCalFrequency') && document.getElementById('swCalFrequency').value) || '1 ปี';
+  var freqEl = document.getElementById('swCalFrequency');
+  var freq = freqEl ? parseInt(freqEl.value) || 2 : 2;
   if (!cal) return;
   var d = new Date(cal);
-  d.setFullYear(d.getFullYear() + (parseInt(freq) || 1));
+  d.setFullYear(d.getFullYear() + freq);
   var due = d.toISOString().slice(0, 10);
   var el = document.getElementById('swDueDate');
   if (el) el.value = due;
@@ -4048,7 +4294,7 @@ async function saveSW() {
     cert_no: get('swCertNo') || null,
     manufacturer: get('swManufacturer') || null,
     cal_date: get('swCalDate') || null,
-    cal_frequency: get('swCalFrequency') || '1 ปี',
+
     due_date: get('swDueDate') || null,
     remark: get('swRemark') || null,
     updated_at: new Date().toISOString(),
