@@ -3531,14 +3531,13 @@ const IMPORT_COL_MAP = {
   's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
   'หน่วยงาน':'department','department':'department',
   'id code':'id_code','id_code':'id_code','idcode':'id_code',
-  // Cert ใหม่ (2026) → cert_no ปัจจุบัน
+  // Cert ใหม่ (มี 2026) → cert_no ปัจจุบัน
   'cert. 2026':'cert_no','cert.2026':'cert_no',
-  // วันสอบเทียบใหม่ (2026) → cal_date ปัจจุบัน
+  // วันสอบใหม่ (มี 2026) → cal_date ปัจจุบัน
   'วันสอบเทียบ 2026':'cal_date','วันสอบเทียบ2026':'cal_date',
-  // Cert เก่า → prev_cert_no (ประวัติ)
-  'cert.':'prev_cert_no','cert_no':'prev_cert_no','เลขที่ certificate':'prev_cert_no',
-  // วันสอบเทียบเก่า → prev_cal_date (ประวัติ)
-  'วันสอบเทียบ':'prev_cal_date','วันที่สอบเทียบ':'prev_cal_date','cal_date':'prev_cal_date',
+  // ถ้าไม่มี 2026 → cert. และวันสอบเทียบ = ปัจจุบัน
+  'cert.':'cert_no','เลขที่ certificate':'cert_no',
+  'วันสอบเทียบ':'cal_date','วันที่สอบเทียบ':'cal_date','cal_date':'cal_date',
   'วันครบกำหนด':'due_date','ครบกำหนด':'due_date','due_date':'due_date',
   'ความถี่สอบเทียบ':'cal_frequency','ความถี่':'cal_frequency','cal_frequency':'cal_frequency',
   'ภายใน/ภายนอก':'cal_type','cal_type':'cal_type',
@@ -3585,9 +3584,19 @@ function handleImportFile(file) {
 
       const excelHeaders = raw[0].map(h => String(h).trim());
       const fieldMap = {};
+      // ตรวจว่ามี Cert. 2026 ไหม — ถ้ามีให้ cert. เก่าเป็น prev
+      const hasNew2026 = excelHeaders.some(h => h.toLowerCase().includes('2026'));
       excelHeaders.forEach((h, i) => {
         const key = h.toLowerCase();
-        if (IMPORT_COL_MAP[key]) fieldMap[i] = IMPORT_COL_MAP[key];
+        if (IMPORT_COL_MAP[key]) {
+          // ถ้าไม่มี 2026 และ key เป็น cert. → map เป็น cert_no (ปัจจุบัน)
+          // ถ้ามี 2026 และ key เป็น cert. → map เป็น prev_cert_no
+          if (!hasNew2026 && key === 'cert.') fieldMap[i] = 'cert_no';
+          else if (!hasNew2026 && key === 'วันสอบเทียบ') fieldMap[i] = 'cal_date';
+          else if (hasNew2026 && key === 'cert.') fieldMap[i] = 'prev_cert_no';
+          else if (hasNew2026 && key === 'วันสอบเทียบ') fieldMap[i] = 'prev_cal_date';
+          else fieldMap[i] = IMPORT_COL_MAP[key];
+        }
       });
 
       const errors = [];
