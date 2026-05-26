@@ -1693,7 +1693,7 @@ function renderTable() {
       <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
       <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
-      <td class="id-code">${d.id_code||'–'}</td>
+      <td><button onclick="openCalHistory(${d.id})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${d.id_code||'–'}</button></td>
       <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
