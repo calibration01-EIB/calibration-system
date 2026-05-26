@@ -261,7 +261,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="form-group">
       <label>รหัสผ่าน</label>
-      <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+      <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
     </div>
     <button class="btn-primary" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
     <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">ติดต่อ Admin หากต้องการสิทธิ์เข้าใช้งาน</p>
