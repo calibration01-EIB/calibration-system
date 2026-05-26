@@ -3645,10 +3645,10 @@ async function confirmImport() {
       const { error } = await sb.from('instruments')
         .upsert(chunk, { onConflict: 'id_code', ignoreDuplicates: false });
       if (error) {
-        // upsert ไม่สำเร็จ — บันทึก error ไว้ ไม่ insert ซ้ำ
         failed += chunk.length;
         failedCodes.push(...chunk.map(r => r.id_code));
-        console.error('upsert error:', error.message);
+        console.error('upsert error:', error.message, error.details, error.hint);
+        showToast('❌ Error: ' + error.message, 'error');
       } else {
         success += chunk.length;
       }
