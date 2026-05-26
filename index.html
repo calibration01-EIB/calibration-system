@@ -2309,9 +2309,9 @@ function renderMonthly() {
         ${ok>0?`<div style="flex:${ok};background:var(--green);border-radius:2px"></div>`:''}
       </div>
       <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-        ${ov>0?`<span style="font-size:10px;color:var(--red)">🔴 ${ov}</span>`:''}
-        ${wa>0?`<span style="font-size:10px;color:var(--amber)">🟡 ${wa}</span>`:''}
-        ${ok>0&&cnt>0?`<span style="font-size:10px;color:var(--green)">🟢 ${ok}</span>`:''}
+        ${ov>0?`<span style="font-size:10px;color:#c0392b;font-weight:600">🔴 ${ov}</span>`:''}
+        ${wa>0?`<span style="font-size:10px;color:#b8690a;font-weight:600">🟡 ${wa}</span>`:''}
+        ${ok>0&&cnt>0?`<span style="font-size:10px;color:#1a6b3c;font-weight:600">🟢 ${ok}</span>`:''}
         ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
       </div>`;
     if (cnt) {
@@ -2386,7 +2386,7 @@ function renderCategoryCards() {
     const thName = fullName.split(' (')[0];
     const isActive = activeCategory === fullName;
 
-    const numColor  = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
+    const numColor  = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : cnt > 0 ? '#1a6b3c' : 'var(--text3)';
     const mainColor = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : 'var(--green)';
     const cardBorder = isActive ? mainColor : 'var(--border)';
     const boxShadow  = isActive ? `0 0 0 2px ${mainColor}40` : 'none';
@@ -2394,7 +2394,7 @@ function renderCategoryCards() {
     const card = document.createElement('div');
     card.style.cssText = `background:white;border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:10px;padding:10px 8px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
     card.innerHTML = `
-      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${thName}</div>
+      <div style="font-size:11px;color:#444;margin-bottom:4px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${thName}</div>
       <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
       <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
         ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red);border-radius:2px"></div>`:''}
@@ -2402,9 +2402,9 @@ function renderCategoryCards() {
         ${s.ok>0?`<div style="flex:${s.ok};background:var(--green);border-radius:2px"></div>`:''}
       </div>
       <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-        ${s.overdue>0?`<span style="font-size:10px;color:var(--red)">🔴 ${s.overdue}</span>`:''}
-        ${s.warning>0?`<span style="font-size:10px;color:var(--amber)">🟡 ${s.warning}</span>`:''}
-        ${s.ok>0&&cnt>0?`<span style="font-size:10px;color:var(--green)">🟢 ${s.ok}</span>`:''}
+        ${s.overdue>0?`<span style="font-size:10px;color:#c0392b;font-weight:600">🔴 ${s.overdue}</span>`:''}
+        ${s.warning>0?`<span style="font-size:10px;color:#b8690a;font-weight:600">🟡 ${s.warning}</span>`:''}
+        ${s.ok>0&&cnt>0?`<span style="font-size:10px;color:#1a6b3c;font-weight:600">🟢 ${s.ok}</span>`:''}
         ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
       </div>`;
 
