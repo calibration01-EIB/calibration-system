@@ -910,6 +910,20 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </div>
 
+<!-- CALIBRATION HISTORY MODAL -->
+<div class="modal-overlay" id="calHistoryModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <div>
+        <h3>📋 ประวัติสอบเทียบ</h3>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;font-family:var(--mono)" id="calHistoryTitle"></div>
+      </div>
+      <button class="btn-close" onclick="closeCalHistoryModal()">×</button>
+    </div>
+    <div class="modal-body" id="calHistoryBody"></div>
+  </div>
+</div>
+
 <!-- ATTACH CERT MODAL -->
 <div class="modal-overlay" id="attachCertModal">
   <div class="modal-box" style="max-width:480px">
@@ -1320,6 +1334,62 @@ async function renderAlerts() {
   }).filter(Boolean).join("");
 }
 
+function openCalHistory(instrumentId) {
+  const d = allData.find(x => x.id === instrumentId);
+  if (!d) return;
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+  const hasPrev = d.prev_cert_no || d.prev_cal_date;
+  document.getElementById('calHistoryTitle').textContent = d.id_code || '–';
+  document.getElementById('calHistoryBody').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบปัจจุบัน</div>
+      <div style="background:var(--accent-light);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text3)">CERT.</div>
+          <div style="font-size:14px;font-weight:600;color:var(--accent);font-family:var(--mono)">${d.cert_no||'–'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
+          <div style="font-size:14px;font-weight:600;color:var(--accent)">${fmt(d.cal_date)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">ครบกำหนด</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${fmt(d.due_date)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">ความถี่</div>
+          <div style="font-size:13px;color:var(--text)">${d.cal_frequency||'–'}</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">รอบก่อนหน้า</div>
+      ${hasPrev ? `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text3)">CERT.</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text2);font-family:var(--mono)">${d.prev_cert_no||'–'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">วันสอบเทียบ</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text2)">${fmt(d.prev_cal_date)}</div>
+        </div>
+      </div>` : `
+      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--text3);font-size:13px">
+        ยังไม่มีประวัติรอบก่อนหน้า<br>
+        <span style="font-size:11px">จะบันทึกอัตโนมัติเมื่อแก้ไข CERT หรือวันสอบเทียบครั้งถัดไป</span>
+      </div>`}
+    </div>
+    <div style="margin-top:14px;padding:10px 14px;background:#f0f7f6;border-radius:8px;font-size:12px;color:var(--text2)">
+      <strong>${d.instrument_name||'–'}</strong> &nbsp;·&nbsp; ${d.department||'–'} &nbsp;·&nbsp; ${d.cal_type||'–'}
+    </div>`;
+  document.getElementById('calHistoryModal').classList.add('open');
+}
+
+function closeCalHistoryModal() {
+  document.getElementById('calHistoryModal').classList.remove('open');
+}
+
 function goToPlanWithItem(instrumentId) {
   const d = allData.find(x => x.id == instrumentId);
   if (d && !planSelectedItems.some(s => s.id == d.id)) {
@@ -1607,7 +1677,7 @@ function renderTable() {
       <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
       <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
       <td><strong>${d.department||'–'}</strong></td>
-      <td class="id-code">${d.id_code||'–'}</td>
+      <td><button onclick="openCalHistory(${d.id})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${d.id_code||'–'}</button></td>
       <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
@@ -1979,6 +2049,15 @@ async function saveInstrument() {
   try {
     if (editingInstrumentId) {
       const original = allData.find(x => x.id === editingInstrumentId);
+      // ถ้า cert_no หรือ cal_date เปลี่ยน → บันทึกค่าเก่าเป็น prev
+      if (original) {
+        const certChanged = original.cert_no && original.cert_no !== payload.cert_no;
+        const dateChanged = original.cal_date && original.cal_date !== payload.cal_date;
+        if (certChanged || dateChanged) {
+          payload.prev_cert_no = original.cert_no || null;
+          payload.prev_cal_date = original.cal_date || null;
+        }
+      }
       const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
       if (error) throw error;
       const diff = original ? getDiff(original, {...original, ...payload}) : null;
