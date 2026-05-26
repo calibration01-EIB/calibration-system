@@ -3678,6 +3678,14 @@ async function confirmImport() {
   const CHUNK = 50;
   let done = 0, success = 0, failed = 0, failedCodes = [];
   try {
+    // ดึงข้อมูลเดิมของทุก id_code ที่จะ import มาเปรียบเทียบ
+    const idCodes = validRows.map(r => r.id_code);
+    const { data: existingData } = await sb.from('instruments')
+      .select('id,id_code,cert_no,cal_date,due_date')
+      .in('id_code', idCodes);
+    const existingMap = {};
+    (existingData || []).forEach(e => { existingMap[e.id_code] = e; });
+
     for (let i = 0; i < validRows.length; i += CHUNK) {
       const chunk = validRows.slice(i, i + CHUNK);
       // clean null-string values + auto-calc due_date ก่อน upsert
@@ -3693,13 +3701,36 @@ async function confirmImport() {
         }
         return clean;
       });
+
+      // บันทึกประวัติ calibration_history เฉพาะรายการที่ cert_no หรือ cal_date เปลี่ยน
+      const historyRows = [];
+      cleanChunk.forEach(row => {
+        const orig = existingMap[row.id_code];
+        if (!orig) return; // รายการใหม่ ยังไม่มีประวัติ
+        const certChanged = orig.cert_no && orig.cert_no !== row.cert_no;
+        const dateChanged = orig.cal_date && orig.cal_date !== row.cal_date;
+        if (certChanged || dateChanged) {
+          historyRows.push({
+            instrument_id: orig.id,
+            cert_no: orig.cert_no || null,
+            cal_date: orig.cal_date || null,
+            due_date: orig.due_date || null,
+          });
+          // set prev fields
+          row.prev_cert_no = orig.cert_no || null;
+          row.prev_cal_date = orig.cal_date || null;
+        }
+      });
+      if (historyRows.length) {
+        await sb.from('calibration_history').insert(historyRows);
+      }
+
       const { error } = await sb.from('instruments')
         .upsert(cleanChunk, { onConflict: 'id_code', ignoreDuplicates: false });
       if (error) {
         failed += chunk.length;
         failedCodes.push(...chunk.map(r => r.id_code));
         console.error('upsert error:', error.message, error.details, error.hint);
-        // แสดง error ชัดเจนและ restore ปุ่ม
         document.getElementById('importProgressText').textContent = '❌ ' + error.message;
         document.getElementById('importStep2').style.display = 'block';
         document.getElementById('confirmImportBtn').disabled = false;
