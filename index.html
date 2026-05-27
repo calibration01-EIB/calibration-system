@@ -133,6 +133,8 @@ table td, table th { white-space: nowrap; }
 table td { font-size: 12px !important; padding: 5px 10px !important; color: #1a2e2c !important; font-weight: 500; }
 table th { font-size: 11px !important; padding: 6px 10px !important; color: #ffffff !important; font-weight: 700; }
 thead { background: #00897B; position: sticky; top: 0; z-index: 3; }
+#certHistTable thead tr { background: var(--surface2) !important; }
+#certHistTable thead th { color: var(--text2) !important; font-weight: 500; }
 th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); white-space: nowrap; border-bottom: 1.5px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
 td { padding: 5px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
@@ -751,7 +753,7 @@ tbody tr:hover { background: var(--surface2); }
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div style="font-size:13px;color:var(--text3)">บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button onclick="openIssueCertModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">🏷️ + ออก Cert</button>
+            <button onclick="openIssueCertModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">🏷️ + ออกลำดับใบ Cert</button>
             <button onclick="exportFrmCal95()" style="background:white;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">📄 Export FRM-CAL95</button>
           </div>
         </div>
@@ -784,8 +786,8 @@ tbody tr:hover { background: var(--surface2); }
             </div>
           </div>
           <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead style="position:sticky;top:0;z-index:1;background:var(--surface2);">
+            <table id="certHistTable" style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead style="position:sticky;top:0;z-index:1;">
                 <tr style="background:var(--surface2)">
                   <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">#</th>
                   <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">หมายเลขใบรับรอง</th>
@@ -1014,8 +1016,8 @@ tbody tr:hover { background: var(--surface2); }
   <div class="modal-box" style="max-width:500px">
     <div class="modal-header">
       <div>
-        <h3>🏷️ ออก Cert ใหม่</h3>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px">เลขจะถูกรันอัตโนมัติตามประเภทเครื่องมือ</div>
+        <h3>🏷️ ออกลำดับใบ Cert ใหม่</h3>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">เลขจะถูกรันอัตโนมัติตามประเภทที่เลือก</div>
       </div>
       <button class="btn-close" onclick="closeIssueCertModal()">×</button>
     </div>
@@ -1027,8 +1029,32 @@ tbody tr:hover { background: var(--surface2); }
           <div style="font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono)" id="issueCertNo">—</div>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>ประเภท (Type) <span style="color:var(--red)">*</span></label>
+          <select id="icTypeCode" onchange="previewCertNo()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+            <option value="">-- เลือกประเภท --</option>
+            <option value="B">B — Balance</option>
+            <option value="T">T — Torque/Safety</option>
+            <option value="F">F — Light/Sound</option>
+            <option value="M">M — Mass Weight</option>
+            <option value="H">H — Flow/Volume</option>
+            <option value="P">P — Pressure</option>
+            <option value="C">C — Temperature</option>
+            <option value="D">D — Chemical</option>
+            <option value="E">E — Electrical</option>
+            <option value="Q">Q — Time/Others</option>
+            <option value="G">G — Speed/Rotation</option>
+            <option value="L">L — Length</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>วันที่ออกเอกสาร <span style="color:var(--red)">*</span></label>
+          <input type="date" id="icIssueDate" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+        </div>
+      </div>
       <div class="form-group">
-        <label>ID Code <span style="color:var(--red)">*</span></label>
+        <label>ID Code</label>
         <input type="text" id="icIdCode" placeholder="พิมพ์ ID Code เช่น PFB1BB03-WI01" oninput="previewCertNo()" list="icIdCodeList" autocomplete="off">
         <datalist id="icIdCodeList"></datalist>
       </div>
@@ -1059,7 +1085,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid var(--border)">
       <button class="btn-secondary" onclick="closeIssueCertModal()">ยกเลิก</button>
-      <button class="btn-primary" onclick="confirmIssueCert()">✅ ยืนยันออก Cert</button>
+      <button class="btn-primary" onclick="confirmIssueCert()">✅ ยืนยันออกลำดับใบ Cert</button>
     </div>
   </div>
 </div>
@@ -4801,6 +4827,8 @@ let _editCertId = null;
 
 function openIssueCertModal() {
   _editCertId = null;
+  document.getElementById('icTypeCode').value = '';
+  document.getElementById('icIssueDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('icIdCode').value = '';
   document.getElementById('icRequestNo').value = '';
   document.getElementById('icJobNo').value = '';
@@ -4818,6 +4846,8 @@ function openEditCertModal(instrumentId) {
   const d = allData.find(x => x.id === instrumentId);
   if (!d) return;
   _editCertId = instrumentId;
+  document.getElementById('icTypeCode').value = getCertTypeCode(d.instrument_type) || '';
+  document.getElementById('icIssueDate').value = d.cal_date || new Date().toISOString().slice(0,10);
   document.getElementById('icIdCode').value = d.id_code || '';
   document.getElementById('icRequestNo').value = d.request_no || '';
   document.getElementById('icJobNo').value = d.job_no || '';
@@ -4834,19 +4864,20 @@ function closeIssueCertModal() {
 }
 
 function previewCertNo() {
-  const idCode = document.getElementById('icIdCode').value.trim();
-  const d = allData.find(x => x.id_code === idCode);
-  if (!d) { document.getElementById('issueCertNo').textContent = '—'; return; }
-  const typeCode = getCertTypeCode(d.instrument_type);
-  const yearCode = new Date().getFullYear() % 100;
-  document.getElementById('issueCertNo').textContent = `${yearCode}${typeCode}???-0 (รันอัตโนมัติ)`;
+  const typeCode = document.getElementById('icTypeCode')?.value || '';
+  const issueDate = document.getElementById('icIssueDate')?.value || '';
+  if (!typeCode) { document.getElementById('issueCertNo').textContent = '—'; return; }
+  const yr = issueDate ? new Date(issueDate).getFullYear() % 100 : new Date().getFullYear() % 100;
+  document.getElementById('issueCertNo').textContent = `${yr}${typeCode}???-0 (รันอัตโนมัติ)`;
 }
 
 async function confirmIssueCert() {
+  const typeCodeSel = document.getElementById('icTypeCode').value.trim();
+  if (!typeCodeSel) { showToast('กรุณาเลือกประเภท (Type)', 'error'); return; }
+  const issueDate = document.getElementById('icIssueDate').value.trim();
+  if (!issueDate) { showToast('กรุณาระบุวันที่ออกเอกสาร', 'error'); return; }
   const idCode = document.getElementById('icIdCode').value.trim();
-  if (!idCode) { showToast('กรุณาระบุ ID Code', 'error'); return; }
-  const d = allData.find(x => x.id_code === idCode);
-  if (!d) { showToast('ไม่พบ ID Code: ' + idCode, 'error'); return; }
+  const d = idCode ? allData.find(x => x.id_code === idCode) : null;
 
   const requestNo = document.getElementById('icRequestNo').value.trim();
   const jobNo = document.getElementById('icJobNo').value.trim();
@@ -4859,14 +4890,14 @@ async function confirmIssueCert() {
     const { error } = await sb.from('instruments').update({
       request_no: requestNo||null, job_no: jobNo||null,
       issued_by: issuedBy||null, responsible_by: responsibleBy||null,
-      remark: remark||null
+      remark: remark||null, cal_date: issueDate||null
     }).eq('id', _editCertId);
     if (error) { showToast('แก้ไขไม่สำเร็จ: '+error.message,'error'); return; }
     showToast('✅ แก้ไขข้อมูล Cert แล้ว','success');
   } else {
     // ออก Cert ใหม่
-    const typeCode = getCertTypeCode(d.instrument_type);
-    const yearCode = new Date().getFullYear() % 100;
+    const typeCode = typeCodeSel;
+    const yearCode = issueDate ? new Date(issueDate).getFullYear() % 100 : new Date().getFullYear() % 100;
     const { data: seqData, error: seqErr } = await sb.from('cert_sequences')
       .select('id,last_number').eq('year_code', yearCode).eq('type_code', typeCode).single();
     let newNumber, seqId;
@@ -4879,10 +4910,11 @@ async function confirmIssueCert() {
       await sb.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
     }
     const certNo = `${yearCode}${typeCode}${String(newNumber).padStart(3,'0')}-0`;
+    if (!d) { showToast('กรุณาระบุ ID Code ที่ถูกต้อง', 'error'); return; }
     const { error } = await sb.from('instruments').update({
       cert_no: certNo, request_no: requestNo||null, job_no: jobNo||null,
       issued_by: issuedBy||null, responsible_by: responsibleBy||null,
-      remark: remark||null
+      remark: remark||null, cal_date: issueDate||null
     }).eq('id', d.id);
     if (error) {
       await sb.from('cert_sequences').update({ last_number: newNumber-1 }).eq('id', seqId);
