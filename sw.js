@@ -1,4 +1,4 @@
-const CACHE = 'cal-v12';
+const CACHE = 'cal-v13';
 const ASSETS = [
   '/calibration-system/',
   '/calibration-system/index.html',
@@ -22,6 +22,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(res => {
       const clone = res.clone();
