@@ -228,12 +228,19 @@ tbody tr:hover { background: var(--surface2); }
   #dashRow2 { grid-template-columns: 1fr 1fr !important; }
   #dashRow2 > div:last-child { grid-column: span 2; }
 }
+@media (max-width: 1024px) {
+  .sidebar { width: 180px; }
+  .main-content { margin-left: 180px; }
+}
 @media (max-width: 768px) {
   .sidebar { width: 100%; height: 60px; flex-direction: row; position: fixed; top: 0; bottom: auto; padding: 0 16px; }
   .sidebar-brand { padding: 0; border: none; display: flex; align-items: center; flex: 1; }
+  .sidebar-brand img { width: 36px !important; height: 36px !important; border-radius: 6px !important; margin: 0 8px 0 0 !important; }
+  .sidebar-brand h2, .sidebar-brand p { display: none; }
   .sidebar-nav { display: none; }
   .sidebar-user { border: none; padding: 0; }
-  .main-content { margin-left: 0; padding-top: 60px; }
+  .user-info { display: none; }
+  .main-content { margin-left: 0; padding-top: 68px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .meta-row { grid-template-columns: 1fr; }
   #dashRow2 { grid-template-columns: 1fr !important; }
@@ -1278,9 +1285,16 @@ function enterApp(user) {
   if (user.role === 'admin') {
     document.getElementById('nav-admin').style.display = 'flex';
     document.getElementById('nav-audit').style.display = 'flex';
+    const ba = document.getElementById('bnav-admin'); if (ba) ba.style.display = 'flex';
+    const bau = document.getElementById('bnav-audit'); if (bau) bau.style.display = 'flex';
   }
   if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
   if (user.role === 'admin' || user.role === 'editor') toggleManageColumns(true);
+  // show bottom nav on mobile/tablet
+  if (window.innerWidth <= 768) {
+    const bn = document.querySelector('.bottom-nav');
+    if (bn) bn.style.display = 'flex';
+  }
   setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
   loadData();
 }
