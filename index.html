@@ -88,7 +88,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .topbar { background: white; border-bottom: 2px solid var(--accent); padding: 7px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
 .topbar-title { font-size: 16px; font-weight: 600; }
 .topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-.page-content { padding: 14px 20px; min-width: 0; overflow-x: hidden; }
+.page-content { padding: 14px 20px; min-width: 0; overflow-x: auto; }
 .db-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
 .status-dot.ok { background: #00897B; }
@@ -759,7 +759,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
 
         <!-- Type Cards -->
-        <div id="certTypeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px"></div>
+        <div id="certTypeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px;overflow:hidden"></div>
 
         <!-- ประวัติ Cert -->
         <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
@@ -790,7 +790,7 @@ tbody tr:hover { background: var(--surface2); }
           </div>
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
-              <thead>
+              <thead style="position:sticky;top:0;z-index:1">
                 <tr style="background:var(--surface2)">
                   <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">#</th>
                   <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">หมายเลขใบรับรอง</th>
