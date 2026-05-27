@@ -4822,9 +4822,9 @@ async function loadCertPage() {
         const editBtn = !approved
           ? `<button onclick="openEditCertModal(${d.id})" style="background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--accent);margin-right:4px">✏️</button>`
           : `<span title="อนุมัติแล้ว ไม่สามารถแก้ไขได้" style="font-size:11px;color:var(--text3)">🔒</span>`;
-        const delBtn = !approved
-          ? `<button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}')" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>`
-          : '';
+        const delBtn = isAdmin
+          ? `<button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',${approved})" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>`
+          : (!approved ? `<button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>` : '');
         return `
         <tr style="border-bottom:1px solid var(--border);${rowBg}">
           <td style="padding:7px 10px;color:var(--text3)">${i+1}</td>
@@ -4979,8 +4979,8 @@ function openIssueCertModal() {
   document.getElementById('icIdCode').value = '';
   document.getElementById('icRequestNo').value = '';
   document.getElementById('icJobNo').value = '';
-  document.getElementById('icIssuedBy').value = '';
-  document.getElementById('icResponsibleBy').value = '';
+  document.getElementById('icIssuedBy').value = currentUser ? currentUser.name : '';
+  document.getElementById('icResponsibleBy').value = currentUser ? currentUser.name : '';
   document.getElementById('icRemark').value = '';
   document.getElementById('issueCertNo').textContent = '—';
   // populate datalist
@@ -5075,11 +5075,22 @@ async function confirmIssueCert() {
   loadCertPage();
 }
 
-async function deleteCertEntry(instrumentId, certNo) {
-  if (!confirm(`ลบเลข Cert: ${certNo} ออกจากรายการนี้?
-(เลขจะถูกล้างออก แต่ข้อมูลเครื่องมือยังอยู่)`)) return;
+async function deleteCertEntry(instrumentId, certNo, isApproved) {
+  if (!currentUser) return;
+  if (isApproved && currentUser.role !== 'admin') {
+    showToast('รายการที่อนุมัติแล้ว เฉพาะ Admin เท่านั้นที่ลบได้', 'error'); return;
+  }
+  const msg = isApproved
+    ? `⚠️ รายการนี้อนุมัติแล้ว
+ยืนยันลบ Cert: ${certNo}?
+(เลขจะถูกล้างออก แต่ข้อมูลเครื่องมือยังอยู่)`
+    : `ลบเลข Cert: ${certNo} ออกจากรายการนี้?
+(เลขจะถูกล้างออก แต่ข้อมูลเครื่องมือยังอยู่)`;
+  if (!confirm(msg)) return;
   const { error } = await sb.from('instruments').update({
-    cert_no: null, request_no: null, job_no: null, issued_by: null, responsible_by: null
+    cert_no: null, request_no: null, job_no: null,
+    issued_by: null, responsible_by: null,
+    approved_by: null, approved_at: null
   }).eq('id', instrumentId);
   if (error) { showToast('ลบไม่สำเร็จ: '+error.message,'error'); return; }
   showToast('✅ ลบเลข Cert แล้ว','success');
