@@ -3726,8 +3726,16 @@ async function confirmImport() {
           row.prev_cal_date = orig.cal_date || null;
         }
       });
+      console.log('[Import] existingMap keys:', Object.keys(existingMap).length);
+      console.log('[Import] historyRows to insert:', historyRows.length, historyRows);
       if (historyRows.length) {
-        await sb.from('calibration_history').insert(historyRows);
+        const { error: histErr } = await sb.from('calibration_history').insert(historyRows);
+        if (histErr) {
+          console.error('[Import] calibration_history insert error:', histErr.message, histErr.details, histErr.hint);
+          showToast('⚠️ บันทึกประวัติไม่สำเร็จ: ' + histErr.message, 'error');
+        } else {
+          console.log('[Import] history inserted OK:', historyRows.length, 'rows');
+        }
       }
 
       const { error } = await sb.from('instruments')
