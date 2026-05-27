@@ -1715,6 +1715,7 @@ async function loadData(forceRefresh = false) {
     renderAlerts();
     loadPlanStatusMap();
     updateNotificationBell();
+    if (document.getElementById("pageCert")?.style.display !== "none") loadCertPage();
   };
 
   // โหลดจาก cache ก่อนถ้ายังไม่หมดอายุ
