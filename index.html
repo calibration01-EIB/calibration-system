@@ -241,7 +241,16 @@ tbody tr:hover { background: var(--surface2); }
   .sidebar-user { border: none; padding: 0; }
   .user-info { display: none; }
   .main-content { margin-left: 0; padding-top: 68px; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { padding: 10px 12px; }
+  .stat-num { font-size: 28px !important; }
+  .stat-label { font-size: 11px !important; }
+  #statCardsGrid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #statCardsGrid > div { padding: 14px 12px !important; }
+  #statCardsGrid > div > div:first-child { margin-bottom: 8px !important; }
+  #statCardsGrid > div > div:first-child > div:first-child { width:32px !important; height:32px !important; font-size:16px !important; }
+  #statCardsGrid > div > div:nth-child(2) { font-size: 28px !important; }
+  #statCardsGrid > div > div:nth-child(3) { font-size: 11px !important; }
   .meta-row { grid-template-columns: 1fr; }
   #dashRow2 { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: span 1; }
@@ -319,7 +328,7 @@ tbody tr:hover { background: var(--surface2); }
       <div id="pageDashboard" class="page-content">
 
         <!-- ROW 1: KPI CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+        <div id="statCardsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
           <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#00695C);border-radius:16px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,137,123,0.3);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="background:rgba(255,255,255,.2);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px">🔧</div>
