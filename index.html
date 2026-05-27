@@ -3636,6 +3636,11 @@ function handleImportFile(file) {
           if (val instanceof Date) {
             const y = val.getFullYear(), m = String(val.getMonth()+1).padStart(2,'0'), d = String(val.getDate()).padStart(2,'0');
             val = y+'-'+m+'-'+d;
+          } else if (typeof val === 'number' && val > 40000 && val < 60000) {
+            // Excel serial number → YYYY-MM-DD (epoch: 1899-12-30)
+            const dt = new Date(Math.round((val - 25569) * 86400 * 1000));
+            const y = dt.getUTCFullYear(), mo = String(dt.getUTCMonth()+1).padStart(2,'0'), dd = String(dt.getUTCDate()).padStart(2,'0');
+            val = y+'-'+mo+'-'+dd;
           } else { val = String(val || '').trim(); }
           if (val) obj[field] = val;
         });
