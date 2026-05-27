@@ -4975,7 +4975,7 @@ function showPage(page) {
   if (page === 'weights') loadStandardWeights();
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
-  if (page === 'cert') setTimeout(loadCertPage, 100);
+  if (page === 'cert') { if (allData && allData.length > 0) loadCertPage(); else setTimeout(function(){ if(allData && allData.length>0) loadCertPage(); else setTimeout(loadCertPage,1000); },300); }
 }
 
 // ====================================================
