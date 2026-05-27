@@ -1856,7 +1856,9 @@ function renderTable() {
       const d = filteredData[start + i];
       if (!d) return;
       const name = (d.instrument_name||'').replace(/'/g, "\\'");
-      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
+      const isInternal = d.cal_type === 'ภายใน';
+      const certBtn = isInternal ? `<button title="ออก Cert" style="margin-right:4px;background:#e0f4f1;border:1px solid #00897B;border-radius:6px;padding:2px 7px;cursor:pointer;font-size:11px;color:#00695C" onclick="issueCert(${d.id})">🏷️</button>` : '';
+      td.innerHTML = `${certBtn}<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
     });
   }
   updateFileCounts(pageData);
@@ -2737,6 +2739,79 @@ function renderAuditTable() {
 
 
 // คืนค่า string 'YYYY-MM-DD' (ใช้ใน Import ไม่ต้องแตะ DOM)
+// ====================================================
+// CERT TYPE MAP — instrument_type → type_code
+// ====================================================
+const CERT_TYPE_MAP = {
+  'มวล/น้ำหนัก (Mass/Weight)':               'B',
+  'ความยาว/มิติ (Length/Dimension)':          'L',
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'C',
+  'ความดัน/สุญญากาศ (Pressure/Vacuum)':       'P',
+  'ความเร็วรอบ (Speed/Rotation)':             'G',
+  'เวลา (Time)':                              'Q',
+  'เคมี/ความเข้มข้น (Chemical/Concentration)':'D',
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'M',
+  'ไฟฟ้า (Electrical)':                       'E',
+  'การไหล/ปริมาตร (Flow/Volume)':             'H',
+  'แสง/เสียง (Light/Sound)':                  'F',
+  'ความปลอดภัย (Safety)':                     'T',
+  'แรงบิด/แรงกด (Torque/Force)':              'T',
+  'อื่นๆ (Others)':                           'Q',
+};
+
+function getCertTypeCode(instrumentType) {
+  return CERT_TYPE_MAP[instrumentType] || 'B';
+}
+
+async function issueCert(instrumentId) {
+  const d = allData.find(x => x.id === instrumentId);
+  if (!d) return;
+  if (d.cal_type !== 'ภายใน') { showToast('ออก Cert ได้เฉพาะการสอบเทียบภายในเท่านั้น', 'error'); return; }
+
+  const typeCode = getCertTypeCode(d.instrument_type);
+  const now = new Date();
+  const yearCode = now.getFullYear() % 100; // 2 หลัก เช่น 26
+
+  // ดึง last_number และ increment
+  const { data: seqData, error: seqErr } = await sb.from('cert_sequences')
+    .select('id, last_number')
+    .eq('year_code', yearCode)
+    .eq('type_code', typeCode)
+    .single();
+
+  if (seqErr || !seqData) {
+    // ถ้ายังไม่มี row ของปีนี้ → สร้างใหม่
+    const { data: inserted } = await sb.from('cert_sequences')
+      .insert({ year_code: yearCode, type_code: typeCode, last_number: 1 })
+      .select().single();
+    if (!inserted) { showToast('ไม่สามารถรันเลข Cert ได้', 'error'); return; }
+    var newNumber = 1;
+    var seqId = inserted.id;
+  } else {
+    var newNumber = seqData.last_number + 1;
+    var seqId = seqData.id;
+    await sb.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
+  }
+
+  const certNo = `${yearCode}${typeCode}${String(newNumber).padStart(3,'0')}-0`;
+
+  // confirm ก่อน
+  const ok = confirm(`ออกเลข Cert: ${certNo}\nสำหรับ: ${d.id_code} — ${d.instrument_name||''}\n\nยืนยันหรือไม่?`);
+  if (!ok) {
+    // rollback last_number
+    await sb.from('cert_sequences').update({ last_number: newNumber - 1 }).eq('id', seqId);
+    return;
+  }
+
+  // บันทึก cert_no ลง instruments
+  const { error } = await sb.from('instruments').update({ cert_no: certNo }).eq('id', instrumentId);
+  if (error) { showToast('บันทึก Cert ไม่สำเร็จ: ' + error.message, 'error'); return; }
+
+  await logAudit('แก้ไข', { id_code: d.id_code, cert_no: certNo }, { cert_no: { before: d.cert_no, after: certNo } });
+  showToast(`✅ ออก Cert สำเร็จ: ${certNo}`, 'success');
+  await loadData(true);
+}
+
 function calcDueDateStr(calDate, frequency) {
   if (!calDate || !frequency) return null;
   const d = new Date(calDate);
