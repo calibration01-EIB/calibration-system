@@ -297,6 +297,7 @@ tbody tr:hover { background: var(--surface2); }
         <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
+        <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">⚖️</span> Standard Weights</div>
       </nav>
       <div class="sidebar-user">
@@ -746,6 +747,81 @@ tbody tr:hover { background: var(--surface2); }
 
 
       <!-- PAGE: STANDARD WEIGHTS -->
+      <!-- CERT PAGE -->
+      <div id="pageCert" class="page-content" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:13px;color:var(--text3)">รายการรอออก Cert และประวัติการออกเลข</div>
+          </div>
+          <button onclick="exportFrmCal95()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">📄 Export FRM-CAL95</button>
+        </div>
+
+        <!-- ส่วนรอออก Cert -->
+        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">🔴 รายการรอออก Cert (ภายใน — ยังไม่มีเลข Cert)</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ID CODE</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ชื่อเครื่องมือ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ประเภท</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">หน่วยงาน</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">วันสอบ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="certPendingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ส่วนประวัติ Cert -->
+        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">✅ ประวัติการออก Cert ทั้งหมด</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="certHistoryYear" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+                <option value="26">ปี 26 (2026)</option>
+                <option value="27">ปี 27 (2027)</option>
+                <option value="25">ปี 25 (2025)</option>
+              </select>
+              <select id="certHistoryType" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+                <option value="">ทุกประเภท</option>
+                <option value="B">B — Balance</option>
+                <option value="T">T — Torque/Safety</option>
+                <option value="F">F — Light/Sound</option>
+                <option value="M">M — Mass Weight</option>
+                <option value="H">H — Flow/Volume</option>
+                <option value="P">P — Pressure</option>
+                <option value="C">C — Temperature</option>
+                <option value="D">D — Chemical</option>
+                <option value="E">E — Electrical</option>
+                <option value="Q">Q — Time/Others</option>
+                <option value="G">G — Speed/Rotation</option>
+                <option value="L">L — Length</option>
+              </select>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">#</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">เลข Cert</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ID CODE</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ชื่อเครื่องมือ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ประเภท</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">หน่วยงาน</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">วันสอบ</th>
+                </tr>
+              </thead>
+              <tbody id="certHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="pageWeights" class="page-content" style="display:none">
 
         <!-- KPI Cards -->
@@ -940,6 +1016,10 @@ tbody tr:hover { background: var(--surface2); }
   <div onclick="showPage('audit')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-audit">
     <div style="font-size:22px">📋</div>
     <div style="font-size:10px;color:#888">Audit Log</div>
+  </div>
+  <div onclick="showPage('cert')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+    <div style="font-size:22px">🏷️</div>
+    <div style="font-size:10px;color:#888">Cert</div>
   </div>
   <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">↩️</div>
@@ -1856,9 +1936,7 @@ function renderTable() {
       const d = filteredData[start + i];
       if (!d) return;
       const name = (d.instrument_name||'').replace(/'/g, "\\'");
-      const isInternal = d.cal_type === 'ภายใน';
-      const certBtn = isInternal ? `<button title="ออก Cert" style="margin-right:4px;background:#e0f4f1;border:1px solid #00897B;border-radius:6px;padding:2px 7px;cursor:pointer;font-size:11px;color:#00695C" onclick="issueCert(${d.id})">🏷️</button>` : '';
-      td.innerHTML = `${certBtn}<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
+      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
     });
   }
   updateFileCounts(pageData);
@@ -4671,8 +4749,100 @@ async function deleteSW(id, idCode) {
 // ====================================================
 // PAGE NAVIGATION
 // ====================================================
+// CERT PAGE
+// ====================================================
+async function loadCertPage() {
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+  const yearSel = document.getElementById('certHistoryYear');
+  const typeSel = document.getElementById('certHistoryType');
+  const yearCode = yearSel ? yearSel.value : '26';
+  const typeCode = typeSel ? typeSel.value : '';
+
+  // รายการรอออก Cert (ภายใน + ไม่มี cert_no)
+  const pending = allData.filter(d => d.cal_type === 'ภายใน' && !d.cert_no);
+  const pendingBody = document.getElementById('certPendingBody');
+  if (pendingBody) {
+    pendingBody.innerHTML = pending.length === 0
+      ? '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีรายการรอออก Cert</td></tr>'
+      : pending.map(d => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 10px;font-family:var(--mono);color:var(--accent)">${d.id_code||'–'}</td>
+          <td style="padding:7px 10px">${d.instrument_name||'–'}</td>
+          <td style="padding:7px 10px;color:var(--text3);font-size:11px">${(d.instrument_type||'–').split(' (')[0]}</td>
+          <td style="padding:7px 10px">${d.department||'–'}</td>
+          <td style="padding:7px 10px">${fmt(d.cal_date)}</td>
+          <td style="padding:7px 10px">
+            <button onclick="issueCert(${d.id})" style="background:#e0f4f1;border:1px solid #00897B;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;color:#00695C;font-family:var(--font)">🏷️ ออก Cert</button>
+          </td>
+        </tr>`).join('');
+  }
+
+  // ประวัติ Cert ที่ออกไปแล้ว (กรองตามปีและประเภท)
+  const prefix = typeCode ? `${yearCode}${typeCode}` : yearCode;
+  const history = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
+  history.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
+
+  const histBody = document.getElementById('certHistoryBody');
+  if (histBody) {
+    histBody.innerHTML = history.length === 0
+      ? '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>'
+      : history.map((d, i) => `
+        <tr style="border-bottom:1px solid var(--border);${i%2===0?'':'background:var(--surface2)'}">
+          <td style="padding:7px 10px;color:var(--text3)">${i+1}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);font-weight:600;color:var(--accent)">${d.cert_no||'–'}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px">${d.id_code||'–'}</td>
+          <td style="padding:7px 10px">${d.instrument_name||'–'}</td>
+          <td style="padding:7px 10px;color:var(--text3);font-size:11px">${(d.instrument_type||'–').split(' (')[0]}</td>
+          <td style="padding:7px 10px">${d.department||'–'}</td>
+          <td style="padding:7px 10px">${fmt(d.cal_date)}</td>
+        </tr>`).join('');
+  }
+}
+
+function exportFrmCal95() {
+  const yearSel = document.getElementById('certHistoryYear');
+  const typeSel = document.getElementById('certHistoryType');
+  const yearCode = yearSel ? yearSel.value : '26';
+  const typeCode = typeSel ? typeSel.value : '';
+  const prefix = typeCode ? `${yearCode}${typeCode}` : yearCode;
+
+  const rows = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
+  rows.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
+
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+
+  const wb = XLSX.utils.book_new();
+  const header = [
+    ['ใบบันทึกการออกหมายเลขลำดับที่ใบรับรองผลการสอบเทียบและการแก้ไข'],
+    ['FRM-CAL95'],
+    [''],
+    ['ลำดับที่','หมายเลขใบรับรองผลการสอบเทียบ','วัน-เดือน-ปี ที่ออก','ชื่ออุปกรณ์เครื่องมือวัด / ID CODE','หน่วยงาน','ภายใน/ภายนอก','Remark'],
+  ];
+  const dataRows = rows.map((d, i) => [
+    i + 1,
+    d.cert_no || '',
+    fmt(d.cal_date),
+    `${d.instrument_name||''} / ${d.id_code||''}`,
+    d.department || '',
+    d.cal_type || '',
+    d.remark || '',
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...header, ...dataRows]);
+  ws['!cols'] = [
+    {wch:8},{wch:28},{wch:18},{wch:40},{wch:14},{wch:14},{wch:20}
+  ];
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
+  XLSX.utils.book_append_sheet(wb, ws, 'FRM-CAL95');
+  XLSX.writeFile(wb, `FRM-CAL95_${yearCode}${typeCode||'_ALL'}.xlsx`);
+  showToast(`✅ Export FRM-CAL95 สำเร็จ ${rows.length} รายการ`, 'success');
+}
+
+// ====================================================
+// SHOW PAGE
+// ====================================================
 function showPage(page) {
-  const pages = ['dashboard','audit','admin','monthly','plan','weights'];
+  const pages = ['dashboard','audit','admin','monthly','plan','weights','cert'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -4688,6 +4858,7 @@ function showPage(page) {
     monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
     plan: ['📅 วางแผนสอบเทียบ','กำหนดตารางและ Export FRM-EIB04'],
     weights: ['⚖️ Standard Weights','ทะเบียนลูกตุ้มมาตรฐาน'],
+    cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -4699,6 +4870,7 @@ function showPage(page) {
   if (page === 'weights') loadStandardWeights();
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
+  if (page === 'cert') loadCertPage();
 }
 
 // ====================================================
