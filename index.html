@@ -749,38 +749,23 @@ tbody tr:hover { background: var(--surface2); }
       <!-- PAGE: STANDARD WEIGHTS -->
       <!-- CERT PAGE -->
       <div id="pageCert" class="page-content" style="display:none">
+        <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div>
-            <div style="font-size:13px;color:var(--text3)">รายการรอออก Cert และประวัติการออกเลข</div>
-          </div>
-          <button onclick="exportFrmCal95()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">📄 Export FRM-CAL95</button>
-        </div>
-
-        <!-- ส่วนรอออก Cert -->
-        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:20px">
-          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">🔴 รายการรอออก Cert (ภายใน — ยังไม่มีเลข Cert)</div>
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead>
-                <tr style="background:var(--surface2)">
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ID CODE</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ชื่อเครื่องมือ</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ประเภท</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">หน่วยงาน</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">วันสอบ</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="certPendingBody"></tbody>
-            </table>
+          <div style="font-size:13px;color:var(--text3)">บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="openIssueCertModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">🏷️ + ออก Cert</button>
+            <button onclick="exportFrmCal95()" style="background:white;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">📄 Export FRM-CAL95</button>
           </div>
         </div>
 
-        <!-- ส่วนประวัติ Cert -->
+        <!-- Type Cards -->
+        <div id="certTypeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px"></div>
+
+        <!-- ประวัติ Cert -->
         <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="font-size:13px;font-weight:600;color:var(--text)">✅ ประวัติการออก Cert ทั้งหมด</div>
-            <div style="display:flex;gap:8px;align-items:center">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <select id="certHistoryYear" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
                 <option value="26">ปี 26 (2026)</option>
                 <option value="27">ปี 27 (2027)</option>
@@ -804,16 +789,18 @@ tbody tr:hover { background: var(--surface2); }
             </div>
           </div>
           <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
               <thead>
                 <tr style="background:var(--surface2)">
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">#</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">เลข Cert</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ID CODE</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ชื่อเครื่องมือ</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">ประเภท</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">หน่วยงาน</th>
-                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">วันสอบ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">#</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">หมายเลขใบรับรอง</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">วัน-เดือน-ปี ที่ออก</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">ชื่ออุปกรณ์ / ID Code</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">หมายเลขใบขอรับบริการ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">เลขที่ของงาน</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">ผู้ออกเอกสาร</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">ผู้รับผิดชอบ</th>
+                  <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="certHistoryBody"></tbody>
@@ -1024,6 +1011,61 @@ tbody tr:hover { background: var(--surface2); }
   <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">↩️</div>
     <div style="font-size:10px;color:#888">ออกจากระบบ</div>
+  </div>
+</div>
+
+<!-- ISSUE CERT MODAL -->
+<div class="modal-overlay" id="issueCertModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header">
+      <div>
+        <h3>🏷️ ออก Cert ใหม่</h3>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">เลขจะถูกรันอัตโนมัติตามประเภทเครื่องมือ</div>
+      </div>
+      <button class="btn-close" onclick="closeIssueCertModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="issueCertPreview" style="background:var(--accent-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">🏷️</div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">เลข Cert ที่จะออก</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono)" id="issueCertNo">—</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ID Code <span style="color:var(--red)">*</span></label>
+        <input type="text" id="icIdCode" placeholder="พิมพ์ ID Code เช่น PFB1BB03-WI01" oninput="previewCertNo()" list="icIdCodeList" autocomplete="off">
+        <datalist id="icIdCodeList"></datalist>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>หมายเลขใบขอรับบริการ</label>
+          <input type="text" id="icRequestNo" placeholder="เช่น REQ-001">
+        </div>
+        <div class="form-group">
+          <label>เลขที่ของงาน</label>
+          <input type="text" id="icJobNo" placeholder="เช่น JOB-001">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>ผู้ออกเอกสาร</label>
+          <input type="text" id="icIssuedBy" placeholder="ชื่อผู้ออกเอกสาร">
+        </div>
+        <div class="form-group">
+          <label>ผู้รับผิดชอบ</label>
+          <input type="text" id="icResponsibleBy" placeholder="ชื่อผู้รับผิดชอบ">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <input type="text" id="icRemark" placeholder="หมายเหตุ (ถ้ามี)">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid var(--border)">
+      <button class="btn-secondary" onclick="closeIssueCertModal()">ยกเลิก</button>
+      <button class="btn-primary" onclick="confirmIssueCert()">✅ ยืนยันออก Cert</button>
+    </div>
   </div>
 </div>
 
@@ -1716,7 +1758,7 @@ async function loadData(forceRefresh = false) {
 
 async function fetchFromSupabase() {
   try {
-    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark';
+    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,issued_by,responsible_by,request_no,job_no';
     const chunkSize = 500;
     const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
 
@@ -2841,54 +2883,6 @@ function getCertTypeCode(instrumentType) {
   return CERT_TYPE_MAP[instrumentType] || 'B';
 }
 
-async function issueCert(instrumentId) {
-  const d = allData.find(x => x.id === instrumentId);
-  if (!d) return;
-  if (d.cal_type !== 'ภายใน') { showToast('ออก Cert ได้เฉพาะการสอบเทียบภายในเท่านั้น', 'error'); return; }
-
-  const typeCode = getCertTypeCode(d.instrument_type);
-  const now = new Date();
-  const yearCode = now.getFullYear() % 100; // 2 หลัก เช่น 26
-
-  // ดึง last_number และ increment
-  const { data: seqData, error: seqErr } = await sb.from('cert_sequences')
-    .select('id, last_number')
-    .eq('year_code', yearCode)
-    .eq('type_code', typeCode)
-    .single();
-
-  if (seqErr || !seqData) {
-    // ถ้ายังไม่มี row ของปีนี้ → สร้างใหม่
-    const { data: inserted } = await sb.from('cert_sequences')
-      .insert({ year_code: yearCode, type_code: typeCode, last_number: 1 })
-      .select().single();
-    if (!inserted) { showToast('ไม่สามารถรันเลข Cert ได้', 'error'); return; }
-    var newNumber = 1;
-    var seqId = inserted.id;
-  } else {
-    var newNumber = seqData.last_number + 1;
-    var seqId = seqData.id;
-    await sb.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
-  }
-
-  const certNo = `${yearCode}${typeCode}${String(newNumber).padStart(3,'0')}-0`;
-
-  // confirm ก่อน
-  const ok = confirm(`ออกเลข Cert: ${certNo}\nสำหรับ: ${d.id_code} — ${d.instrument_name||''}\n\nยืนยันหรือไม่?`);
-  if (!ok) {
-    // rollback last_number
-    await sb.from('cert_sequences').update({ last_number: newNumber - 1 }).eq('id', seqId);
-    return;
-  }
-
-  // บันทึก cert_no ลง instruments
-  const { error } = await sb.from('instruments').update({ cert_no: certNo }).eq('id', instrumentId);
-  if (error) { showToast('บันทึก Cert ไม่สำเร็จ: ' + error.message, 'error'); return; }
-
-  await logAudit('แก้ไข', { id_code: d.id_code, cert_no: certNo }, { cert_no: { before: d.cert_no, after: certNo } });
-  showToast(`✅ ออก Cert สำเร็จ: ${certNo}`, 'success');
-  await loadData(true);
-}
 
 function calcDueDateStr(calDate, frequency) {
   if (!calDate || !frequency) return null;
@@ -4751,6 +4745,9 @@ async function deleteSW(id, idCode) {
 // ====================================================
 // CERT PAGE
 // ====================================================
+const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
+const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
+
 async function loadCertPage() {
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
   const yearSel = document.getElementById('certHistoryYear');
@@ -4758,45 +4755,161 @@ async function loadCertPage() {
   const yearCode = yearSel ? yearSel.value : '26';
   const typeCode = typeSel ? typeSel.value : '';
 
-  // รายการรอออก Cert (ภายใน + ไม่มี cert_no)
-  const pending = allData.filter(d => d.cal_type === 'ภายใน' && !d.cert_no);
-  const pendingBody = document.getElementById('certPendingBody');
-  if (pendingBody) {
-    pendingBody.innerHTML = pending.length === 0
-      ? '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีรายการรอออก Cert</td></tr>'
-      : pending.map(d => `
-        <tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 10px;font-family:var(--mono);color:var(--accent)">${d.id_code||'–'}</td>
-          <td style="padding:7px 10px">${d.instrument_name||'–'}</td>
-          <td style="padding:7px 10px;color:var(--text3);font-size:11px">${(d.instrument_type||'–').split(' (')[0]}</td>
-          <td style="padding:7px 10px">${d.department||'–'}</td>
-          <td style="padding:7px 10px">${fmt(d.cal_date)}</td>
-          <td style="padding:7px 10px">
-            <button onclick="issueCert(${d.id})" style="background:#e0f4f1;border:1px solid #00897B;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;color:#00695C;font-family:var(--font)">🏷️ ออก Cert</button>
-          </td>
-        </tr>`).join('');
+  // Type Cards — ดึงจาก cert_sequences
+  const { data: seqData } = await sb.from('cert_sequences').select('*').eq('year_code', parseInt(yearCode)).order('type_code');
+  const cards = document.getElementById('certTypeCards');
+  if (cards) {
+    const codes = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
+    const seqMap = {};
+    (seqData||[]).forEach(s => { seqMap[s.type_code] = s.last_number; });
+    cards.innerHTML = codes.map(c => {
+      const n = seqMap[c] || 0;
+      const col = CERT_COLORS[c] || '#888';
+      const first = n > 0 ? `${yearCode}${c}001` : '—';
+      const last  = n > 0 ? `${yearCode}${c}${String(n).padStart(3,'0')}` : '—';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;cursor:default">
+        <div style="font-size:20px;font-weight:700;color:${col};line-height:1">${n}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px">${c} — ${CERT_LABELS[c]||c}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${first}${n>1?` – ${last}`:''}</div>
+      </div>`;
+    }).join('');
   }
 
-  // ประวัติ Cert ที่ออกไปแล้ว (กรองตามปีและประเภท)
+  // ประวัติ Cert
   const prefix = typeCode ? `${yearCode}${typeCode}` : yearCode;
   const history = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
   history.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
-
   const histBody = document.getElementById('certHistoryBody');
   if (histBody) {
     histBody.innerHTML = history.length === 0
-      ? '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>'
+      ? '<tr><td colspan="9" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>'
       : history.map((d, i) => `
         <tr style="border-bottom:1px solid var(--border);${i%2===0?'':'background:var(--surface2)'}">
           <td style="padding:7px 10px;color:var(--text3)">${i+1}</td>
           <td style="padding:7px 10px;font-family:var(--mono);font-weight:600;color:var(--accent)">${d.cert_no||'–'}</td>
-          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px">${d.id_code||'–'}</td>
-          <td style="padding:7px 10px">${d.instrument_name||'–'}</td>
-          <td style="padding:7px 10px;color:var(--text3);font-size:11px">${(d.instrument_type||'–').split(' (')[0]}</td>
-          <td style="padding:7px 10px">${d.department||'–'}</td>
-          <td style="padding:7px 10px">${fmt(d.cal_date)}</td>
+          <td style="padding:7px 10px;font-size:11px">${fmt(d.cal_date)}</td>
+          <td style="padding:7px 10px;font-size:11px">${d.instrument_name||'–'} / <span style="font-family:var(--mono)">${d.id_code||'–'}</span></td>
+          <td style="padding:7px 10px;font-size:11px">${d.request_no||'–'}</td>
+          <td style="padding:7px 10px;font-size:11px">${d.job_no||'–'}</td>
+          <td style="padding:7px 10px;font-size:11px">${d.issued_by||'–'}</td>
+          <td style="padding:7px 10px;font-size:11px">${d.responsible_by||'–'}</td>
+          <td style="padding:7px 10px;white-space:nowrap">
+            <button onclick="openEditCertModal(${d.id})" style="background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--accent);margin-right:4px">✏️</button>
+            <button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}')" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>
+          </td>
         </tr>`).join('');
   }
+}
+
+let _editCertId = null;
+
+function openIssueCertModal() {
+  _editCertId = null;
+  document.getElementById('icIdCode').value = '';
+  document.getElementById('icRequestNo').value = '';
+  document.getElementById('icJobNo').value = '';
+  document.getElementById('icIssuedBy').value = '';
+  document.getElementById('icResponsibleBy').value = '';
+  document.getElementById('icRemark').value = '';
+  document.getElementById('issueCertNo').textContent = '—';
+  // populate datalist
+  const dl = document.getElementById('icIdCodeList');
+  if (dl) dl.innerHTML = allData.filter(d => d.cal_type==='ภายใน').map(d => `<option value="${d.id_code||''}">`).join('');
+  document.getElementById('issueCertModal').classList.add('open');
+}
+
+function openEditCertModal(instrumentId) {
+  const d = allData.find(x => x.id === instrumentId);
+  if (!d) return;
+  _editCertId = instrumentId;
+  document.getElementById('icIdCode').value = d.id_code || '';
+  document.getElementById('icRequestNo').value = d.request_no || '';
+  document.getElementById('icJobNo').value = d.job_no || '';
+  document.getElementById('icIssuedBy').value = d.issued_by || '';
+  document.getElementById('icResponsibleBy').value = d.responsible_by || '';
+  document.getElementById('icRemark').value = d.remark || '';
+  document.getElementById('issueCertNo').textContent = d.cert_no || '—';
+  document.getElementById('issueCertModal').classList.add('open');
+}
+
+function closeIssueCertModal() {
+  document.getElementById('issueCertModal').classList.remove('open');
+  _editCertId = null;
+}
+
+function previewCertNo() {
+  const idCode = document.getElementById('icIdCode').value.trim();
+  const d = allData.find(x => x.id_code === idCode);
+  if (!d) { document.getElementById('issueCertNo').textContent = '—'; return; }
+  const typeCode = getCertTypeCode(d.instrument_type);
+  const yearCode = new Date().getFullYear() % 100;
+  document.getElementById('issueCertNo').textContent = `${yearCode}${typeCode}???-0 (รันอัตโนมัติ)`;
+}
+
+async function confirmIssueCert() {
+  const idCode = document.getElementById('icIdCode').value.trim();
+  if (!idCode) { showToast('กรุณาระบุ ID Code', 'error'); return; }
+  const d = allData.find(x => x.id_code === idCode);
+  if (!d) { showToast('ไม่พบ ID Code: ' + idCode, 'error'); return; }
+
+  const requestNo = document.getElementById('icRequestNo').value.trim();
+  const jobNo = document.getElementById('icJobNo').value.trim();
+  const issuedBy = document.getElementById('icIssuedBy').value.trim();
+  const responsibleBy = document.getElementById('icResponsibleBy').value.trim();
+  const remark = document.getElementById('icRemark').value.trim();
+
+  if (_editCertId) {
+    // แก้ไข — ไม่รันเลขใหม่
+    const { error } = await sb.from('instruments').update({
+      request_no: requestNo||null, job_no: jobNo||null,
+      issued_by: issuedBy||null, responsible_by: responsibleBy||null,
+      remark: remark||null
+    }).eq('id', _editCertId);
+    if (error) { showToast('แก้ไขไม่สำเร็จ: '+error.message,'error'); return; }
+    showToast('✅ แก้ไขข้อมูล Cert แล้ว','success');
+  } else {
+    // ออก Cert ใหม่
+    const typeCode = getCertTypeCode(d.instrument_type);
+    const yearCode = new Date().getFullYear() % 100;
+    const { data: seqData, error: seqErr } = await sb.from('cert_sequences')
+      .select('id,last_number').eq('year_code', yearCode).eq('type_code', typeCode).single();
+    let newNumber, seqId;
+    if (seqErr || !seqData) {
+      const { data: ins } = await sb.from('cert_sequences').insert({ year_code: yearCode, type_code: typeCode, last_number: 1 }).select().single();
+      if (!ins) { showToast('ไม่สามารถรันเลข Cert ได้','error'); return; }
+      newNumber = 1; seqId = ins.id;
+    } else {
+      newNumber = seqData.last_number + 1; seqId = seqData.id;
+      await sb.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
+    }
+    const certNo = `${yearCode}${typeCode}${String(newNumber).padStart(3,'0')}-0`;
+    const { error } = await sb.from('instruments').update({
+      cert_no: certNo, request_no: requestNo||null, job_no: jobNo||null,
+      issued_by: issuedBy||null, responsible_by: responsibleBy||null,
+      remark: remark||null
+    }).eq('id', d.id);
+    if (error) {
+      await sb.from('cert_sequences').update({ last_number: newNumber-1 }).eq('id', seqId);
+      showToast('บันทึก Cert ไม่สำเร็จ: '+error.message,'error'); return;
+    }
+    await logAudit('แก้ไข', { id_code: d.id_code, cert_no: certNo }, { cert_no: { before: d.cert_no, after: certNo } });
+    showToast(`✅ ออก Cert สำเร็จ: ${certNo}`,'success');
+  }
+  closeIssueCertModal();
+  await loadData(true);
+  loadCertPage();
+}
+
+async function deleteCertEntry(instrumentId, certNo) {
+  if (!confirm(`ลบเลข Cert: ${certNo} ออกจากรายการนี้?
+(เลขจะถูกล้างออก แต่ข้อมูลเครื่องมือยังอยู่)`)) return;
+  const { error } = await sb.from('instruments').update({
+    cert_no: null, request_no: null, job_no: null, issued_by: null, responsible_by: null
+  }).eq('id', instrumentId);
+  if (error) { showToast('ลบไม่สำเร็จ: '+error.message,'error'); return; }
+  showToast('✅ ลบเลข Cert แล้ว','success');
+  await loadData(true);
+  loadCertPage();
 }
 
 function exportFrmCal95() {
@@ -4805,37 +4918,28 @@ function exportFrmCal95() {
   const yearCode = yearSel ? yearSel.value : '26';
   const typeCode = typeSel ? typeSel.value : '';
   const prefix = typeCode ? `${yearCode}${typeCode}` : yearCode;
-
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
   const rows = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
   rows.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
-
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-
   const wb = XLSX.utils.book_new();
   const header = [
     ['ใบบันทึกการออกหมายเลขลำดับที่ใบรับรองผลการสอบเทียบและการแก้ไข'],
     ['FRM-CAL95'],
+    ['ประเภทของอุปกรณ์เครื่องมือวัด: ' + (typeCode ? `${typeCode} — ${CERT_LABELS[typeCode]||typeCode}` : 'ทุกประเภท')],
     [''],
-    ['ลำดับที่','หมายเลขใบรับรองผลการสอบเทียบ','วัน-เดือน-ปี ที่ออก','ชื่ออุปกรณ์เครื่องมือวัด / ID CODE','หน่วยงาน','ภายใน/ภายนอก','Remark'],
+    ['ลำดับที่','หมายเลขใบรับรองผลการสอบเทียบ','วัน-เดือน-ปี ที่ออก','ชื่ออุปกรณ์เครื่องมือวัด / ID CODE','หมายเลขใบขอรับบริการ','เลขที่ของงาน','ผู้ออกเอกสาร','ผู้รับผิดชอบ'],
   ];
   const dataRows = rows.map((d, i) => [
-    i + 1,
-    d.cert_no || '',
-    fmt(d.cal_date),
+    i+1, d.cert_no||'', fmt(d.cal_date),
     `${d.instrument_name||''} / ${d.id_code||''}`,
-    d.department || '',
-    d.cal_type || '',
-    d.remark || '',
+    d.request_no||'', d.job_no||'', d.issued_by||'', d.responsible_by||''
   ]);
-
   const ws = XLSX.utils.aoa_to_sheet([...header, ...dataRows]);
-  ws['!cols'] = [
-    {wch:8},{wch:28},{wch:18},{wch:40},{wch:14},{wch:14},{wch:20}
-  ];
-  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
+  ws['!cols'] = [{wch:8},{wch:28},{wch:18},{wch:40},{wch:22},{wch:16},{wch:18},{wch:18}];
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} },{ s:{r:1,c:0}, e:{r:1,c:7} },{ s:{r:2,c:0}, e:{r:2,c:7} }];
   XLSX.utils.book_append_sheet(wb, ws, 'FRM-CAL95');
   XLSX.writeFile(wb, `FRM-CAL95_${yearCode}${typeCode||'_ALL'}.xlsx`);
-  showToast(`✅ Export FRM-CAL95 สำเร็จ ${rows.length} รายการ`, 'success');
+  showToast(`✅ Export FRM-CAL95 สำเร็จ ${rows.length} รายการ`,'success');
 }
 
 // ====================================================
