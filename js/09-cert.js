@@ -2,6 +2,16 @@
 const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
 const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
 
+// อัพเดท badge จำนวน Cert ที่ยังไม่อนุมัติ (นับทั้งหมดจาก allData, เฉพาะ Admin)
+function updateCertBadge() {
+  const navBadge = document.getElementById('certPendingBadge');
+  if (!navBadge) return;
+  const isAdmin = (currentUser && currentUser.role === 'admin');
+  const n = isAdmin ? (allData || []).filter(d => d.cert_no && !d.approved_by).length : 0;
+  navBadge.textContent = n > 0 ? n : '';
+  navBadge.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
 async function loadCertPage() {
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
   const fmtDt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
@@ -76,9 +86,8 @@ async function loadCertPage() {
       }).join('');
   }
 
-  // อัพเดท badge รออนุมัติ
-  const badge = document.getElementById('certPendingBadge');
-  if (badge) badge.textContent = pendingCount > 0 ? pendingCount : '';
+  // อัพเดท badge รออนุมัติ (นับทั้งหมดจาก allData)
+  updateCertBadge();
 
   // แสดง/ซ่อนปุ่ม approve all และ print
   const approveAllBtn = document.getElementById('certApproveAllBtn');

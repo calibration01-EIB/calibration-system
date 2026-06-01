@@ -279,6 +279,7 @@ async function loadData(forceRefresh = false) {
     renderAlerts();
     loadPlanStatusMap();
     updateNotificationBell();
+    updateCertBadge();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();
   };
 
