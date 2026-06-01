@@ -1403,7 +1403,7 @@ if ('serviceWorker' in navigator) {
 </script>
 <script>
 function toggleSidebar(){var al=document.querySelector(".app-layout");if(!al)return;var c=al.classList.toggle("collapsed");try{localStorage.setItem("sidebarCollapsed",c?"1":"0");}catch(e){}}
-(function(){try{if(localStorage.getItem("sidebarCollapsed")==="1"){var al=document.querySelector(".app-layout");if(al)al.classList.add("collapsed");}}catch(e){}})();
+(function(){var al=document.querySelector(".app-layout");if(al)al.classList.add("collapsed");})();
 </script>
 </body>
 </html>
