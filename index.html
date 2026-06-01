@@ -154,18 +154,20 @@
 .sb-toggle{background:none;border:none;cursor:pointer;font-size:19px;color:var(--text2);padding:3px 9px;border-radius:8px;line-height:1;transition:background .15s,color .15s;}
 .sb-toggle:hover{background:var(--accent-light);color:var(--accent);}
 @media (min-width:769px){
-  .app-layout.collapsed .sidebar{width:64px;}
+  .app-layout .sidebar{transition:width .18s ease, box-shadow .18s ease;}
+  .app-layout.collapsed .sidebar:not(:hover){width:64px;}
   .app-layout.collapsed .main-content{margin-left:64px;}
-  .app-layout.collapsed .sidebar-brand{padding:12px 6px;}
-  .app-layout.collapsed .brand-box{padding:6px;}
-  .app-layout.collapsed .brand-box .brand-full{display:none;}
-  .app-layout.collapsed .brand-box .brand-mini{display:block;}
-  .app-layout.collapsed .brand-cap{display:none;}
-  .app-layout.collapsed .nav-item{font-size:0!important;justify-content:center!important;gap:0!important;padding:11px 0!important;}
-  .app-layout.collapsed .nav-item .nav-icon{font-size:18px;width:auto;}
-  .app-layout.collapsed #navPlanBadge{display:none!important;}
-  .app-layout.collapsed .sidebar-user{justify-content:center;padding:14px 6px;}
-  .app-layout.collapsed .sidebar-user .user-info,.app-layout.collapsed .sidebar-user .btn-logout{display:none;}
+  .app-layout.collapsed .sidebar:not(:hover) .sidebar-brand{padding:12px 6px;}
+  .app-layout.collapsed .sidebar:not(:hover) .brand-box{padding:6px;}
+  .app-layout.collapsed .sidebar:not(:hover) .brand-box .brand-full{display:none;}
+  .app-layout.collapsed .sidebar:not(:hover) .brand-box .brand-mini{display:block;}
+  .app-layout.collapsed .sidebar:not(:hover) .brand-cap{display:none;}
+  .app-layout.collapsed .sidebar:not(:hover) .nav-item{font-size:0!important;justify-content:center!important;gap:0!important;padding:11px 0!important;}
+  .app-layout.collapsed .sidebar:not(:hover) .nav-item .nav-icon{font-size:18px;width:auto;}
+  .app-layout.collapsed .sidebar:not(:hover) #navPlanBadge{display:none!important;}
+  .app-layout.collapsed .sidebar:not(:hover) .sidebar-user{justify-content:center;padding:14px 6px;}
+  .app-layout.collapsed .sidebar:not(:hover) .sidebar-user .user-info,.app-layout.collapsed .sidebar:not(:hover) .sidebar-user .btn-logout{display:none;}
+  .app-layout.collapsed .sidebar:hover{box-shadow:4px 0 24px rgba(0,0,0,.22);z-index:200;}
 }
 </style>
 </head>
