@@ -164,7 +164,7 @@
   .app-layout.collapsed .sidebar:not(:hover) .brand-cap{display:none;}
   .app-layout.collapsed .sidebar:not(:hover) .nav-item{font-size:0!important;justify-content:center!important;gap:0!important;padding:11px 0!important;}
   .app-layout.collapsed .sidebar:not(:hover) .nav-item .nav-icon{font-size:18px;width:auto;}
-  .app-layout.collapsed .sidebar:not(:hover) #navPlanBadge{display:none!important;}
+  .app-layout.collapsed .sidebar:not(:hover) #navPlanBadge,.app-layout.collapsed .sidebar:not(:hover) #certPendingBadge{display:none!important;}
   .app-layout.collapsed .sidebar:not(:hover) .sidebar-user{justify-content:center;padding:14px 6px;}
   .app-layout.collapsed .sidebar:not(:hover) .sidebar-user .user-info,.app-layout.collapsed .sidebar:not(:hover) .sidebar-user .btn-logout{display:none;}
   .app-layout.collapsed .sidebar:hover{box-shadow:4px 0 24px rgba(0,0,0,.22);z-index:200;}
@@ -265,7 +265,7 @@
         <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
-        <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
+        <div class="nav-item" onclick="showPage('cert')" id="nav-cert" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">🏷️</span> ออก Cert</span><span id="certPendingBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">⚖️</span> Standard Weights</div>
       </nav>
       <div class="sidebar-user">
