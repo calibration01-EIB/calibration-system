@@ -189,6 +189,13 @@
   .app-layout.collapsed .sidebar:hover{box-shadow:4px 0 24px rgba(0,0,0,.22);z-index:200;}
 }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<style>
+  .flatpickr-day.selected,.flatpickr-day.selected:hover{background:var(--accent,#00897B);border-color:var(--accent,#00897B);}
+  .flatpickr-day.today{border-color:var(--accent,#00897B);}
+  .flatpickr-months .flatpickr-month,.flatpickr-current-month .flatpickr-monthDropdown-months,.flatpickr-weekday{color:var(--accent,#00897B);}
+</style>
 </head>
 <body>
 
@@ -1240,11 +1247,11 @@
         </div>
         <div class="form-group">
           <label>วันที่สอบเทียบ</label>
-          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value); autoFillPrevCert()">
+          <input type="text" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value); autoFillPrevCert()">
         </div>
         <div class="form-group">
           <label>วันครบกำหนด</label>
-          <input type="date" id="iDueDate" readonly style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
+          <input type="text" id="iDueDate" readonly style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
         </div>
         <div class="form-group">
           <label style="color:var(--text3)">📋 Cert รอบก่อน (อัตโนมัติ)</label>
@@ -1252,7 +1259,7 @@
         </div>
         <div class="form-group">
           <label style="color:var(--text3)">📋 วันสอบรอบก่อน (อัตโนมัติ)</label>
-          <input type="date" id="iPrevCalDate" readonly style="background:var(--surface2);color:var(--text2)">
+          <input type="text" id="iPrevCalDate" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
         <div class="form-group">
           <label>ชื่อเครื่องจักร</label>
@@ -1419,6 +1426,24 @@ if ('serviceWorker' in navigator) {
 <script>
 function toggleSidebar(){var al=document.querySelector(".app-layout");if(!al)return;var c=al.classList.toggle("collapsed");try{localStorage.setItem("sidebarCollapsed",c?"1":"0");}catch(e){}}
 (function(){var al=document.querySelector(".app-layout");if(al)al.classList.add("collapsed");})();
+/* วันที่แสดงเป็น dd/mm/yyyy (flatpickr) แต่เก็บค่าเป็น yyyy-mm-dd เหมือนเดิม — logic เดิมไม่ต้องแก้ */
+function initCalDatePickers(){
+  if(typeof flatpickr==='undefined') return;
+  ['iCalDate','iDueDate','iPrevCalDate'].forEach(function(id){
+    var el=document.getElementById(id); if(!el||el._fpInit) return;
+    var ro=el.hasAttribute('readonly')||el.readOnly;
+    var fp=flatpickr(el,{dateFormat:'Y-m-d',altInput:true,altFormat:'d/m/Y',allowInput:!ro,clickOpens:!ro,disableMobile:true});
+    el._fpInit=true; el._fp=fp;
+    var st=el.getAttribute('style'); if(st&&fp.altInput) fp.altInput.style.cssText=st;
+    if(ro&&fp.altInput) fp.altInput.readOnly=true;
+    var desc=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+    Object.defineProperty(el,'value',{configurable:true,
+      get:function(){return desc.get.call(this);},
+      set:function(v){ if(this._fpset){desc.set.call(this,v);return;} this._fpset=true; try{ if(v){fp.setDate(v,false,'Y-m-d');}else{fp.clear(false);} }catch(e){desc.set.call(this,v);} this._fpset=false; }
+    });
+  });
+}
+initCalDatePickers();
 </script>
 </body>
 </html>
