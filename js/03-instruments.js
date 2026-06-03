@@ -306,6 +306,14 @@ async function saveInstrument() {
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
 
+  // เช็ค ID Code ซ้ำ (ไม่สนตัวพิมพ์เล็ก-ใหญ่; ตอนแก้ไขไม่นับตัวเอง)
+  const _code = payload.id_code.trim().toLowerCase();
+  const _dup = (allData || []).find(x => x.id_code && x.id_code.trim().toLowerCase() === _code && x.id !== editingInstrumentId);
+  if (_dup) {
+    showToast('ID Code "' + payload.id_code + '" ซ้ำกับเครื่องมือที่มีอยู่แล้ว (' + (_dup.instrument_name || '–') + ')', 'error');
+    return;
+  }
+
   const btn = document.getElementById('saveInstrumentBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
