@@ -314,6 +314,15 @@ async function saveInstrument() {
     return;
   }
 
+  // เตือนเลข Cert ซ้ำ (เฉพาะเมื่อมีเลข Cert) — เตือนแล้วเลือกบันทึกต่อได้
+  if (payload.cert_no) {
+    const _cert = payload.cert_no.trim().toLowerCase();
+    const _certDup = (allData || []).find(x => x.cert_no && x.cert_no.trim().toLowerCase() === _cert && x.id !== editingInstrumentId);
+    if (_certDup) {
+      if (!confirm('เลข Cert "' + payload.cert_no + '" ซ้ำกับเครื่องมือ "' + (_certDup.instrument_name || '–') + '" (ID Code: ' + (_certDup.id_code || '–') + ')\n\nต้องการบันทึกต่อหรือไม่?')) return;
+    }
+  }
+
   const btn = document.getElementById('saveInstrumentBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
