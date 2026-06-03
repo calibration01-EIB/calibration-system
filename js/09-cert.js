@@ -1,6 +1,6 @@
 /* ===== 09-cert.js ===== (extracted from index.html lines 4306-4637) */
-const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
-const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
+const CERT_COLORS = { B:'#00897B',M:'#639922',F:'#BA7517',P:'#534AB7',T:'#C62828',H:'#993556',W:'#00838F',G:'#2E7D32',Q:'#1565C0',R:'#6A1B9A',L:'#185FA5',E:'#0F6E56',D:'#3B6D11',C:'#D85A30' };
+const CERT_LABELS = { B:'Balance',M:'Mass',F:'Force/Torque',P:'Pressure',T:'Temperature',H:'Tachometer',W:'Timer',G:'Moisture',Q:'Flow Meter',R:'Ruler/Tape',L:'Gauge/Dimension',E:'Battery',D:'Caliper',C:'PH/Visco/DO' };
 
 // อัพเดท badge จำนวน Cert ที่ยังไม่อนุมัติ (นับทั้งหมดจาก allData, เฉพาะ Admin)
 function updateCertBadge() {
@@ -25,7 +25,7 @@ async function loadCertPage() {
   const { data: seqData } = await sb.from('cert_sequences').select('*').eq('year_code', parseInt(yearCode)).order('type_code');
   const cards = document.getElementById('certTypeCards');
   if (cards) {
-    const codes = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
+    const codes = ['B','M','F','P','T','H','W','G','Q','R','L','E','D','C'];
     const seqMap = {};
     (seqData||[]).forEach(s => { seqMap[s.type_code] = s.last_number; });
     cards.innerHTML = codes.map(c => {

@@ -127,20 +127,20 @@ function renderAuditTable() {
 // CERT TYPE MAP — instrument_type → type_code
 // ====================================================
 const CERT_TYPE_MAP = {
-  'มวล/น้ำหนัก (Mass/Weight)':               'B',
-  'ความยาว/มิติ (Length/Dimension)':          'L',
-  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'C',
-  'ความดัน/สุญญากาศ (Pressure/Vacuum)':       'P',
-  'ความเร็วรอบ (Speed/Rotation)':             'G',
-  'เวลา (Time)':                              'Q',
-  'เคมี/ความเข้มข้น (Chemical/Concentration)':'D',
-  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'M',
-  'ไฟฟ้า (Electrical)':                       'E',
-  'การไหล/ปริมาตร (Flow/Volume)':             'H',
-  'แสง/เสียง (Light/Sound)':                  'F',
-  'ความปลอดภัย (Safety)':                     'T',
-  'แรงบิด/แรงกด (Torque/Force)':              'T',
-  'อื่นๆ (Others)':                           'Q',
+  'มวล/น้ำหนัก (Mass/Weight)':                'B',  // Balance (เลือก M=Mass เองได้ถ้าเป็นตุ้มน้ำหนัก)
+  'ความยาว/มิติ (Length/Dimension)':          'L',  // Gauge/Dimension (เลือก D=Caliper / R=Ruler เองได้)
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'T',  // Temperature
+  'ความดัน/สุญญากาศ (Pressure/Vacuum)':       'P',  // Pressure
+  'ความเร็วรอบ (Speed/Rotation)':             'H',  // Tachometer
+  'เวลา (Time)':                              'W',  // Timer
+  'เคมี/ความเข้มข้น (Chemical/Concentration)':'C',  // PH / DO Meter
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'C',  // Viscometer
+  'ไฟฟ้า (Electrical)':                       'E',  // Battery Tester
+  'การไหล/ปริมาตร (Flow/Volume)':             'Q',  // Flow Meter
+  'แสง/เสียง (Light/Sound)':                  'B',  // ไม่มีตัวอักษรเฉพาะ — เลือกเองตอนออก Cert
+  'ความปลอดภัย (Safety)':                     'B',  // ไม่มีตัวอักษรเฉพาะ
+  'แรงบิด/แรงกด (Torque/Force)':              'F',  // Force/Torque
+  'อื่นๆ (Others)':                           'B',  // ไม่มีตัวอักษรเฉพาะ
 };
 
 function getCertTypeCode(instrumentType) {
