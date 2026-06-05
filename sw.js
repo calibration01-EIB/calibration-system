@@ -1,10 +1,12 @@
-const CACHE_NAME = 'calibration-app-v1';
+const CACHE_NAME = 'calibration-app-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './assets/ilc-logo-full.png',
+  './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
   './assets/calibration-lab-hero.png'
 ];

@@ -257,6 +257,64 @@ tbody tr:hover { background: var(--surface2); }
   #dashRow2 { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: span 1; }
 }
+.sidebar .sidebar-brand .sidebar-logo {
+  overflow: hidden !important;
+}
+.sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img {
+  display: block !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+}
+.sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+  display: none !important;
+}
+.sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+  display: block !important;
+  width: 100% !important;
+  max-width: 42px !important;
+  height: auto !important;
+}
+@media (max-width: 768px) {
+  .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: none !important;
+  }
+  .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: block !important;
+    width: 40px !important;
+    max-width: 40px !important;
+    height: auto !important;
+  }
+}
+@media (min-width: 769px) {
+  #app .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: none !important;
+  }
+  #app .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: block !important;
+    width: 100% !important;
+    max-width: 42px !important;
+    height: auto !important;
+  }
+  #app .sidebar:hover .sidebar-logo,
+  #app .sidebar:focus-within .sidebar-logo {
+    padding: 22px 10px 18px !important;
+  }
+  #app .sidebar:hover .sidebar-brand .sidebar-logo .sidebar-logo-img-full,
+  #app .sidebar:focus-within .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: block !important;
+    width: 100% !important;
+    max-width: 154px !important;
+    height: auto !important;
+  }
+  #app .sidebar:hover .sidebar-brand .sidebar-logo .sidebar-logo-img-mini,
+  #app .sidebar:focus-within .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: none !important;
+  }
+}
 </style>
 <style id="calibrationLoginRefresh">
 :root{--cal-ink:#15343b;--cal-muted:#597177;--cal-line:rgba(21,52,59,.14);--cal-panel:rgba(255,255,255,.90);--cal-aqua:#1fb9c7;--cal-mint:#4ed7a8;--cal-sun:#ffc84a;--cal-coral:#ff7f62;}
@@ -344,22 +402,50 @@ body {
   display: inline-flex !important;
   align-items: flex-end !important;
   justify-content: center !important;
-  gap: 4px !important;
+  gap: 0 !important;
   color: #008b73 !important;
-  font-family: Arial, sans-serif !important;
+  font-family: "Arial Black", Arial, sans-serif !important;
   font-size: 50px !important;
-  line-height: .82 !important;
+  line-height: .78 !important;
   font-weight: 900 !important;
   letter-spacing: -3px !important;
+  transform: skewX(-2deg) !important;
+}
+.sidebar-logo-letter {
+  position: relative !important;
+  display: inline-block !important;
+  color: #008b73 !important;
+  background: linear-gradient(135deg, #18c7ae 0%, #008b73 46%, #005f57 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow:
+    1px 0 0 rgba(255,255,255,.58),
+    -1px 0 0 rgba(0,73,68,.30),
+    2px 2px 0 rgba(0,79,72,.26) !important;
+}
+.sidebar-logo-i {
+  padding-top: .18em !important;
+  margin-right: -.02em !important;
+}
+.sidebar-logo-l {
+  margin-left: -.02em !important;
+}
+.sidebar-logo-c {
+  margin-left: -.09em !important;
 }
 .sidebar-logo-dot {
   position: absolute !important;
-  left: 1px !important;
-  top: -11px !important;
-  width: 18px !important;
-  height: 18px !important;
+  left: 50% !important;
+  top: -0.22em !important;
+  width: .31em !important;
+  height: .31em !important;
+  transform: translateX(-50%) !important;
   border-radius: 999px !important;
-  background: #d9363e !important;
+  background: radial-gradient(circle at 35% 30%, #ff777d 0%, #e43d45 48%, #a81f28 100%) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.65) inset,
+    1px 2px 3px rgba(0,0,0,.28) !important;
 }
 .sidebar-logo-sub {
   color: #00796b !important;
@@ -686,7 +772,7 @@ tbody tr:hover td { background: #eff8f6 !important; }
   .sidebar .sidebar-brand img { width: 48px !important; max-width: 48px !important; padding: 4px !important; margin: 0 !important; }
   .sidebar .sidebar-logo { width: 48px !important; min-height: 48px !important; padding: 8px !important; margin: 0 !important; }
   .sidebar .sidebar-logo-mark { font-size: 22px !important; letter-spacing: -1px !important; }
-  .sidebar .sidebar-logo-dot, .sidebar .sidebar-logo-sub { display: none !important; }
+  .sidebar .sidebar-logo-sub { display: none !important; }
   .main-content { margin-left: 0 !important; padding-top: 70px !important; }
   .topbar { padding: 8px 14px !important; }
   .page-content { padding: 14px !important; }
@@ -765,7 +851,6 @@ tbody tr:hover td { background: #eff8f6 !important; }
     font-size: 22px !important;
     letter-spacing: -1px !important;
   }
-  #app .sidebar .sidebar-logo-dot,
   #app .sidebar .sidebar-logo-sub {
     opacity: 0 !important;
     transform: translateY(-4px) !important;
@@ -782,8 +867,6 @@ tbody tr:hover td { background: #eff8f6 !important; }
     font-size: 50px !important;
     letter-spacing: -3px !important;
   }
-  #app .sidebar:hover .sidebar-logo-dot,
-  #app .sidebar:focus-within .sidebar-logo-dot,
   #app .sidebar:hover .sidebar-logo-sub,
   #app .sidebar:focus-within .sidebar-logo-sub {
     opacity: 1 !important;
@@ -846,6 +929,84 @@ tbody tr:hover td { background: #eff8f6 !important; }
   #app .sidebar:not(:hover):not(:focus-within) .btn-logout {
     display: none !important;
   }
+  #app .sidebar .sidebar-brand .sidebar-logo {
+    padding: 4px !important;
+  }
+  #app .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+  }
+  #app .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: none !important;
+  }
+  #app .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: block !important;
+    width: 100% !important;
+    max-width: 38px !important;
+    height: auto !important;
+  }
+  #app .sidebar:hover .sidebar-logo,
+  #app .sidebar:focus-within .sidebar-logo {
+    padding: 22px 10px 18px !important;
+  }
+  #app .sidebar:hover .sidebar-brand .sidebar-logo .sidebar-logo-img-full,
+  #app .sidebar:focus-within .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: block !important;
+    width: 100% !important;
+    max-width: 154px !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+  #app .sidebar:hover .sidebar-brand .sidebar-logo .sidebar-logo-img-mini,
+  #app .sidebar:focus-within .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: none !important;
+  }
+  #app .sidebar:not(:hover):not(:focus-within) .sidebar-brand {
+    width: var(--sidebar-collapsed) !important;
+    min-width: var(--sidebar-collapsed) !important;
+    max-width: var(--sidebar-collapsed) !important;
+    box-sizing: border-box !important;
+    padding: 16px 10px 16px !important;
+    align-content: start !important;
+    justify-items: start !important;
+  }
+  #app .sidebar:not(:hover):not(:focus-within) .sidebar-logo {
+    width: 56px !important;
+    min-height: 56px !important;
+    box-sizing: border-box !important;
+    padding: 7px !important;
+    margin: 0 !important;
+    justify-self: start !important;
+    align-self: start !important;
+  }
+  #app .sidebar:not(:hover):not(:focus-within) .sidebar-logo-img-mini {
+    width: 42px !important;
+    max-width: 42px !important;
+    height: auto !important;
+  }
+}
+@media (max-width: 768px) {
+  .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+  }
+  .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-full {
+    display: none !important;
+  }
+  .sidebar .sidebar-brand .sidebar-logo .sidebar-logo-img-mini {
+    display: block !important;
+    width: 38px !important;
+    max-width: 38px !important;
+    height: auto !important;
+  }
 }
 </style>
 </head>
@@ -897,9 +1058,9 @@ tbody tr:hover td { background: #eff8f6 !important; }
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-brand" style="padding:16px 12px;text-align:center;border-bottom:1px solid rgba(255,255,255,.15)">
-                <div class="sidebar-logo" aria-label="ILC International Laboratories">
-          <div class="sidebar-logo-mark"><span class="sidebar-logo-dot" aria-hidden="true"></span><span>ilc</span></div>
-          <div class="sidebar-logo-sub">INTERNATIONAL<br>LABORATORIES CORP., LTD</div>
+        <div class="sidebar-logo" aria-label="ILC International Laboratories">
+          <img class="sidebar-logo-img sidebar-logo-img-full" src="assets/ilc-logo-full.png" alt="ILC International Laboratories Corp., Ltd">
+          <img class="sidebar-logo-img sidebar-logo-img-mini" src="assets/ilc-logo-symbol.png" alt="" aria-hidden="true">
         </div>
         <div class="sidebar-brand-caption" style="font-size:12px;color:rgba(255,255,255,.5);margin-top:8px;letter-spacing:.05em">Calibration System</div>
       </div>
