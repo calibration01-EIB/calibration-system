@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<meta name="theme-color" content="#1a2f4a">
+<meta name="theme-color" content="#102337">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1007,6 +1007,122 @@ tbody tr:hover td { background: #eff8f6 !important; }
     max-width: 38px !important;
     height: auto !important;
   }
+}
+
+/* Midnight Lab theme */
+body.app-mode {
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --surface2: #f2f6fb;
+  --border: #d9e5f1;
+  --text: #17243a;
+  --text2: #52667d;
+  --text3: #7a8fa6;
+  --accent: #0891b2;
+  --accent-light: #e6f7fb;
+  --green: #1f8a43;
+  --green-light: #e9f7ee;
+  --red: #dd2f3b;
+  --red-light: #fff0f2;
+  --amber: #f97316;
+  --amber-light: #fff4e7;
+  --shadow: 0 14px 32px rgba(30,64,175,.08);
+  --shadow-lg: 0 22px 48px rgba(30,64,175,.14);
+  background: #f3f6fb !important;
+  color: var(--text) !important;
+}
+body.app-mode #app .main-content {
+  background: linear-gradient(180deg, #f7faff 0%, #eef4fb 100%) !important;
+}
+body.app-mode #app .topbar {
+  background: rgba(255,255,255,.97) !important;
+  border-bottom: 1px solid rgba(37,99,235,.12) !important;
+  box-shadow: 0 8px 24px rgba(37,99,235,.06) !important;
+}
+body.app-mode #app .topbar-title {
+  color: #17243a !important;
+}
+body.app-mode #app .topbar-sub,
+body.app-mode #app .db-status {
+  color: #66758d !important;
+}
+body.app-mode #app .sidebar {
+  background: linear-gradient(180deg, #102337 0%, #0c3442 55%, #07313a 100%) !important;
+  border-right: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 12px 0 34px rgba(7,31,50,.20) !important;
+}
+body.app-mode #app .sidebar-brand {
+  border-bottom-color: rgba(255,255,255,.12) !important;
+}
+body.app-mode #app .sidebar-logo {
+  box-shadow: 0 20px 44px rgba(2,18,32,.26) !important;
+}
+body.app-mode #app .sidebar-brand-caption {
+  color: rgba(222,238,255,.72) !important;
+}
+body.app-mode #app .nav-item {
+  color: rgba(226,238,252,.78) !important;
+  font-weight: 700 !important;
+}
+body.app-mode #app .nav-item.active {
+  background: linear-gradient(135deg, #eef7ff 0%, #ffffff 100%) !important;
+  color: #17436b !important;
+  box-shadow: 0 13px 28px rgba(2,18,32,.20) !important;
+}
+body.app-mode #app .nav-item:not(.active):hover {
+  background: rgba(125,211,252,.13) !important;
+  color: #ffffff !important;
+}
+body.app-mode #app .sidebar-user {
+  background: rgba(125,211,252,.10) !important;
+  border: 1px solid rgba(186,230,253,.18) !important;
+}
+body.app-mode #app .user-avatar {
+  background: linear-gradient(135deg, #2563eb, #0891b2) !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,.24) !important;
+}
+body.app-mode #statCardsGrid > div {
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(37,99,235,.13) !important;
+  box-shadow: 0 14px 32px rgba(30,64,175,.08) !important;
+}
+body.app-mode #statCardsGrid > div:first-child {
+  background: linear-gradient(135deg, #1d4ed8 0%, #0891b2 58%, #22c55e 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 18px 38px rgba(37,99,235,.20) !important;
+}
+body.app-mode #dashRow2 > div,
+body.app-mode #pageDashboard > div:nth-of-type(3),
+body.app-mode .controls-bar,
+body.app-mode .table-wrap,
+body.app-mode .modal-box,
+body.app-mode .users-table-wrap {
+  background: rgba(255,255,255,.96) !important;
+  border: 1px solid rgba(37,99,235,.12) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 18px 40px rgba(30,64,175,.08) !important;
+}
+body.app-mode #monthGrid > div,
+body.app-mode #categoryGrid > div {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  border: 1px solid rgba(37,99,235,.13) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 24px rgba(30,64,175,.07) !important;
+}
+body.app-mode #alertList > div {
+  border-radius: 8px !important;
+}
+body.app-mode input,
+body.app-mode select,
+body.app-mode textarea {
+  border-color: rgba(37,99,235,.16) !important;
+}
+body.app-mode input:focus,
+body.app-mode select:focus,
+body.app-mode textarea:focus {
+  border-color: #0891b2 !important;
+  box-shadow: 0 0 0 3px rgba(8,145,178,.12) !important;
 }
 </style>
 </head>
