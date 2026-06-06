@@ -370,7 +370,7 @@ async function deleteInstrument(id, name) {
     if (error) throw error;
     await logAudit('ลบ', instrument || {id, instrument_name: name, id_code: ''}, null);
     showToast('ลบเครื่องมือแล้ว', 'success');
-    await loadData();
+    await loadData(true);
   } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
 }
 

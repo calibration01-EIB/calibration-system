@@ -380,7 +380,7 @@ function updateStats() {
     else ok++;
   });
   const total = filteredData.length;
-  const okCount = total - ov - wa;
+  const okCount = ok;
 
   document.getElementById('statTotal').textContent = total.toLocaleString();
   document.getElementById('statOk').textContent = okCount.toLocaleString();
@@ -449,12 +449,14 @@ function filterData() {
     if (unit && d.department !== unit) return false;
     // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
     if (activeCategory && activeCategory !== 'all' && d.instrument_type !== activeCategory) return false;
-    if (status && d.days_left !== null) {
+    if (status && d.days_left === null) return false;
+    if (status) {
       if (status === 'overdue' && d.days_left >= 0) return false;
       if (status === 'warning' && (d.days_left < 0 || d.days_left > 30)) return false;
       if (status === 'ok' && d.days_left <= 30) return false;
     }
-    if (month && d.due_date) {
+    if (month && !d.due_date) return false;
+    if (month) {
       const m = new Date(d.due_date).getMonth() + 1;
       if (String(m) !== month) return false;
     }
