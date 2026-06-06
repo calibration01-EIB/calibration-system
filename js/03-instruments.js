@@ -251,6 +251,7 @@ let editingInstrumentId = null;
 
 function openInstrumentModal(instrumentId) {
   editingInstrumentId = instrumentId || null;
+  clearInstrumentDuplicateWarning();
   document.getElementById('instrumentModalTitle').textContent = instrumentId ? 'แก้ไขเครื่องมือ' : 'เพิ่มเครื่องมือ';
 
   if (instrumentId) {
@@ -280,11 +281,148 @@ function openInstrumentModal(instrumentId) {
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
+  initInstrumentDuplicateCheck();
+  checkInstrumentDuplicates(false);
 }
 
 function closeInstrumentModal() {
   document.getElementById('instrumentModal').classList.remove('open');
   editingInstrumentId = null;
+  clearInstrumentDuplicateWarning();
+}
+
+let lastInstrumentDuplicateToastKey = '';
+
+function normalizeInstrumentDuplicateValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getInstrumentDuplicateMatches(idCode, certNo) {
+  const idValue = normalizeInstrumentDuplicateValue(idCode);
+  const certValue = normalizeInstrumentDuplicateValue(certNo);
+  const currentId = editingInstrumentId ? String(editingInstrumentId) : null;
+  const matches = [];
+
+  (allData || []).forEach(d => {
+    if (currentId && String(d.id) === currentId) return;
+    const fields = [];
+    if (idValue && normalizeInstrumentDuplicateValue(d.id_code) === idValue) fields.push('ID Code');
+    if (certValue && normalizeInstrumentDuplicateValue(d.cert_no) === certValue) fields.push('CERT.');
+    if (fields.length) matches.push({ instrument: d, fields });
+  });
+
+  return matches;
+}
+
+async function getInstrumentDuplicateMatchesFromDb(idCode, certNo) {
+  const currentId = editingInstrumentId ? String(editingInstrumentId) : null;
+  const rowsById = new Map();
+  const fieldsById = new Map();
+  const cols = 'id,instrument_type,instrument_name,brand,serial_no,department,id_code,cert_no';
+
+  const collectRows = (rows, fieldLabel) => {
+    (rows || []).forEach(d => {
+      if (currentId && String(d.id) === currentId) return;
+      rowsById.set(String(d.id), d);
+      const fields = fieldsById.get(String(d.id)) || [];
+      if (!fields.includes(fieldLabel)) fields.push(fieldLabel);
+      fieldsById.set(String(d.id), fields);
+    });
+  };
+
+  if (idCode) {
+    const { data, error } = await sb.from('instruments').select(cols).eq('id_code', idCode);
+    if (error) throw error;
+    collectRows(data, 'ID Code');
+  }
+
+  if (certNo) {
+    const { data, error } = await sb.from('instruments').select(cols).eq('cert_no', certNo);
+    if (error) throw error;
+    collectRows(data, 'CERT.');
+  }
+
+  return [...rowsById.entries()].map(([id, instrument]) => ({
+    instrument,
+    fields: fieldsById.get(id) || [],
+  }));
+}
+
+function clearInstrumentDuplicateWarning() {
+  const box = document.getElementById('instrumentDuplicateWarning');
+  if (box) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+  }
+  lastInstrumentDuplicateToastKey = '';
+}
+
+function renderInstrumentDuplicateWarning(matches) {
+  const box = document.getElementById('instrumentDuplicateWarning');
+  if (!box) return;
+  if (!matches.length) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="font-weight:700;margin-bottom:8px">พบข้อมูลซ้ำ กรุณาตรวจสอบก่อนบันทึก</div>
+    ${matches.map(({ instrument: d, fields }) => `
+      <div style="background:#fff;border:1px solid #F3B7B7;border-radius:8px;padding:8px 10px;margin-top:7px">
+        <div style="font-weight:700;color:#7A1818">${fields.join(' และ ')} ซ้ำกับรายการที่มีอยู่แล้ว</div>
+        <div style="margin-top:4px;color:#5F1E1E">
+          <strong>${escapeHtml(d.instrument_name || '–')}</strong>
+          <span style="color:#8A5A5A"> · ${escapeHtml(d.department || '–')} · ${escapeHtml(d.instrument_type || '–')}</span>
+        </div>
+        <div style="margin-top:3px;font-family:var(--mono);font-size:12px;color:#7A1818">
+          ID: ${escapeHtml(d.id_code || '–')} · CERT: ${escapeHtml(d.cert_no || '–')} · S/N: ${escapeHtml(d.serial_no || '–')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function checkInstrumentDuplicates(showToastOnDuplicate = false) {
+  const idCode = document.getElementById('iIdCode')?.value || '';
+  const certNo = document.getElementById('iCertNo')?.value || '';
+  const matches = getInstrumentDuplicateMatches(idCode, certNo);
+  renderInstrumentDuplicateWarning(matches);
+
+  if (showToastOnDuplicate && matches.length) {
+    const toastKey = matches.map(m => `${m.instrument.id}:${m.fields.join('+')}`).join('|');
+    if (toastKey && toastKey !== lastInstrumentDuplicateToastKey) {
+      showToast('พบข้อมูลซ้ำ: ' + matches.map(m => m.fields.join('/')).join(', '), 'error');
+      lastInstrumentDuplicateToastKey = toastKey;
+    }
+  } else if (!matches.length) {
+    lastInstrumentDuplicateToastKey = '';
+  }
+
+  return matches;
+}
+
+function initInstrumentDuplicateCheck() {
+  const idInput = document.getElementById('iIdCode');
+  const certInput = document.getElementById('iCertNo');
+  if (idInput && !idInput.dataset.duplicateCheckReady) {
+    idInput.addEventListener('input', () => checkInstrumentDuplicates(true));
+    idInput.dataset.duplicateCheckReady = 'true';
+  }
+  if (certInput && !certInput.dataset.duplicateCheckReady) {
+    certInput.addEventListener('input', () => checkInstrumentDuplicates(true));
+    certInput.dataset.duplicateCheckReady = 'true';
+  }
 }
 
 async function saveInstrument() {
@@ -309,6 +447,24 @@ async function saveInstrument() {
   };
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
+
+  const duplicateMatches = checkInstrumentDuplicates(false);
+  if (duplicateMatches.length) {
+    showToast('บันทึกไม่ได้: พบ ID Code หรือ CERT. ซ้ำกับข้อมูลที่มีอยู่แล้ว', 'error');
+    return;
+  }
+
+  try {
+    const dbDuplicateMatches = await getInstrumentDuplicateMatchesFromDb(payload.id_code, payload.cert_no);
+    if (dbDuplicateMatches.length) {
+      renderInstrumentDuplicateWarning(dbDuplicateMatches);
+      showToast('บันทึกไม่ได้: พบ ID Code หรือ CERT. ซ้ำกับข้อมูลล่าสุดในระบบ', 'error');
+      return;
+    }
+  } catch(e) {
+    showToast('ตรวจสอบข้อมูลซ้ำไม่สำเร็จ: ' + e.message, 'error');
+    return;
+  }
 
   const btn = document.getElementById('saveInstrumentBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
