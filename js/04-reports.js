@@ -1,4 +1,6 @@
-/* ===== 04-reports.js ===== (extracted from index.html lines 2415-2754) */
+/* ===== 04-reports.js ===== (generated from index.html inline app script) */
+// PRINT / PDF REPORT
+// ====================================================
 function printReport() {
   const today = new Date();
   const todayStr = today.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
@@ -302,6 +304,13 @@ function renderCategoryCards() {
 }
 
 
+function selectCategory(cat) {
+  activeCategory = (activeCategory === cat) ? 'all' : cat;
+  currentPage = 1;
+  filterData();
+  renderCategoryCards();
+}
+
 // ====================================================
 // PAGINATION
 // ====================================================
@@ -334,8 +343,3 @@ function updatePaginationUI() {
 
 
 // ====================================================
-// AUDIT LOG
-// ====================================================
-let auditData = [];
-let auditFiltered = [];
-

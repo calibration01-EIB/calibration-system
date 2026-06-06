@@ -1,22 +1,4 @@
-/* ===== 07-notifications.js ===== (extracted from index.html lines 3962-4098) */
-document.addEventListener('click', (e) => {
-  const wrapper = document.getElementById('notifWrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
-    const dd = document.getElementById('notifDropdown');
-    if (dd) dd.style.display = 'none';
-  }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  const ia = document.getElementById('importUploadArea');
-  if (!ia) return;
-  ia.addEventListener('dragover', e => { e.preventDefault(); ia.classList.add('dragover'); });
-  ia.addEventListener('dragleave', () => ia.classList.remove('dragover'));
-  ia.addEventListener('drop', e => { e.preventDefault(); ia.classList.remove('dragover'); handleImportFile(e.dataTransfer.files[0]); });
-});
-
-
-// ====================================================
+/* ===== 07-notifications.js ===== (generated from index.html inline app script) */
 // NOTIFICATION BELL
 // ====================================================
 function updateNotificationBell() {
@@ -86,7 +68,7 @@ function renderNotifDropdown() {
 
 function notifGoTo(idCode) {
   document.getElementById('notifDropdown').style.display = 'none';
-  showPage('dashboard');
+  showPage('list');
   document.getElementById('searchInput').value = idCode;
   filterData();
   setTimeout(() => {
@@ -103,36 +85,9 @@ function notifGoTo(idCode) {
 
 function notifGoAll() {
   document.getElementById('notifDropdown').style.display = 'none';
-  showPage('dashboard');
+  showPage('list');
   document.getElementById('statusFilter').value = 'overdue';
   filterData();
 }
 
-// ====================================================
-// PLAN PAGE
-// ====================================================
-const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                         'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-let planSchedule = {};
-let planStatusMap = {}; // instrument_id → {status, title, planned_date}
-
-// โหลดสถานะแผนจาก Supabase เพื่อแสดงในตาราง
-async function loadPlanStatusMap() {
-  try {
-    const { data } = await sb.from('calibration_plan_items')
-      .select('instrument_id, calibration_plans!inner(status, title, planned_date)')
-      .in('calibration_plans.status', ['pending_plan','planned','pending_cert','completed']);
-    planStatusMap = {};
-    if (data) {
-      data.forEach(item => {
-        const p = item.calibration_plans;
-        planStatusMap[item.instrument_id] = { status: p.status, title: p.title, planned_date: p.planned_date };
-      });
-    }
-    renderTable(); // re-render ตารางหลัง load
-  } catch(e) { /* ignore */ }
-}
-
-// ====================================================
-// STANDARD WEIGHTS (ลูกตุ้มมาตรฐาน)
 // ====================================================

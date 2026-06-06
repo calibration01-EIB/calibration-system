@@ -1,4 +1,6 @@
-/* ===== 02-dashboard.js ===== (extracted from index.html lines 1461-2032) */
+/* ===== 02-dashboard.js ===== (generated from index.html inline app script) */
+// MOBILE CARDS
+// ====================================================
 function renderMobileCards() {
   const el = document.getElementById('mobileCardList');
   if (!el) return;
@@ -279,7 +281,6 @@ async function loadData(forceRefresh = false) {
     renderAlerts();
     loadPlanStatusMap();
     updateNotificationBell();
-    updateCertBadge();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();
   };
 
@@ -377,7 +378,6 @@ function updateStats() {
     if (d.days_left < 0) ov++;
     else if (d.days_left <= 30) wa++;
     else ok++;
-  renderDashMiniList();
   });
   const total = filteredData.length;
   const okCount = total - ov - wa;
@@ -410,6 +410,7 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
+  renderDashMiniList();
 }
 
 function renderDashMiniList() {
@@ -592,7 +593,3 @@ async function updateFileCounts(pageItems) {
 }
 
 // ====================================================
-// CERT MODAL — Supabase Storage
-// ====================================================
-let currentInstrumentId = null;
-

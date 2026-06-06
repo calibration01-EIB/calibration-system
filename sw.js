@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v5';
+const CACHE_NAME = 'calibration-app-v6';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const APP_SHELL = [
   './',
@@ -10,7 +10,17 @@ const APP_SHELL = [
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
-  './assets/calibration-lab-hero.png'
+  './assets/calibration-lab-hero.png',
+  './js/01-core.js',
+  './js/02-dashboard.js',
+  './js/03-instruments.js',
+  './js/04-reports.js',
+  './js/05-audit.js',
+  './js/06-plan.js',
+  './js/07-notifications.js',
+  './js/08-weights.js',
+  './js/09-cert.js',
+  './js/10-router.js'
 ];
 
 async function withMidnightLabTheme(response) {
