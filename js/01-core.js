@@ -1,4 +1,4 @@
-/* ===== 01-core.js ===== (extracted from index.html lines 1373-1460) */
+/* ===== 01-core.js ===== (generated from index.html inline app script) */
 // ====================================================
 // SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
 // ====================================================
@@ -60,8 +60,10 @@ async function doLogin() {
 }
 
 function enterApp(user) {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  document.body.classList.add('app-mode');
+  document.body.classList.remove('login-mode');
+  document.getElementById('loginPage').style.setProperty('display', 'none', 'important');
+  document.getElementById('app').style.setProperty('display', 'block', 'important');
   document.getElementById('sidebarName').textContent = user.name;
   document.getElementById('sidebarRole').textContent = user.role;
   document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
@@ -84,6 +86,4 @@ function enterApp(user) {
 
 function doLogout() { clearSession(); location.reload(); }
 
-// ====================================================
-// MOBILE CARDS
 // ====================================================

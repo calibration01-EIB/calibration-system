@@ -1,6 +1,8 @@
-/* ===== 10-router.js ===== (extracted from index.html lines 4638-4696) */
+/* ===== 10-router.js ===== (generated from index.html inline app script) */
+// SHOW PAGE
+// ====================================================
 function showPage(page) {
-  const pages = ['dashboard','audit','admin','monthly','plan','weights','cert'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -43,17 +45,24 @@ function showPage(page) {
 // INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
 
+
 function filterByStatus(status) {
   showPage('list');
   const sel = document.getElementById('statusFilter');
   if (sel) sel.value = status;
   if (typeof filterData === 'function') filterData();
 }
+
 (function init() {
   const session = getSession();
   if (session) {
     currentUser = session;
     enterApp(session);
+  } else {
+    document.body.classList.add('login-mode');
+    document.body.classList.remove('app-mode');
+    document.getElementById('loginPage')?.style.setProperty('display', 'grid', 'important');
+    document.getElementById('app')?.style.setProperty('display', 'none', 'important');
   }
 })();
 

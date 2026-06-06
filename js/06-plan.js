@@ -1,4 +1,11 @@
-/* ===== 06-plan.js ===== (extracted from index.html lines 2997-3961) */
+/* ===== 06-plan.js ===== (generated from index.html inline app script) */
+// CALIBRATION PLAN — WORKFLOW
+// ====================================================
+let planSelectedItems = []; // เครื่องมือที่เลือก
+let planFilteredItems = []; // เครื่องมือที่กรองแล้ว
+let planFileObj = null;     // ไฟล์ที่แนบ
+
+// --- Switch tabs ---
 function switchPlanTab(tab) {
   ['new','list','confirm','history'].forEach(t => {
     const el = document.getElementById('planTab-' + t);
@@ -964,3 +971,509 @@ async function confirmImport() {
   }
 }
 
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('notifWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ia = document.getElementById('importUploadArea');
+  if (!ia) return;
+  ia.addEventListener('dragover', e => { e.preventDefault(); ia.classList.add('dragover'); });
+  ia.addEventListener('dragleave', () => ia.classList.remove('dragover'));
+  ia.addEventListener('drop', e => { e.preventDefault(); ia.classList.remove('dragover'); handleImportFile(e.dataTransfer.files[0]); });
+});
+
+
+// ====================================================
+
+// ====================================================
+// PLAN PAGE — schedule matrix and export helpers
+// ====================================================
+// PLAN PAGE
+// ====================================================
+const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                         'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let planSchedule = {};
+let planStatusMap = {}; // instrument_id → {status, title, planned_date}
+
+// โหลดสถานะแผนจาก Supabase เพื่อแสดงในตาราง
+async function loadPlanStatusMap() {
+  try {
+    const { data } = await sb.from('calibration_plan_items')
+      .select('instrument_id, calibration_plans!inner(status, title, planned_date)')
+      .in('calibration_plans.status', ['pending_plan','planned','pending_cert','completed']);
+    planStatusMap = {};
+    if (data) {
+      data.forEach(item => {
+        const p = item.calibration_plans;
+        planStatusMap[item.instrument_id] = { status: p.status, title: p.title, planned_date: p.planned_date };
+      });
+    }
+    renderTable(); // re-render ตารางหลัง load
+  } catch(e) { /* ignore */ }
+}
+
+function initOldPlanPage() {
+  const planMonth = document.getElementById('planMonth');
+  const planYear  = document.getElementById('planYear');
+  if (planMonth && !planMonth.dataset.init) {
+    const now = new Date();
+    planMonth.value = now.getMonth() + 1;
+    const buddhistYear = now.getFullYear() + 543;
+    planYear.value = buddhistYear;
+    planMonth.dataset.init = '1';
+  }
+  // Populate dept/type filters
+  const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
+  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const planDept = document.getElementById('planDept');
+  const planType = document.getElementById('planType');
+  if (planDept && planDept.options.length <= 1) {
+    depts.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; planDept.appendChild(o); });
+  }
+  if (planType && planType.options.length <= 1) {
+    types.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t.split(' (')[0]; planType.appendChild(o); });
+  }
+}
+
+function getPlanData() {
+  const month  = parseInt(document.getElementById('planMonth').value);
+  const yearBE = parseInt(document.getElementById('planYear').value);
+  const yearCE = yearBE - 543;
+  const dept   = document.getElementById('planDept').value;
+  const type   = document.getElementById('planType').value;
+  const calType= document.getElementById('planCalType').value;
+
+  return allData.filter(d => {
+    if (!d.due_date) return false;
+    const dd = new Date(d.due_date);
+    if (dd.getFullYear() !== yearCE || dd.getMonth() + 1 !== month) return false;
+    if (dept && d.department !== dept) return false;
+    if (type && d.instrument_type !== type) return false;
+    if (calType && d.cal_type !== calType) return false;
+    return true;
+  });
+}
+
+function renderPlanTable() {
+  const data = getPlanData();
+  const tbody = document.getElementById('planTableBody');
+  const summary = document.getElementById('planSummary');
+  const empty   = document.getElementById('planEmpty');
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="no-data">ไม่มีเครื่องมือที่ครบกำหนดในช่วงนี้</td></tr>';
+    summary.style.display = 'none';
+    empty.style.display   = 'block';
+    return;
+  }
+  empty.style.display   = 'none';
+  summary.style.display = 'grid';
+
+  tbody.innerHTML = data.map((d, i) => {
+    const days = d.days_left;
+    let badge, daysColor;
+    if (days === null)   { badge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; }
+    else if (days < 0)   { badge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysColor = 'var(--red)'; }
+    else if (days <= 30) { badge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysColor = 'var(--amber)'; }
+    else                 { badge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysColor = 'var(--green)'; }
+
+    const scheduled = planSchedule[d.id] || '';
+    return `<tr id="planRow_${d.id}">
+      <td style="color:var(--text3);font-size:13px">${i+1}</td>
+      <td style="font-family:var(--mono);font-size:13px;font-weight:600">${d.id_code||'–'}</td>
+      <td>${d.instrument_name||'–'}</td>
+      <td style="font-size:13px;color:var(--text2)">${d.brand||'–'}</td>
+      <td><strong>${d.department||'–'}</strong></td>
+      <td style="font-size:13px;color:var(--text2)">${d.location||'–'}</td>
+      <td style="font-family:var(--mono);font-size:13px">${formatDate(d.due_date)}</td>
+      <td><span style="font-family:var(--mono);font-size:13px;font-weight:600;color:${daysColor}">${days !== null ? days : '–'}</span></td>
+      <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
+      <td>${badge}</td>
+      <td>
+        <input type="date" class="plan-day-input" value="${scheduled}"
+               onchange="setPlanSchedule(${d.id}, this.value)"
+               title="เลือกวันนัดสอบเทียบ">
+      </td>
+    </tr>`;
+  }).join('');
+
+  updatePlanSummary(data);
+}
+
+function setPlanSchedule(id, dateVal) {
+  if (dateVal) planSchedule[id] = dateVal;
+  else delete planSchedule[id];
+  updatePlanSummaryFromCurrent();
+  // Audit log
+  const inst = allData.find(d => d.id == id);
+  if (dateVal) {
+    logAudit('วางแผนสอบเทียบ', inst || { id, id_code: String(id) }, { วันที่นัด: { from: planSchedule[id] || '–', to: dateVal } });
+  } else {
+    logAudit('ยกเลิกแผน', inst || { id, id_code: String(id) }, null);
+  }
+}
+
+function updatePlanSummaryFromCurrent() {
+  const data = getPlanData();
+  updatePlanSummary(data);
+}
+
+function updatePlanSummary(data) {
+  const total   = data.length;
+  const sched   = data.filter(d => planSchedule[d.id]).length;
+  const pending = total - sched;
+  const overdue = data.filter(d => d.days_left !== null && d.days_left < 0).length;
+  document.getElementById('planSumTotal').textContent   = total;
+  document.getElementById('planSumSched').textContent   = sched;
+  document.getElementById('planSumPending').textContent = pending;
+  document.getElementById('planSumOverdue').textContent = overdue;
+}
+
+// ====================================================
+// EXPORT FRM-EIB04 (AOA-based, reliable)
+// ====================================================
+function exportFRMEIB04() {
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
+
+  const data = getPlanData();
+  if (!data.length) { showToast('ไม่มีข้อมูลในแผน กรุณาค้นหาก่อน', 'error'); return; }
+
+  try {
+    const monthNum   = parseInt(document.getElementById('planMonth').value);
+    const yearBE     = parseInt(document.getElementById('planYear').value);
+    const yearCE     = yearBE - 543;
+    const monthNamesTH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const monthNamesEN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthNameTH  = monthNamesTH[monthNum - 1];
+    const monthNameEN  = monthNamesEN[monthNum - 1];
+    const dept      = document.getElementById('planDept').value || '–';
+    const iType     = document.getElementById('planType').value || '';
+    const calTypeVal= document.getElementById('planCalType').value;
+    const typeName  = iType ? (iType.split(' (')[1] || '').replace(')','') || iType : 'ALL';
+    const isInternal= calTypeVal === 'ภายใน';
+    const isExternal= calTypeVal === 'ภายนอก';
+
+    // Template constants
+    const DATA_SLOTS = 17;  // rows 10-26
+    const TMPL_ROWS  = 30;  // template height in rows
+    const totalPages = Math.ceil(data.length / DATA_SLOTS);
+
+    // Column widths matching Book1.xlsx exactly
+    const COL_WIDTHS = [
+      4.3, 18.1, 12.6, 5.0, 7.4,
+      ...Array(31).fill(2.4),
+      10.6, 10.4, 6.7, 7.7, 5.3, 5.1, 7.7, 10.1, 9.1
+    ];
+
+    // Build merged-cell list for one template block at rowOffset
+    function getMerges(ro) {
+      return [
+        // Row 3: Title A3:AR3
+        {s:{r:ro+2,c:0}, e:{r:ro+2,c:43}},
+        // Row 4
+        {s:{r:ro+3,c:18}, e:{r:ro+3,c:22}},  // S4:W4 month name
+        {s:{r:ro+3,c:26}, e:{r:ro+3,c:30}},  // AA4:AE4 year
+        // Row 5
+        {s:{r:ro+4,c:0},  e:{r:ro+4,c:19}},  // A5 group name
+        {s:{r:ro+4,c:20}, e:{r:ro+4,c:28}},  // U5:AC5 type
+        {s:{r:ro+4,c:30}, e:{r:ro+4,c:35}},  // AE5 unit label
+        {s:{r:ro+4,c:36}, e:{r:ro+4,c:38}},  // AK5:AM5 unit value
+        {s:{r:ro+4,c:40}, e:{r:ro+4,c:40}},  // AO5 section label
+        {s:{r:ro+4,c:41}, e:{r:ro+4,c:43}},  // AP5:AR5 section value
+        // Row 6
+        {s:{r:ro+5,c:1},  e:{r:ro+5,c:4}},   // B6:E6 internal
+        {s:{r:ro+5,c:5},  e:{r:ro+5,c:19}},  // F6:T6 external
+        {s:{r:ro+5,c:25}, e:{r:ro+5,c:27}},  // Z6:AB6 Drug
+        {s:{r:ro+5,c:34}, e:{r:ro+5,c:36}},  // AI6 Cosmetic
+        {s:{r:ro+5,c:39}, e:{r:ro+5,c:43}},  // AN6 Other
+        // Rows 7-9: header merges (span 3 rows each)
+        {s:{r:ro+6,c:0},  e:{r:ro+8,c:0}},   // A7:A9 Item
+        {s:{r:ro+6,c:1},  e:{r:ro+8,c:1}},   // B7:B9 Name
+        {s:{r:ro+6,c:2},  e:{r:ro+8,c:2}},   // C7:C9 ID CODE
+        {s:{r:ro+6,c:3},  e:{r:ro+8,c:3}},   // D7:D9 Location
+        {s:{r:ro+6,c:4},  e:{r:ro+8,c:4}},   // E7:E9 Due Date
+        {s:{r:ro+6,c:5},  e:{r:ro+6,c:35}},  // F7:AJ7 Month
+        {s:{r:ro+6,c:36}, e:{r:ro+6,c:43}},  // AK7:AR7 Action
+        // Row 8 day cells (merge each day row 8-9)
+        ...[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36].map(c => ({s:{r:ro+7,c}, e:{r:ro+8,c}})),
+        // Action sub-headers
+        {s:{r:ro+7,c:36}, e:{r:ro+8,c:36}},  // AK8:AK9
+        {s:{r:ro+7,c:37}, e:{r:ro+8,c:37}},  // AL8:AL9
+        {s:{r:ro+7,c:38}, e:{r:ro+8,c:38}},  // AM8:AM9
+        {s:{r:ro+7,c:39}, e:{r:ro+7,c:41}},  // AN8:AP8 Recorded by
+        {s:{r:ro+7,c:42}, e:{r:ro+7,c:43}},  // AQ8:AR8 Reviewed by
+        // Row 9 signed/date
+        {s:{r:ro+8,c:39}, e:{r:ro+8,c:39}},
+        {s:{r:ro+8,c:40}, e:{r:ro+8,c:40}},
+        {s:{r:ro+8,c:42}, e:{r:ro+8,c:42}},
+        {s:{r:ro+8,c:43}, e:{r:ro+8,c:43}},
+        // Footer row 27
+        {s:{r:ro+26,c:0},  e:{r:ro+26,c:35}},
+        {s:{r:ro+26,c:36}, e:{r:ro+26,c:43}},
+        {s:{r:ro+27,c:36}, e:{r:ro+27,c:43}},
+      ];
+    }
+
+    // Build one page AOA (30 rows)
+    function buildPage(pageItems, pageNum, startNum) {
+      const rows = [];
+      // Row 1: empty
+      rows.push(Array(44).fill(null));
+      // Row 2: empty
+      rows.push(Array(44).fill(null));
+      // Row 3: Title
+      const r3 = Array(44).fill(null); r3[0] = 'Equipment Calibration Plan'; rows.push(r3);
+      // Row 4: Month/Year
+      const r4 = Array(44).fill(null);
+      r4[15]='Month'; r4[18]=monthNameEN; r4[24]='Year'; r4[26]=yearCE;
+      rows.push(r4);
+      // Row 5: Group / Type / Unit / Section
+      const r5 = Array(44).fill(null);
+      r5[0]  = 'กลุ่มเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ (Inspection, measuring and testing instruments group) ';
+      r5[20] = typeName.toUpperCase();
+      r5[30] = 'หน่วยงาน (Unit)';
+      r5[36] = dept;
+      r5[40] = 'แผนก (Section) ';
+      r5[41] = dept;
+      rows.push(r5);
+      // Row 6: Cal type / Product type
+      const r6 = Array(44).fill(null);
+      r6[1]  = 'สอบเทียบภายใน (Internal calibration)' + (isInternal?' ✓':'');
+      r6[5]  = 'สอบเทียบภายนอก (External calibration)' + (isExternal?' ✓':'');
+      r6[25] = 'Drug product';
+      r6[34] = 'Cosmetic product';
+      r6[39] = 'Other ____________________________';
+      rows.push(r6);
+      // Row 7: Column headers
+      const r7 = Array(44).fill(null);
+      r7[0]='Item'; r7[1]='Name of Inspection, measuring and testing instruments';
+      r7[2]='ID CODE'; r7[3]='Location'; r7[4]='Due Date'; r7[5]='Month';
+      r7[36]='Action by Calibration Laboratory (EIB)';
+      rows.push(r7);
+      // Row 8: Day numbers 1-31
+      const r8 = Array(44).fill(null);
+      for (let d=1; d<=31; d++) r8[4+d]=d;
+      r8[36]='Certification No.'; r8[37]='Calibration Date'; r8[38]='Agency';
+      r8[39]='Recorded  by'; r8[42]='Reviewed by (Supervisor level and above) ';
+      rows.push(r8);
+      // Row 9: Signed/Date
+      const r9 = Array(44).fill(null);
+      r9[39]='Signed'; r9[40]='Date'; r9[42]='Signed'; r9[43]='Date';
+      rows.push(r9);
+      // Rows 10-26: Data (17 slots)
+      for (let i=0; i<DATA_SLOTS; i++) {
+        const row = Array(44).fill(null);
+        const d = pageItems[i];
+        if (d) {
+          row[0] = startNum + i;
+          row[1] = d.instrument_name || '';
+          row[2] = d.id_code || '';
+          row[3] = d.location || '';
+          row[4] = d.due_date ? new Date(d.due_date) : null;
+          const sched = planSchedule[d.id];
+          if (sched) {
+            const sd = new Date(sched);
+            if (sd.getMonth()+1===monthNum && sd.getFullYear()===yearCE) {
+              const day = sd.getDate();
+              if (day>=1 && day<=31) row[4+day] = 'v';
+            }
+          }
+        }
+        rows.push(row);
+      }
+      // Row 27: Prepared/Approved footer
+      const rFoot = Array(44).fill(null);
+      rFoot[0]  = 'Prepared by :___________(EIB)  Date _____________   Approved by :____________(EIB)  Date ________________ Acknowledge by _____________(Owner) Date _____________';
+      rFoot[36] = 'The owner accepts the work by ___________ Date _____________';
+      rows.push(rFoot);
+      // Row 28: Level notes
+      const rLv = Array(44).fill(null);
+      rLv[4]  = '  ระดับแผนกขึ้นไป ( Section manager level and above)';
+      rLv[20] = 'ระดับหน่วยขึ้นไป ( Supervisor level and above)';
+      rLv[36] = 'ระดับหน่วยขึ้นไป ( Supervisor level and above)';
+      rows.push(rLv);
+      // Row 29: empty
+      rows.push(Array(44).fill(null));
+      // Row 30: Form ID / Effective Date / Page
+      const rForm = Array(44).fill(null);
+      rForm[0]  = 'FRM-EIB04 (TP) Rev.03';
+      rForm[19] = 'Effective Date: 31/03/2025 (5Y)';
+      rForm[43] = 'Page ' + pageNum + ' of ' + totalPages;
+      rows.push(rForm);
+      return rows;
+    }
+
+    // Build all pages into one big AOA
+    let allRows = [];
+    let allMerges = [];
+    for (let pg=1; pg<=totalPages; pg++) {
+      const startIdx = (pg-1)*DATA_SLOTS;
+      const pageItems = data.slice(startIdx, startIdx+DATA_SLOTS);
+      const rowOffset = (pg-1)*TMPL_ROWS;
+      allRows = allRows.concat(buildPage(pageItems, pg, startIdx+1));
+      allMerges = allMerges.concat(getMerges(rowOffset));
+    }
+
+    // Build workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(allRows, {dateNF:'DD/MMM/YYYY'});
+    ws['!cols'] = COL_WIDTHS.map(w => ({wch: w}));
+    ws['!merges'] = allMerges;
+
+    // Row heights (0-based index matching template)
+    const ROW_HEIGHTS = {0:23.25,2:29.25,3:30,4:30,5:25.15,6:21,7:45,8:30,
+      9:24,10:24,11:24,12:24,13:24,14:24,15:24,16:24,17:24,18:24,
+      19:24,20:24,21:24,22:24,23:24,24:24,25:24,26:33,27:19.5,28:25.5,29:18};
+    const rowsArr = [];
+    for (let pg=0; pg<totalPages; pg++) {
+      const offset = pg*TMPL_ROWS;
+      Object.entries(ROW_HEIGHTS).forEach(([ri, ht]) => {
+        rowsArr[offset + parseInt(ri)] = {hpt: ht, hpx: Math.round(ht*1.33)};
+      });
+    }
+    ws['!rows'] = rowsArr;
+
+    // ---- Apply cell borders + fonts to all cells ----
+    const thin  = {style:'thin',  color:{rgb:'FF000000'}};
+    const med   = {style:'medium',color:{rgb:'FF000000'}};
+    const thick = {style:'thick', color:{rgb:'FF000000'}};
+    const none  = {};
+
+    // Helper: encode column index to letter(s)
+    function colLetter(c) { return XLSX.utils.encode_col(c); }
+
+    const wsRange = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = wsRange.s.r; R <= wsRange.e.r; R++) {
+      for (let C = wsRange.s.c; C <= wsRange.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({r:R, c:C});
+        if (!ws[addr]) ws[addr] = {t:'z', v:''};
+        const cell = ws[addr];
+
+        // Row within template block (0-based)
+        const rowInBlock = R % TMPL_ROWS;
+        // Is this a header row?
+        const isTitle    = rowInBlock === 2;                // Row 3
+        const isInfo     = rowInBlock >= 3 && rowInBlock <= 5; // Rows 4-6
+        const isColHdr   = rowInBlock >= 6 && rowInBlock <= 8; // Rows 7-9
+        const isDataRow  = rowInBlock >= 9 && rowInBlock <= 25;// Rows 10-26
+        const isFooter   = rowInBlock >= 26;               // Rows 27+
+
+        // Is this the Agency column (0-based col 38 = AM)?
+        const isAgencyCol = C === 38;
+        // Day-grid area cols 5-35
+        const isDayCol = C >= 5 && C <= 35;
+        // Action area cols 36-43
+        const isActionCol = C >= 36;
+
+        // Determine borders for this cell
+        let top=thin, bottom=thin, left=thin, right=thin;
+
+        // Thick right border on col E (Due Date, C=4) — separates due date from day grid
+        if (C === 4) right = med;
+        // Thick left border on AK (C=36) — separates day grid from action area
+        if (C === 36) left = med;
+        // Thick left border on Agency col (C=38) — col 9 separator
+        if (C === 38) left = thick;
+        // Thick bottom on header rows 6,8,9 (rowInBlock 5,7,8)
+        if (rowInBlock === 5) bottom = med;
+        if (rowInBlock === 8) bottom = med;
+        // Thick outer border on last data row (row 26, rowInBlock=25)
+        if (rowInBlock === 25) bottom = med;
+        // No side borders in day-grid for cleaner look (keep thin)
+        // Title row — thicker bottom
+        if (isTitle) bottom = med;
+
+        // Font
+        let font = {name:'AngsanaUPC', sz:11};
+        if (isTitle)  font = {name:'AngsanaUPC', sz:22, bold:true};
+        if (isColHdr) font = {name:'AngsanaUPC', sz:14, bold:true};
+        if (isDataRow && C <= 4) font = {name:'AngsanaUPC', sz:14};
+        if (isDataRow && isDayCol) font = {name:'AngsanaUPC', sz:14, bold:true};
+        if (isInfo)   font = {name:'AngsanaUPC', sz:14, bold:true};
+        if (isFooter) font = {name:'AngsanaUPC', sz:13};
+
+        // Alignment
+        let alignment = {vertical:'center', wrapText: true};
+        if (isTitle) alignment = {horizontal:'center', vertical:'center'};
+        if (isColHdr) alignment = {horizontal:'center', vertical:'center', wrapText:true};
+        if (isDataRow && C === 1) alignment = {horizontal:'left', vertical:'center'};
+        if (isDataRow && (C === 0 || C === 2 || C === 3 || C === 4 || isDayCol))
+          alignment = {horizontal:'center', vertical:'center'};
+
+        cell.s = {
+          border: {top, bottom, left, right},
+          font,
+          alignment
+        };
+      }
+    }
+
+    const sheetName = monthNameEN.substring(0,3) + '_' + yearBE;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const fname = 'FRM-EIB04_' + dept.replace(/[^a-zA-Z0-9ก-ฮ]/g,'_') + '_' + monthNameTH + yearBE + '_' + today + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('✅ Export สำเร็จ — ' + data.length + ' รายการ (' + totalPages + ' หน้า)', 'success');
+
+  } catch(err) {
+    showToast('Export ผิดพลาด: ' + err.message, 'error');
+    console.error('exportFRMEIB04 error:', err);
+  }
+}
+
+
+
+
+// ====================================================
+// EXPORT SCHEDULE JSON (for use with generate_frm.py)
+// ====================================================
+function exportScheduleJSON() {
+  const data = getPlanData();
+  if (!data.length) {
+    showToast('ไม่มีข้อมูลในแผน กรุณาค้นหาก่อน', 'error');
+    return;
+  }
+  const month  = parseInt(document.getElementById('planMonth').value);
+  const yearBE = parseInt(document.getElementById('planYear').value);
+  const yearCE = yearBE - 543;
+
+  // Build schedule object: { "instrumentId": "YYYY-MM-DD" }
+  const schedule = {};
+  data.forEach(d => {
+    if (planSchedule[d.id]) schedule[String(d.id)] = planSchedule[d.id];
+  });
+
+  // Wrap with metadata so user knows which month/year to pass
+  const payload = {
+    _meta: {
+      month: month,
+      year_ce: yearCE,
+      year_be: yearBE,
+      dept: document.getElementById('planDept').value || null,
+      cal_type: document.getElementById('planCalType').value || null,
+      exported_at: new Date().toISOString()
+    },
+    schedule: schedule
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  a.href     = url;
+  a.download = `schedule_${MONTH_NAMES_EN[month-1]}${yearBE}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const schedCount = Object.keys(schedule).length;
+  showToast(`✅ บันทึก JSON — ${data.length} รายการ (นัดแล้ว ${schedCount})`, 'success');
+}
+
+
+// ====================================================

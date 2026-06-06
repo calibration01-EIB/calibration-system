@@ -1,4 +1,6 @@
-/* ===== 08-weights.js ===== (extracted from index.html lines 4099-4305) */
+/* ===== 08-weights.js ===== (generated from index.html inline app script) */
+// STANDARD WEIGHTS (ลูกตุ้มมาตรฐาน)
+// ====================================================
 let swData = [], swFiltered = [];
 let editingSWId = null;
 
@@ -203,6 +205,4 @@ async function deleteSW(id, idCode) {
 
 // ====================================================
 // PAGE NAVIGATION
-// ====================================================
-// CERT PAGE
 // ====================================================

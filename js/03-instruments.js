@@ -1,4 +1,8 @@
-/* ===== 03-instruments.js ===== (extracted from index.html lines 2033-2414) */
+/* ===== 03-instruments.js ===== (generated from index.html inline app script) */
+// CERT MODAL — Supabase Storage
+// ====================================================
+let currentInstrumentId = null;
+
 async function openCertModal(instrumentId, idCode, certNo, equipment) {
   currentInstrumentId = instrumentId;
   document.getElementById('mIdCode').textContent = idCode;
@@ -306,23 +310,6 @@ async function saveInstrument() {
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
 
-  // เช็ค ID Code ซ้ำ (ไม่สนตัวพิมพ์เล็ก-ใหญ่; ตอนแก้ไขไม่นับตัวเอง)
-  const _code = payload.id_code.trim().toLowerCase();
-  const _dup = (allData || []).find(x => x.id_code && x.id_code.trim().toLowerCase() === _code && x.id !== editingInstrumentId);
-  if (_dup) {
-    showToast('ID Code "' + payload.id_code + '" ซ้ำกับเครื่องมือที่มีอยู่แล้ว (' + (_dup.instrument_name || '–') + ')', 'error');
-    return;
-  }
-
-  // เตือนเลข Cert ซ้ำ (เฉพาะเมื่อมีเลข Cert) — เตือนแล้วเลือกบันทึกต่อได้
-  if (payload.cert_no) {
-    const _cert = payload.cert_no.trim().toLowerCase();
-    const _certDup = (allData || []).find(x => x.cert_no && x.cert_no.trim().toLowerCase() === _cert && x.id !== editingInstrumentId);
-    if (_certDup) {
-      if (!confirm('เลข Cert "' + payload.cert_no + '" ซ้ำกับเครื่องมือ "' + (_certDup.instrument_name || '–') + '" (ID Code: ' + (_certDup.id_code || '–') + ')\n\nต้องการบันทึกต่อหรือไม่?')) return;
-    }
-  }
-
   const btn = document.getElementById('saveInstrumentBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
@@ -395,6 +382,4 @@ function toggleManageColumns(show) {
 }
 
 
-// ====================================================
-// PRINT / PDF REPORT
 // ====================================================

@@ -1,16 +1,8 @@
-/* ===== 09-cert.js ===== (extracted from index.html lines 4306-4637) */
-const CERT_COLORS = { B:'#00897B',M:'#639922',F:'#BA7517',P:'#534AB7',T:'#C62828',H:'#993556',W:'#00838F',G:'#2E7D32',Q:'#1565C0',R:'#6A1B9A',L:'#185FA5',E:'#0F6E56',D:'#3B6D11',C:'#D85A30' };
-const CERT_LABELS = { B:'Balance',M:'Mass',F:'Force/Torque',P:'Pressure',T:'Temperature',H:'Tachometer',W:'Timer',G:'Moisture',Q:'Flow Meter',R:'Ruler/Tape',L:'Gauge/Dimension',E:'Battery',D:'Caliper',C:'PH/Visco/DO' };
-
-// อัพเดท badge จำนวน Cert ที่ยังไม่อนุมัติ (นับทั้งหมดจาก allData, เฉพาะ Admin)
-function updateCertBadge() {
-  const navBadge = document.getElementById('certPendingBadge');
-  if (!navBadge) return;
-  const isAdmin = (currentUser && currentUser.role === 'admin');
-  const n = isAdmin ? (allData || []).filter(d => d.cert_no && !d.approved_by).length : 0;
-  navBadge.textContent = n > 0 ? n : '';
-  navBadge.style.display = n > 0 ? 'inline-flex' : 'none';
-}
+/* ===== 09-cert.js ===== (generated from index.html inline app script) */
+// CERT PAGE
+// ====================================================
+const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
+const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
 
 async function loadCertPage() {
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
@@ -25,7 +17,7 @@ async function loadCertPage() {
   const { data: seqData } = await sb.from('cert_sequences').select('*').eq('year_code', parseInt(yearCode)).order('type_code');
   const cards = document.getElementById('certTypeCards');
   if (cards) {
-    const codes = ['B','M','F','P','T','H','W','G','Q','R','L','E','D','C'];
+    const codes = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
     const seqMap = {};
     (seqData||[]).forEach(s => { seqMap[s.type_code] = s.last_number; });
     cards.innerHTML = codes.map(c => {
@@ -86,8 +78,9 @@ async function loadCertPage() {
       }).join('');
   }
 
-  // อัพเดท badge รออนุมัติ (นับทั้งหมดจาก allData)
-  updateCertBadge();
+  // อัพเดท badge รออนุมัติ
+  const badge = document.getElementById('certPendingBadge');
+  if (badge) badge.textContent = pendingCount > 0 ? pendingCount : '';
 
   // แสดง/ซ่อนปุ่ม approve all และ print
   const approveAllBtn = document.getElementById('certApproveAllBtn');
@@ -174,7 +167,8 @@ function printCertPage() {
     tr:nth-child(even) { background: #f5f5f5; }
     .footer { margin-top: 8px; font-size: 8pt; color: #555; text-align: right; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-  </style></head><body>
+  </style>
+</head><body>
   <div class="header">
     <div style="display:flex;align-items:center;gap:10px">
       <div style="width:40px;height:30px;background:#1a5276;border-radius:3px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:10pt">iLC</div>
@@ -337,6 +331,34 @@ async function deleteCertEntry(instrumentId, certNo, isApproved) {
   loadCertPage();
 }
 
-// ====================================================
-// SHOW PAGE
+function exportFrmCal95() {
+  const yearSel = document.getElementById('certHistoryYear');
+  const typeSel = document.getElementById('certHistoryType');
+  const yearCode = yearSel ? yearSel.value : '26';
+  const typeCode = typeSel ? typeSel.value : '';
+  const prefix = typeCode ? `${yearCode}${typeCode}` : String(yearCode);
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+  const rows = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
+  rows.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
+  const wb = XLSX.utils.book_new();
+  const header = [
+    ['ใบบันทึกการออกหมายเลขลำดับที่ใบรับรองผลการสอบเทียบและการแก้ไข'],
+    ['FRM-CAL95'],
+    ['ประเภทของอุปกรณ์เครื่องมือวัด: ' + (typeCode ? `${typeCode} — ${CERT_LABELS[typeCode]||typeCode}` : 'ทุกประเภท')],
+    [''],
+    ['ลำดับที่','หมายเลขใบรับรองผลการสอบเทียบ','วัน-เดือน-ปี ที่ออก','ชื่ออุปกรณ์เครื่องมือวัด / ID CODE','หมายเลขใบขอรับบริการ','เลขที่ของงาน','ผู้ออกเอกสาร','ผู้รับผิดชอบ'],
+  ];
+  const dataRows = rows.map((d, i) => [
+    i+1, d.cert_no||'', fmt(d.cal_date),
+    `${d.instrument_name||''} / ${d.id_code||''}`,
+    d.request_no||'', d.job_no||'', d.issued_by||'', d.responsible_by||''
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([...header, ...dataRows]);
+  ws['!cols'] = [{wch:8},{wch:28},{wch:18},{wch:40},{wch:22},{wch:16},{wch:18},{wch:18}];
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} },{ s:{r:1,c:0}, e:{r:1,c:7} },{ s:{r:2,c:0}, e:{r:2,c:7} }];
+  XLSX.utils.book_append_sheet(wb, ws, 'FRM-CAL95');
+  XLSX.writeFile(wb, `FRM-CAL95_${yearCode}${typeCode||'_ALL'}.xlsx`);
+  showToast(`✅ Export FRM-CAL95 สำเร็จ ${rows.length} รายการ`,'success');
+}
+
 // ====================================================
