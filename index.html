@@ -84,6 +84,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .user-info .role { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
 .btn-logout { background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer; font-size: 16px; padding: 4px; transition: color .15s; }
 .btn-logout:hover { color: white; }
+.sidebar-user-action { background:none; border:none; color:rgba(255,255,255,.45); cursor:pointer; font-size:16px; padding:4px; border-radius:6px; transition:all .15s; display:none; }
+.sidebar-user-action:hover { background:rgba(255,255,255,.10); color:white; }
 .main-content { flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
 .topbar { background: white; border-bottom: 2px solid var(--accent); padding: 7px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
 .topbar-title { font-size: 16px; font-weight: 600; }
@@ -752,6 +754,7 @@ tbody tr:hover td { background: #eff8f6 !important; }
 .app-layout.collapsed .sidebar:not(:hover) .nav-item { justify-content: center !important; padding: 10px 0 !important; }
 .app-layout.collapsed .sidebar:not(:hover) .nav-item .nav-icon { width: 24px !important; }
 .app-layout.collapsed .sidebar:not(:hover) .sidebar-user { margin: 0 8px 12px !important; padding: 10px 0 !important; justify-content: center !important; }
+.app-layout.collapsed .sidebar:not(:hover) .sidebar-user-action { display: none !important; }
 @media (max-width: 1180px) {
   #statCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   #dashRow2 { grid-template-columns: 1fr !important; }
@@ -926,6 +929,7 @@ tbody tr:hover td { background: #eff8f6 !important; }
     justify-content: center !important;
   }
   #app .sidebar:not(:hover):not(:focus-within) .user-info,
+  #app .sidebar:not(:hover):not(:focus-within) .sidebar-user-action,
   #app .sidebar:not(:hover):not(:focus-within) .btn-logout {
     display: none !important;
   }
@@ -1192,6 +1196,7 @@ body.app-mode textarea:focus {
       <div class="sidebar-user">
         <div class="user-avatar" id="sidebarInitial">A</div>
         <div class="user-info"><div class="name" id="sidebarName">Admin</div><div class="role" id="sidebarRole">admin</div></div>
+        <button class="sidebar-user-action" id="sidebarAdminBtn" onclick="showPage('admin')" title="จัดการผู้ใช้">👥</button>
         <button class="btn-logout" onclick="doLogout()" title="ออกจากระบบ">↩</button>
       </div>
     </div>
@@ -1300,14 +1305,14 @@ body.app-mode textarea:focus {
               </div>
             </div>
 
-            <!-- แจ้งเตือนวางแผน -->
+            <!-- Audit log ล่าสุด -->
             <div style="border-top:1px solid var(--border);padding-top:12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">📅 ต้องวางแผนสอบเทียบ</div>
-                <button onclick="showPage('plan')" style="font-size:10px;color:var(--accent);background:var(--accent-light);border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:var(--font);font-weight:500">วางแผนเลย →</button>
+                <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">📋 กิจกรรมล่าสุด</div>
+                <button onclick="showPage('audit')" style="font-size:10px;color:var(--accent);background:var(--accent-light);border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:var(--font);font-weight:500">Audit Log →</button>
               </div>
-              <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
-                <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลด...</div>
+              <div id="dashboardAuditList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
+                <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>
               </div>
             </div>
 

@@ -278,7 +278,7 @@ async function loadData(forceRefresh = false) {
     renderMonthly();
     renderCategoryCards();
     renderDonut();
-    renderAlerts();
+    renderDashboardAuditLog();
     loadPlanStatusMap();
     updateNotificationBell();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();
@@ -434,6 +434,84 @@ function renderDashMiniList() {
       <div style="font-size:12px;color:${color};white-space:nowrap">${status}</div>
     </div>`;
   }).join('');
+}
+
+function formatDashboardAuditTime(value) {
+  if (!value) return '–';
+  const date = new Date(value);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'เมื่อสักครู่';
+  if (diffMin < 60) return diffMin + ' นาทีที่แล้ว';
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return diffHour + ' ชม.ที่แล้ว';
+  return date.toLocaleDateString('th-TH', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getDashboardAuditStyle(action) {
+  const text = String(action || '');
+  if (text.includes('ลบ')) return { icon:'🗑️', color:'#C62828', bg:'#FCEBEB' };
+  if (text.includes('เพิ่ม') || text.includes('สร้าง')) return { icon:'➕', color:'#2E7D32', bg:'#E8F5E9' };
+  if (text.includes('แก้ไข') || text.includes('อัพเดท')) return { icon:'✏️', color:'#F57F17', bg:'#FFF8E1' };
+  if (text.includes('อัพโหลด') || text.includes('แนบ')) return { icon:'📎', color:'#00695C', bg:'#E0F4F1' };
+  if (text.includes('แผน') || text.includes('สอบ')) return { icon:'📅', color:'#5B21B6', bg:'#F3F0FF' };
+  return { icon:'•', color:'var(--text2)', bg:'var(--surface2)' };
+}
+
+function renderDashboardAuditItems(items) {
+  const el = document.getElementById('dashboardAuditList');
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ยังไม่มีกิจกรรมล่าสุด</div>';
+    return;
+  }
+
+  el.innerHTML = items.slice(0, 10).map(item => {
+    const style = getDashboardAuditStyle(item.action);
+    const title = item.instrument_name || item.id_code || item.title || item.note || '–';
+    const meta = [
+      item.id_code,
+      item.username || item.created_by,
+      formatDashboardAuditTime(item.created_at)
+    ].filter(Boolean).join(' · ');
+    return `<div style="display:flex;align-items:flex-start;gap:10px;background:${style.bg};border-radius:8px;padding:9px 10px">
+      <div style="width:24px;height:24px;border-radius:50%;background:white;color:${style.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">${style.icon}</div>
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:12px;font-weight:700;color:${style.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.action || 'กิจกรรม'}</div>
+          <div style="font-size:10px;color:var(--text3);white-space:nowrap">${formatDashboardAuditTime(item.created_at)}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${title}</div>
+        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${meta || '–'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function renderDashboardAuditLog() {
+  const el = document.getElementById('dashboardAuditList');
+  if (!el || typeof sb === 'undefined') return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>';
+
+  try {
+    const [auditRes, planRes] = await Promise.all([
+      sb.from('audit_logs').select('created_at,username,action,id_code,instrument_name,changes').order('created_at', { ascending:false }).limit(12),
+      sb.from('plan_audit_log').select('created_at,username,action,note').order('created_at', { ascending:false }).limit(8)
+    ]);
+    if (auditRes.error) throw auditRes.error;
+
+    const auditItems = (auditRes.data || []).map(row => ({ ...row, source:'instrument' }));
+    const planItems = planRes.error ? [] : (planRes.data || []).map(row => ({
+      ...row,
+      source:'plan',
+      instrument_name: row.note || 'แผนสอบเทียบ'
+    }));
+    const items = auditItems.concat(planItems).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    renderDashboardAuditItems(items);
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--red);text-align:center;padding:16px 0">โหลด Audit log ไม่สำเร็จ</div>';
+  }
 }
 
 function filterData() {

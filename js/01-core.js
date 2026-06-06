@@ -68,7 +68,7 @@ function enterApp(user) {
   document.getElementById('sidebarRole').textContent = user.role;
   document.getElementById('sidebarInitial').textContent = user.name.charAt(0).toUpperCase();
   if (user.role === 'admin') {
-    document.getElementById('nav-admin').style.display = 'flex';
+    const adminBtn = document.getElementById('sidebarAdminBtn'); if (adminBtn) adminBtn.style.display = 'inline-flex';
     document.getElementById('nav-audit').style.display = 'flex';
     const ba = document.getElementById('bnav-admin'); if (ba) ba.style.display = 'flex';
     const bau = document.getElementById('bnav-audit'); if (bau) bau.style.display = 'flex';
