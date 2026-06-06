@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v6';
+const CACHE_NAME = 'calibration-app-v7';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const APP_SHELL = [
   './',
@@ -56,11 +56,22 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   const isHtml = event.request.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+  const isFreshAsset = ['script', 'style'].includes(event.request.destination) || url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
   if (isHtml) {
     event.respondWith(
-      caches.match(event.request)
-        .then(cached => cached || fetch(event.request))
+      fetch(event.request)
+        .catch(() => caches.match(event.request))
         .then(response => withMidnightLabTheme(response))
+    );
+    return;
+  }
+  if (isFreshAsset) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => undefined);
+        return response;
+      }).catch(() => caches.match(event.request))
     );
     return;
   }
