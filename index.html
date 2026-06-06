@@ -1182,6 +1182,7 @@ body.app-mode textarea:focus {
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="showPage('list')" id="nav-list"><span class="nav-icon">📑</span> รายการเครื่องมือ</div>
         <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
@@ -1321,6 +1322,18 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
+      <!-- ต้องสนใจตอนนี้ (mini-list) -->
+        <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:var(--shadow)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">🔔 ต้องสนใจตอนนี้ <span style="font-size:12px;color:var(--text3);font-weight:400">(เกินกำหนด / ใกล้ครบ ≤30 วัน)</span></div>
+            <button onclick="filterByStatus('overdue')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--font);font-weight:500">ดูทั้งหมด →</button>
+          </div>
+          <div id="dashMiniList"></div>
+        </div>
+      </div>
+
+      <!-- หน้า รายการเครื่องมือ -->
+   <div id="pageList" class="page-content" style="display:none">
         <!-- ROW 3: ประเภทเครื่องมือ -->
         <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:var(--shadow)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1405,7 +1418,8 @@ body.app-mode textarea:focus {
             <tbody id="dataTable"><tr><td colspan="22" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
-      </div>
+
+   </div>
 
             <!-- AUDIT LOG -->
       <div id="pageAudit" class="page-content" style="display:none">
@@ -6063,13 +6077,6 @@ function showPage(page) {
 // INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
 
-function filterByStatus(status) {
-  const sel = document.getElementById('statusFilter');
-  if (sel) sel.value = status;
-  filterData();
-  const tbl = document.getElementById('dataTable');
-  if (tbl) tbl.closest('section, .page, [id^="page"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
 
 (function init() {
   const session = getSession();

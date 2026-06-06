@@ -377,6 +377,7 @@ function updateStats() {
     if (d.days_left < 0) ov++;
     else if (d.days_left <= 30) wa++;
     else ok++;
+  renderDashMiniList();
   });
   const total = filteredData.length;
   const okCount = total - ov - wa;
@@ -409,6 +410,29 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
+}
+
+function renderDashMiniList() {
+  const el = document.getElementById('dashMiniList');
+  if (!el) return;
+  const items = (allData || [])
+    .filter(d => d.days_left !== null && d.days_left <= 30)
+    .sort((a, b) => a.days_left - b.days_left)
+    .slice(0, 8);
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0">✅ ไม่มีเครื่องมือที่เกินกำหนดหรือใกล้ครบ</div>';
+    return;
+  }
+  el.innerHTML = items.map(d => {
+    const over = d.days_left < 0;
+    const dot = over ? '🔴' : '🟡';
+    const color = over ? 'var(--red)' : 'var(--amber)';
+    const status = over ? `เกิน ${Math.abs(d.days_left)} วัน` : `อีก ${d.days_left} วัน`;
+    return `<div onclick="filterByStatus('${over ? 'overdue' : 'warning'}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="font-size:13px;color:var(--text)">${dot} ${d.id_code || '-'} ${d.instrument_name || d.instrument_type || ''}</div>
+      <div style="font-size:12px;color:${color};white-space:nowrap">${status}</div>
+    </div>`;
+  }).join('');
 }
 
 function filterData() {

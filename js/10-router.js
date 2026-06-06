@@ -11,6 +11,7 @@ function showPage(page) {
 
   const titles = {
     dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
+    list: ['รายการเครื่องมือ','ค้นหา กรอง และจัดการรายการ'],
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
     monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
@@ -43,13 +44,11 @@ function showPage(page) {
 // ====================================================
 
 function filterByStatus(status) {
+  showPage('list');
   const sel = document.getElementById('statusFilter');
   if (sel) sel.value = status;
-  filterData();
-  const tbl = document.getElementById('dataTable');
-  if (tbl) tbl.closest('section, .page, [id^="page"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (typeof filterData === 'function') filterData();
 }
-
 (function init() {
   const session = getSession();
   if (session) {
