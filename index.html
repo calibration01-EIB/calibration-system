@@ -2769,6 +2769,30 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
+  renderDashMiniList();
+}
+
+function renderDashMiniList() {
+  const el = document.getElementById('dashMiniList');
+  if (!el) return;
+  const items = (allData || [])
+    .filter(d => d.days_left !== null && d.days_left <= 30)
+    .sort((a, b) => a.days_left - b.days_left)
+    .slice(0, 8);
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0">✅ ไม่มีเครื่องมือที่เกินกำหนดหรือใกล้ครบ</div>';
+    return;
+  }
+  el.innerHTML = items.map(d => {
+    const over = d.days_left < 0;
+    const dot = over ? '🔴' : '🟡';
+    const color = over ? 'var(--red)' : 'var(--amber)';
+    const status = over ? `เกิน ${Math.abs(d.days_left)} วัน` : `อีก ${d.days_left} วัน`;
+    return `<div onclick="filterByStatus('${over ? 'overdue' : 'warning'}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="font-size:13px;color:var(--text)">${dot} ${d.id_code || '-'} ${d.instrument_name || d.instrument_type || ''}</div>
+      <div style="font-size:12px;color:${color};white-space:nowrap">${status}</div>
+    </div>`;
+  }).join('');
 }
 
 function filterData() {
@@ -4955,7 +4979,7 @@ function renderNotifDropdown() {
 
 function notifGoTo(idCode) {
   document.getElementById('notifDropdown').style.display = 'none';
-  showPage('dashboard');
+  showPage('list');
   document.getElementById('searchInput').value = idCode;
   filterData();
   setTimeout(() => {
@@ -4972,7 +4996,7 @@ function notifGoTo(idCode) {
 
 function notifGoAll() {
   document.getElementById('notifDropdown').style.display = 'none';
-  showPage('dashboard');
+  showPage('list');
   document.getElementById('statusFilter').value = 'overdue';
   filterData();
 }
@@ -6035,7 +6059,7 @@ function exportFrmCal95() {
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','audit','admin','monthly','plan','weights','cert'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -6046,6 +6070,7 @@ function showPage(page) {
 
   const titles = {
     dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
+    list: ['รายการเครื่องมือ','ค้นหา กรอง และจัดการรายการ'],
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
     monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
@@ -6077,6 +6102,13 @@ function showPage(page) {
 // INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
 
+
+function filterByStatus(status) {
+  showPage('list');
+  const sel = document.getElementById('statusFilter');
+  if (sel) sel.value = status;
+  if (typeof filterData === 'function') filterData();
+}
 
 (function init() {
   const session = getSession();
