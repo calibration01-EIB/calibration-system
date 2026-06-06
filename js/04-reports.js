@@ -297,6 +297,7 @@ function renderCategoryCards() {
         activeCategory = (activeCategory === fullName) ? 'all' : fullName;
         renderCategoryCards();
         filterData();
+        showPage('list');
       });
     }
     grid.appendChild(card);
