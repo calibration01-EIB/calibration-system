@@ -1,0 +1,122 @@
+name: Refactor index inline JS
+
+on:
+  push:
+    branches: ["codex/refactor-index-js-loader"]
+    paths:
+      - ".github/workflows/refactor-index-js-loader.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/refactor-index-js-loader
+          fetch-depth: 0
+
+      - name: Extract inline app script into JS files
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          index_path = Path('index.html')
+          text = index_path.read_text(encoding='utf-8')
+          lines = text.splitlines(keepends=True)
+
+          script_start = None
+          for i, line in enumerate(lines):
+              if line.strip() == '<script>' and i > 1000:
+                  script_start = i
+                  break
+          if script_start is None:
+              raise SystemExit('Could not find inline app <script> block')
+
+          script_end = None
+          for i in range(script_start + 1, len(lines)):
+              if lines[i].strip() == '</script>':
+                  script_end = i
+                  break
+          if script_end is None:
+              raise SystemExit('Could not find inline app </script> block')
+
+          app_lines = lines[script_start + 1:script_end]
+
+          def marker(label: str) -> int:
+              for idx, line in enumerate(app_lines):
+                  if label in line:
+                      return idx
+              raise SystemExit(f'Marker not found: {label}')
+
+          m_mobile = marker('MOBILE CARDS')
+          m_cert_modal = marker('CERT MODAL')
+          m_reports = marker('PRINT / PDF REPORT')
+          m_audit = marker('AUDIT LOG')
+          m_plan = marker('CALIBRATION PLAN')
+          m_notif = marker('NOTIFICATION BELL')
+          m_plan_page = marker('PLAN PAGE')
+          m_weights = marker('STANDARD WEIGHTS')
+          m_cert_page = marker('CERT PAGE')
+          m_show_page = marker('SHOW PAGE')
+
+          sections = [
+              ('js/01-core.js', app_lines[:m_mobile]),
+              ('js/02-dashboard.js', app_lines[m_mobile:m_cert_modal]),
+              ('js/03-instruments.js', app_lines[m_cert_modal:m_reports]),
+              ('js/04-reports.js', app_lines[m_reports:m_audit]),
+              ('js/05-audit.js', app_lines[m_audit:m_plan]),
+              ('js/06-plan.js', app_lines[m_plan:m_notif] + ['\n', '// ====================================================\n', '// PLAN PAGE — schedule matrix and export helpers\n', '// ====================================================\n'] + app_lines[m_plan_page:m_weights]),
+              ('js/07-notifications.js', app_lines[m_notif:m_plan_page]),
+              ('js/08-weights.js', app_lines[m_weights:m_cert_page]),
+              ('js/09-cert.js', app_lines[m_cert_page:m_show_page]),
+              ('js/10-router.js', app_lines[m_show_page:]),
+          ]
+
+          script_order = [path for path, _ in sections]
+          for path, body in sections:
+              output = Path(path)
+              output.parent.mkdir(parents=True, exist_ok=True)
+              title = output.name
+              content = f'/* ===== {title} ===== (generated from index.html inline app script) */\n' + ''.join(body).lstrip('\n')
+              output.write_text(content, encoding='utf-8', newline='')
+
+          replacement = ['<!-- App logic extracted from the old inline script. Keep this order. -->\n']
+          replacement.extend([f'<script src="{path}"></script>\n' for path in script_order])
+          new_lines = lines[:script_start] + replacement + lines[script_end + 1:]
+          index_path.write_text(''.join(new_lines), encoding='utf-8', newline='')
+
+          sw_path = Path('sw.js')
+          if sw_path.exists():
+              sw = sw_path.read_text(encoding='utf-8')
+              def bump(match):
+                  return f"calibration-app-v{int(match.group(1)) + 1}"
+              sw = re.sub(r'calibration-app-v(\d+)', bump, sw, count=1)
+              if "'./js/01-core.js'" not in sw:
+                  js_entries = ',\n'.join(f"  './{path}'" for path in script_order)
+                  sw = sw.replace("  './assets/calibration-lab-hero.png'", "  './assets/calibration-lab-hero.png',\n" + js_entries)
+              sw_path.write_text(sw, encoding='utf-8', newline='')
+
+          Path('.github/workflows/refactor-index-js-loader.yml').unlink(missing_ok=True)
+          PY
+
+      - name: Commit refactor
+        shell: bash
+        run: |
+          git diff --check
+          git status --short
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Refactor index JavaScript into external files"
+          git push origin HEAD:codex/refactor-index-js-loader
