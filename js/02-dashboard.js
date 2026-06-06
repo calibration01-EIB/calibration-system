@@ -9,59 +9,54 @@ function renderMobileCards() {
   window._mobileRows = rows;
   el.innerHTML = rows.map((d, i) => {
     const days = d.days_left;
-    let badge = '', rowBg = '', daysText = '';
+    let badgeClass = 'ok';
+    let badgeText = '&#x0E1B;&#x0E01;&#x0E15;&#x0E34;';
+    let daysText = days !== null ? String(days) + ' &#x0E27;&#x0E31;&#x0E19;' : '-';
     if (days !== null && days < 0) {
-      badge = `<span style="background:#fdecea;color:#C62828;font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
-      daysText = `<span style="font-size:11px;color:#C62828">${days} วัน</span>`;
-      rowBg = '#1a0000';
+      badgeClass = 'overdue';
+      badgeText = '&#x0E40;&#x0E01;&#x0E34;&#x0E19;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;';
     } else if (days !== null && days <= 30) {
-      badge = `<span style="background:#fff8e1;color:#F57F17;font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ</span>`;
-      daysText = `<span style="font-size:11px;color:#F57F17">${days} วัน</span>`;
-      rowBg = '#1a1400';
-    } else {
-      badge = `<span style="background:#e8f5e9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:20px">ปกติ</span>`;
-      daysText = `<span style="font-size:11px;color:#2E7D32">${days !== null ? days + ' วัน' : '–'}</span>`;
-      rowBg = '#1E1E1E';
+      badgeClass = 'warn';
+      badgeText = '&#x0E43;&#x0E01;&#x0E25;&#x0E49;&#x0E04;&#x0E23;&#x0E1A;';
     }
-    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-    const typShort = (d.instrument_type||'–').split(' (')[0];
-
-    // สถานะวางแผน
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
+    const typShort = (d.instrument_type || '-').split(' (')[0];
     const ps = planStatusMap[d.id];
     const sMap = {
-      pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#2A2000'],
-      planned:      ['✅ วางแผนแล้ว','#3B6D11','#0A1A0A'],
-      pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#001020'],
-      completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#001A14'],
+      pending_plan: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E41;&#x0E1C;&#x0E19;', '#854F0B', '#FAEEDA'],
+      planned:      ['&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#3B6D11', '#EAF3DE'],
+      pending_cert: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E2A;&#x0E2D;&#x0E1A;', '#185FA5', '#E6F1FB'],
+      completed:    ['&#x0E2A;&#x0E2D;&#x0E1A;&#x0E40;&#x0E17;&#x0E35;&#x0E22;&#x0E1A;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#0F6E56', '#E1F5EE'],
     };
-    const planBadge = ps
-      ? `<span style="font-size:10px;color:${(sMap[ps.status]||['','#888'])[1]};background:${(sMap[ps.status]||['','','#333'])[2]};border-radius:4px;padding:2px 7px;font-weight:500">${(sMap[ps.status]||[ps.status])[0]}</span>`
-      : `<span style="font-size:10px;color:#888;background:#222;border-radius:4px;padding:2px 7px">📋 ยังไม่วางแผน</span>`;
+    const planMeta = ps ? (sMap[ps.status] || [ps.status, '#52667d', '#f2f6fb']) : ['&#x0E22;&#x0E31;&#x0E07;&#x0E44;&#x0E21;&#x0E48;&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;', '#52667d', '#f2f6fb'];
+    const planBadge = '<span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span>';
     const planBtn = ps
-      ? `<button onclick="goToPlanDetail(${d.id})" style="flex:1;padding:8px;background:#001A14;border:1px solid #0F6E56;border-radius:8px;font-size:12px;color:#34D399;cursor:pointer;font-family:var(--font)">📅 ดูแผน</button>`
-      : `<button onclick="goToPlanWithItem(${d.id})" style="flex:1;padding:8px;background:#001020;border:1px solid #185FA5;border-radius:8px;font-size:12px;color:#60A5FA;cursor:pointer;font-family:var(--font)">📋 วางแผน</button>`;
-
-    return `<div style="background:${rowBg};border:0.5px solid #333;border-radius:12px;padding:14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div style="flex:1;min-width:0;margin-right:8px">
-          <div style="font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.instrument_name||'–'}</div>
-          <div style="font-size:12px;color:#aaa;margin-top:2px">${d.brand||''} · ${d.department||''}</div>
-        </div>${badge}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:8px">
-        <div style="font-size:11px;color:#aaa">🏷 <span style="color:#69F0AE;font-weight:500">${d.id_code||'–'}</span></div>
-        <div style="font-size:11px;color:#aaa">📂 ${typShort}</div>
-        <div style="font-size:11px;color:#aaa">📅 ครบ: ${dueDate}</div>
-        <div style="font-size:11px">${daysText}</div>
-      </div>
-      <div style="margin-bottom:8px">${planBadge}</div>
-      <div style="display:flex;gap:8px">
-        <button onclick="mobileEdit(${i})" style="flex:1;padding:8px;background:#1B3A2A;border:1px solid #2E7D32;border-radius:8px;font-size:12px;color:#69F0AE;cursor:pointer;font-family:var(--font)">✏️ แก้ไข</button>
-        <button onclick="mobileCert(${i})" style="flex:1;padding:8px;background:#1A2A1A;border:1px solid #388E3C;border-radius:8px;font-size:12px;color:#A5D6A7;cursor:pointer;font-family:var(--font)">📄 Cert</button>
-        ${planBtn}
-      </div>
-    </div>`;
-  }).join('') || `<div style="text-align:center;padding:32px;color:#888">ไม่พบข้อมูล</div>`;
+      ? '<button class="mobile-card-action primary" onclick="goToPlanDetail(' + d.id + ')">&#x0E41;&#x0E1C;&#x0E19;</button>'
+      : '<button class="mobile-card-action primary" onclick="goToPlanWithItem(' + d.id + ')">&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;</button>';
+    return '<div class="mobile-card">' +
+      '<div class="mobile-card-head">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="mobile-card-title">' + (d.instrument_name || '-') + '</div>' +
+          '<div class="mobile-card-sub">' + (d.brand || '-') + ' &middot; ' + (d.department || '-') + '</div>' +
+        '</div>' +
+        '<span class="mobile-badge ' + badgeClass + '">' + badgeText + '</span>' +
+      '</div>' +
+      '<div class="mobile-card-grid">' +
+        '<div class="mobile-field"><span>ID Code</span><strong>' + (d.id_code || '-') + '</strong></div>' +
+        '<div class="mobile-field"><span>CERT.</span><strong>' + (d.cert_no || '-') + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E1B;&#x0E23;&#x0E30;&#x0E40;&#x0E20;&#x0E17;</span><strong>' + typShort + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E04;&#x0E23;&#x0E1A;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;</span><strong>' + dueDate + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E04;&#x0E07;&#x0E40;&#x0E2B;&#x0E25;&#x0E37;&#x0E2D;</span><strong>' + daysText + '</strong></div>' +
+        '<div class="mobile-field"><span>S/N</span><strong>' + (d.serial_no || '-') + '</strong></div>' +
+      '</div>' +
+      planBadge +
+      '<div class="mobile-card-actions">' +
+        '<button class="mobile-card-action" onclick="mobileEdit(' + i + ')">&#x0E41;&#x0E01;&#x0E49;&#x0E44;&#x0E02;</button>' +
+        '<button class="mobile-card-action" onclick="mobileCert(' + i + ')">Cert</button>' +
+        planBtn +
+      '</div>' +
+    '</div>';
+  }).join('') || '<div class="mobile-empty">&#x0E44;&#x0E21;&#x0E48;&#x0E1E;&#x0E1A;&#x0E02;&#x0E49;&#x0E2D;&#x0E21;&#x0E39;&#x0E25;</div>';
 }
 function mobileEdit(i) { const d = window._mobileRows?.[i]; if (d) openInstrumentModal(d.id); }
 function mobileCert(i) { const d = window._mobileRows?.[i]; if (d) openCertModal(d.id, d.id_code||'', d.cert_no||'', d.instrument_name||''); }
@@ -589,6 +584,7 @@ function renderTable() {
   if (!filteredData.length) { 
     tbody.innerHTML = '<tr><td colspan="22" class="no-data">ไม่พบข้อมูล</td></tr>';
     updatePaginationUI();
+    renderMobileCards();
     return; 
   }
   // Pagination
@@ -653,6 +649,7 @@ function renderTable() {
     });
   }
   updateFileCounts(pageData);
+  renderMobileCards();
 }
 
 async function updateFileCounts(pageItems) {

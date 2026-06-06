@@ -10,6 +10,8 @@ function showPage(page) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
+  updateMobileNav(page);
+  updateMobileListVisibility(page);
 
   const titles = {
     dashboard: ['Dashboard','ภาพรวมสถานะเครื่องมือ'],
@@ -41,6 +43,25 @@ function showPage(page) {
   }
 }
 
+function updateMobileNav(page) {
+  document.querySelectorAll('.bottom-nav .mobile-nav-item[data-page]').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+}
+
+function updateMobileListVisibility(page) {
+  const el = document.getElementById('mobileCardList');
+  if (!el) return;
+  const shouldShow = page === 'list' && window.innerWidth <= 768;
+  el.classList.toggle('mobile-visible', shouldShow);
+  if (shouldShow && typeof renderMobileCards === 'function') renderMobileCards();
+}
+
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.nav-item.active')?.id?.replace('nav-', '') || 'dashboard';
+  updateMobileListVisibility(active);
+});
+
 // ====================================================
 // INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
 // ====================================================
@@ -65,4 +86,3 @@ function filterByStatus(status) {
     document.getElementById('app')?.style.setProperty('display', 'none', 'important');
   }
 })();
-

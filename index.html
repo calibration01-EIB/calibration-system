@@ -317,6 +317,288 @@ tbody tr:hover { background: var(--surface2); }
     display: none !important;
   }
 }
+/* MOBILE APP POLISH */
+@media (max-width: 768px) {
+  body.app-mode {
+    background: #f5f8fc !important;
+    overflow-x: hidden;
+  }
+  body.app-mode #app {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  }
+  body.app-mode .sidebar {
+    height: 58px !important;
+    padding: 8px 12px !important;
+    background: rgba(8, 47, 73, .96) !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, .18) !important;
+    backdrop-filter: blur(14px);
+  }
+  body.app-mode .sidebar-user {
+    margin-left: auto !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+  body.app-mode .user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 13px !important;
+  }
+  body.app-mode .sidebar-user-action {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #dff7ff !important;
+  }
+  body.app-mode .main-content {
+    padding-top: 58px !important;
+    padding-bottom: 76px !important;
+    min-width: 0;
+  }
+  body.app-mode .topbar {
+    position: sticky;
+    top: 58px;
+    z-index: 40;
+    padding: 10px 14px !important;
+    min-height: 58px;
+    background: rgba(245, 248, 252, .92) !important;
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(217,229,241,.9) !important;
+  }
+  body.app-mode #topbarTitle {
+    font-size: 18px !important;
+    line-height: 1.15;
+  }
+  body.app-mode #topbarSub {
+    max-width: 58vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.app-mode .page-content {
+    padding: 14px !important;
+  }
+  body.app-mode .section-header {
+    margin-bottom: 14px !important;
+  }
+  body.app-mode #statCardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  body.app-mode #statCardsGrid > div {
+    border-radius: 14px !important;
+    min-height: 112px !important;
+    padding: 14px 12px !important;
+  }
+  body.app-mode #dashboardCategoryPanel {
+    border-radius: 14px !important;
+    padding: 16px !important;
+    margin-bottom: 14px !important;
+  }
+  body.app-mode #categoryGrid {
+    display: flex !important;
+    gap: 10px !important;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+  body.app-mode #categoryGrid > div {
+    flex: 0 0 148px;
+    min-height: 92px;
+    scroll-snap-align: start;
+  }
+  body.app-mode #dashRow2,
+  body.app-mode #monthGrid {
+    grid-template-columns: 1fr !important;
+  }
+  body.app-mode .controls-bar {
+    position: sticky;
+    top: 116px;
+    z-index: 30;
+    border-radius: 14px !important;
+    padding: 12px !important;
+    box-shadow: 0 10px 24px rgba(30,64,175,.08);
+  }
+  body.app-mode .controls-bar input,
+  body.app-mode .controls-bar select,
+  body.app-mode .controls-bar button {
+    min-height: 42px;
+    border-radius: 10px !important;
+  }
+  body.app-mode #pageList > div[style*="justify-content:space-between"] {
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  body.app-mode #pageList > div[style*="justify-content:space-between"] > div:last-child {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  body.app-mode #pageList .table-wrap {
+    display: none !important;
+  }
+  body.app-mode #mobileCardList {
+    display: none;
+  }
+  body.app-mode #mobileCardList.mobile-visible {
+    display: block !important;
+  }
+  .mobile-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 12px 28px rgba(30,64,175,.08);
+  }
+  .mobile-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .mobile-card-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-card-sub {
+    color: var(--text3);
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  .mobile-badge {
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    white-space: nowrap;
+  }
+  .mobile-badge.ok { background: var(--green-light); color: var(--green); }
+  .mobile-badge.warn { background: var(--amber-light); color: var(--amber); }
+  .mobile-badge.overdue { background: var(--red-light); color: var(--red); }
+  .mobile-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin: 10px 0;
+  }
+  .mobile-field {
+    min-width: 0;
+  }
+  .mobile-field span {
+    display: block;
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .mobile-field strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-plan-badge {
+    display: inline-flex;
+    max-width: 100%;
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .mobile-card-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mobile-card-action {
+    min-height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mobile-card-action.primary {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: rgba(8,145,178,.25);
+  }
+  .mobile-empty {
+    padding: 34px 14px;
+    text-align: center;
+    color: var(--text3);
+    background: white;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+  }
+  body.app-mode .bottom-nav {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,.96) !important;
+    border-top: 1px solid var(--border) !important;
+    box-shadow: 0 -14px 34px rgba(15,23,42,.12);
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+    backdrop-filter: blur(16px);
+  }
+  body.app-mode .bottom-nav .mobile-nav-item {
+    flex: 1;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 7px 2px !important;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item > div:first-child {
+    font-size: 19px !important;
+    line-height: 1;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item > div:last-child {
+    color: var(--text3) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    margin-top: 3px;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item.active {
+    background: var(--accent-light);
+  }
+  body.app-mode .bottom-nav .mobile-nav-item.active > div:last-child {
+    color: var(--accent) !important;
+  }
+  body.app-mode .modal-box {
+    width: calc(100vw - 22px) !important;
+    max-height: calc(100vh - 28px) !important;
+    border-radius: 16px !important;
+  }
+  body.app-mode .modal-body {
+    padding: 16px !important;
+  }
+  body.app-mode .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 420px) {
+  body.app-mode #statCardsGrid {
+    grid-template-columns: 1fr !important;
+  }
+  body.app-mode #topbarSub {
+    display: none;
+  }
+  .mobile-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 <style id="calibrationLoginRefresh">
 :root{--cal-ink:#15343b;--cal-muted:#597177;--cal-line:rgba(21,52,59,.14);--cal-panel:rgba(255,255,255,.90);--cal-aqua:#1fb9c7;--cal-mint:#4ed7a8;--cal-sun:#ffc84a;--cal-coral:#ff7f62;}
@@ -1423,6 +1705,7 @@ body.app-mode textarea:focus {
             <tbody id="dataTable"><tr><td colspan="22" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
+        <div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
 
    </div>
 
@@ -1887,32 +2170,29 @@ body.app-mode textarea:focus {
         </div>
       </div>
 
-<!-- MOBILE CARD LIST -->
-<div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
-
 <!-- BOTTOM NAV (mobile only) -->
 <div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1E1E1E;border-top:1px solid #333;z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
-  <div onclick="showPage('dashboard')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+  <div class="mobile-nav-item" data-page="dashboard" onclick="showPage('dashboard')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">📊</div>
     <div style="font-size:10px;color:#69F0AE;font-weight:600">Dashboard</div>
   </div>
-  <div onclick="showPage('plan')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+  <div class="mobile-nav-item" data-page="plan" onclick="showPage('plan')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">📅</div>
     <div style="font-size:10px;color:#888">วางแผน</div>
   </div>
-  <div onclick="showPage('admin')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-admin">
+  <div class="mobile-nav-item" data-page="admin" onclick="showPage('admin')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-admin">
     <div style="font-size:22px">👥</div>
     <div style="font-size:10px;color:#888">ผู้ใช้</div>
   </div>
-  <div onclick="showPage('audit')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-audit">
+  <div class="mobile-nav-item" data-page="audit" onclick="showPage('audit')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-audit">
     <div style="font-size:22px">📋</div>
     <div style="font-size:10px;color:#888">Audit Log</div>
   </div>
-  <div onclick="showPage('cert')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+  <div class="mobile-nav-item" data-page="cert" onclick="showPage('cert')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">🏷️</div>
     <div style="font-size:10px;color:#888">Cert</div>
   </div>
-  <div onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+  <div class="mobile-nav-item" onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">↩️</div>
     <div style="font-size:10px;color:#888">ออกจากระบบ</div>
   </div>
@@ -2276,16 +2556,16 @@ body.app-mode textarea:focus {
 </div>
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
-<script src="js/01-core.js?v=20260607-dashcat"></script>
-<script src="js/02-dashboard.js?v=20260607-dashcat"></script>
-<script src="js/03-instruments.js?v=20260607-dashcat"></script>
-<script src="js/04-reports.js?v=20260607-dashcat"></script>
-<script src="js/05-audit.js?v=20260607-dashcat"></script>
-<script src="js/06-plan.js?v=20260607-dashcat"></script>
-<script src="js/07-notifications.js?v=20260607-dashcat"></script>
-<script src="js/08-weights.js?v=20260607-dashcat"></script>
-<script src="js/09-cert.js?v=20260607-dashcat"></script>
-<script src="js/10-router.js?v=20260607-dashcat"></script>
+<script src="js/01-core.js?v=20260607-mobile"></script>
+<script src="js/02-dashboard.js?v=20260607-mobile"></script>
+<script src="js/03-instruments.js?v=20260607-mobile"></script>
+<script src="js/04-reports.js?v=20260607-mobile"></script>
+<script src="js/05-audit.js?v=20260607-mobile"></script>
+<script src="js/06-plan.js?v=20260607-mobile"></script>
+<script src="js/07-notifications.js?v=20260607-mobile"></script>
+<script src="js/08-weights.js?v=20260607-mobile"></script>
+<script src="js/09-cert.js?v=20260607-mobile"></script>
+<script src="js/10-router.js?v=20260607-mobile"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
