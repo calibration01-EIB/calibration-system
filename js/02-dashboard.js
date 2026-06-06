@@ -84,66 +84,41 @@ async function renderAlerts() {
   const el = document.getElementById('alertList');
   if (!el) return;
   if (!allData.length) { setTimeout(renderAlerts, 500); return; }
-
   el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px 0">กำลังโหลด...</div>';
-
-  // ดึง instrument_id ที่มีแผน active อยู่แล้ว
   let plannedIds = new Set();
   try {
-    const { data: planItems } = await sb
-      .from('calibration_plan_items')
-      .select('instrument_id, calibration_plans!inner(status)')
-      .in('calibration_plans.status', ['pending_plan','planned','pending_cert']);
+    const { data: planItems } = await sb.from('calibration_plan_items').select('instrument_id, calibration_plans!inner(status)').in('calibration_plans.status', ['pending_plan','planned','pending_cert']);
     if (planItems) planItems.forEach(p => plannedIds.add(p.instrument_id));
   } catch(e) { /* ถ้าดึงไม่ได้ก็แสดงทั้งหมด */ }
-
   const today = new Date(); today.setHours(0,0,0,0);
-
-  // กรองเครื่องมือที่ยังไม่มีแผนและ due ภายใน 60 วัน
-  const alerts = allData.filter(d => {
-    if (d.days_left === null) return false;
-    if (plannedIds.has(d.id)) return false;
-    return d.days_left >= -30 && d.days_left <= 60;
-  }).sort((a,b) => a.days_left - b.days_left).slice(0, 12);
-
+  const allAlerts = allData.filter(d => d.days_left !== null && !plannedIds.has(d.id) && d.days_left <= 60).sort((a,b) => a.days_left - b.days_left);
+  const actionCount = document.getElementById('dashActionCount');
+  if (actionCount) actionCount.textContent = allAlerts.length.toLocaleString() + ' รายการ';
+  const alerts = allAlerts.slice(0, 12);
   if (!alerts.length) {
+    const summary = document.getElementById('dashWorkSummary');
+    if (summary) summary.textContent = 'ไม่มีรายการที่ต้องวางแผนเร่งด่วน';
     el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">✅ เครื่องมือทุกเครื่องมีแผนแล้ว</div>';
     return;
   }
-
+  const overdueCount = allAlerts.filter(d => d.days_left < 0).length;
+  const warningCount = allAlerts.filter(d => d.days_left >= 0 && d.days_left <= 30).length;
+  const summary = document.getElementById('dashWorkSummary');
+  if (summary) summary.textContent = 'เกินกำหนด ' + overdueCount.toLocaleString() + ' รายการ · ใกล้ครบ ' + warningCount.toLocaleString() + ' รายการ · แสดง ' + alerts.length + ' รายการแรก';
   el.innerHTML = alerts.map(d => {
     const days = d.days_left;
     const due = new Date(d.due_date);
     const planStart = new Date(due.getFullYear(), due.getMonth() - 1, 1);
-    const planEnd   = new Date(due.getFullYear(), due.getMonth() - 1, 15);
-    let bg, color, icon, label;
-    if (days < 0) {
-      bg = "var(--red-light)"; color = "var(--red)";
-      icon = "🔴"; label = "เกินกำหนด " + Math.abs(days) + " วัน";
-    } else if (days <= 15) {
-      bg = "#fff3e0"; color = "#E65100";
-      icon = "⚠️"; label = "ใกล้ Due " + days + " วัน";
-    } else if (today >= planStart && today <= planEnd) {
-      bg = "#fff8e1"; color = "var(--amber)";
-      icon = "🟡"; label = "ถึงเวลาวางแผน! (" + days + " วัน)";
-    } else if (today > planEnd && days <= 45) {
-      bg = "var(--red-light)"; color = "var(--red)";
-      icon = "🔴"; label = "วางแผนช้าแล้ว! (" + days + " วัน)";
-    } else {
-      bg = "var(--accent-light)"; color = "var(--accent)";
-      icon = "📋"; label = "เตรียมวางแผน (" + days + " วัน)";
-    }
-    const dueStr = due.toLocaleDateString("th-TH", {day:"numeric", month:"short", year:"numeric"});
-    return "<div style='background:" + bg + ";border-radius:8px;padding:7px 10px;margin-bottom:4px'>" +
-      "<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:2px'>" +
-      "<div style='font-size:12px;font-weight:600;color:" + color + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1'>"+icon+" "+(d.instrument_name||"–")+"</div>" +
-      "<button onclick='goToPlanWithItem(" + d.id + ")' style='font-size:10px;background:" + color + ";color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font);font-weight:600'>วางแผน →</button>" +
-      "</div>" +
-      "<div style='display:flex;align-items:center;justify-content:space-between;gap:6px'>" +
-      "<div style='font-size:10px;color:var(--text3)'>"+( d.id_code||"–")+" · "+(d.department||"–")+" · Due: "+dueStr+"</div>" +
-      "<span style='font-size:10px;color:" + color + ";font-weight:600'>"+label+"</span>" +
-      "</div></div>";
-  }).filter(Boolean).join("");
+    const planEnd = new Date(due.getFullYear(), due.getMonth() - 1, 15);
+    let color, icon, label, tone;
+    if (days < 0) { color = 'var(--red)'; tone = 'danger'; icon = '🔴'; label = 'เกินกำหนด ' + Math.abs(days) + ' วัน'; }
+    else if (days <= 15) { color = '#E65100'; tone = 'warn'; icon = '⚠️'; label = 'ใกล้ Due ' + days + ' วัน'; }
+    else if (today >= planStart && today <= planEnd) { color = 'var(--amber)'; tone = 'warn'; icon = '🟡'; label = 'ถึงเวลาวางแผน! (' + days + ' วัน)'; }
+    else if (today > planEnd && days <= 45) { color = 'var(--red)'; tone = 'danger'; icon = '🔴'; label = 'วางแผนช้าแล้ว! (' + days + ' วัน)'; }
+    else { color = 'var(--accent)'; tone = 'info'; icon = '📋'; label = 'เตรียมวางแผน (' + days + ' วัน)'; }
+    const dueStr = due.toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+    return '<div class="dash-action-item ' + tone + '"><div class="dash-action-main"><div class="dash-action-name">' + icon + ' ' + (d.instrument_name || d.instrument_type || '–') + '</div><div class="dash-action-meta">' + (d.id_code || '–') + ' · ' + (d.department || '–') + ' · Due: ' + dueStr + '</div></div><div class="dash-action-side"><span class="dash-action-status" style="color:' + color + '">' + label + '</span><button class="dash-action-btn" onclick="goToPlanWithItem(' + d.id + ')" style="background:' + color + '">วางแผน</button></div></div>';
+  }).filter(Boolean).join('');
 }
 
 async function openCalHistory(instrumentId) {
@@ -387,6 +362,16 @@ function updateStats() {
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
 
+  const rate = (n) => total ? Math.round(n / total * 100) + '%' : '0%';
+  const okRate = document.getElementById('statOkRate');
+  const overdueRate = document.getElementById('statOverdueRate');
+  const warningRate = document.getElementById('statWarningRate');
+  const totalHint = document.getElementById('dashTotalHint');
+  if (okRate) okRate.textContent = rate(okCount);
+  if (overdueRate) overdueRate.textContent = rate(ov);
+  if (warningRate) warningRate.textContent = rate(wa);
+  if (totalHint) totalHint.textContent = 'อัปเดตล่าสุด';
+
   // summary box
   const el2Ok = document.getElementById('statOk2');
   const el2Ov = document.getElementById('statOverdue2');
@@ -416,10 +401,7 @@ function updateStats() {
 function renderDashMiniList() {
   const el = document.getElementById('dashMiniList');
   if (!el) return;
-  const items = (allData || [])
-    .filter(d => d.days_left !== null && d.days_left <= 30)
-    .sort((a, b) => a.days_left - b.days_left)
-    .slice(0, 8);
+  const items = (allData || []).filter(d => d.days_left !== null && d.days_left <= 30).sort((a, b) => a.days_left - b.days_left).slice(0, 6);
   if (!items.length) {
     el.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0">✅ ไม่มีเครื่องมือที่เกินกำหนดหรือใกล้ครบ</div>';
     return;
@@ -428,11 +410,8 @@ function renderDashMiniList() {
     const over = d.days_left < 0;
     const dot = over ? '🔴' : '🟡';
     const color = over ? 'var(--red)' : 'var(--amber)';
-    const status = over ? `เกิน ${Math.abs(d.days_left)} วัน` : `อีก ${d.days_left} วัน`;
-    return `<div onclick="filterByStatus('${over ? 'overdue' : 'warning'}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="font-size:13px;color:var(--text)">${dot} ${d.id_code || '-'} ${d.instrument_name || d.instrument_type || ''}</div>
-      <div style="font-size:12px;color:${color};white-space:nowrap">${status}</div>
-    </div>`;
+    const status = over ? 'เกิน ' + Math.abs(d.days_left) + ' วัน' : 'อีก ' + d.days_left + ' วัน';
+    return '<div class="dash-risk-item" onclick="filterByStatus(\'' + (over ? 'overdue' : 'warning') + '\')"><div class="dash-risk-name">' + dot + ' ' + (d.id_code || '-') + ' · ' + (d.instrument_name || d.instrument_type || '') + '</div><div class="dash-risk-status" style="color:' + color + '">' + status + '</div></div>';
   }).join('');
 }
 
