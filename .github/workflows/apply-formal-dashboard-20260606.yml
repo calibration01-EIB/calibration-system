@@ -1,5 +1,6 @@
 name: Apply formal dashboard update
 
+# This temporary workflow applies the dashboard patch, commits it, then removes itself.
 on:
   push:
     branches:
