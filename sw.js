@@ -1,7 +1,6 @@
-const CACHE_NAME = 'calibration-app-v19';
+const CACHE_NAME = 'calibration-app-v20';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
-const IMPORT_TEMPLATE_SELECTION_VISIBILITY_SCRIPT = './js/12-import-template-selection-visibility.js';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
 @media (min-width: 769px) {
   body.app-mode #app #pageList .table-wrap,
@@ -34,8 +33,7 @@ const APP_SHELL = [
   './js/08-weights.js',
   './js/09-cert.js',
   './js/10-router.js',
-  IMPORT_TEMPLATE_SELECTION_SCRIPT,
-  IMPORT_TEMPLATE_SELECTION_VISIBILITY_SCRIPT
+  IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
 
 async function withMidnightLabTheme(response) {
@@ -52,12 +50,9 @@ async function withMidnightLabTheme(response) {
   const withImportTemplateSelection = withListHeight.includes('11-import-template-selection.js')
     ? withListHeight
     : withListHeight.replace(/<\/body>/i, `<script src="${IMPORT_TEMPLATE_SELECTION_SCRIPT}"></script>\n</body>`);
-  const withImportTemplateSelectionVisibility = withImportTemplateSelection.includes('12-import-template-selection-visibility.js')
-    ? withImportTemplateSelection
-    : withImportTemplateSelection.replace(/<\/body>/i, `<script src="${IMPORT_TEMPLATE_SELECTION_VISIBILITY_SCRIPT}"></script>\n</body>`);
   const headers = new Headers(response.headers);
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(withImportTemplateSelectionVisibility, {
+  return new Response(withImportTemplateSelection, {
     status: response.status,
     statusText: response.statusText,
     headers
