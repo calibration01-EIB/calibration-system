@@ -62,11 +62,6 @@ window.addEventListener('resize', () => {
   updateMobileListVisibility(active);
 });
 
-// ====================================================
-// INIT — ตรวจ session อัตโนมัติตอนโหลดหน้า
-// ====================================================
-
-
 function filterByStatus(status) {
   showPage('list');
   const sel = document.getElementById('statusFilter');
@@ -74,11 +69,12 @@ function filterByStatus(status) {
   if (typeof filterData === 'function') filterData();
 }
 
-(function installCancelledCalibrationStatus() {
+(function installListIntegrityFixes() {
   const CANCEL_LABEL = 'ยกเลิกสอบเทียบ';
   const LEGACY_MARKER = '[[CAL_STATUS_CANCELLED]]';
+  window.__calibrationListFixVersion = 14;
 
-  function safeHtml(value) {
+  function escapeValue(value) {
     if (typeof escapeHtml === 'function') return escapeHtml(value);
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -104,8 +100,7 @@ function filterByStatus(status) {
 
   function buildCalibrationRemark(remark, status) {
     const clean = stripCalibrationCancelMarker(remark);
-    if (status !== 'cancelled') return clean || null;
-    return [CANCEL_LABEL, clean].filter(Boolean).join('\n');
+    return status === 'cancelled' ? [CANCEL_LABEL, clean].filter(Boolean).join('\n') : (clean || null);
   }
 
   function isCalibrationCancelled(row) {
@@ -118,29 +113,55 @@ function filterByStatus(status) {
       || remarkLines.includes(LEGACY_MARKER);
   }
 
-  window.isCalibrationCancelled = isCalibrationCancelled;
+  function calculateDaysLeft(row) {
+    if (!row?.due_date) return null;
+    const due = new Date(row.due_date);
+    if (Number.isNaN(due.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    return Math.round((due - today) / 86400000);
+  }
 
-  function normalizeCalibrationCancelRows() {
-    if (typeof allData === 'undefined' || !Array.isArray(allData)) return;
-    allData.forEach(row => {
+  function normalizeRows(rows) {
+    (rows || []).forEach(row => {
       if (!row) return;
       row.calibration_cancelled = isCalibrationCancelled(row);
-      if (row.calibration_cancelled) row.days_left = null;
+      row._days_left_actual = calculateDaysLeft(row);
+      row.days_left = row.calibration_cancelled ? null : row._days_left_actual;
     });
+  }
+
+  function getRowStatus(row) {
+    if (isCalibrationCancelled(row)) return 'cancelled';
+    const days = calculateDaysLeft(row);
+    if (days === null) return 'none';
+    if (days < 0) return 'overdue';
+    if (days <= 30) return 'warning';
+    return 'ok';
   }
 
   function ensureCancelStatusFilterOption() {
     const sel = document.getElementById('statusFilter');
-    if (!sel || [...sel.options].some(option => option.value === 'cancelled')) return;
-    sel.insertAdjacentHTML('beforeend', '<option value="cancelled">ยกเลิกสอบเทียบ</option>');
+    if (!sel) return;
+    if (![...sel.options].some(option => option.value === 'cancelled')) {
+      sel.insertAdjacentHTML('beforeend', '<option value="cancelled">ยกเลิกสอบเทียบ</option>');
+    }
   }
 
-  function getInstrumentTableWrap() {
+  function setSelectValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (value && ![...el.options].some(option => option.value === value)) return;
+    el.value = value || '';
+  }
+
+  function getTableWrap() {
     return document.querySelector('#pageList .table-wrap') || document.querySelector('.table-wrap');
   }
 
-  function captureInstrumentListState() {
-    const wrap = getInstrumentTableWrap();
+  function captureListState() {
+    const wrap = getTableWrap();
     return {
       page: typeof currentPage === 'number' ? currentPage : 1,
       scrollTop: wrap ? wrap.scrollTop : 0,
@@ -156,14 +177,52 @@ function filterByStatus(status) {
     };
   }
 
-  function setSelectValue(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (value && ![...el.options].some(option => option.value === value)) return;
-    el.value = value || '';
+  function matchesText(row, search) {
+    if (!search) return true;
+    return ['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location']
+      .some(key => String(row[key] || '').toLowerCase().includes(search));
   }
 
-  function restoreInstrumentListState(state) {
+  function matchesStatus(row, status) {
+    if (!status) return true;
+    const rowStatus = getRowStatus(row);
+    if (status === 'cancelled') return rowStatus === 'cancelled';
+    if (rowStatus === 'cancelled') return false;
+    return rowStatus === status;
+  }
+
+  function applyListFilters(keepPage = false) {
+    ensureCancelStatusFilterOption();
+    normalizeRows(allData);
+    const previousPage = typeof currentPage === 'number' ? currentPage : 1;
+    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const type = document.getElementById('typeFilter')?.value || '';
+    const unit = document.getElementById('unitFilter')?.value || '';
+    const status = document.getElementById('statusFilter')?.value || '';
+    const month = document.getElementById('monthFilter')?.value || '';
+
+    filteredData = (allData || []).filter(row => {
+      if (!matchesText(row, search)) return false;
+      if (type && row.instrument_type !== type) return false;
+      if (unit && row.department !== unit) return false;
+      if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all' && row.instrument_type !== activeCategory) return false;
+      if (!matchesStatus(row, status)) return false;
+      if (month && !row.due_date) return false;
+      if (month) {
+        const m = new Date(row.due_date).getMonth() + 1;
+        if (String(m) !== month) return false;
+      }
+      return true;
+    });
+
+    const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / size));
+    currentPage = keepPage ? Math.min(Math.max(previousPage, 1), totalPages) : 1;
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderTable === 'function') renderTable();
+  }
+
+  function restoreListState(state) {
     if (!state) return;
     ensureCancelStatusFilterOption();
     const search = document.getElementById('searchInput');
@@ -174,27 +233,23 @@ function filterByStatus(status) {
     setSelectValue('monthFilter', state.month);
     if (typeof activeCategory !== 'undefined') activeCategory = state.activeCategory || 'all';
     if (typeof renderCategoryCards === 'function') renderCategoryCards();
-    if (typeof filterData === 'function') filterData();
-    const totalRows = Array.isArray(filteredData) ? filteredData.length : 0;
-    const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
-    const totalPages = Math.max(1, Math.ceil(totalRows / size));
-    currentPage = Math.min(Math.max(state.page || 1, 1), totalPages);
-    if (typeof updateStats === 'function') updateStats();
-    if (typeof renderTable === 'function') renderTable();
+    applyListFilters(true);
     requestAnimationFrame(() => {
-      const wrap = getInstrumentTableWrap();
+      const wrap = getTableWrap();
       if (wrap) {
         wrap.scrollTop = state.scrollTop || 0;
         wrap.scrollLeft = state.scrollLeft || 0;
       }
       window.scrollTo({ top: state.windowY || 0, left: 0, behavior: 'auto' });
-      if (state.idCode) {
-        document.querySelectorAll('#dataTable tr').forEach(row => {
-          if (!row.textContent.includes(state.idCode)) return;
-          row.style.background = '#e0f4f1';
-          setTimeout(() => { row.style.background = ''; }, 2500);
-        });
-      }
+      if (state.idCode) highlightVisibleRow(state.idCode);
+    });
+  }
+
+  function highlightVisibleRow(idCode) {
+    document.querySelectorAll('#dataTable tr').forEach(row => {
+      if (!row.textContent.includes(idCode)) return;
+      row.style.background = '#e0f4f1';
+      setTimeout(() => { row.style.background = ''; }, 2500);
     });
   }
 
@@ -211,34 +266,28 @@ function filterByStatus(status) {
         <option value="cancelled">ยกเลิกสอบเทียบ</option>
       </select>
     `;
-    if (dueGroup?.parentNode) {
-      dueGroup.insertAdjacentElement('afterend', field);
-    } else {
-      document.querySelector('#instrumentModal .modal-body')?.appendChild(field);
-    }
+    if (dueGroup?.parentNode) dueGroup.insertAdjacentElement('afterend', field);
+    else document.querySelector('#instrumentModal .modal-body')?.appendChild(field);
   }
 
-  function patchRenderedCancellationStatus() {
-    if (typeof filteredData === 'undefined' || !Array.isArray(filteredData)) return;
-    const rows = document.querySelectorAll('#dataTable tr');
+  function cleanRenderedRemarksAndStatus() {
+    if (!Array.isArray(filteredData)) return;
     const start = ((typeof currentPage === 'number' ? currentPage : 1) - 1) * (typeof pageSize === 'number' ? pageSize : 100);
-    rows.forEach((row, index) => {
+    document.querySelectorAll('#dataTable tr').forEach((row, index) => {
       const item = filteredData[start + index];
-      if (!item || !row.cells || row.cells.length < 18) return;
+      if (!item || !row.cells || row.cells.length < 22) return;
       const cleanRemark = stripCalibrationCancelMarker(item.remark);
-      if (row.cells[20]) {
-        row.cells[20].innerHTML = cleanRemark ? `<span style="font-size:13px;color:#888">${safeHtml(cleanRemark)}</span>` : '–';
-      }
+      row.cells[20].innerHTML = cleanRemark ? `<span style="font-size:13px;color:#888">${escapeValue(cleanRemark)}</span>` : '–';
       if (!isCalibrationCancelled(item)) return;
       row.style.background = 'rgba(148,163,184,.06)';
-      if (row.cells[13]) row.cells[13].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
-      if (row.cells[14]) row.cells[14].innerHTML = '<span class="days-chip badge badge-gray">–</span>';
-      if (row.cells[17]) row.cells[17].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
-      if (row.cells[18]) row.cells[18].innerHTML = '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
+      row.cells[13].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
+      row.cells[14].innerHTML = '<span class="days-chip badge badge-gray">–</span>';
+      row.cells[17].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
+      row.cells[18].innerHTML = '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
     });
   }
 
-  function patchRenderedMobileCancellationStatus() {
+  function cleanRenderedMobileCards() {
     const rows = window._mobileRows || [];
     document.querySelectorAll('#mobileCardList .mobile-card').forEach((card, index) => {
       const item = rows[index];
@@ -273,20 +322,47 @@ function filterByStatus(status) {
     });
   }
 
+  window.isCalibrationCancelled = isCalibrationCancelled;
+  window.stripCalibrationCancelMarker = stripCalibrationCancelMarker;
+
   const originalUpdateStats = typeof updateStats === 'function' ? updateStats : null;
   if (originalUpdateStats) {
     updateStats = window.updateStats = function(...args) {
-      normalizeCalibrationCancelRows();
+      normalizeRows(allData);
+      normalizeRows(filteredData);
       return originalUpdateStats.apply(this, args);
+    };
+  }
+
+  const originalUpdatePaginationUI = typeof updatePaginationUI === 'function' ? updatePaginationUI : null;
+  if (originalUpdatePaginationUI) {
+    updatePaginationUI = window.updatePaginationUI = function(...args) {
+      const total = Array.isArray(filteredData) ? filteredData.length : 0;
+      if (total === 0) {
+        const info = document.getElementById('paginationInfo');
+        const pageNum = document.getElementById('pageNum');
+        const prev = document.getElementById('btnPrev');
+        const next = document.getElementById('btnNext');
+        if (info) info.textContent = 'แสดง 0 จาก 0 รายการ';
+        if (pageNum) pageNum.textContent = 'หน้า 0 / 0';
+        if (prev) prev.disabled = true;
+        if (next) next.disabled = true;
+        return;
+      }
+      const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+      const totalPages = Math.max(1, Math.ceil(total / size));
+      currentPage = Math.min(Math.max(currentPage || 1, 1), totalPages);
+      return originalUpdatePaginationUI.apply(this, args);
     };
   }
 
   const originalRenderTable = typeof renderTable === 'function' ? renderTable : null;
   if (originalRenderTable) {
     renderTable = window.renderTable = function(...args) {
-      normalizeCalibrationCancelRows();
+      normalizeRows(allData);
+      normalizeRows(filteredData);
       const result = originalRenderTable.apply(this, args);
-      patchRenderedCancellationStatus();
+      cleanRenderedRemarksAndStatus();
       return result;
     };
   }
@@ -294,9 +370,9 @@ function filterByStatus(status) {
   const originalRenderMobileCards = typeof renderMobileCards === 'function' ? renderMobileCards : null;
   if (originalRenderMobileCards) {
     renderMobileCards = window.renderMobileCards = function(...args) {
-      normalizeCalibrationCancelRows();
+      normalizeRows(filteredData);
       const result = originalRenderMobileCards.apply(this, args);
-      patchRenderedMobileCancellationStatus();
+      cleanRenderedMobileCards();
       return result;
     };
   }
@@ -304,7 +380,7 @@ function filterByStatus(status) {
   const originalRenderDonut = typeof renderDonut === 'function' ? renderDonut : null;
   if (originalRenderDonut) {
     renderDonut = window.renderDonut = function(...args) {
-      normalizeCalibrationCancelRows();
+      normalizeRows(allData);
       return originalRenderDonut.apply(this, args);
     };
   }
@@ -312,39 +388,24 @@ function filterByStatus(status) {
   const originalRenderAlerts = typeof renderAlerts === 'function' ? renderAlerts : null;
   if (originalRenderAlerts) {
     renderAlerts = window.renderAlerts = function(...args) {
-      normalizeCalibrationCancelRows();
+      normalizeRows(allData);
       return originalRenderAlerts.apply(this, args);
     };
   }
 
-  const originalFilterData = typeof filterData === 'function' ? filterData : null;
-  if (originalFilterData) {
-    filterData = window.filterData = function(...args) {
-      ensureCancelStatusFilterOption();
-      normalizeCalibrationCancelRows();
-      const status = document.getElementById('statusFilter')?.value || '';
-      if (status !== 'cancelled') return originalFilterData.apply(this, args);
+  filterData = window.filterData = function() {
+    applyListFilters(false);
+  };
 
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const type = document.getElementById('typeFilter').value;
-      const unit = document.getElementById('unitFilter').value;
-      const month = document.getElementById('monthFilter').value;
-      filteredData = allData.filter(d => {
-        if (!isCalibrationCancelled(d)) return false;
-        if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k] || '').toLowerCase().includes(search))) return false;
-        if (type && d.instrument_type !== type) return false;
-        if (unit && d.department !== unit) return false;
-        if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all' && d.instrument_type !== activeCategory) return false;
-        if (month && !d.due_date) return false;
-        if (month) {
-          const m = new Date(d.due_date).getMonth() + 1;
-          if (String(m) !== month) return false;
-        }
-        return true;
-      });
-      currentPage = 1;
-      updateStats();
-      renderTable();
+  const originalResetFilters = typeof resetFilters === 'function' ? resetFilters : null;
+  if (originalResetFilters) {
+    resetFilters = window.resetFilters = function(...args) {
+      const result = originalResetFilters.apply(this, args);
+      ensureCancelStatusFilterOption();
+      normalizeRows(allData);
+      normalizeRows(filteredData);
+      cleanRenderedRemarksAndStatus();
+      return result;
     };
   }
 
@@ -353,7 +414,7 @@ function filterByStatus(status) {
     openInstrumentModal = window.openInstrumentModal = function(instrumentId, ...args) {
       const result = originalOpenInstrumentModal.call(this, instrumentId, ...args);
       ensureCalibrationStatusField();
-      const item = Array.isArray(allData) ? allData.find(d => String(d.id) === String(instrumentId)) : null;
+      const item = Array.isArray(allData) ? allData.find(row => String(row.id) === String(instrumentId)) : null;
       const statusEl = document.getElementById('iCalStatus');
       const remarkEl = document.getElementById('iRemark');
       if (statusEl) statusEl.value = item && isCalibrationCancelled(item) ? 'cancelled' : 'active';
@@ -365,7 +426,7 @@ function filterByStatus(status) {
   const originalSaveInstrument = typeof saveInstrument === 'function' ? saveInstrument : null;
   if (originalSaveInstrument) {
     saveInstrument = window.saveInstrument = async function(...args) {
-      const listState = captureInstrumentListState();
+      const listState = captureListState();
       const statusEl = document.getElementById('iCalStatus');
       const remarkEl = document.getElementById('iRemark');
       const cleanRemark = stripCalibrationCancelMarker(remarkEl?.value || '');
@@ -375,7 +436,7 @@ function filterByStatus(status) {
       if (currentLoadData) {
         loadData = window.loadData = async function(...loadArgs) {
           const result = await currentLoadData.apply(this, loadArgs);
-          restoreInstrumentListState(listState);
+          restoreListState(listState);
           return result;
         };
       }
@@ -386,7 +447,7 @@ function filterByStatus(status) {
         if (currentLoadData) loadData = window.loadData = currentLoadData;
         const modalOpen = document.getElementById('instrumentModal')?.classList.contains('open');
         if (modalOpen && remarkEl) remarkEl.value = cleanRemark;
-        setTimeout(() => restoreInstrumentListState(listState), 950);
+        setTimeout(() => restoreListState(listState), 950);
       }
     };
   }
@@ -396,10 +457,11 @@ function filterByStatus(status) {
     loadData = window.loadData = async function(...args) {
       ensureCancelStatusFilterOption();
       const result = await originalLoadData.apply(this, args);
-      normalizeCalibrationCancelRows();
       ensureCancelStatusFilterOption();
-      patchRenderedCancellationStatus();
-      patchRenderedMobileCancellationStatus();
+      normalizeRows(allData);
+      normalizeRows(filteredData);
+      cleanRenderedRemarksAndStatus();
+      cleanRenderedMobileCards();
       return result;
     };
   }
