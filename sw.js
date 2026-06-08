@@ -1,5 +1,16 @@
-const CACHE_NAME = 'calibration-app-v12';
+const CACHE_NAME = 'calibration-app-v13';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
+const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
+@media (min-width: 769px) {
+  body.app-mode #app #pageList .table-wrap,
+  body.app-mode #pageList .table-wrap {
+    height: clamp(390px, calc(100vh - 378px), 620px) !important;
+    min-height: clamp(390px, calc(100vh - 378px), 620px) !important;
+    max-height: clamp(390px, calc(100vh - 378px), 620px) !important;
+    overflow: auto !important;
+  }
+}
+</style>`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,11 +37,14 @@ const APP_SHELL = [
 async function withMidnightLabTheme(response) {
   const html = await response.text();
   const hasTheme = html.includes('theme-midnight-lab.css');
-  const nextHtml = hasTheme
+  const withTheme = hasTheme
     ? html
     : html
         .replace(/<meta name="theme-color" content="#[^"]*">/i, '<meta name="theme-color" content="#102337">')
         .replace(/<\/head>/i, '<link rel="stylesheet" href="./theme-midnight-lab.css">\n</head>');
+  const nextHtml = withTheme.includes('codex-list-height-fix')
+    ? withTheme
+    : withTheme.replace(/<\/head>/i, `${LIST_HEIGHT_STYLE}\n</head>`);
   const headers = new Headers(response.headers);
   headers.set('Content-Type', 'text/html; charset=utf-8');
   return new Response(nextHtml, {
