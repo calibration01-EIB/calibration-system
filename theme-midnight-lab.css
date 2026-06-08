@@ -93,7 +93,8 @@ body.app-mode .users-table-wrap {
   box-shadow: 0 18px 40px rgba(30,64,175,.08) !important;
 }
 body.app-mode #dashMiniPanel,
-body.app-mode .dash-risk-list {
+body.app-mode .dash-risk-list,
+body.app-mode #pageDashboard > div:not(#dashRow2):has(#dashMiniList) {
   display: none !important;
 }
 body.app-mode #app #pageList .table-wrap,
