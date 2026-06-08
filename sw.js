@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v11';
+const CACHE_NAME = 'calibration-app-v12';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const APP_SHELL = [
   './',
