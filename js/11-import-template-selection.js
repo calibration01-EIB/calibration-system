@@ -140,7 +140,12 @@
     const toolbar = document.getElementById('importSelectionToolbar');
     if (!toolbar) return;
     const importBtn = document.getElementById('btnImportExcel');
-    const hidden = !importBtn || importBtn.offsetParent === null || getComputedStyle(importBtn).display === 'none';
+    let hidden = true;
+    if (importBtn) {
+      const style = getComputedStyle(importBtn);
+      const rect = importBtn.getBoundingClientRect();
+      hidden = style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0;
+    }
     toolbar.style.display = hidden ? 'none' : 'flex';
   }
 
