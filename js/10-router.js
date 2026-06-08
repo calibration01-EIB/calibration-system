@@ -168,6 +168,7 @@ function filterByStatus(status) {
       }
       if (!isCalibrationCancelled(item)) return;
       row.style.background = 'rgba(148,163,184,.06)';
+      if (row.cells[13]) row.cells[13].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
       if (row.cells[14]) row.cells[14].innerHTML = '<span class="days-chip badge badge-gray">–</span>';
       if (row.cells[17]) row.cells[17].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
       if (row.cells[18]) row.cells[18].innerHTML = '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
@@ -187,10 +188,10 @@ function filterByStatus(status) {
         badge.style.color = '#5f6b7a';
       }
       card.querySelectorAll('.mobile-field').forEach(field => {
-        if (field.textContent.includes('คงเหลือ')) {
-          const strong = field.querySelector('strong');
-          if (strong) strong.textContent = '-';
-        }
+        const strong = field.querySelector('strong');
+        if (!strong) return;
+        if (field.textContent.includes('ครบกำหนด')) strong.textContent = CANCEL_LABEL;
+        if (field.textContent.includes('คงเหลือ')) strong.textContent = '-';
       });
       const planBadge = card.querySelector('.mobile-plan-badge');
       if (planBadge) {
