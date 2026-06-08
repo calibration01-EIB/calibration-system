@@ -3,6 +3,15 @@
 // ====================================================
 const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
 const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
+const CERT_TYPE_CODES = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
+
+function normalizeCertNo(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function sortByCertNo(a, b) {
+  return normalizeCertNo(a.cert_no).localeCompare(normalizeCertNo(b.cert_no), undefined, { numeric: true, sensitivity: 'base' });
+}
 
 async function loadCertPage() {
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
@@ -13,18 +22,22 @@ async function loadCertPage() {
   const typeCode = typeSel ? typeSel.value : '';
   const isAdmin = (currentUser && currentUser.role === 'admin');
 
+  const certRowsByType = CERT_TYPE_CODES.reduce((acc, code) => {
+    acc[code] = (allData || [])
+      .filter(d => normalizeCertNo(d.cert_no).startsWith(`${yearCode}${code}`))
+      .sort(sortByCertNo);
+    return acc;
+  }, {});
+
   // Type Cards
-  const { data: seqData } = await sb.from('cert_sequences').select('*').eq('year_code', parseInt(yearCode)).order('type_code');
   const cards = document.getElementById('certTypeCards');
   if (cards) {
-    const codes = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
-    const seqMap = {};
-    (seqData||[]).forEach(s => { seqMap[s.type_code] = s.last_number; });
-    cards.innerHTML = codes.map(c => {
-      const n = seqMap[c] || 0;
+    cards.innerHTML = CERT_TYPE_CODES.map(c => {
+      const rows = certRowsByType[c] || [];
+      const n = rows.length;
       const col = CERT_COLORS[c] || '#888';
-      const first = n > 0 ? `${yearCode}${c}001` : '—';
-      const last  = n > 0 ? `${yearCode}${c}${String(n).padStart(3,'0')}` : '—';
+      const first = n > 0 ? normalizeCertNo(rows[0].cert_no) : '—';
+      const last  = n > 0 ? normalizeCertNo(rows[n - 1].cert_no) : '—';
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;cursor:default">
         <div style="font-size:20px;font-weight:700;color:${col};line-height:1">${n}</div>
         <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px">${c} — ${CERT_LABELS[c]||c}</div>
@@ -35,8 +48,8 @@ async function loadCertPage() {
 
   // ประวัติ Cert
   const prefix = typeCode ? `${yearCode}${typeCode}` : String(yearCode);
-  const history = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
-  history.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
+  const history = (allData || []).filter(d => normalizeCertNo(d.cert_no).startsWith(prefix));
+  history.sort(sortByCertNo);
   const pendingCount = history.filter(d => !d.approved_by).length;
 
   const histBody = document.getElementById('certHistoryBody');
