@@ -92,6 +92,10 @@ body.app-mode .users-table-wrap {
   border-radius: 8px !important;
   box-shadow: 0 18px 40px rgba(30,64,175,.08) !important;
 }
+body.app-mode #pageList .table-wrap {
+  height: clamp(390px, calc(100vh - 250px), 620px) !important;
+  max-height: clamp(390px, calc(100vh - 250px), 620px) !important;
+}
 body.app-mode #monthGrid > div,
 body.app-mode #categoryGrid > div {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
@@ -112,4 +116,11 @@ body.app-mode select:focus,
 body.app-mode textarea:focus {
   border-color: #0891b2 !important;
   box-shadow: 0 0 0 3px rgba(8,145,178,.12) !important;
+}
+@media (max-width: 768px) {
+  body.app-mode #pageList .table-wrap {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
 }
