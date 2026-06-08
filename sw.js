@@ -1,5 +1,6 @@
-const CACHE_NAME = 'calibration-app-v17';
+const CACHE_NAME = 'calibration-app-v18';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
+const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
 @media (min-width: 769px) {
   body.app-mode #app #pageList .table-wrap,
@@ -31,7 +32,8 @@ const APP_SHELL = [
   './js/07-notifications.js',
   './js/08-weights.js',
   './js/09-cert.js',
-  './js/10-router.js'
+  './js/10-router.js',
+  IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
 
 async function withMidnightLabTheme(response) {
@@ -42,12 +44,15 @@ async function withMidnightLabTheme(response) {
     : html
         .replace(/<meta name="theme-color" content="#[^"]*">/i, '<meta name="theme-color" content="#102337">')
         .replace(/<\/head>/i, '<link rel="stylesheet" href="./theme-midnight-lab.css">\n</head>');
-  const nextHtml = withTheme.includes('codex-list-height-fix')
+  const withListHeight = withTheme.includes('codex-list-height-fix')
     ? withTheme
     : withTheme.replace(/<\/head>/i, `${LIST_HEIGHT_STYLE}\n</head>`);
+  const withImportTemplateSelection = withListHeight.includes('11-import-template-selection.js')
+    ? withListHeight
+    : withListHeight.replace(/<\/body>/i, `<script src="${IMPORT_TEMPLATE_SELECTION_SCRIPT}"></script>\n</body>`);
   const headers = new Headers(response.headers);
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(nextHtml, {
+  return new Response(withImportTemplateSelection, {
     status: response.status,
     statusText: response.statusText,
     headers
