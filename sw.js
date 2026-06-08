@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v15';
+const CACHE_NAME = 'calibration-app-v16';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
 @media (min-width: 769px) {
