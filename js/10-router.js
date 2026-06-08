@@ -135,6 +135,69 @@ function filterByStatus(status) {
     sel.insertAdjacentHTML('beforeend', '<option value="cancelled">ยกเลิกสอบเทียบ</option>');
   }
 
+  function getInstrumentTableWrap() {
+    return document.querySelector('#pageList .table-wrap') || document.querySelector('.table-wrap');
+  }
+
+  function captureInstrumentListState() {
+    const wrap = getInstrumentTableWrap();
+    return {
+      page: typeof currentPage === 'number' ? currentPage : 1,
+      scrollTop: wrap ? wrap.scrollTop : 0,
+      scrollLeft: wrap ? wrap.scrollLeft : 0,
+      windowY: window.scrollY || 0,
+      activeCategory: typeof activeCategory !== 'undefined' ? activeCategory : 'all',
+      search: document.getElementById('searchInput')?.value || '',
+      type: document.getElementById('typeFilter')?.value || '',
+      unit: document.getElementById('unitFilter')?.value || '',
+      status: document.getElementById('statusFilter')?.value || '',
+      month: document.getElementById('monthFilter')?.value || '',
+      idCode: document.getElementById('iIdCode')?.value?.trim() || '',
+    };
+  }
+
+  function setSelectValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (value && ![...el.options].some(option => option.value === value)) return;
+    el.value = value || '';
+  }
+
+  function restoreInstrumentListState(state) {
+    if (!state) return;
+    ensureCancelStatusFilterOption();
+    const search = document.getElementById('searchInput');
+    if (search) search.value = state.search || '';
+    setSelectValue('typeFilter', state.type);
+    setSelectValue('unitFilter', state.unit);
+    setSelectValue('statusFilter', state.status);
+    setSelectValue('monthFilter', state.month);
+    if (typeof activeCategory !== 'undefined') activeCategory = state.activeCategory || 'all';
+    if (typeof renderCategoryCards === 'function') renderCategoryCards();
+    if (typeof filterData === 'function') filterData();
+    const totalRows = Array.isArray(filteredData) ? filteredData.length : 0;
+    const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+    const totalPages = Math.max(1, Math.ceil(totalRows / size));
+    currentPage = Math.min(Math.max(state.page || 1, 1), totalPages);
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderTable === 'function') renderTable();
+    requestAnimationFrame(() => {
+      const wrap = getInstrumentTableWrap();
+      if (wrap) {
+        wrap.scrollTop = state.scrollTop || 0;
+        wrap.scrollLeft = state.scrollLeft || 0;
+      }
+      window.scrollTo({ top: state.windowY || 0, left: 0, behavior: 'auto' });
+      if (state.idCode) {
+        document.querySelectorAll('#dataTable tr').forEach(row => {
+          if (!row.textContent.includes(state.idCode)) return;
+          row.style.background = '#e0f4f1';
+          setTimeout(() => { row.style.background = ''; }, 2500);
+        });
+      }
+    });
+  }
+
   function ensureCalibrationStatusField() {
     if (document.getElementById('iCalStatus')) return;
     const dueInput = document.getElementById('iDueDate');
@@ -302,15 +365,28 @@ function filterByStatus(status) {
   const originalSaveInstrument = typeof saveInstrument === 'function' ? saveInstrument : null;
   if (originalSaveInstrument) {
     saveInstrument = window.saveInstrument = async function(...args) {
+      const listState = captureInstrumentListState();
       const statusEl = document.getElementById('iCalStatus');
       const remarkEl = document.getElementById('iRemark');
       const cleanRemark = stripCalibrationCancelMarker(remarkEl?.value || '');
       if (remarkEl) remarkEl.value = buildCalibrationRemark(cleanRemark, statusEl?.value);
+
+      const currentLoadData = typeof loadData === 'function' ? loadData : null;
+      if (currentLoadData) {
+        loadData = window.loadData = async function(...loadArgs) {
+          const result = await currentLoadData.apply(this, loadArgs);
+          restoreInstrumentListState(listState);
+          return result;
+        };
+      }
+
       try {
         return await originalSaveInstrument.apply(this, args);
       } finally {
+        if (currentLoadData) loadData = window.loadData = currentLoadData;
         const modalOpen = document.getElementById('instrumentModal')?.classList.contains('open');
         if (modalOpen && remarkEl) remarkEl.value = cleanRemark;
+        setTimeout(() => restoreInstrumentListState(listState), 950);
       }
     };
   }
