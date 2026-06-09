@@ -1,9 +1,59 @@
 /* ===== 09-cert.js ===== (generated from index.html inline app script) */
 // CERT PAGE
 // ====================================================
-const CERT_COLORS = { B:'#00897B',T:'#185FA5',F:'#BA7517',M:'#639922',H:'#993556',P:'#534AB7',C:'#D85A30',D:'#3B6D11',E:'#0F6E56',Q:'#888780',G:'#BA7517',L:'#185FA5' };
-const CERT_LABELS = { B:'Balance',T:'Torque/Safety',F:'Light/Sound',M:'Mass Weight',H:'Flow/Volume',P:'Pressure',C:'Temperature',D:'Chemical',E:'Electrical',Q:'Time/Others',G:'Speed/Rotation',L:'Length' };
-const CERT_TYPE_CODES = ['B','T','F','M','H','P','C','D','E','Q','G','L'];
+const CERT_COLORS = { C:'#D85A30',D:'#3B6D11',L:'#185FA5',Q:'#993556',R:'#0F6E56',G:'#BA7517',T:'#D85A30',H:'#185FA5',W:'#888780',P:'#534AB7',B:'#00897B',M:'#639922',F:'#BA7517' };
+const CERT_LABELS = {
+  C:'pH Meter / Viscometer / DO Meter',
+  D:'Digital / Vernier Caliper',
+  L:'Thickness / Micrometer / Depth / Height / Penetrometer / Profile / Linear Scale',
+  Q:'Flow Meter',
+  R:'Steel Ruler / Tape Measure',
+  G:'Moisture Tester',
+  T:'Temperature',
+  H:'Tachometer',
+  W:'Timer',
+  P:'Pressure',
+  B:'Balance',
+  M:'Mass',
+  F:'Force / Torque',
+};
+const CERT_CARD_LABELS = {
+  C:'pH / Visco / DO',
+  D:'Calipers',
+  L:'Length Tools',
+  Q:'Flow Meter',
+  R:'Ruler / Tape',
+  G:'Moisture',
+  T:'Temperature',
+  H:'Tachometer',
+  W:'Timer',
+  P:'Pressure',
+  B:'Balance',
+  M:'Mass',
+  F:'Force / Torque',
+};
+const CERT_TYPE_CODES = ['C','D','L','Q','R','G','T','H','W','P','B','M','F'];
+
+function certTypeOptionHtml() {
+  return CERT_TYPE_CODES
+    .map(code => `<option value="${code}">${code} — ${escapeHtmlText(CERT_CARD_LABELS[code] || CERT_LABELS[code] || code)}</option>`)
+    .join('');
+}
+
+function renderCertTypeSelectOptions() {
+  const historyType = document.getElementById('certHistoryType');
+  const issueType = document.getElementById('icTypeCode');
+  if (historyType) {
+    const value = historyType.value;
+    historyType.innerHTML = '<option value="">ทุกประเภท</option>' + certTypeOptionHtml();
+    historyType.value = CERT_TYPE_CODES.includes(value) ? value : '';
+  }
+  if (issueType) {
+    const value = issueType.value;
+    issueType.innerHTML = '<option value="">-- เลือกประเภท --</option>' + certTypeOptionHtml();
+    issueType.value = CERT_TYPE_CODES.includes(value) ? value : '';
+  }
+}
 
 function normalizeCertNo(value) {
   return String(value || '').trim().toUpperCase();
@@ -14,6 +64,7 @@ function sortByCertNo(a, b) {
 }
 
 async function loadCertPage() {
+  renderCertTypeSelectOptions();
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
   const fmtDt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
   const yearSel = document.getElementById('certHistoryYear');
@@ -38,9 +89,11 @@ async function loadCertPage() {
       const col = CERT_COLORS[c] || '#888';
       const first = n > 0 ? normalizeCertNo(rows[0].cert_no) : '—';
       const last  = n > 0 ? normalizeCertNo(rows[n - 1].cert_no) : '—';
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;cursor:default">
+      const fullLabel = CERT_LABELS[c] || c;
+      const cardLabel = CERT_CARD_LABELS[c] || fullLabel;
+      return `<div title="${escapeHtmlAttr(`${c} — ${fullLabel}`)}" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;cursor:default;min-height:78px">
         <div style="font-size:20px;font-weight:700;color:${col};line-height:1">${n}</div>
-        <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px">${c} — ${CERT_LABELS[c]||c}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px;line-height:1.25">${c} — ${escapeHtmlText(cardLabel)}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">${first}${n>1?` – ${last}`:''}</div>
       </div>`;
     }).join('');
@@ -220,6 +273,7 @@ let _editCertId = null;
 
 function openIssueCertModal() {
   _editCertId = null;
+  renderCertTypeSelectOptions();
   document.getElementById('icTypeCode').value = '';
   document.getElementById('icIssueDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('icIdCode').value = '';
@@ -239,7 +293,8 @@ function openEditCertModal(instrumentId) {
   const d = allData.find(x => x.id === instrumentId);
   if (!d) return;
   _editCertId = instrumentId;
-  document.getElementById('icTypeCode').value = getCertTypeCode(d.instrument_type) || '';
+  renderCertTypeSelectOptions();
+  document.getElementById('icTypeCode').value = getCertTypeCode(d.instrument_type, d.instrument_name) || '';
   document.getElementById('icIssueDate').value = d.cal_date || new Date().toISOString().slice(0,10);
   document.getElementById('icIdCode').value = d.id_code || '';
   document.getElementById('icRequestNo').value = d.request_no || '';

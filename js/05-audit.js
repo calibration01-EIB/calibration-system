@@ -129,27 +129,46 @@ function renderAuditTable() {
 
 // คืนค่า string 'YYYY-MM-DD' (ใช้ใน Import ไม่ต้องแตะ DOM)
 // ====================================================
-// CERT TYPE MAP — instrument_type → type_code
+// CERT TYPE MAP — instrument_type / instrument_name → type_code
 // ====================================================
 const CERT_TYPE_MAP = {
   'มวล/น้ำหนัก (Mass/Weight)':               'B',
   'ความยาว/มิติ (Length/Dimension)':          'L',
-  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'C',
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'T',
   'ความดัน/สุญญากาศ (Pressure/Vacuum)':       'P',
-  'ความเร็วรอบ (Speed/Rotation)':             'G',
-  'เวลา (Time)':                              'Q',
-  'เคมี/ความเข้มข้น (Chemical/Concentration)':'D',
-  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'M',
-  'ไฟฟ้า (Electrical)':                       'E',
-  'การไหล/ปริมาตร (Flow/Volume)':             'H',
-  'แสง/เสียง (Light/Sound)':                  'F',
-  'ความปลอดภัย (Safety)':                     'T',
-  'แรงบิด/แรงกด (Torque/Force)':              'T',
-  'อื่นๆ (Others)':                           'Q',
+  'ความเร็วรอบ (Speed/Rotation)':             'H',
+  'เวลา (Time)':                              'W',
+  'เคมี/ความเข้มข้น (Chemical/Concentration)':'C',
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'C',
+  'ไฟฟ้า (Electrical)':                       '',
+  'การไหล/ปริมาตร (Flow/Volume)':             'Q',
+  'แสง/เสียง (Light/Sound)':                  '',
+  'ความปลอดภัย (Safety)':                     '',
+  'แรงบิด/แรงกด (Torque/Force)':              'F',
+  'อื่นๆ (Others)':                           '',
 };
 
-function getCertTypeCode(instrumentType) {
-  return CERT_TYPE_MAP[instrumentType] || 'B';
+function getCertTypeCode(instrumentType, instrumentName = '') {
+  const name = String(instrumentName || '').toLowerCase();
+  const nameRules = [
+    ['C', /\bph\b|p\.h\.|viscometer|visco|\bdo\s*meter\b|dissolved\s*oxygen|ความหนืด/],
+    ['D', /digital\s*caliper|digitol\s*caliper|vernier\s*caliper|\bcaliper\b|ดิจิตอล|เวอร์เนียร์/],
+    ['R', /steel\s*ruler|\bruler\b|tape\s*measure|ตลับเมตร|ไม้บรรทัด/],
+    ['L', /thickness\s*gauge|micrometer|\bmicro\b|depth\s*gauge|height\s*gauge|penetrometer|profile\s*(projector|protector)|linear\s*scale/],
+    ['Q', /flow\s*meter|\bflow\b|การไหล/],
+    ['G', /moisture\s*tester|\bmoisture\b/],
+    ['T', /temperature|thermometer|\btemp\b|อุณหภูมิ/],
+    ['H', /tachometer|\brpm\b|speed|rotation|ความเร็วรอบ/],
+    ['W', /timer|stopwatch|\btime\b|เวลา/],
+    ['P', /pressure|ความดัน/],
+    ['F', /force|torque|แรงบิด|แรงกด/],
+    ['M', /\bmass\b|\bweight\b|weight\s*set|\bweights\b|ตุ้มน้ำหนัก/],
+    ['B', /\bbalance\b|electronic\s*scale|weighing\s*scale|เครื่องชั่ง/],
+  ];
+  for (const [code, pattern] of nameRules) {
+    if (pattern.test(name)) return code;
+  }
+  return CERT_TYPE_MAP[instrumentType] || '';
 }
 
 
