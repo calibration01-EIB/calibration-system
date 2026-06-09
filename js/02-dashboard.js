@@ -1,4 +1,55 @@
 /* ===== 02-dashboard.js ===== (generated from index.html inline app script) */
+
+let _monthlyBarChart = null;
+function renderMonthlyBarChart() {
+  const canvas = document.getElementById('monthlyBarChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (!allData.length) { setTimeout(renderMonthlyBarChart, 500); return; }
+
+  const yearLabel = document.getElementById('monthlyYearLabel');
+  if (yearLabel) yearLabel.textContent = (new Date().getFullYear() + 543).toString();
+
+  const byMonth = Array.from({length: 12}, () => ({ok: 0, warn: 0, over: 0}));
+  allData.forEach(d => {
+    if (!d.due_date || d.days_left === null) return;
+    const m = new Date(d.due_date).getMonth();
+    if (d.days_left < 0) byMonth[m].over++;
+    else if (d.days_left <= 30) byMonth[m].warn++;
+    else byMonth[m].ok++;
+  });
+
+  const labels = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  if (_monthlyBarChart) _monthlyBarChart.destroy();
+  _monthlyBarChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'เกินกำหนด', data: byMonth.map(m => m.over), backgroundColor: 'rgba(221,47,59,.82)', borderRadius: 3 },
+        { label: 'ใกล้ครบ',   data: byMonth.map(m => m.warn), backgroundColor: 'rgba(249,115,22,.82)', borderRadius: 3 },
+        { label: 'ปกติ',      data: byMonth.map(m => m.ok),   backgroundColor: 'rgba(0,137,123,.82)', borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 8, padding: 16 } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } }
+      },
+      onClick: (_evt, elements) => {
+        if (!elements.length) return;
+        document.getElementById('monthFilter').value = elements[0].index + 1;
+        filterData();
+        showPage('list');
+      }
+    }
+  });
+}
 // MOBILE CARDS
 // ====================================================
 function renderMobileCards() {
@@ -305,6 +356,8 @@ async function loadData(forceRefresh = false) {
     renderMonthly();
     renderCategoryCards();
     renderDonut();
+    renderAlerts();
+    renderMonthlyBarChart();
     renderDashboardAuditLog();
     loadPlanStatusMap();
     updateNotificationBell();
