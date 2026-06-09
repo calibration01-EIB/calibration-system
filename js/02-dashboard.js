@@ -366,7 +366,6 @@ async function loadData(forceRefresh = false) {
     renderMonthly();
     renderCategoryCards();
     renderDonut();
-    renderAlerts();
     renderMonthlyBarChart();
     renderDashboardAuditLog();
     loadPlanStatusMap();

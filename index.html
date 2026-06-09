@@ -2223,8 +2223,8 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
-        <!-- ROW 2: Instrument Types + Alerts -->
-        <div id="dashDonutAlertsRow" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- ROW 2: Instrument Types -->
+        <div id="dashDonutAlertsRow" style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px">
 
           <!-- Instrument Type Cards -->
           <div id="dashboardCategoryPanel" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow)">
@@ -2235,16 +2235,7 @@ body.app-mode textarea:focus {
               </div>
               <button onclick="activeCategory='all';renderCategoryCards();filterData();showPage('list')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap">ดูทั้งหมด →</button>
             </div>
-            <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:300px;overflow-y:auto;padding-right:4px"></div>
-          </div>
-
-          <!-- Alerts panel -->
-          <div style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow)">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--border)">
-              <div style="font-size:14px;font-weight:700;color:var(--text)">ต้องสนใจตอนนี้</div>
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red)"></span>
-            </div>
-            <div id="alertList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+            <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:360px;overflow-y:auto;padding-right:4px"></div>
           </div>
 
         </div>
@@ -3216,7 +3207,7 @@ body.app-mode textarea:focus {
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
-<script src="js/02-dashboard.js?v=20260609-mobile-refresh"></script>
+<script src="js/02-dashboard.js?v=20260609-dashboard-types"></script>
 <script src="js/03-instruments.js?v=20260609-category-fix2"></script>
 <script src="js/04-reports.js?v=20260609-category-fix2"></script>
 <script src="js/05-audit.js?v=20260609-cert-headings"></script>
