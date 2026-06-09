@@ -205,7 +205,10 @@ function filterByStatus(status) {
       if (!matchesText(row, search)) return false;
       if (type && row.instrument_type !== type) return false;
       if (unit && row.department !== unit) return false;
-      if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all' && row.instrument_type !== activeCategory) return false;
+      if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all') {
+        const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(row) : row.instrument_type;
+        if (category !== activeCategory) return false;
+      }
       if (!matchesStatus(row, status)) return false;
       if (month && !row.due_date) return false;
       if (month) {
