@@ -59,6 +59,7 @@ function renderMobileCards() {
   const rows = filteredData.slice(start, start + pageSize);
   window._mobileRows = rows;
   el.innerHTML = rows.map((d, i) => {
+    const id = Number(d.id) || 0;
     const days = d.days_left;
     let badgeClass = 'ok';
     let badgeText = '&#x0E1B;&#x0E01;&#x0E15;&#x0E34;';
@@ -72,6 +73,14 @@ function renderMobileCards() {
     }
     const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
     const typShort = (d.instrument_type || '-').split(' (')[0];
+    const title = escapeHtmlText(d.instrument_name || '-');
+    const certNo = escapeHtmlText(d.cert_no || '-');
+    const idCode = escapeHtmlText(d.id_code || '-');
+    const serialNo = escapeHtmlText(d.serial_no || '-');
+    const typeText = escapeHtmlText(typShort);
+    const dueText = escapeHtmlText(dueDate);
+    const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' &middot; ') || '-';
+    const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' &middot; ') || escapeHtmlText(d.department || '-');
     const ps = planStatusMap[d.id];
     const sMap = {
       pending_plan: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E41;&#x0E1C;&#x0E19;', '#854F0B', '#FAEEDA'],
@@ -79,34 +88,35 @@ function renderMobileCards() {
       pending_cert: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E2A;&#x0E2D;&#x0E1A;', '#185FA5', '#E6F1FB'],
       completed:    ['&#x0E2A;&#x0E2D;&#x0E1A;&#x0E40;&#x0E17;&#x0E35;&#x0E22;&#x0E1A;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#0F6E56', '#E1F5EE'],
     };
-    const planMeta = ps ? (sMap[ps.status] || [ps.status, '#52667d', '#f2f6fb']) : ['&#x0E22;&#x0E31;&#x0E07;&#x0E44;&#x0E21;&#x0E48;&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;', '#52667d', '#f2f6fb'];
-    const planBadge = '<span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span>';
+    const planMeta = ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['&#x0E22;&#x0E31;&#x0E07;&#x0E44;&#x0E21;&#x0E48;&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;', '#52667d', '#f2f6fb'];
+    const planBadge = '<div class="mobile-plan-row"><span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span></div>';
     const planBtn = ps
-      ? '<button class="mobile-card-action primary" onclick="goToPlanDetail(' + d.id + ')">&#x0E41;&#x0E1C;&#x0E19;</button>'
-      : '<button class="mobile-card-action primary" onclick="goToPlanWithItem(' + d.id + ')">&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;</button>';
-    return '<div class="mobile-card">' +
+      ? '<button class="mobile-card-action primary" onclick="goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>&#x0E41;&#x0E1C;&#x0E19;</span></button>'
+      : '<button class="mobile-card-action primary" onclick="goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;</span></button>';
+    return '<article class="mobile-card mobile-card--' + badgeClass + '">' +
       '<div class="mobile-card-head">' +
         '<div style="flex:1;min-width:0">' +
-          '<div class="mobile-card-title">' + (d.instrument_name || '-') + '</div>' +
-          '<div class="mobile-card-sub">' + (d.brand || '-') + ' &middot; ' + (d.department || '-') + '</div>' +
+          '<div class="mobile-card-kicker">' + idCode + '</div>' +
+          '<div class="mobile-card-title">' + title + '</div>' +
+          '<div class="mobile-card-sub">' + brandDept + '</div>' +
         '</div>' +
         '<span class="mobile-badge ' + badgeClass + '">' + badgeText + '</span>' +
       '</div>' +
       '<div class="mobile-card-grid">' +
-        '<div class="mobile-field"><span>ID Code</span><strong>' + (d.id_code || '-') + '</strong></div>' +
-        '<div class="mobile-field"><span>CERT.</span><strong>' + (d.cert_no || '-') + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E1B;&#x0E23;&#x0E30;&#x0E40;&#x0E20;&#x0E17;</span><strong>' + typShort + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E04;&#x0E23;&#x0E1A;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;</span><strong>' + dueDate + '</strong></div>' +
+        '<div class="mobile-field"><span>CERT.</span><strong>' + certNo + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E04;&#x0E23;&#x0E1A;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;</span><strong>' + dueText + '</strong></div>' +
         '<div class="mobile-field"><span>&#x0E04;&#x0E07;&#x0E40;&#x0E2B;&#x0E25;&#x0E37;&#x0E2D;</span><strong>' + daysText + '</strong></div>' +
-        '<div class="mobile-field"><span>S/N</span><strong>' + (d.serial_no || '-') + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E1B;&#x0E23;&#x0E30;&#x0E40;&#x0E20;&#x0E17;</span><strong>' + typeText + '</strong></div>' +
+        '<div class="mobile-field"><span>S/N</span><strong>' + serialNo + '</strong></div>' +
+        '<div class="mobile-field"><span>&#x0E08;&#x0E38;&#x0E14;&#x0E43;&#x0E0A;&#x0E49;&#x0E07;&#x0E32;&#x0E19;</span><strong>' + machineLoc + '</strong></div>' +
       '</div>' +
       planBadge +
       '<div class="mobile-card-actions">' +
-        '<button class="mobile-card-action" onclick="mobileEdit(' + i + ')">&#x0E41;&#x0E01;&#x0E49;&#x0E44;&#x0E02;</button>' +
-        '<button class="mobile-card-action" onclick="mobileCert(' + i + ')">Cert</button>' +
+        '<button class="mobile-card-action" onclick="mobileEdit(' + i + ')"><i class="ti ti-pencil"></i><span>&#x0E41;&#x0E01;&#x0E49;&#x0E44;&#x0E02;</span></button>' +
+        '<button class="mobile-card-action" onclick="mobileCert(' + i + ')"><i class="ti ti-paperclip"></i><span>Cert</span></button>' +
         planBtn +
       '</div>' +
-    '</div>';
+    '</article>';
   }).join('') || '<div class="mobile-empty">&#x0E44;&#x0E21;&#x0E48;&#x0E1E;&#x0E1A;&#x0E02;&#x0E49;&#x0E2D;&#x0E21;&#x0E39;&#x0E25;</div>';
 }
 function mobileEdit(i) { const d = window._mobileRows?.[i]; if (d) openInstrumentModal(d.id); }
