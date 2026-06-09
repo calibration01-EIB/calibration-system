@@ -3,6 +3,7 @@
 // ====================================================
 function printReport() {
   const today = new Date();
+  today.setHours(0,0,0,0);
   const todayStr = today.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
   const year = today.getFullYear() + 543;
 
@@ -152,6 +153,121 @@ const CATEGORY_ICONS = {
   'อื่นๆ (Others)': 'ti-dots-circle-horizontal',
 };
 
+const CATEGORY_DEFS = [
+  {
+    name: 'มวล/น้ำหนัก (Mass/Weight)',
+    aliases: ['mass/weight', 'mass', 'weight', 'balance', 'scale', 'weigh', 'น้ำหนัก', 'มวล', 'เครื่องชั่ง']
+  },
+  {
+    name: 'ความยาว/มิติ (Length/Dimension)',
+    aliases: ['length/dimension', 'length', 'dimension', 'caliper', 'micrometer', 'vernier', 'ruler', 'gauge block', 'ความยาว', 'มิติ']
+  },
+  {
+    name: 'อุณหภูมิ/ความชื้น (Temperature/Humidity)',
+    aliases: ['temperature/humidity', 'temperature', 'humidity', 'temp', 'thermo', 'อุณหภูมิ', 'ความชื้น']
+  },
+  {
+    name: 'ความดัน/สุญญากาศ (Pressure/Vacuum)',
+    aliases: ['pressure/vacuum', 'pressure', 'vacuum', 'manometer', 'ความดัน', 'สุญญากาศ']
+  },
+  {
+    name: 'ความเร็วรอบ (Speed/Rotation)',
+    aliases: ['speed/rotation', 'speed', 'rotation', 'rpm', 'tachometer', 'ความเร็วรอบ', 'รอบ']
+  },
+  {
+    name: 'เวลา (Time)',
+    aliases: ['time', 'timer', 'stopwatch', 'clock', 'เวลา']
+  },
+  {
+    name: 'เคมี/ความเข้มข้น (Chemical/Concentration)',
+    aliases: ['chemical/concentration', 'chemical', 'concentration', 'ph', 'conductivity', 'เคมี', 'ความเข้มข้น']
+  },
+  {
+    name: 'ความหนืด/ความหนาแน่น (Viscosity/Density)',
+    aliases: ['viscosity/density', 'viscosity', 'density', 'ความหนืด', 'ความหนาแน่น']
+  },
+  {
+    name: 'ไฟฟ้า (Electrical)',
+    aliases: ['electrical', 'electric', 'voltage', 'current', 'multimeter', 'ไฟฟ้า']
+  },
+  {
+    name: 'การไหล/ปริมาตร (Flow/Volume)',
+    aliases: ['flow/volume', 'flow', 'volume', 'pipette', 'burette', 'การไหล', 'ปริมาตร']
+  },
+  {
+    name: 'แสง/เสียง (Light/Sound)',
+    aliases: ['light/sound', 'light', 'sound', 'lux', 'decibel', 'แสง', 'เสียง']
+  },
+  {
+    name: 'ความปลอดภัย (Safety)',
+    aliases: ['safety', 'ความปลอดภัย']
+  },
+  {
+    name: 'แรงบิด/แรงกด (Torque/Force)',
+    aliases: ['torque/force', 'torque', 'force', 'แรงบิด', 'แรงกด', 'แรง']
+  },
+  {
+    name: 'อื่นๆ (Others)',
+    aliases: ['others', 'other', 'อื่นๆ', 'อื่น']
+  },
+];
+
+function normalizeCategoryText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeCategoryKey(value) {
+  return normalizeCategoryText(value)
+    .replace(/\s+/g, ' ')
+    .replace(/[()]/g, '')
+    .trim();
+}
+
+const CATEGORY_BY_KEY = CATEGORY_DEFS.reduce((acc, cat) => {
+  acc[normalizeCategoryKey(cat.name)] = cat.name;
+  cat.aliases.forEach(alias => { acc[normalizeCategoryKey(alias)] = cat.name; });
+  return acc;
+}, {});
+
+function categoryAliasMatches(text, alias) {
+  const needle = normalizeCategoryText(alias);
+  if (!needle) return false;
+  if (/^[a-z0-9/ ]+$/.test(needle)) {
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text);
+  }
+  return text.includes(needle);
+}
+
+function matchCategoryFromText(value) {
+  const normalized = normalizeCategoryKey(value);
+  if (!normalized) return null;
+  if (CATEGORY_BY_KEY[normalized]) return CATEGORY_BY_KEY[normalized];
+
+  const text = normalizeCategoryText(value);
+  const match = CATEGORY_DEFS.find(cat =>
+    cat.name !== 'อื่นๆ (Others)' && cat.aliases.some(alias => categoryAliasMatches(text, alias))
+  );
+  return match ? match.name : null;
+}
+
+function getInstrumentCategory(row) {
+  const rawType = String(row?.instrument_type || row?.category || '').trim();
+  const typeMatch = matchCategoryFromText(rawType);
+  if (typeMatch) return typeMatch;
+  if (rawType) return 'อื่นๆ (Others)';
+
+  const haystack = normalizeCategoryText([
+    row?.instrument_name,
+    row?.brand
+  ].filter(Boolean).join(' '));
+
+  const match = CATEGORY_DEFS.find(cat =>
+    cat.name !== 'อื่นๆ (Others)' && cat.aliases.some(alias => categoryAliasMatches(haystack, alias))
+  );
+  return match ? match.name : 'อื่นๆ (Others)';
+}
+
 let activeCategory = 'all';
 
 // ====================================================
@@ -229,40 +345,30 @@ function renderCategoryCards() {
   if (!grid) return;
   grid.innerHTML = '';
 
-  const CAT_14 = [
-    ['มวล/น้ำหนัก (Mass/Weight)', 'Mass/Weight'],
-    ['ความยาว/มิติ (Length/Dimension)', 'Length/Dimension'],
-    ['อุณหภูมิ/ความชื้น (Temperature/Humidity)', 'Temperature/Humidity'],
-    ['ความดัน/สุญญากาศ (Pressure/Vacuum)', 'Pressure/Vacuum'],
-    ['ความเร็วรอบ (Speed/Rotation)', 'Speed/Rotation'],
-    ['เวลา (Time)', 'Time'],
-    ['เคมี/ความเข้มข้น (Chemical/Concentration)', 'Chemical/Concentration'],
-    ['ความหนืด/ความหนาแน่น (Viscosity/Density)', 'Viscosity/Density'],
-    ['ไฟฟ้า (Electrical)', 'Electrical'],
-    ['การไหล/ปริมาตร (Flow/Volume)', 'Flow/Volume'],
-    ['แสง/เสียง (Light/Sound)', 'Light/Sound'],
-    ['ความปลอดภัย (Safety)', 'Safety'],
-    ['แรงบิด/แรงกด (Torque/Force)', 'Torque/Force'],
-    ['อื่นๆ (Others)', 'Others'],
-  ];
-
   const today = new Date();
+  today.setHours(0,0,0,0);
 
   // นับจำนวนและสถานะจาก allData
   const stats = {};
   allData.forEach(d => {
-    const t = d.instrument_type || 'อื่นๆ (Others)';
+    const t = getInstrumentCategory(d);
     if (!stats[t]) stats[t] = { total: 0, overdue: 0, warning: 0, ok: 0 };
     stats[t].total++;
-    const due = d.due_date ? new Date(d.due_date) : null;
-    if (!due) { stats[t].ok++; return; }
-    const diff = Math.ceil((due - today) / 86400000);
+    let diff = d.days_left;
+    if (diff === undefined) {
+      const due = d.due_date ? new Date(d.due_date) : null;
+      if (due) {
+        due.setHours(0,0,0,0);
+        diff = Math.round((due - today) / 86400000);
+      }
+    }
+    if (diff === null || diff === undefined || Number.isNaN(diff)) { stats[t].ok++; return; }
     if (diff < 0) stats[t].overdue++;
     else if (diff <= 30) stats[t].warning++;
     else stats[t].ok++;
   });
 
-  CAT_14.forEach(([fullName, enName]) => {
+  CATEGORY_DEFS.forEach(({ name: fullName }) => {
     const s = stats[fullName] || { total: 0, overdue: 0, warning: 0, ok: 0 };
     const cnt = s.total;
     const thName = fullName.split(' (')[0];

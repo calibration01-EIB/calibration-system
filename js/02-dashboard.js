@@ -400,13 +400,14 @@ function populateFilters() {
 
 function updateStats() {
   let ov = 0, wa = 0, ok = 0;
-  filteredData.forEach(d => {
+  const dashboardRows = allData || [];
+  dashboardRows.forEach(d => {
     if (d.days_left === null) return;
     if (d.days_left < 0) ov++;
     else if (d.days_left <= 30) wa++;
     else ok++;
   });
-  const total = filteredData.length;
+  const total = dashboardRows.length;
   const okCount = ok;
 
   document.getElementById('statTotal').textContent = total.toLocaleString();
@@ -553,7 +554,10 @@ function filterData() {
     if (type && d.instrument_type !== type) return false;
     if (unit && d.department !== unit) return false;
     // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
-    if (activeCategory && activeCategory !== 'all' && d.instrument_type !== activeCategory) return false;
+    if (activeCategory && activeCategory !== 'all') {
+      const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(d) : d.instrument_type;
+      if (category !== activeCategory) return false;
+    }
     if (status && d.days_left === null) return false;
     if (status) {
       if (status === 'overdue' && d.days_left >= 0) return false;
