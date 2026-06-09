@@ -254,9 +254,41 @@ function goToPlanDetail(instrumentId) {
 let allData = [], filteredData = [];
 let fileCountCache = {};
 
+function escapeHtmlText(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeHtmlAttr(value) {
+  return escapeHtmlText(value).replace(/`/g, '&#96;');
+}
+
+function escapeJsSingle(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/</g, '\\x3C')
+    .replace(/>/g, '\\x3E')
+    .replace(/&/g, '\\x26')
+    .replace(/"/g, '&quot;');
+}
+
+function getInstrumentCachePrefix() {
+  const userKey = currentUser?.id || currentUser?.username || 'anonymous';
+  const roleKey = currentUser?.role || 'unknown';
+  return 'ilc_instruments_cache_' + roleKey + '_' + userKey;
+}
+
 async function loadData(forceRefresh = false) {
-  const CACHE_KEY = 'ilc_instruments_cache';
-  const CACHE_TIME_KEY = 'ilc_instruments_cache_time';
+  const cachePrefix = getInstrumentCachePrefix();
+  const CACHE_KEY = cachePrefix + '_rows';
+  const CACHE_TIME_KEY = cachePrefix + '_time';
   const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
 
   const procesData = (rows) => {
@@ -362,8 +394,8 @@ async function fetchFromSupabase() {
 function populateFilters() {
   const types = [...new Set(allData.map(d => d.instrument_type))].filter(Boolean).sort();
   const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
-  document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option>${t}</option>`).join('');
-  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option>${u}</option>`).join('');
+  document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t)}</option>`).join('');
+  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option value="${escapeHtmlAttr(u)}">${escapeHtmlText(u)}</option>`).join('');
 }
 
 function updateStats() {
@@ -425,7 +457,7 @@ function renderDashMiniList() {
     const color = over ? 'var(--red)' : 'var(--amber)';
     const status = over ? `เกิน ${Math.abs(d.days_left)} วัน` : `อีก ${d.days_left} วัน`;
     return `<div onclick="filterByStatus('${over ? 'overdue' : 'warning'}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="font-size:13px;color:var(--text)">${dot} ${d.id_code || '-'} ${d.instrument_name || d.instrument_type || ''}</div>
+      <div style="font-size:13px;color:var(--text)">${dot} ${escapeHtmlText(d.id_code || '-')} ${escapeHtmlText(d.instrument_name || d.instrument_type || '')}</div>
       <div style="font-size:12px;color:${color};white-space:nowrap">${status}</div>
     </div>`;
   }).join('');
@@ -474,11 +506,11 @@ function renderDashboardAuditItems(items) {
       <div style="width:24px;height:24px;border-radius:50%;background:white;color:${style.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">${style.icon}</div>
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div style="font-size:12px;font-weight:700;color:${style.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.action || 'กิจกรรม'}</div>
+          <div style="font-size:12px;font-weight:700;color:${style.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtmlText(item.action || 'กิจกรรม')}</div>
           <div style="font-size:10px;color:var(--text3);white-space:nowrap">${formatDashboardAuditTime(item.created_at)}</div>
         </div>
-        <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${title}</div>
-        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${meta || '–'}</div>
+        <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${escapeHtmlText(title)}</div>
+        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${escapeHtmlText(meta || '–')}</div>
       </div>
     </div>`;
   }).join('');
@@ -576,7 +608,7 @@ function typeBadge(t) {
     'ความปลอดภัย (Safety)': 'badge-red',
     'แรงบิด/แรงกด (Torque/Force)': 'badge-purple',
   };
-  return `<span class="badge ${map[t]||'badge-gray'}" style="font-size:13px">${t}</span>`;
+  return `<span class="badge ${map[t]||'badge-gray'}" style="font-size:13px">${escapeHtmlText(t)}</span>`;
 }
 
 function renderTable() {
@@ -596,6 +628,11 @@ function renderTable() {
   tbody.innerHTML = pageData.map((d, i) => {
   const rowNum = start + i + 1;
     const days = d.days_left;
+    const idCode = escapeHtmlText(d.id_code || '–');
+    const certNo = escapeHtmlText(d.cert_no || '–');
+    const instrumentName = escapeHtmlText(d.instrument_name || '–');
+    const planTitle = escapeHtmlAttr(planStatusMap[d.id]?.title || '');
+    const openCertCall = `openCertModal(${Number(d.id)||0},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
     let statusBadge, daysClass;
     if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysClass = 'badge-gray'; }
     else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysClass = 'badge-red'; }
@@ -604,25 +641,25 @@ function renderTable() {
     return `<tr>
       <td>${rowNum}</td>
       <td>${typeBadge(d.instrument_type)}</td>
-      <td>${d.machine_name||'–'}</td>
-      <td>${d.location||'–'}</td>
-      <td>${d.instrument_name||'–'}</td>
-      <td>${d.brand||'–'}</td>
-      <td>${d.range_val||'–'}</td>
-      <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+d.tolerance : '–'}</td>
-      <td style="font-family:var(--mono);font-size:20px">${d.serial_no||'–'}</td>
-      <td><strong>${d.department||'–'}</strong></td>
-      <td><button onclick="openCalHistory(${d.id})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${d.id_code||'–'}</button></td>
-      <td style="font-family:var(--mono);font-size:20px">${d.cert_no||'–'}</td>
+      <td>${escapeHtmlText(d.machine_name || '–')}</td>
+      <td>${escapeHtmlText(d.location || '–')}</td>
+      <td>${instrumentName}</td>
+      <td>${escapeHtmlText(d.brand || '–')}</td>
+      <td>${escapeHtmlText(d.range_val || '–')}</td>
+      <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+escapeHtmlText(d.tolerance) : '–'}</td>
+      <td style="font-family:var(--mono);font-size:20px">${escapeHtmlText(d.serial_no || '–')}</td>
+      <td><strong>${escapeHtmlText(d.department || '–')}</strong></td>
+      <td><button onclick="openCalHistory(${Number(d.id)||0})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${idCode}</button></td>
+      <td style="font-family:var(--mono);font-size:20px">${certNo}</td>
       <td>${formatDate(d.cal_date)}</td>
       <td>${formatDate(d.due_date)}</td>
       <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
-      <td>${d.cal_frequency||'–'}</td>
+      <td>${escapeHtmlText(d.cal_frequency || '–')}</td>
       <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
       <td>${statusBadge}</td>
       <td>${(()=>{
         const ps = planStatusMap[d.id];
-        if (!ps) return `<button onclick="goToPlanWithItem(${d.id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        if (!ps) return `<button onclick="goToPlanWithItem(${Number(d.id)||0})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
         const sMap = {
           pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#FAEEDA'],
           planned:      ['✅ วางแผนแล้ว','#3B6D11','#EAF3DE'],
@@ -630,10 +667,10 @@ function renderTable() {
           completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
         };
         const [lbl,color,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
-        return `<button onclick="goToPlanDetail(${d.id})" title="ดูแผน: ${ps.title}" style="font-size:11px;background:${bg};color:${color};border:1px solid ${color}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
+        return `<button onclick="goToPlanDetail(${Number(d.id)||0})" title="ดูแผน: ${planTitle}" style="font-size:11px;background:${bg};color:${color};border:1px solid ${color}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
       })()}</td>
-      <td><button id="certbtn-${d.id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="openCertModal(${d.id},'${(d.id_code||'')}','${(d.cert_no||'')}','${(d.instrument_name||'').replace(/'/g,"\\'")}')" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
-      <td>${d.remark ? '<span style="font-size:13px;color:#888">'+d.remark+'</span>' : '–'}</td>
+      <td><button id="certbtn-${Number(d.id)||0}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
+      <td>${d.remark ? '<span style="font-size:13px;color:#888">'+escapeHtmlText(d.remark)+'</span>' : '–'}</td>
       <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
   }).join('');
@@ -644,8 +681,9 @@ function renderTable() {
     document.querySelectorAll('.td-manage').forEach((td, i) => {
       const d = filteredData[start + i];
       if (!d) return;
-      const name = (d.instrument_name||'').replace(/'/g, "\\'");
-      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${d.id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${d.id},'${name}')">🗑️</button>`;
+      const name = escapeJsSingle(d.instrument_name || '');
+      const id = Number(d.id) || 0;
+      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${id},'${name}')">🗑️</button>`;
     });
   }
   updateFileCounts(pageData);
