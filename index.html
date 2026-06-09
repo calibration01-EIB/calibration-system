@@ -1040,6 +1040,7 @@ tbody tr:hover td { background: #eff8f6 !important; }
 @media (max-width: 1180px) {
   #statCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   #dashRow2 { grid-template-columns: 1fr !important; }
+  #dashMonthlyAuditRow { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: auto !important; }
 }
 @media (max-width: 1024px) {
@@ -1615,6 +1616,12 @@ body.app-mode textarea:focus {
     margin-bottom: 12px !important;
   }
 
+  body.app-mode #dashMonthlyAuditRow {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
   body.app-mode #dashDonutAlertsRow > div,
   body.app-mode #dashMonthlyRow,
   body.app-mode #dashAuditRow,
@@ -1636,6 +1643,10 @@ body.app-mode textarea:focus {
 
   body.app-mode #dashMonthlyRow > div[style*="height:220px"] {
     height: 190px !important;
+  }
+
+  body.app-mode #monthGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   body.app-mode #dashboardAuditList,
@@ -2240,24 +2251,27 @@ body.app-mode textarea:focus {
 
         </div>
 
-        <!-- ROW 3: Monthly Bar Chart -->
-        <div id="dashMonthlyRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-            <div style="font-size:14px;font-weight:700;color:var(--text)">ครบกำหนดสอบเทียบรายเดือน</div>
-            <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)" id="monthlyYearLabel"></span>
+        <!-- ROW 3: Monthly Cards + Audit Log -->
+        <div id="dashMonthlyAuditRow" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);gap:16px;margin-bottom:16px">
+          <div id="dashMonthlyRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+              <div>
+                <div style="font-size:14px;font-weight:700;color:var(--text)">ครบกำหนดสอบเทียบรายเดือน</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px">แสดงจำนวนเครื่องมือที่ครบกำหนดในแต่ละเดือน</div>
+              </div>
+              <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap" id="monthlyYearLabel"></span>
+            </div>
+            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px"></div>
           </div>
-          <div style="height:220px;position:relative"><canvas id="monthlyBarChart"></canvas></div>
-          <div id="monthGrid" style="display:none"></div>
-        </div>
 
-        <!-- ROW 4: Audit Log -->
-        <div id="dashAuditRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-            <div style="font-size:14px;font-weight:700;color:var(--text)">กิจกรรมล่าสุด · Audit Log</div>
-            <button onclick="showPage('audit')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font);font-weight:600">ดูทั้งหมด →</button>
-          </div>
-          <div id="dashboardAuditList" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
-            <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>
+          <div id="dashAuditRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+              <div style="font-size:14px;font-weight:700;color:var(--text)">กิจกรรมล่าสุด · Audit Log</div>
+              <button onclick="showPage('audit')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font);font-weight:600">ดูทั้งหมด →</button>
+            </div>
+            <div id="dashboardAuditList" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto">
+              <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>
+            </div>
           </div>
         </div>
 
@@ -3209,7 +3223,7 @@ body.app-mode textarea:focus {
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
 <script src="js/02-dashboard.js?v=20260609-dashboard-types"></script>
 <script src="js/03-instruments.js?v=20260609-category-fix2"></script>
-<script src="js/04-reports.js?v=20260609-category-fix2"></script>
+<script src="js/04-reports.js?v=20260609-month-cards"></script>
 <script src="js/05-audit.js?v=20260609-cert-headings"></script>
 <script src="js/06-plan.js?v=20260609-category-fix2"></script>
 <script src="js/07-notifications.js?v=20260609-category-fix2"></script>

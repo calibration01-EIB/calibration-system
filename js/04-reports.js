@@ -279,6 +279,9 @@ let activeMonthCard = null;
 
 function renderMonthly() {
   if (!allData.length) { setTimeout(renderMonthly, 500); return; }
+  const yearLabel = document.getElementById('monthlyYearLabel');
+  if (yearLabel) yearLabel.textContent = (new Date().getFullYear() + 543).toString();
+
   const byMonth = {};
   for (let i = 0; i < 12; i++) byMonth[i] = [];
   allData.forEach(d => {
@@ -300,7 +303,8 @@ function renderMonthly() {
     const ok = cnt - ov - wa;
     card.innerHTML = `
       <div style="font-size:11px;color:#444;margin-bottom:4px;font-weight:600">${MONTH_NAMES_SHORT[i]}</div>
-      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
+      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">เครื่องมือ</div>
       <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
         ${ov>0?`<div style="flex:${ov};background:var(--red);border-radius:2px"></div>`:''}
         ${wa>0?`<div style="flex:${wa};background:var(--amber);border-radius:2px"></div>`:''}
