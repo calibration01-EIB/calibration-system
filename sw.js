@@ -80,7 +80,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .catch(() => caches.match(event.request))
-        .then(response => withMidnightLabTheme(response))
+        .then(response => response ? withMidnightLabTheme(response) : Response.error())
     );
     return;
   }

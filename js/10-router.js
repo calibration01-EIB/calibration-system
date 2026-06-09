@@ -450,7 +450,6 @@ function filterByStatus(status) {
         if (currentLoadData) loadData = window.loadData = currentLoadData;
         const modalOpen = document.getElementById('instrumentModal')?.classList.contains('open');
         if (modalOpen && remarkEl) remarkEl.value = cleanRemark;
-        setTimeout(() => restoreListState(listState), 950);
       }
     };
   }
