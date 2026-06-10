@@ -4,9 +4,14 @@
 function updateNotificationBell() {
   if (!currentUser) return;
   const userTypes = currentUser.instrument_types;
-  const relevant = (userTypes && userTypes.length > 0)
+  // เครื่องที่ยกเลิกสอบเทียบแล้ว ต้องไม่ถูกนับว่าเกินกำหนด/ใกล้ครบ
+  const isCancelled = (d) =>
+    d.calibration_cancelled === true ||
+    (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
+  const relevant = ((userTypes && userTypes.length > 0)
     ? allData.filter(d => userTypes.includes(d.instrument_type))
-    : allData;
+    : allData
+  ).filter(d => !isCancelled(d));
 
   const overdue = relevant.filter(d => d.days_left !== null && d.days_left < 0);
   const warning = relevant.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30);
