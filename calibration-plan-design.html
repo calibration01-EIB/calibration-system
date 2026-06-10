@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calibration Plan — Workflow Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #edf3f8;
+  --surface: #ffffff;
+  --surface2: #f6f9fc;
+  --line: #d8e4ef;
+  --text: #102337;
+  --muted: #60758b;
+  --soft: #8da0b4;
+  --accent: #0891b2;
+  --green: #168a4a;
+  --amber: #f97316;
+  --red: #dc3545;
+  --radius: 8px;
+  --shadow: 0 16px 36px rgba(20, 54, 88, .08);
+  --font: "IBM Plex Sans Thai", sans-serif;
+  --mono: "IBM Plex Mono", monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #f7fbff 0%, var(--bg) 100%);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+}
+button, input, select { font: inherit; }
+.page { width: min(1180px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 48px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.top h1 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 800; }
+.top p { margin: 6px 0 0; max-width: 760px; color: var(--muted); }
+.project-badge {
+  display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px;
+  border: 1px solid rgba(8, 145, 178, .24); border-radius: 999px;
+  background: #e6f7fb; color: #06718b; font-weight: 700; white-space: nowrap;
+}
+.jump {
+  position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 0 14px;
+  background: linear-gradient(180deg, rgba(247, 251, 255, .98), rgba(247, 251, 255, .82));
+  backdrop-filter: blur(14px);
+}
+.jump a {
+  flex: 0 0 auto; text-decoration: none; color: var(--muted); min-height: 36px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 700;
+}
+.jump a:hover { color: var(--accent); border-color: rgba(8, 145, 178, .28); }
+
+/* ===== Workflow stepper (overview) ===== */
+.flow {
+  background: var(--surface); border: 1px solid rgba(37, 99, 235, .12);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin: 0 0 18px;
+}
+.flow-rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+.flow-step { position: relative; padding: 0 14px; text-align: center; }
+.flow-step:not(:last-child)::after {
+  content: ""; position: absolute; top: 22px; right: -6px; width: 12px; height: 12px;
+  border-top: 2px solid var(--line); border-right: 2px solid var(--line); transform: rotate(45deg);
+}
+.flow-step .bubble {
+  width: 46px; height: 46px; margin: 0 auto 10px; display: grid; place-items: center;
+  border-radius: 50%; font-size: 21px; color: #fff;
+}
+.flow-step .role { font-weight: 800; font-size: 13px; }
+.flow-step .who { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.flow-step .act {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 3px 9px;
+  border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--surface2);
+  border: 1px solid var(--line); color: var(--muted);
+}
+.b-blue { background: linear-gradient(135deg, #2563eb, #0891b2); }
+.b-violet { background: linear-gradient(135deg, #7c3aed, #2563eb); }
+.b-amber { background: linear-gradient(135deg, #f97316, #f59e0b); }
+.b-green { background: linear-gradient(135deg, #16a34a, #0891b2); }
+
+/* ===== Section / option card ===== */
+.option {
+  background: var(--surface); border: 1px solid rgba(37, 99, 235, .12);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin: 0 0 18px;
+}
+.option-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--line);
+}
+.option-title { display: flex; align-items: center; gap: 10px; }
+.option-num {
+  width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--radius);
+  color: #fff; font-weight: 800; font-family: var(--mono); flex: 0 0 auto;
+}
+.option h2 { margin: 0; font-size: 17px; line-height: 1.2; }
+.option .hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.fit {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; border-radius: 999px;
+  padding: 0 12px; font-weight: 700; white-space: nowrap;
+}
+.fit.blue { background: #f1f7ff; color: #2563eb; border: 1px solid #d8e8ff; }
+.fit.violet { background: #f4f0ff; color: #7c3aed; border: 1px solid #e3d8ff; }
+.fit.amber { background: #fff7ed; color: #d97706; border: 1px solid #fed7aa; }
+.fit.green { background: #ecfdf3; color: #15803d; border: 1px solid #b7efca; }
+
+/* ===== mini step indicator inside planner screen ===== */
+.mini-steps { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.mini-step {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--muted); font-weight: 700;
+}
+.mini-step .n {
+  width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--surface2); color: var(--muted); font-size: 11px; font-family: var(--mono);
+}
+.mini-step.done { color: #15803d; background: #ecfdf3; border-color: #b7efca; }
+.mini-step.done .n { background: #16a34a; color: #fff; }
+.mini-step.active { color: #06718b; background: #e6f7fb; border-color: #a7e2ef; }
+.mini-step.active .n { background: #0891b2; color: #fff; }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; }
+.chip {
+  flex: 0 0 auto; min-height: 32px; display: inline-flex; align-items: center; gap: 7px;
+  padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff;
+  color: var(--muted); font-weight: 700;
+}
+.chip.active { color: #06718b; background: #e6f7fb; border-color: #a7e2ef; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: var(--radius); padding: 0 13px; border: 1px solid var(--line); background: #fff;
+  color: var(--text); font-weight: 700; cursor: pointer;
+}
+.btn.primary { border-color: #0891b2; background: #0891b2; color: #fff; }
+.btn.green { border-color: #16a34a; background: #16a34a; color: #fff; }
+.btn.danger { border-color: #f7c1c1; background: #fff0f2; color: var(--red); }
+.btn.ghost { background: var(--surface2); }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+
+.status {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 9px;
+  border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status.over { color: var(--red); background: #fff0f2; border: 1px solid #ffc8d0; }
+.status.warn { color: var(--amber); background: #fff6ec; border: 1px solid #ffd7a8; }
+.status.ok { color: var(--green); background: #ecfdf3; border: 1px solid #b7efca; }
+.status.wait { color: #854f0b; background: #faeeda; border: 1px solid #f2dcb0; }
+.status.appr { color: #185fa5; background: #e6f1fb; border: 1px solid #b5d4f4; }
+.status.conf { color: #0f6e56; background: #e1f5ee; border: 1px solid #b6e6d6; }
+.status.rej { color: #a32d2d; background: #fcebeb; border: 1px solid #f7c1c1; }
+
+.code { font-family: var(--mono); color: #38546e; font-size: 12px; }
+.iconbox {
+  width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center;
+  border: 1px solid #cfe1ee; border-radius: var(--radius); background: #f7fbff;
+  color: var(--accent); font-size: 17px;
+}
+.iconbox.green { color: #15803d; background: #edfbf3; border-color: #c8efd7; }
+.iconbox.amber { color: #d97706; background: #fff7ed; border-color: #fed7aa; }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th { height: 40px; text-align: left; color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--line); font-weight: 800; padding: 0 10px; }
+.table td { height: 50px; border-bottom: 1px solid #edf3f7; vertical-align: middle; padding: 0 10px; }
+.table tr.sel { background: #f1fbf5; }
+.instrument-cell { display: flex; align-items: center; gap: 10px; }
+.name { font-weight: 800; color: #071f35; }
+.sub { color: var(--muted); font-size: 11px; }
+.checkbox { width: 17px; height: 17px; accent-color: var(--accent); }
+.dateinput {
+  min-height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 0 9px;
+  background: #fff; color: var(--text); font-family: var(--mono); width: 140px;
+}
+.dateinput:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,145,178,.12); }
+
+/* layout split: list + cart */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 332px; gap: 14px; }
+.panel { border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+}
+.panel-head h3 { margin: 0; font-size: 14px; }
+.panel-body { padding: 14px; }
+
+/* ===== selected group (by department + type) with date range ===== */
+.grp { border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.grp-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; background: var(--surface2); border-bottom: 1px solid var(--line);
+}
+.grp-head .left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.grp-code {
+  width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 7px;
+  color: #fff; font-family: var(--mono); font-weight: 800; font-size: 13px; background: var(--accent);
+}
+.grp-title { font-weight: 800; font-size: 12px; }
+.grp-sub { color: var(--muted); font-size: 11px; }
+.grp-body { padding: 11px 12px; }
+.range {
+  display: grid; grid-template-columns: 1fr 16px 1fr; align-items: end; gap: 8px;
+}
+.range .lab { display: block; font-size: 11px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.range .arrow { text-align: center; color: var(--soft); padding-bottom: 8px; }
+.range .dateinput { width: 100%; }
+.range-summary {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 3px 10px;
+  border-radius: 999px; background: #e6f7fb; color: #06718b; border: 1px solid #a7e2ef; font-weight: 700; font-size: 11px;
+}
+.grp-items { border-top: 1px dashed var(--line); margin-top: 10px; padding-top: 9px; }
+.grp-items .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.grp-items .row .code { flex: 0 0 auto; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-weight: 800; font-size: 12px; margin-bottom: 5px; }
+.field input[type=text], .field input[type=date], .field textarea, .field select {
+  width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px;
+  padding: 8px 10px; background: #fff; color: var(--text);
+}
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,145,178,.12); }
+.dropzone {
+  border: 1.5px dashed var(--line); border-radius: var(--radius); background: var(--surface2);
+  padding: 16px; text-align: center; color: var(--muted);
+}
+.summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; }
+.summary-row strong { font-weight: 800; }
+
+/* approval review */
+.review-grid { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 14px; }
+.kv { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px; padding: 6px 0; }
+.kv span { color: var(--muted); }
+.dept-group { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; }
+.dept-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; background: var(--surface2); border-bottom: 1px solid var(--line);
+}
+.dept-head .left { display: flex; align-items: center; gap: 10px; }
+.dept-owner { color: var(--muted); font-size: 11px; }
+.dept-row {
+  display: grid; grid-template-columns: 32px minmax(0,1fr) 130px 120px; gap: 12px;
+  align-items: center; padding: 10px 14px; border-bottom: 1px solid #edf3f7;
+}
+.dept-row:last-child { border-bottom: 0; }
+
+/* confirm screen (owner) */
+.confirm-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid #b5d4f4; background: #e6f1fb; border-radius: var(--radius);
+  margin-bottom: 14px; color: #185fa5; font-weight: 700;
+}
+
+/* tracking board (back to planner) */
+.track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.track-card { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg,#fff,#f8fbff); padding: 14px; }
+.track-card .num { font-size: 26px; font-weight: 800; margin: 6px 0 2px; }
+.progress { height: 7px; border-radius: 999px; background: #eef4f8; overflow: hidden; display: flex; margin-top: 10px; }
+.progress i { display: block; height: 100%; }
+
+.note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--line); color: var(--muted); font-size: 12px; margin-top: 14px; }
+
+@media (max-width: 980px) {
+  .split, .review-grid { grid-template-columns: 1fr; }
+  .flow-rail { grid-template-columns: 1fr 1fr; gap: 18px 0; }
+  .flow-step:nth-child(2)::after, .flow-step:nth-child(4)::after { display: none; }
+  .track { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 620px) {
+  .page { width: min(100% - 20px, 1180px); padding-top: 14px; }
+  .top { flex-direction: column; }
+  .option { padding: 12px; }
+  .option-head { flex-direction: column; }
+  .flow-rail { grid-template-columns: 1fr; }
+  .flow-step::after { display: none !important; }
+  .track { grid-template-columns: 1fr; }
+  .table-wrap { overflow-x: auto; }
+  .table { min-width: 720px; }
+  .dept-row { grid-template-columns: 28px minmax(0,1fr) 110px; }
+  .dept-row .hide-mobile { display: none; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div>
+      <h1>ระบบวางแผนสอบเทียบ — Workflow Design</h1>
+      <p>ออกแบบ flow การวางแผนสอบเทียบ: ผู้วางแผนเลือกเครื่องมือและวันที่เข้าสอบ → ส่งให้ Admin อนุมัติ → กระจายไปให้ผู้รับผิดชอบเครื่องมือแต่ละหน่วยงานยืนยัน → ผลยืนยันส่งกลับมาที่ผู้วางแผน (เลือกเฉพาะวันที่ ไม่ระบุเวลา)</p>
+    </div>
+    <div class="project-badge">Mockup preview</div>
+  </header>
+
+  <nav class="jump" aria-label="Screens">
+    <a href="#flow"><i class="ti ti-route"></i>ภาพรวม Flow</a>
+    <a href="#s1"><i class="ti ti-list-check"></i>1 ผู้วางแผน</a>
+    <a href="#s2"><i class="ti ti-stamp"></i>2 Admin อนุมัติ</a>
+    <a href="#s3"><i class="ti ti-users-group"></i>3 หน่วยงานยืนยัน</a>
+    <a href="#s4"><i class="ti ti-checkup-list"></i>4 ส่งกลับผู้วางแผน</a>
+  </nav>
+
+  <!-- ===================== FLOW OVERVIEW ===================== -->
+  <section class="flow" id="flow">
+    <div class="flow-rail">
+      <div class="flow-step">
+        <div class="bubble b-blue"><i class="ti ti-list-check"></i></div>
+        <div class="role">วางแผน</div>
+        <div class="who">ผู้วางแผนสอบเทียบ (Editor)</div>
+        <div class="act"><i class="ti ti-send"></i>เลือกเครื่องมือ + ช่วงวัน</div>
+      </div>
+      <div class="flow-step">
+        <div class="bubble b-violet"><i class="ti ti-stamp"></i></div>
+        <div class="role">อนุมัติ</div>
+        <div class="who">ผู้อนุมัติ (Admin)</div>
+        <div class="act"><i class="ti ti-check"></i>อนุมัติ / ปฏิเสธ</div>
+      </div>
+      <div class="flow-step">
+        <div class="bubble b-amber"><i class="ti ti-users-group"></i></div>
+        <div class="role">ยืนยัน</div>
+        <div class="who">ผู้รับผิดชอบแต่ละหน่วยงาน</div>
+        <div class="act"><i class="ti ti-calendar-check"></i>ยืนยันช่วงวัน (เป็นกลุ่ม)</div>
+      </div>
+      <div class="flow-step">
+        <div class="bubble b-green"><i class="ti ti-checkup-list"></i></div>
+        <div class="role">สรุปผล</div>
+        <div class="who">กลับมาที่ผู้วางแผน</div>
+        <div class="act"><i class="ti ti-clipboard-check"></i>พร้อมเข้าสอบเทียบ</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREEN 1 — PLANNER ===================== -->
+  <section class="option" id="s1">
+    <div class="option-head">
+      <div class="option-title">
+        <div class="option-num b-blue">01</div>
+        <div>
+          <h2>ผู้วางแผน — เลือกเครื่องมือและกำหนดวันที่</h2>
+          <p class="hint">เลือกเครื่องมือที่จะเข้าสอบเทียบ และระบุวันที่จะเข้าไปสอบเทียบรายเครื่อง (เลือกเฉพาะวันที่) จากนั้นส่งให้ผู้อนุมัติ</p>
+        </div>
+      </div>
+      <span class="fit blue"><i class="ti ti-user-edit"></i>บทบาท: ผู้วางแผน</span>
+    </div>
+
+    <div class="mini-steps">
+      <span class="mini-step active"><span class="n">1</span>เลือกเครื่องมือ + วันที่</span>
+      <span class="mini-step"><span class="n">2</span>ตั้งชื่อแผน + แนบไฟล์</span>
+      <span class="mini-step"><span class="n">3</span>ส่งให้ผู้อนุมัติ</span>
+    </div>
+
+    <div class="toolbar">
+      <div class="chips">
+        <span class="chip active">ทั้งหมด 1,709</span>
+        <span class="chip">เกินกำหนด 23</span>
+        <span class="chip">ใกล้ครบ 41</span>
+        <span class="chip">D Calipers</span>
+        <span class="chip">B Balance</span>
+        <span class="chip">P Pressure</span>
+      </div>
+      <div class="actions">
+        <button class="btn ghost sm"><i class="ti ti-filter"></i>ตัวกรอง</button>
+        <button class="btn ghost sm"><i class="ti ti-checks"></i>เลือกทั้งหน้า</button>
+      </div>
+    </div>
+
+    <div class="split">
+      <!-- instrument list -->
+      <div class="panel">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:34px"></th><th>รหัส</th><th>เครื่องมือ</th><th>หน่วยงาน</th><th>ครบกำหนด</th><th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="sel">
+                <td><input class="checkbox" type="checkbox" checked></td>
+                <td><span class="code">CAL-02600</span></td>
+                <td><div class="instrument-cell"><span class="iconbox"><i class="ti ti-ruler-measure"></i></span><div><div class="name">Digital Caliper 0-150mm</div><div class="sub">D Calipers · Fluke MX-1000</div></div></div></td>
+                <td>Metrology Lab</td>
+                <td><strong>07 มิ.ย. 69</strong></td>
+                <td><span class="status over">เกินกำหนด</span></td>
+              </tr>
+              <tr class="sel">
+                <td><input class="checkbox" type="checkbox" checked></td>
+                <td><span class="code">CAL-02634</span></td>
+                <td><div class="instrument-cell"><span class="iconbox green"><i class="ti ti-scale"></i></span><div><div class="name">Precision Balance 6.2kg</div><div class="sub">B Balance · Ametek T-1358</div></div></div></td>
+                <td>Production 2</td>
+                <td><strong>15 มิ.ย. 69</strong></td>
+                <td><span class="status warn">ใกล้ครบ 5 วัน</span></td>
+              </tr>
+              <tr>
+                <td><input class="checkbox" type="checkbox"></td>
+                <td><span class="code">CAL-02603</span></td>
+                <td><div class="instrument-cell"><span class="iconbox amber"><i class="ti ti-gauge"></i></span><div><div class="name">Vacuum Transducer</div><div class="sub">P Pressure · E+H X1111</div></div></div></td>
+                <td>Production 2</td>
+                <td><strong>12 มิ.ย. 69</strong></td>
+                <td><span class="status warn">ใกล้ครบ 2 วัน</span></td>
+              </tr>
+              <tr class="sel">
+                <td><input class="checkbox" type="checkbox" checked></td>
+                <td><span class="code">CAL-02662</span></td>
+                <td><div class="instrument-cell"><span class="iconbox"><i class="ti ti-thermometer"></i></span><div><div class="name">Dry-block Calibrator</div><div class="sub">T Temperature · Tektronix S1494</div></div></div></td>
+                <td>Thermal Lab</td>
+                <td><strong>30 มิ.ย. 69</strong></td>
+                <td><span class="status ok">ปกติ</span></td>
+              </tr>
+              <tr>
+                <td><input class="checkbox" type="checkbox"></td>
+                <td><span class="code">CAL-02641</span></td>
+                <td><div class="instrument-cell"><span class="iconbox green"><i class="ti ti-wave-sine"></i></span><div><div class="name">Turbine Flow Meter</div><div class="sub">Q Flow · Yokogawa PRO-1617</div></div></div></td>
+                <td>Cleanroom 1</td>
+                <td><strong>22 มิ.ย. 69</strong></td>
+                <td><span class="status ok">ปกติ</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- selected groups (by department + type) with date range -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3><i class="ti ti-stack-2"></i> กลุ่มที่เลือก (ตามหน่วยงาน)</h3>
+          <span class="status appr">3 กลุ่ม · 14 รายการ</span>
+        </div>
+        <div class="panel-body">
+
+          <!-- group: BB Balance -->
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#16a34a">BB</span>
+                <div>
+                  <div class="grp-title">Balance — หน่วยงาน BB</div>
+                  <div class="grp-sub">B Balance · 10 รายการ</div>
+                </div>
+              </div>
+              <button class="btn ghost sm" onclick="this.closest('.grp').querySelector('.grp-items').style.display = this.closest('.grp').querySelector('.grp-items').style.display==='none'?'block':'none'"><i class="ti ti-chevron-down"></i></button>
+            </div>
+            <div class="grp-body">
+              <div class="range">
+                <div><span class="lab">เข้าสอบตั้งแต่</span><input class="dateinput" type="date" value="2026-06-10"></div>
+                <div class="arrow"><i class="ti ti-arrow-right"></i></div>
+                <div><span class="lab">ถึงวันที่</span><input class="dateinput" type="date" value="2026-06-25"></div>
+              </div>
+              <span class="range-summary"><i class="ti ti-calendar-week"></i> 10 – 25 มิ.ย. 69 · 16 วัน</span>
+              <div class="grp-items" style="display:none">
+                <div class="row"><span class="code">CAL-02634</span><span class="name" style="font-size:12px">Precision Balance 6.2kg</span></div>
+                <div class="row"><span class="code">CAL-02635</span><span class="name" style="font-size:12px">Analytical Balance 220g</span></div>
+                <div class="row"><span class="code">CAL-02636</span><span class="name" style="font-size:12px">Bench Scale 30kg</span></div>
+                <div class="row" style="color:var(--muted)"><i class="ti ti-dots"></i> และอีก 7 รายการ</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- group: MT Calipers -->
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#2563eb">MT</span>
+                <div>
+                  <div class="grp-title">Calipers — Metrology Lab</div>
+                  <div class="grp-sub">D Calipers · 3 รายการ</div>
+                </div>
+              </div>
+              <button class="btn ghost sm"><i class="ti ti-chevron-down"></i></button>
+            </div>
+            <div class="grp-body">
+              <div class="range">
+                <div><span class="lab">เข้าสอบตั้งแต่</span><input class="dateinput" type="date" value="2026-06-18"></div>
+                <div class="arrow"><i class="ti ti-arrow-right"></i></div>
+                <div><span class="lab">ถึงวันที่</span><input class="dateinput" type="date" value="2026-06-19"></div>
+              </div>
+              <span class="range-summary"><i class="ti ti-calendar-week"></i> 18 – 19 มิ.ย. 69 · 2 วัน</span>
+            </div>
+          </div>
+
+          <!-- group: TL Thermal -->
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#0891b2">TL</span>
+                <div>
+                  <div class="grp-title">Temperature — Thermal Lab</div>
+                  <div class="grp-sub">T Temperature · 1 รายการ</div>
+                </div>
+              </div>
+              <button class="btn ghost sm"><i class="ti ti-chevron-down"></i></button>
+            </div>
+            <div class="grp-body">
+              <div class="range">
+                <div><span class="lab">เข้าสอบตั้งแต่</span><input class="dateinput" type="date" value="2026-06-25"></div>
+                <div class="arrow"><i class="ti ti-arrow-right"></i></div>
+                <div><span class="lab">ถึงวันที่</span><input class="dateinput" type="date" value="2026-06-25"></div>
+              </div>
+              <span class="range-summary"><i class="ti ti-calendar-week"></i> 25 มิ.ย. 69 · วันเดียว</span>
+            </div>
+          </div>
+
+          <div style="border-top:1px dashed var(--line); margin:6px 0 12px"></div>
+
+          <div class="field">
+            <label>ชื่อแผนสอบเทียบ</label>
+            <input type="text" value="แผนสอบเทียบ Q2 — รอบ มิ.ย. 69">
+          </div>
+          <div class="field">
+            <label>แนบไฟล์แผน (ไม่บังคับ)</label>
+            <div class="dropzone"><i class="ti ti-cloud-upload" style="font-size:22px"></i><div style="margin-top:4px">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</div></div>
+          </div>
+
+          <div class="summary-row"><span class="sub">เครื่องมือทั้งหมด</span><strong>14 รายการ</strong></div>
+          <div class="summary-row"><span class="sub">จำนวนกลุ่ม / หน่วยงาน</span><strong>3 กลุ่ม</strong></div>
+          <div class="summary-row"><span class="sub">ช่วงวันสอบเทียบรวม</span><strong>10 – 25 มิ.ย. 69</strong></div>
+
+          <button class="btn primary" style="width:100%; margin-top:12px"><i class="ti ti-send"></i> ส่งให้ผู้อนุมัติ</button>
+        </div>
+      </div>
+    </div>
+    <div class="note"><i class="ti ti-info-circle"></i><div>เครื่องมือที่เลือกจะถูกจัดเป็น "กลุ่ม" ตามหน่วยงาน+ประเภท แต่ละกลุ่มกำหนด <strong>ช่วงวันสอบเทียบ (ตั้งแต่–ถึง)</strong> เช่น Balance 10 รายการของ BB เข้าสอบช่วง 10–25 มิ.ย. 69 — ผู้อนุมัติและผู้รับผิดชอบจึงพิจารณา/ยืนยันเป็นกลุ่มได้ในครั้งเดียว ระบบเก็บเฉพาะวันที่ ไม่บันทึกเวลา</div></div>
+  </section>
+
+  <!-- ===================== SCREEN 2 — ADMIN APPROVE ===================== -->
+  <section class="option" id="s2">
+    <div class="option-head">
+      <div class="option-title">
+        <div class="option-num b-violet">02</div>
+        <div>
+          <h2>ผู้อนุมัติ (Admin) — ตรวจและอนุมัติแผน</h2>
+          <p class="hint">Admin เห็นรายการแผนที่รอการอนุมัติ ตรวจเครื่องมือและวันที่นัด แล้วอนุมัติเพื่อส่งต่อไปยังผู้รับผิดชอบแต่ละหน่วยงาน หรือปฏิเสธพร้อมเหตุผล</p>
+        </div>
+      </div>
+      <span class="fit violet"><i class="ti ti-shield-check"></i>บทบาท: Admin</span>
+    </div>
+
+    <div class="review-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h3><i class="ti ti-file-description"></i> แผนสอบเทียบ Q2 — รอบ มิ.ย. 69</h3>
+          <span class="status wait">รออนุมัติ</span>
+        </div>
+        <div class="panel-body" style="padding-top:6px">
+          <div class="kv"><span>ผู้วางแผน</span><strong>สมหญิง ก. · Editor</strong></div>
+          <div class="kv"><span>ส่งเมื่อ</span><strong>10 มิ.ย. 69 14:32</strong></div>
+          <div class="kv"><span>เครื่องมือ</span><strong>14 รายการ · 3 กลุ่ม</strong></div>
+          <div class="kv"><span>ช่วงวันสอบเทียบรวม</span><strong>10 – 25 มิ.ย. 69</strong></div>
+          <div style="border-top:1px solid var(--line); margin:10px 0"></div>
+          <div class="sub" style="font-weight:800; margin-bottom:8px">อนุมัติเป็นกลุ่ม</div>
+
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#16a34a">BB</span>
+                <div><div class="grp-title">Balance — หน่วยงาน BB</div><div class="grp-sub">B Balance · 10 รายการ · <span class="range-summary">10 – 25 มิ.ย. 69</span></div></div>
+              </div>
+              <button class="btn green sm"><i class="ti ti-check"></i>อนุมัติกลุ่ม</button>
+            </div>
+          </div>
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#2563eb">MT</span>
+                <div><div class="grp-title">Calipers — Metrology Lab</div><div class="grp-sub">D Calipers · 3 รายการ · <span class="range-summary">18 – 19 มิ.ย. 69</span></div></div>
+              </div>
+              <button class="btn green sm"><i class="ti ti-check"></i>อนุมัติกลุ่ม</button>
+            </div>
+          </div>
+          <div class="grp">
+            <div class="grp-head">
+              <div class="left">
+                <span class="grp-code" style="background:#0891b2">TL</span>
+                <div><div class="grp-title">Temperature — Thermal Lab</div><div class="grp-sub">T Temperature · 1 รายการ · <span class="range-summary">25 มิ.ย. 69</span></div></div>
+              </div>
+              <button class="btn green sm"><i class="ti ti-check"></i>อนุมัติกลุ่ม</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3><i class="ti ti-gavel"></i> การตัดสินใจ</h3></div>
+        <div class="panel-body">
+          <p class="sub" style="margin-top:0">อนุมัติทีละกลุ่มจากรายการด้านซ้าย หรืออนุมัติทั้งแผนพร้อมกัน เมื่ออนุมัติ ระบบจะส่งช่วงวันสอบเทียบของแต่ละกลุ่มไปให้ผู้รับผิดชอบหน่วยงานนั้นยืนยัน</p>
+          <button class="btn green" style="width:100%; margin-bottom:8px"><i class="ti ti-checks"></i> อนุมัติทั้งแผน (ทุกกลุ่ม)</button>
+          <div class="field" style="margin-top:6px">
+            <label>เหตุผล (กรณีปฏิเสธ)</label>
+            <textarea rows="3" placeholder="ระบุเหตุผลที่ปฏิเสธ..."></textarea>
+          </div>
+          <button class="btn danger" style="width:100%"><i class="ti ti-x"></i> ปฏิเสธแผน</button>
+          <div class="note" style="margin-top:14px"><i class="ti ti-route"></i><div>หลังอนุมัติ สถานะแผนจะเปลี่ยนเป็น <strong>"รอหน่วยงานยืนยัน"</strong> และแจ้งเตือนไปยังผู้รับผิดชอบของ 3 หน่วยงาน</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREEN 3 — DEPARTMENT OWNER CONFIRM ===================== -->
+  <section class="option" id="s3">
+    <div class="option-head">
+      <div class="option-title">
+        <div class="option-num b-amber">03</div>
+        <div>
+          <h2>ผู้รับผิดชอบหน่วยงาน — ยืนยันการเข้าสอบเทียบ</h2>
+          <p class="hint">หลัง Admin อนุมัติ แผนถูกแบ่งตามหน่วยงาน ผู้รับผิดชอบแต่ละหน่วยงานเห็นเฉพาะเครื่องมือของตน ยืนยันวันที่ (หรือเสนอวันใหม่) แล้วส่งกลับ</p>
+        </div>
+      </div>
+      <span class="fit amber"><i class="ti ti-user-check"></i>บทบาท: ผู้รับผิดชอบ (ตาม department)</span>
+    </div>
+
+    <div class="confirm-bar">
+      <span><i class="ti ti-bell-ringing"></i> คุณได้รับมอบหมายให้ยืนยัน <strong>กลุ่ม Balance · 10 เครื่องมือ</strong> ช่วง 10–25 มิ.ย. 69 จากแผน "แผนสอบเทียบ Q2"</span>
+      <span class="status wait">รอคุณยืนยัน</span>
+    </div>
+
+    <!-- BB Balance group (this owner) — confirm the date range -->
+    <div class="dept-group">
+      <div class="dept-head">
+        <div class="left">
+          <span class="grp-code" style="background:#16a34a">BB</span>
+          <div>
+            <div class="name" style="font-size:13px">Balance — หน่วยงาน BB</div>
+            <div class="dept-owner">ผู้รับผิดชอบ: ปิยะ ส. (คุณ) · 10 รายการ</div>
+          </div>
+        </div>
+        <span class="status wait">รอยืนยัน</span>
+      </div>
+      <div class="grp-body">
+        <div class="sub" style="margin-bottom:8px">ผู้วางแผนเสนอช่วงวันสอบเทียบ — ยืนยันตามนี้ หรือปรับช่วงที่หน่วยงานสะดวก</div>
+        <div class="range" style="max-width:420px">
+          <div><span class="lab">เข้าสอบตั้งแต่</span><input class="dateinput" type="date" value="2026-06-10"></div>
+          <div class="arrow"><i class="ti ti-arrow-right"></i></div>
+          <div><span class="lab">ถึงวันที่</span><input class="dateinput" type="date" value="2026-06-25"></div>
+        </div>
+        <span class="range-summary"><i class="ti ti-calendar-week"></i> 10 – 25 มิ.ย. 69 · 16 วัน</span>
+        <div class="grp-items">
+          <div class="row"><input class="checkbox" type="checkbox" checked><span class="code">CAL-02634</span><span class="name" style="font-size:12px">Precision Balance 6.2kg</span></div>
+          <div class="row"><input class="checkbox" type="checkbox" checked><span class="code">CAL-02635</span><span class="name" style="font-size:12px">Analytical Balance 220g</span></div>
+          <div class="row"><input class="checkbox" type="checkbox" checked><span class="code">CAL-02636</span><span class="name" style="font-size:12px">Bench Scale 30kg</span></div>
+          <div class="row" style="color:var(--muted)"><i class="ti ti-dots"></i> และอีก 7 รายการ (เลือกทั้งหมด)</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; padding:12px 14px; border-top:1px solid var(--line); background:var(--surface2)">
+        <button class="btn ghost sm"><i class="ti ti-calendar-plus"></i>เสนอช่วงใหม่</button>
+        <button class="btn danger sm"><i class="ti ti-x"></i>แจ้งไม่พร้อม</button>
+        <button class="btn green sm"><i class="ti ti-check"></i>ยืนยันช่วงสอบเทียบ</button>
+      </div>
+    </div>
+
+    <!-- other groups (read-only progress for context) -->
+    <div class="dept-group">
+      <div class="dept-head">
+        <div class="left">
+          <span class="grp-code" style="background:#2563eb">MT</span>
+          <div>
+            <div class="name" style="font-size:13px">Calipers — Metrology Lab</div>
+            <div class="dept-owner">ผู้รับผิดชอบ: สมชาย ว. · 3 รายการ</div>
+          </div>
+        </div>
+        <span class="status conf">ยืนยันแล้ว</span>
+      </div>
+      <div class="dept-row">
+        <span class="iconbox" style="width:24px;height:24px;font-size:13px"><i class="ti ti-ruler-measure"></i></span>
+        <div><div class="name" style="font-size:12px">D Calipers · 3 รายการ</div><div class="sub">CAL-02600, CAL-02601, CAL-02602</div></div>
+        <div class="hide-mobile"><div class="sub">ยืนยันช่วง</div><strong>18 – 19 มิ.ย. 69</strong></div>
+        <div style="text-align:right"><span class="status conf">เข้าสอบ 18–19 มิ.ย.</span></div>
+      </div>
+    </div>
+
+    <div class="dept-group">
+      <div class="dept-head">
+        <div class="left">
+          <span class="grp-code" style="background:#0891b2">TL</span>
+          <div>
+            <div class="name" style="font-size:13px">Temperature — Thermal Lab</div>
+            <div class="dept-owner">ผู้รับผิดชอบ: อรุณ ม. · 1 รายการ</div>
+          </div>
+        </div>
+        <span class="status wait">รอยืนยัน</span>
+      </div>
+      <div class="dept-row">
+        <span class="iconbox" style="width:24px;height:24px;font-size:13px"><i class="ti ti-thermometer"></i></span>
+        <div><div class="name" style="font-size:12px">Dry-block Calibrator</div><div class="sub">CAL-02662 · T Temperature</div></div>
+        <div class="hide-mobile"><div class="sub">ช่วงที่เสนอ</div><strong>25 มิ.ย. 69</strong></div>
+        <div style="text-align:right"><span class="status wait">ยังไม่ตอบ</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREEN 4 — BACK TO PLANNER ===================== -->
+  <section class="option" id="s4">
+    <div class="option-head">
+      <div class="option-title">
+        <div class="option-num b-green">04</div>
+        <div>
+          <h2>กลับมาที่ผู้วางแผน — ติดตามผลการยืนยัน</h2>
+          <p class="hint">เมื่อหน่วยงานยืนยัน ผลจะส่งกลับมาที่ผู้วางแผนแบบเรียลไทม์ เห็นความคืบหน้าต่อหน่วยงานและสรุปวันที่จริงที่แต่ละเครื่องมือพร้อมเข้าสอบเทียบ</p>
+        </div>
+      </div>
+      <span class="fit green"><i class="ti ti-clipboard-check"></i>บทบาท: ผู้วางแผน</span>
+    </div>
+
+    <div class="track">
+      <div class="track-card">
+        <span class="sub">เครื่องมือทั้งหมด</span>
+        <div class="num">14</div>
+        <div class="sub">ใน 3 กลุ่ม</div>
+      </div>
+      <div class="track-card">
+        <span class="sub">กลุ่มที่ยืนยันแล้ว</span>
+        <div class="num" style="color:var(--green)">2</div>
+        <div class="progress"><i style="width:67%;background:var(--green)"></i></div>
+      </div>
+      <div class="track-card">
+        <span class="sub">กลุ่มที่รอยืนยัน</span>
+        <div class="num" style="color:var(--amber)">1</div>
+        <div class="sub">Thermal Lab (TL)</div>
+      </div>
+      <div class="track-card">
+        <span class="sub">ความคืบหน้า</span>
+        <div class="num" style="color:var(--accent)">67%</div>
+        <div class="progress"><i style="width:67%;background:var(--accent)"></i></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head">
+        <h3><i class="ti ti-list-details"></i> สรุปการยืนยันรายกลุ่ม</h3>
+        <span class="status appr">อัปเดต 10 มิ.ย. 69 16:05</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>กลุ่ม / หน่วยงาน</th><th>ประเภท</th><th>จำนวน</th><th>ช่วงสอบเทียบที่ยืนยัน</th><th>ยืนยันโดย</th><th>สถานะ</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="code">BB</span> <span class="name" style="font-size:12px">Balance — หน่วยงาน BB</span></td>
+              <td class="sub">B Balance</td>
+              <td><strong>10</strong></td>
+              <td><strong>10 – 25 มิ.ย. 69</strong></td>
+              <td class="sub">ปิยะ ส.</td>
+              <td><span class="status conf">ยืนยันแล้ว</span></td>
+            </tr>
+            <tr>
+              <td><span class="code">MT</span> <span class="name" style="font-size:12px">Calipers — Metrology Lab</span></td>
+              <td class="sub">D Calipers</td>
+              <td><strong>3</strong></td>
+              <td><strong>18 – 19 มิ.ย. 69</strong></td>
+              <td class="sub">สมชาย ว.</td>
+              <td><span class="status conf">ยืนยันแล้ว</span></td>
+            </tr>
+            <tr>
+              <td><span class="code">TL</span> <span class="name" style="font-size:12px">Temperature — Thermal Lab</span></td>
+              <td class="sub">T Temperature</td>
+              <td><strong>1</strong></td>
+              <td class="sub">เสนอ 25 มิ.ย. 69</td>
+              <td class="sub">อรุณ ม.</td>
+              <td><span class="status wait">รอยืนยัน</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel-body" style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-top:1px solid var(--line)">
+        <span class="sub"><i class="ti ti-bell"></i> ส่งการแจ้งเตือนซ้ำไปยังหน่วยงานที่ยังไม่ยืนยันได้</span>
+        <div class="actions">
+          <button class="btn ghost sm"><i class="ti ti-send"></i>เตือนหน่วยงานที่ค้าง</button>
+          <button class="btn primary sm"><i class="ti ti-calendar-check"></i>ปิดแผน (เมื่อครบทุกหน่วยงาน)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><i class="ti ti-git-branch"></i><div>สถานะแผนตลอด flow: <span class="status wait">รออนุมัติ</span> → <span class="status appr">รอหน่วยงานยืนยัน</span> → <span class="status conf">ยืนยันครบ พร้อมสอบเทียบ</span> &nbsp;(หากถูกปฏิเสธ → <span class="status rej">ปฏิเสธ</span> ส่งกลับผู้วางแผนพร้อมเหตุผล)</div></div>
+  </section>
+</main>
+</body>
+</html>
