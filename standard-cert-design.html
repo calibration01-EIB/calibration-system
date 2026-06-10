@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Standard Certificate Registry — Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #eef4f8;
+  --surface: #ffffff;
+  --surface-soft: #f7fafc;
+  --line: #d9e5ee;
+  --line-soft: #eaf0f5;
+  --text: #102337;
+  --muted: #61758a;
+  --soft: #8aa0b4;
+  --accent: #0788a6;
+  --accent-soft: #e4f8fb;
+  --green: #168a4a;
+  --green-soft: #ecfdf3;
+  --amber: #ee7b12;
+  --amber-soft: #fff5e9;
+  --red: #dc3545;
+  --red-soft: #fff0f2;
+  --blue: #2563eb;
+  --radius: 8px;
+  --shadow: 0 14px 34px rgba(25, 58, 90, .08);
+  --font: "IBM Plex Sans Thai", sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+.page { width: min(1240px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 44px; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.title-block h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+.title-block p { margin: 5px 0 0; color: var(--muted); max-width: 640px; }
+.top-stats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.stat { min-width: 112px; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.stat span { display: block; color: var(--muted); font-size: 11px; }
+.stat strong { display: block; margin-top: 2px; font-size: 19px; line-height: 1; }
+.toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+.searchbox { position: relative; }
+.searchbox i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--soft); font-size: 17px; }
+.searchbox input {
+  width: 100%; height: 38px; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 0 12px 0 36px; background: var(--surface); color: var(--text); outline: none;
+}
+.searchbox input:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.select { height: 38px; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 32px 0 12px; background: var(--surface); color: var(--text); outline: none; }
+.btn {
+  min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--text);
+  padding: 0 12px; font-weight: 700;
+}
+.btn:hover { border-color: rgba(8,136,166,.35); }
+.btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+.btn.ghost { background: var(--surface-soft); }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.registry { border: 1px solid rgba(37, 99, 235, .12); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.registry-head { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.registry-head h2 { margin: 0; font-size: 15px; }
+.count-label { min-height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-soft); color: var(--muted); font-weight: 700; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; min-width: 980px; border-collapse: collapse; }
+.table th { height: 42px; padding: 0 14px; text-align: left; color: #31465b; background: #edf4f8; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; }
+.table td { height: 56px; padding: 0 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: #edf8fb; }
+.name { color: #071f35; font-weight: 800; }
+.sub { color: var(--muted); font-size: 11px; }
+.iconbox {
+  width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center;
+  border: 1px solid #bfece0; border-radius: var(--radius); background: #e9fbf6; color: #00897b; font-size: 18px;
+}
+.cert-cell { display: flex; align-items: center; gap: 9px; min-width: 220px; }
+.badge {
+  min-height: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px;
+  border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge.ok { color: var(--green); border: 1px solid #b7efca; background: var(--green-soft); }
+.badge.warn { color: var(--amber); border: 1px solid #ffd0a0; background: var(--amber-soft); }
+.badge.expired { color: var(--red); border: 1px solid #ffc8d0; background: var(--red-soft); }
+.badge.superseded { color: #5f6b7a; border: 1px solid #d5dbe2; background: #eef0f3; }
+.chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; background: var(--accent-soft); color: #06718b; border: 1px solid #a7e2ef; white-space: nowrap; }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+/* modal */
+.modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(16,35,55,.42); }
+.modal.open { display: flex; }
+.modal-box {
+  width: min(920px, 100%); max-height: min(820px, calc(100vh - 30px)); display: flex; flex-direction: column;
+  border-radius: var(--radius); background: #fff; box-shadow: 0 24px 70px rgba(0,0,0,.22);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.modal-head h3 { margin: 0; font-size: 15px; }
+.modal-body { overflow: auto; padding: 12px 16px 16px; }
+.detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.detail-title { display: flex; gap: 9px; align-items: center; }
+.detail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-bottom: 10px; }
+.metric { min-height: 50px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-soft); padding: 6px 9px; }
+.metric > span { display: block; color: #4a6075; font-size: 11px; font-weight: 700; }
+.metric strong { display: block; margin-top: 2px; font-size: 13px; }
+.section-title { display: flex; align-items: center; gap: 7px; margin: 14px 0 6px; color: var(--text); font-size: 12px; font-weight: 800; }
+.section-title::before { content: ""; width: 3px; height: 14px; flex: 0 0 auto; border-radius: 999px; background: var(--accent); }
+.section-title span:first-of-type { margin-right: auto; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.info-item { min-width: 0; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+.info-item.full { grid-column: 1 / -1; }
+.info-item span { display: block; color: #4a6075; font-size: 11px; font-weight: 700; }
+.info-item strong { display: block; margin-top: 1px; color: var(--text); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
+/* results table */
+.vals { width: 100%; border-collapse: collapse; }
+.vals th { height: 36px; padding: 0 10px; text-align: left; color: #31465b; background: #edf4f8; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.vals td { height: 38px; padding: 0 10px; border-bottom: 1px solid var(--line-soft); font-size: 12px; white-space: nowrap; }
+.vals td.num { text-align: right; }
+.vals th.num { text-align: right; }
+.pass { color: var(--green); font-weight: 800; }
+.fail { color: var(--red); font-weight: 800; }
+.calc-box { border: 1px solid #a7e2ef; background: var(--accent-soft); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+.calc-box .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.calc-out { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; margin-top: 10px; }
+.calc-out .metric { background: #fff; }
+.note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: var(--radius); background: var(--surface-soft); border: 1px solid var(--line); color: var(--muted); font-size: 12px; margin-top: 12px; }
+.file-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; padding: 7px 9px; }
+.file-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); }
+/* edit form */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: grid; gap: 5px; }
+.field.full { grid-column: 1 / -1; }
+.field label { color: var(--muted); font-size: 12px; font-weight: 700; }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 8px 10px; background: #fff; color: var(--text); outline: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.rows-edit { width: 100%; border-collapse: collapse; }
+.rows-edit th { text-align: left; color: #31465b; font-size: 11px; padding: 6px 6px; background: #edf4f8; }
+.rows-edit td { padding: 4px 4px; }
+.rows-edit input, .rows-edit select { width: 100%; min-height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; background: #fff; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.toast {
+  position: fixed; right: 18px; bottom: 18px; z-index: 80; display: none; min-height: 40px;
+  align-items: center; gap: 8px; border-radius: var(--radius); border: 1px solid #b7efca;
+  background: #ecfdf3; color: var(--green); padding: 0 12px; box-shadow: var(--shadow); font-weight: 800;
+}
+.toast.show { display: inline-flex; }
+@media (max-width: 760px) {
+  .page { width: min(100% - 20px, 1240px); padding-top: 14px; }
+  .topbar { flex-direction: column; }
+  .toolbar { grid-template-columns: 1fr; }
+  .metric-grid, .info-grid, .form-grid, .calc-out { grid-template-columns: 1fr; }
+  .info-item.full, .field.full { grid-column: auto; }
+  .modal { padding: 10px; align-items: flex-end; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="topbar">
+    <div class="title-block">
+      <h1>ใบรับรองมาตรฐาน (Cert. Standard)</h1>
+      <p>เก็บใบ Certificate ของตุ้มน้ำหนัก/เครื่องมือมาตรฐานทั้งชุด พร้อมตารางผลวัดรายลูก (Conventional mass · Uncertainty · MPE) เพื่อดึงค่าไปใช้คำนวณในการสอบเทียบเครื่องชั่งต่อไป</p>
+    </div>
+    <div class="top-stats">
+      <div class="stat"><span>ใบ Cert ทั้งหมด</span><strong id="stTotal">0</strong></div>
+      <div class="stat"><span>ใช้งานอยู่</span><strong id="stOk" style="color:var(--green)">0</strong></div>
+      <div class="stat"><span>ใกล้หมดอายุ</span><strong id="stWarn" style="color:var(--amber)">0</strong></div>
+      <div class="stat"><span>หมดอายุ/แทนที่</span><strong id="stExpired" style="color:var(--red)">0</strong></div>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <label class="searchbox" for="searchInput">
+      <i class="ti ti-search"></i>
+      <input id="searchInput" type="search" placeholder="ค้นหา Cert No., ชุดมาตรฐาน, S/N, รายการ, Lab">
+    </label>
+    <select id="setFilter" class="select"><option value="">ทุกชุดมาตรฐาน</option></select>
+    <select id="statusFilter" class="select">
+      <option value="">สถานะทั้งหมด</option>
+      <option value="ok">ใช้งานอยู่</option>
+      <option value="warn">ใกล้หมดอายุ</option>
+      <option value="expired">หมดอายุ</option>
+      <option value="superseded">มีใบใหม่แทน</option>
+    </select>
+    <button class="btn primary" onclick="openEdit(null)"><i class="ti ti-certificate"></i> เพิ่มใบ Cert</button>
+  </section>
+
+  <section class="registry">
+    <div class="registry-head">
+      <h2><i class="ti ti-certificate-2"></i> ทะเบียนใบรับรองมาตรฐาน</h2>
+      <span class="count-label" id="resultCount">0 ใบ</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Certificate</th>
+            <th>ชุดมาตรฐาน</th>
+            <th>Class</th>
+            <th>S/N</th>
+            <th>จำนวนตุ้ม</th>
+            <th>วันที่สอบเทียบ</th>
+            <th>ครบกำหนด</th>
+            <th>สถานะ</th>
+            <th>ไฟล์</th>
+          </tr>
+        </thead>
+        <tbody id="certBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="note"><i class="ti ti-info-circle"></i><div>
+    คลิกใบ Cert เพื่อดูตารางผลวัดรายลูกและทดลองดึงค่าไปใช้คำนวณ — ระบบจะเลือก<strong>ใบล่าสุดที่ยังไม่หมดอายุ</strong>ของแต่ละชุดมาตรฐานให้โมดูลสอบเทียบโดยอัตโนมัติ ใบเก่าจะถูกขึ้นป้าย "มีใบใหม่แทน" และเก็บไว้เป็นประวัติ
+  </div></div>
+</main>
+
+<!-- DETAIL MODAL -->
+<div class="modal" id="detailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><i class="ti ti-certificate"></i> รายละเอียดใบรับรอง</h3>
+      <button class="btn ghost sm" type="button" onclick="closeDetail()"><i class="ti ti-x"></i> ปิด</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal" id="editModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="editTitle">เพิ่มใบ Cert</h3>
+      <button class="btn ghost sm" type="button" onclick="closeEdit()"><i class="ti ti-x"></i> ปิด</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Certificate No.</label><input id="fCertNo" type="text" placeholder="MM-0161-22"></div>
+        <div class="field"><label>ชุดมาตรฐาน (ID ภายใน)</label><input id="fSetCode" type="text" placeholder="E2-CLCLRS01"></div>
+        <div class="field full"><label>รายการ (Measurement item)</label><input id="fItem" type="text" placeholder="Weight set (1 mg to 1 kg)"></div>
+        <div class="field"><label>ผู้ผลิต</label><input id="fManufacturer" type="text" placeholder="Mettler Toledo"></div>
+        <div class="field"><label>Class</label>
+          <select id="fClass"><option>E1</option><option selected>E2</option><option>F1</option><option>F2</option><option>M1</option></select>
+        </div>
+        <div class="field"><label>Serial Number</label><input id="fSerial" type="text"></div>
+        <div class="field"><label>ห้องปฏิบัติการ (Issued by)</label><input id="fLab" type="text" placeholder="NIMT — Mass Laboratory"></div>
+        <div class="field"><label>วันที่สอบเทียบ</label><input id="fMeasDate" type="date" onchange="autoDue()"></div>
+        <div class="field"><label>รอบสอบเทียบ (ปี)</label><input id="fInterval" type="number" value="2" min="1" onchange="autoDue()"></div>
+        <div class="field"><label>วันครบกำหนด</label><input id="fDueDate" type="date"></div>
+        <div class="field"><label>ไฟล์ใบ Cert (PDF)</label><input id="fFile" type="file" accept=".pdf"></div>
+        <div class="field full"><label>สภาวะแวดล้อม / หมายเหตุ</label><textarea id="fRemark" rows="2" placeholder="(21.8 ± 0.3) °C, RH (53.0 ± 5.0) %, ..."></textarea></div>
+      </div>
+
+      <div class="section-title"><span>ตารางผลวัด (ตามใบ Cert)</span>
+        <button class="btn ghost sm" type="button" onclick="addValueRow()"><i class="ti ti-plus"></i> เพิ่มแถว</button>
+      </div>
+      <table class="rows-edit">
+        <thead><tr><th style="width:90px">ค่าพิกัด</th><th style="width:70px">หน่วย</th><th>Marking/Shape</th><th style="width:110px">Correction (mg)</th><th style="width:110px">U, k=2 (mg)</th><th style="width:100px">MPE ± (mg)</th><th style="width:36px"></th></tr></thead>
+        <tbody id="valueRows"></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" type="button" onclick="closeEdit()">ยกเลิก</button>
+      <button class="btn primary" type="button" onclick="saveCert()"><i class="ti ti-device-floppy"></i> บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toastText">บันทึกแล้ว</span></div>
+
+<script>
+// ===== ข้อมูลตัวอย่างจากใบ Cert จริง (NIMT) =====
+// rows: [nominal, unit, marking, correction_mg, uncertainty_mg, mpe_mg]
+const SET_ROWS = [
+  [1,'mg','triangle, wire',-0.0021,0.0020,0.006],
+  [2,'mg','square, wire',0.0016,0.0020,0.006],
+  [2,'mg','square hook, wire',0.0006,0.0020,0.006],
+  [5,'mg','pentagon, wire',-0.0011,0.0020,0.006],
+  [10,'mg','triangle, wire',0.0040,0.0025,0.008],
+  [20,'mg','square, wire',0.0038,0.0030,0.010],
+  [20,'mg','square hook, wire',0.0046,0.0030,0.010],
+  [50,'mg','pentagon, wire',0.0043,0.0040,0.012],
+  [100,'mg','triangle, wire',0.0072,0.0050,0.016],
+  [200,'mg','square, wire',0.0078,0.0060,0.020],
+  [200,'mg','square hook, wire',0.0067,0.0060,0.020],
+  [500,'mg','pentagon, wire',0.0074,0.0080,0.025],
+  [1,'g','none',0.006,0.010,0.03],
+  [2,'g','none',0.020,0.012,0.04],
+  [2,'g','point',0.008,0.012,0.04],
+  [5,'g','none',-0.002,0.016,0.05],
+  [10,'g','none',0.005,0.020,0.06],
+  [20,'g','none',0.002,0.025,0.08],
+  [20,'g','point',0.018,0.025,0.08],
+  [50,'g','none',-0.048,0.030,0.10],
+  [100,'g','none',-0.070,0.050,0.16],
+  [200,'g','none',-0.06,0.10,0.3],
+  [200,'g','point',-0.01,0.10,0.3],
+  [500,'g','none',0.03,0.25,0.8],
+  [1,'kg','none',-0.49,0.50,1.6],
+];
+const mkRows = list => list.map(([nominal_value, unit, marking, correction_mg, uncertainty_mg, mpe_mg]) =>
+  ({ nominal_value, unit, marking, correction_mg, uncertainty_mg, mpe_mg }));
+
+let certs = [
+  {
+    id: 1, cert_no: 'MM-0148-25', set_code: 'E2-CLCLRS01', item: 'Weight set (1 mg to 1 kg)',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15885',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2025-10-15', due_date: '2027-10-15', interval_years: 2,
+    remark: '(21.8 ± 0.3) °C, RH (53.0 ± 5.0) %, (1 012.4 ± 5.0) hPa · OIML R 111-1',
+    file: { name: 'E2-CLCLRS01 1mg-1kg 25.pdf', size: '1.2 MB' },
+    rows: mkRows(SET_ROWS),
+  },
+  {
+    id: 2, cert_no: 'MM-0161-22', set_code: 'E2-CLCLRS01', item: 'Weight set (1 mg to 1 kg)',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15885',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2022-10-11', due_date: '2024-10-11', interval_years: 2,
+    remark: '(21.8 ± 0.3) °C, RH (53.0 ± 5.0) %, (1 012.4 ± 5.0) hPa · OIML R 111-1',
+    file: { name: 'E2-CLCLRS01 1mg-1kg 22.pdf', size: '1.1 MB' },
+    rows: mkRows(SET_ROWS),
+  },
+  {
+    id: 3, cert_no: 'MM-0162-22', set_code: 'E2-CLCLRS02', item: 'Weight 2 kg',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15849',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2024-12-02', due_date: '2026-07-04', interval_years: 2,
+    remark: '(21.6 ± 0.3) °C, RH (50.8 ± 5.0) %, (1 013.5 ± 5.0) hPa · OIML R 111-1',
+    file: { name: 'E2-CLCLRS02 2kg 22.pdf', size: '420 KB' },
+    rows: mkRows([[2,'kg','none',1.1,1.0,3.0]]),
+  },
+  {
+    id: 4, cert_no: 'MM-0163-22', set_code: 'E2-CLCLRS02', item: 'Weight 5 kg',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15850',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2025-02-10', due_date: '2027-02-10', interval_years: 2,
+    remark: '(21.8 ± 0.3) °C, RH (52.2 ± 5.0) %, (1 008.4 ± 5.0) hPa · OIML R 111-1',
+    file: { name: 'E2-CLCLRS02 5kg 22.pdf', size: '415 KB' },
+    rows: mkRows([[5,'kg','none',4.6,2.5,8.0]]),
+  },
+  {
+    id: 5, cert_no: 'MM-0164-22', set_code: 'E2-CLCLRS02', item: 'Weight 10 kg',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15851',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2024-05-20', due_date: '2026-05-20', interval_years: 2,
+    remark: '(21.7 ± 0.3) °C, RH (52.1 ± 5.0) %, (1 009.2 ± 5.0) hPa · OIML R 111-1',
+    file: null,
+    rows: mkRows([[10,'kg','none',4.6,5.0,16]]),
+  },
+  {
+    id: 6, cert_no: 'MM-0165-22', set_code: 'E2-CLCLRS02', item: 'Weight 20 kg',
+    manufacturer: 'Mettler Toledo', class_grade: 'E2', serial_no: '15852',
+    lab: 'NIMT — Mass Laboratory', measurement_date: '2024-12-02', due_date: '2026-12-02', interval_years: 2,
+    remark: '(21.6 ± 0.3) °C, RH (51.4 ± 5.0) %, (1 013.0 ± 5.0) hPa · OIML R 111-1',
+    file: { name: 'E2-CLCLRS02 20kg 22.pdf', size: '405 KB' },
+    rows: mkRows([[20,'kg','none',10,10,30]]),
+  },
+];
+
+let editingId = null;
+let detailId = null;
+const byId = id => document.getElementById(id);
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtDate(v) {
+  if (!v) return '–';
+  return new Date(v + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+// สถานะใบ cert: superseded (มีใบใหม่กว่าในชุดเดียวกัน+รายการเดียวกัน) > หมดอายุ > ใกล้ครบ(60วัน) > ใช้งาน
+function certStatus(c) {
+  const newer = certs.some(o => o.id !== c.id && o.set_code === c.set_code && o.serial_no === c.serial_no
+    && new Date(o.measurement_date) > new Date(c.measurement_date));
+  if (newer) return { key: 'superseded', label: 'มีใบใหม่แทน' };
+  if (!c.due_date) return { key: 'ok', label: 'ใช้งานอยู่' };
+  const days = Math.round((new Date(c.due_date + 'T00:00:00') - todayStart()) / 86400000);
+  if (days < 0) return { key: 'expired', label: 'หมดอายุ ' + Math.abs(days) + ' วัน' };
+  if (days <= 60) return { key: 'warn', label: 'อีก ' + days + ' วัน' };
+  return { key: 'ok', label: 'ใช้งานอยู่ (อีก ' + days + ' วัน)' };
+}
+function todayStart() { const t = new Date(); t.setHours(0,0,0,0); return t; }
+
+// แปลง correction (mg) เป็น conventional mass ในหน่วยของตุ้ม
+const MG_PER_UNIT = { mg: 1, g: 1000, kg: 1000000 };
+function conventionalMass(row) {
+  return row.nominal_value + row.correction_mg / MG_PER_UNIT[row.unit];
+}
+function fmtMass(value, unit) {
+  const decimals = unit === 'mg' ? 4 : unit === 'g' ? 6 : 8;
+  return parseFloat(value.toFixed(decimals)).toString() + ' ' + unit;
+}
+function fmtSigned(v) { return (v > 0 ? '+' : '') + v; }
+
+function filtered() {
+  const q = byId('searchInput').value.trim().toLowerCase();
+  const set = byId('setFilter').value;
+  const st = byId('statusFilter').value;
+  return certs.filter(c => {
+    if (set && c.set_code !== set) return false;
+    if (st && certStatus(c).key !== st) return false;
+    if (!q) return true;
+    return [c.cert_no, c.set_code, c.item, c.serial_no, c.lab, c.manufacturer].some(v => String(v||'').toLowerCase().includes(q));
+  });
+}
+
+function renderStats() {
+  let ok = 0, warn = 0, bad = 0;
+  certs.forEach(c => {
+    const k = certStatus(c).key;
+    if (k === 'ok') ok++; else if (k === 'warn') warn++; else bad++;
+  });
+  byId('stTotal').textContent = certs.length;
+  byId('stOk').textContent = ok;
+  byId('stWarn').textContent = warn;
+  byId('stExpired').textContent = bad;
+}
+
+function renderSetFilter() {
+  const sets = [...new Set(certs.map(c => c.set_code))].sort();
+  const current = byId('setFilter').value;
+  byId('setFilter').innerHTML = '<option value="">ทุกชุดมาตรฐาน</option>' +
+    sets.map(s => `<option value="${escapeHtml(s)}" ${s === current ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+}
+
+function renderTable() {
+  const rows = filtered();
+  byId('resultCount').textContent = rows.length + ' ใบ';
+  byId('certBody').innerHTML = rows.length ? rows.map(c => {
+    const st = certStatus(c);
+    return `<tr onclick="if(!event.target.closest('button'))openDetail(${c.id})">
+      <td><div class="cert-cell"><span class="iconbox"><i class="ti ti-certificate"></i></span>
+        <div><div class="name">${escapeHtml(c.cert_no)}</div><div class="sub">${escapeHtml(c.item)} · ${escapeHtml(c.lab)}</div></div></div></td>
+      <td><span class="chip">${escapeHtml(c.set_code)}</span></td>
+      <td><strong>${escapeHtml(c.class_grade)}</strong></td>
+      <td>${escapeHtml(c.serial_no || '–')}</td>
+      <td><strong>${c.rows.length}</strong> <span class="sub">ลูก</span></td>
+      <td>${fmtDate(c.measurement_date)}</td>
+      <td><strong>${fmtDate(c.due_date)}</strong></td>
+      <td><span class="badge ${st.key}">${st.label}</span></td>
+      <td>${c.file ? `<button class="btn ghost sm" onclick="showToastMsg('เปิดไฟล์ ${escapeHtml(c.file.name)}')"><i class="ti ti-file-text"></i> PDF</button>` : '<span class="sub">–</span>'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="9"><div class="empty">ไม่พบข้อมูล</div></td></tr>';
+}
+
+function renderAll() { renderStats(); renderSetFilter(); renderTable(); }
+
+// ===== DETAIL =====
+function openDetail(id) {
+  const c = certs.find(x => x.id === id);
+  if (!c) return;
+  detailId = id;
+  const st = certStatus(c);
+  byId('detailBody').innerHTML = `
+    <div class="detail-head">
+      <div class="detail-title">
+        <span class="iconbox"><i class="ti ti-certificate"></i></span>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="name" style="font-size:15px">${escapeHtml(c.cert_no)}</span>
+            <span class="badge ${st.key}">${st.label}</span>
+          </div>
+          <div class="sub" style="margin-top:2px"><span class="chip" style="min-height:20px;font-size:10px">${escapeHtml(c.set_code)}</span> ${escapeHtml(c.item)}</div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn sm" onclick="closeDetail();openEdit(${c.id})"><i class="ti ti-pencil"></i> แก้ไข</button>
+        ${c.file ? `<button class="btn sm" onclick="showToastMsg('เปิดไฟล์ ${escapeHtml(c.file.name)}')"><i class="ti ti-file-text"></i> เปิด PDF</button>` : ''}
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric"><span>Class</span><strong>${escapeHtml(c.class_grade)}</strong></div>
+      <div class="metric"><span>Serial No.</span><strong>${escapeHtml(c.serial_no || '–')}</strong></div>
+      <div class="metric"><span>วันที่สอบเทียบ</span><strong>${fmtDate(c.measurement_date)}</strong></div>
+      <div class="metric"><span>ครบกำหนด</span><strong>${fmtDate(c.due_date)}</strong></div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item"><span>ห้องปฏิบัติการ</span><strong>${escapeHtml(c.lab)}</strong></div>
+      <div class="info-item"><span>ผู้ผลิต</span><strong>${escapeHtml(c.manufacturer || '–')}</strong></div>
+      <div class="info-item full"><span>สภาวะแวดล้อม / วิธีวัด</span><strong>${escapeHtml(c.remark || '–')}</strong></div>
+      ${c.file ? `<div class="info-item full"><span>ไฟล์แนบ</span>
+        <div class="file-row" style="margin-top:4px"><div class="file-icon"><i class="ti ti-file-text"></i></div>
+        <div><div class="name" style="font-size:12px">${escapeHtml(c.file.name)}</div><div class="sub">${escapeHtml(c.file.size || '')}</div></div>
+        <button class="btn ghost sm" onclick="showToastMsg('เปิดไฟล์ ${escapeHtml(c.file.name)}')"><i class="ti ti-eye"></i> ดู</button></div></div>` : ''}
+    </div>
+
+    <div class="section-title"><span>ผลวัด — Conventional mass & MPE (OIML R 111-1)</span><span class="sub">${c.rows.length} รายการ</span></div>
+    <div class="table-wrap">
+      <table class="vals">
+        <thead><tr>
+          <th>#</th><th>ค่าพิกัด</th><th>Marking/Shape</th>
+          <th class="num">Correction (mg)</th><th class="num">Conventional mass</th>
+          <th class="num">U, k=2 (mg)</th><th class="num">MPE ± (mg)</th><th>เกณฑ์ E2</th>
+        </tr></thead>
+        <tbody>
+          ${c.rows.map((r, i) => {
+            const pass = Math.abs(r.correction_mg) + r.uncertainty_mg <= r.mpe_mg;
+            return `<tr>
+              <td class="sub">${i + 1}</td>
+              <td><strong>${r.nominal_value} ${r.unit}</strong></td>
+              <td class="sub">${escapeHtml(r.marking || '–')}</td>
+              <td class="num">${fmtSigned(r.correction_mg)}</td>
+              <td class="num"><strong>${fmtMass(conventionalMass(r), r.unit)}</strong></td>
+              <td class="num">${r.uncertainty_mg}</td>
+              <td class="num">${r.mpe_mg}</td>
+              <td class="${pass ? 'pass' : 'fail'}">${pass ? '✓ ผ่าน' : '✗ เกิน'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="calc-box">
+      <div class="row">
+        <strong><i class="ti ti-calculator"></i> ทดลองดึงค่าไปใช้คำนวณ:</strong>
+        <select id="calcPick" class="select" style="min-width:180px" onchange="renderCalc()">
+          ${c.rows.map((r, i) => `<option value="${i}">${r.nominal_value} ${r.unit}${r.marking && r.marking !== 'none' ? ' (' + escapeHtml(r.marking) + ')' : ''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="calc-out" id="calcOut"></div>
+      <div class="sub" style="margin-top:8px">โมดูลสอบเทียบเครื่องชั่งจะใช้ <strong>Conventional mass</strong> เป็นค่าจริงของตุ้ม และใช้ <strong>U (k=2)</strong> ในงบประมาณความไม่แน่นอน (u<sub>std</sub> = U/2)</div>
+    </div>
+  `;
+  byId('detailModal').classList.add('open');
+  renderCalc();
+}
+function renderCalc() {
+  const c = certs.find(x => x.id === detailId);
+  if (!c) return;
+  const r = c.rows[Number(byId('calcPick').value) || 0];
+  byId('calcOut').innerHTML = `
+    <div class="metric"><span>ค่าจริงของตุ้ม (Conventional mass)</span><strong>${fmtMass(conventionalMass(r), r.unit)}</strong></div>
+    <div class="metric"><span>ความไม่แน่นอนมาตรฐาน u = U/2</span><strong>${parseFloat((r.uncertainty_mg / 2).toFixed(5))} mg</strong></div>
+    <div class="metric"><span>เทียบเกณฑ์ Class E2</span><strong>|${fmtSigned(r.correction_mg)}| + ${r.uncertainty_mg} ≤ ${r.mpe_mg} mg</strong></div>
+  `;
+}
+function closeDetail() { byId('detailModal').classList.remove('open'); detailId = null; }
+
+// ===== EDIT =====
+function valueRowHtml(r) {
+  r = r || { nominal_value: '', unit: 'g', marking: '', correction_mg: '', uncertainty_mg: '', mpe_mg: '' };
+  return `<tr>
+    <td><input type="number" step="any" class="vNominal" value="${r.nominal_value}"></td>
+    <td><select class="vUnit">${['mg','g','kg'].map(u => `<option ${u === r.unit ? 'selected' : ''}>${u}</option>`).join('')}</select></td>
+    <td><input type="text" class="vMarking" value="${escapeHtml(r.marking)}"></td>
+    <td><input type="number" step="any" class="vCorr" value="${r.correction_mg}"></td>
+    <td><input type="number" step="any" class="vUnc" value="${r.uncertainty_mg}"></td>
+    <td><input type="number" step="any" class="vMpe" value="${r.mpe_mg}"></td>
+    <td><button class="btn ghost sm" type="button" onclick="this.closest('tr').remove()"><i class="ti ti-trash"></i></button></td>
+  </tr>`;
+}
+function addValueRow(r) { byId('valueRows').insertAdjacentHTML('beforeend', valueRowHtml(r)); }
+
+function openEdit(id) {
+  editingId = id;
+  const c = id ? certs.find(x => x.id === id) : null;
+  byId('editTitle').textContent = c ? 'แก้ไขใบ Cert — ' + c.cert_no : 'เพิ่มใบ Cert';
+  byId('fCertNo').value = c?.cert_no || '';
+  byId('fSetCode').value = c?.set_code || '';
+  byId('fItem').value = c?.item || '';
+  byId('fManufacturer').value = c?.manufacturer || '';
+  byId('fClass').value = c?.class_grade || 'E2';
+  byId('fSerial').value = c?.serial_no || '';
+  byId('fLab').value = c?.lab || '';
+  byId('fMeasDate').value = c?.measurement_date || '';
+  byId('fInterval').value = c?.interval_years || 2;
+  byId('fDueDate').value = c?.due_date || '';
+  byId('fRemark').value = c?.remark || '';
+  byId('valueRows').innerHTML = '';
+  (c?.rows?.length ? c.rows : [null]).forEach(r => addValueRow(r));
+  byId('editModal').classList.add('open');
+}
+function closeEdit() { byId('editModal').classList.remove('open'); editingId = null; }
+
+function autoDue() {
+  const meas = byId('fMeasDate').value;
+  const years = parseInt(byId('fInterval').value) || 2;
+  if (!meas) return;
+  const d = new Date(meas + 'T00:00:00');
+  d.setFullYear(d.getFullYear() + years);
+  byId('fDueDate').value = d.toISOString().slice(0, 10);
+}
+
+function collectRows() {
+  return [...byId('valueRows').querySelectorAll('tr')].map(tr => ({
+    nominal_value: parseFloat(tr.querySelector('.vNominal').value) || 0,
+    unit: tr.querySelector('.vUnit').value,
+    marking: tr.querySelector('.vMarking').value.trim(),
+    correction_mg: parseFloat(tr.querySelector('.vCorr').value) || 0,
+    uncertainty_mg: parseFloat(tr.querySelector('.vUnc').value) || 0,
+    mpe_mg: parseFloat(tr.querySelector('.vMpe').value) || 0,
+  })).filter(r => r.nominal_value > 0);
+}
+
+function saveCert() {
+  const certNo = byId('fCertNo').value.trim();
+  const setCode = byId('fSetCode').value.trim();
+  if (!certNo || !setCode) { showToastMsg('กรุณากรอก Cert No. และชุดมาตรฐาน'); return; }
+  const rows = collectRows();
+  if (!rows.length) { showToastMsg('กรุณากรอกผลวัดอย่างน้อย 1 แถว'); return; }
+  const fileInput = byId('fFile');
+  const payload = {
+    cert_no: certNo, set_code: setCode,
+    item: byId('fItem').value.trim(),
+    manufacturer: byId('fManufacturer').value.trim(),
+    class_grade: byId('fClass').value,
+    serial_no: byId('fSerial').value.trim(),
+    lab: byId('fLab').value.trim(),
+    measurement_date: byId('fMeasDate').value,
+    interval_years: parseInt(byId('fInterval').value) || 2,
+    due_date: byId('fDueDate').value,
+    remark: byId('fRemark').value.trim(),
+    rows,
+  };
+  if (fileInput.files[0]) {
+    payload.file = { name: fileInput.files[0].name, size: Math.round(fileInput.files[0].size / 1024) + ' KB' };
+  }
+  if (editingId) {
+    const c = certs.find(x => x.id === editingId);
+    Object.assign(c, payload);
+    showToastMsg('บันทึกตัวอย่างแล้ว (แก้ไข ' + certNo + ')');
+  } else {
+    payload.id = Math.max(0, ...certs.map(c => c.id)) + 1;
+    payload.file = payload.file || null;
+    certs.push(payload);
+    showToastMsg('เพิ่มใบ Cert ' + certNo + ' ในตัวอย่างแล้ว');
+  }
+  fileInput.value = '';
+  closeEdit();
+  renderAll();
+}
+
+function showToastMsg(msg) {
+  byId('toastText').textContent = msg;
+  byId('toast').classList.add('show');
+  clearTimeout(showToastMsg.timer);
+  showToastMsg.timer = setTimeout(() => byId('toast').classList.remove('show'), 2000);
+}
+
+byId('searchInput').addEventListener('input', renderTable);
+byId('setFilter').addEventListener('change', renderTable);
+byId('statusFilter').addEventListener('change', renderTable);
+byId('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') closeDetail(); });
+byId('editModal').addEventListener('click', e => { if (e.target.id === 'editModal') closeEdit(); });
+
+renderAll();
+</script>
+</body>
+</html>
