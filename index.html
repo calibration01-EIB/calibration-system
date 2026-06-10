@@ -2106,10 +2106,6 @@ body.app-mode textarea:focus {
 }
 
 /* ===== Instrument registry redesign (pageList) ===== */
-.reg-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.reg-stat { flex: 1 1 110px; min-width: 100px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: white; }
-.reg-stat span { display: block; color: var(--text3); font-size: 11px; }
-.reg-stat strong { display: block; margin-top: 2px; font-size: 19px; line-height: 1; }
 .reg-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
 .reg-pill { flex: 0 0 auto; min-width: 104px; border: 1px solid var(--border); border-radius: var(--radius); background: white; padding: 8px 12px; text-align: left; cursor: pointer; font-family: var(--font); }
 .reg-pill span { display: block; color: var(--text3); font-size: 11px; white-space: nowrap; }
@@ -2120,7 +2116,7 @@ body.app-mode textarea:focus {
 .reg-iconbox { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid; border-radius: var(--radius); font-size: 18px; }
 .reg-name { color: var(--text); font-weight: 700; }
 .reg-sub { color: var(--text3); font-size: 11px; }
-.reg-stack { display: grid; gap: 2px; font-family: var(--mono); line-height: 1.35; }
+.reg-stack { display: grid; gap: 2px; line-height: 1.35; }
 .reg-stack strong { color: var(--text); font-size: 13px; font-weight: 700; }
 .reg-stack span { color: var(--text2); font-size: 12px; }
 .reg-chip { width: 40px; min-height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 800; box-shadow: inset 0 -1px 0 rgba(0,0,0,.16); }
@@ -2334,14 +2330,6 @@ body.app-mode textarea:focus {
 
       <!-- หน้า รายการเครื่องมือ -->
    <div id="pageList" class="page-content" style="display:none">
-        <!-- STATS -->
-        <div class="reg-stats" aria-label="สรุปรายการเครื่องมือ">
-          <div class="reg-stat"><span>ทั้งหมด</span><strong id="listStatTotal">0</strong></div>
-          <div class="reg-stat"><span>เกินกำหนด</span><strong id="listStatOver" style="color:var(--red)">0</strong></div>
-          <div class="reg-stat"><span>ใกล้ครบ</span><strong id="listStatWarn" style="color:var(--amber)">0</strong></div>
-          <div class="reg-stat"><span>ปกติ</span><strong id="listStatOk" style="color:var(--green)">0</strong></div>
-        </div>
-
         <!-- ROW 4: FILTER + TABLE -->
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT..." oninput="filterData()">
@@ -3279,15 +3267,15 @@ body.app-mode textarea:focus {
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
-<script src="js/02-dashboard.js?v=20260610-list-redesign3"></script>
-<script src="js/03-instruments.js?v=20260610-list-redesign3"></script>
+<script src="js/02-dashboard.js?v=20260610-list-redesign4"></script>
+<script src="js/03-instruments.js?v=20260610-list-redesign4"></script>
 <script src="js/04-reports.js?v=20260609-month-cards"></script>
 <script src="js/05-audit.js?v=20260609-cert-headings"></script>
 <script src="js/06-plan.js?v=20260609-category-fix2"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
 <script src="js/09-cert.js?v=20260609-cert-headings"></script>
-<script src="js/10-router.js?v=20260610-list-redesign3"></script>
+<script src="js/10-router.js?v=20260610-list-redesign4"></script>
 <script src="js/11-import-template-selection.js?v=20260609-category-fix2"></script>
 
 <!-- IMPORT EXCEL MODAL -->

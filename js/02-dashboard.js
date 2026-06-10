@@ -523,15 +523,6 @@ function updateStats() {
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
 
-  // stats บนหน้าทะเบียนเครื่องมือ
-  const lTotal = document.getElementById('listStatTotal');
-  if (lTotal) {
-    lTotal.textContent = total.toLocaleString();
-    document.getElementById('listStatOver').textContent = ov.toLocaleString();
-    document.getElementById('listStatWarn').textContent = wa.toLocaleString();
-    document.getElementById('listStatOk').textContent = okCount.toLocaleString();
-  }
-
   // summary box
   const el2Ok = document.getElementById('statOk2');
   const el2Ov = document.getElementById('statOverdue2');
