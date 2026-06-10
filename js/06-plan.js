@@ -747,6 +747,28 @@ function exportExcel() {
 // IMPORT EXCEL
 // ====================================================
 let importRows = [];
+let importAnalysis = {
+  existingMap: {},
+  actionIds: [],
+  unchangedIds: [],
+  duplicateIds: [],
+  invalidRows: [],
+  newCount: 0,
+  updateCount: 0,
+  unchangedCount: 0,
+};
+
+const IMPORT_DB_SELECT = [
+  'id','instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
+  'serial_no','department','id_code','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
+  'prev_cert_no','prev_cal_date'
+].join(',');
+
+const IMPORT_COMPARE_FIELDS = [
+  'instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
+  'serial_no','department','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
+  'prev_cert_no','prev_cal_date'
+];
 
 const IMPORT_COL_MAP = {
   'ประเภทเครื่องมือ':'instrument_type','instrument_type':'instrument_type',
@@ -792,6 +814,16 @@ function closeImportModal() { document.getElementById('importModal').classList.r
 
 function resetImport() {
   importRows = [];
+  importAnalysis = {
+    existingMap: {},
+    actionIds: [],
+    unchangedIds: [],
+    duplicateIds: [],
+    invalidRows: [],
+    newCount: 0,
+    updateCount: 0,
+    unchangedCount: 0,
+  };
   document.getElementById('importStep1').style.display = 'block';
   document.getElementById('importStep2').style.display = 'none';
   document.getElementById('importProgress').style.display = 'none';
@@ -799,11 +831,129 @@ function resetImport() {
   if (fi) fi.value = '';
 }
 
+function normalizeImportBlank(value) {
+  const s = String(value ?? '').trim();
+  return (s === '' || s === '–' || s === '-') ? null : s;
+}
+
+function importComparableValue(value, field) {
+  const normalized = normalizeImportBlank(value);
+  if (normalized === null) return '';
+  if (['cal_date','due_date','prev_cal_date'].includes(field)) return String(normalized).slice(0, 10);
+  return String(normalized).trim();
+}
+
+function parseImportDateCell(value, rowNo, header) {
+  if (value === '' || value === null || value === undefined) return { value: '' };
+  if (value instanceof Date) {
+    const y = value.getFullYear(), m = String(value.getMonth()+1).padStart(2,'0'), d = String(value.getDate()).padStart(2,'0');
+    return { value: y+'-'+m+'-'+d };
+  }
+  if (typeof value === 'number' && value > 40000 && value < 60000) {
+    const dt = new Date(Math.round((value - 25569) * 86400 * 1000));
+    const y = dt.getUTCFullYear(), mo = String(dt.getUTCMonth()+1).padStart(2,'0'), dd = String(dt.getUTCDate()).padStart(2,'0');
+    return { value: y+'-'+mo+'-'+dd };
+  }
+
+  const raw = String(value || '').trim();
+  if (!raw || raw === '–' || raw === '-') return { value: '' };
+
+  let y, m, d;
+  let match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (match) {
+    y = Number(match[1]); m = Number(match[2]); d = Number(match[3]);
+  } else {
+    match = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (match) {
+      d = Number(match[1]); m = Number(match[2]); y = Number(match[3]);
+      if (y < 100) y += 2000;
+    }
+  }
+
+  if (!match) return { value: raw, error: `แถว ${rowNo}: ${header} ต้องเป็นวันที่ แต่พบ "${raw}"` };
+  if (y > 2400) y -= 543;
+
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    return { value: raw, error: `แถว ${rowNo}: ${header} วันที่ไม่ถูกต้อง "${raw}"` };
+  }
+
+  return { value: `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` };
+}
+
+function prepareImportRowForDb(row) {
+  const clean = {};
+  Object.entries(row).forEach(([k, v]) => {
+    if (k.startsWith('__')) return;
+    clean[k] = normalizeImportBlank(v);
+  });
+  if (!clean.due_date && clean.cal_date && clean.cal_frequency) {
+    clean.due_date = calcDueDateStr(clean.cal_date, clean.cal_frequency);
+  }
+  return clean;
+}
+
+function getImportDiff(existing, cleanRow) {
+  if (!existing) return [];
+  return IMPORT_COMPARE_FIELDS.filter(field => {
+    if (!Object.prototype.hasOwnProperty.call(cleanRow, field)) return false;
+    return importComparableValue(existing[field], field) !== importComparableValue(cleanRow[field], field);
+  });
+}
+
+async function fetchExistingImportRows(idCodes) {
+  const uniqueCodes = [...new Set(idCodes.map(v => String(v || '').trim()).filter(Boolean))];
+  const existingMap = {};
+  for (let i = 0; i < uniqueCodes.length; i += 100) {
+    const chunk = uniqueCodes.slice(i, i + 100);
+    const { data, error } = await sb.from('instruments').select(IMPORT_DB_SELECT).in('id_code', chunk);
+    if (error) throw error;
+    (data || []).forEach(row => { existingMap[row.id_code] = row; });
+  }
+  return existingMap;
+}
+
+function analyzeImportRows(validRows, existingMap) {
+  const countsById = {};
+  validRows.forEach(row => { countsById[row.id_code] = (countsById[row.id_code] || 0) + 1; });
+  const duplicateIds = Object.keys(countsById).filter(id => countsById[id] > 1);
+  let newCount = 0, updateCount = 0, unchangedCount = 0;
+  const actionIds = [], unchangedIds = [];
+
+  validRows.forEach(row => {
+    const existing = existingMap[row.id_code];
+    const clean = prepareImportRowForDb(row);
+    if (!existing) {
+      newCount += 1;
+      actionIds.push(row.id_code);
+      return;
+    }
+    const diff = getImportDiff(existing, clean);
+    if (diff.length) {
+      updateCount += 1;
+      actionIds.push(row.id_code);
+    } else {
+      unchangedCount += 1;
+      unchangedIds.push(row.id_code);
+    }
+  });
+
+  return { existingMap, actionIds, unchangedIds, duplicateIds, newCount, updateCount, unchangedCount };
+}
+
+function importStatusBadge(row) {
+  if (!row.id_code) return '<span style="color:var(--red);font-weight:700">ไม่มี ID Code</span>';
+  if (importAnalysis.duplicateIds.includes(row.id_code)) return '<span style="color:var(--red);font-weight:700">ID ซ้ำในไฟล์</span>';
+  if (importAnalysis.unchangedIds.includes(row.id_code)) return '<span style="color:var(--text3);font-weight:700">ซ้ำเดิม</span>';
+  if (importAnalysis.existingMap[row.id_code]) return '<span style="color:var(--amber);font-weight:700">อัปเดต</span>';
+  return '<span style="color:var(--green);font-weight:700">ใหม่</span>';
+}
+
 function handleImportFile(file) {
   if (!file) return;
   if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -832,7 +982,11 @@ function handleImportFile(file) {
         const obj = {};
         Object.entries(fieldMap).forEach(([ci, field]) => {
           let val = r[ci];
-          if (val instanceof Date) {
+          if (['cal_date','due_date','prev_cal_date'].includes(field)) {
+            const parsed = parseImportDateCell(val, rowIdx + 2, excelHeaders[ci] || field);
+            val = parsed.value;
+            if (parsed.error) errors.push(parsed.error);
+          } else if (val instanceof Date) {
             const y = val.getFullYear(), m = String(val.getMonth()+1).padStart(2,'0'), d = String(val.getDate()).padStart(2,'0');
             val = y+'-'+m+'-'+d;
           } else if (typeof val === 'number' && val > 40000 && val < 60000) {
@@ -848,24 +1002,61 @@ function handleImportFile(file) {
         return obj;
       }).filter(o => Object.keys(o).length > 0);
 
-      const previewCols = excelHeaders.filter((_, i) => fieldMap[i]);
-      const previewFields = previewCols.map(h => fieldMap[excelHeaders.indexOf(h)]);
+      const validRows = importRows.filter(r => r.id_code);
+      let analysisError = '';
+      try {
+        const existingMap = await fetchExistingImportRows(validRows.map(r => r.id_code));
+        importAnalysis = {
+          ...analyzeImportRows(validRows, existingMap),
+          invalidRows: errors,
+        };
+      } catch (checkError) {
+        analysisError = 'ตรวจข้อมูลซ้ำไม่สำเร็จ: ' + checkError.message;
+        importAnalysis = {
+          existingMap: {},
+          actionIds: validRows.map(r => r.id_code),
+          unchangedIds: [],
+          duplicateIds: [],
+          invalidRows: errors,
+          newCount: validRows.length,
+          updateCount: 0,
+          unchangedCount: 0,
+        };
+      }
+
+      if (importAnalysis.duplicateIds.length) {
+        errors.push('พบ ID Code ซ้ำในไฟล์: ' + importAnalysis.duplicateIds.slice(0,8).join(', ') + (importAnalysis.duplicateIds.length > 8 ? ' ...' : ''));
+      }
+      if (analysisError) errors.push(analysisError);
+
+      const previewColumns = excelHeaders
+        .map((h, i) => fieldMap[i] ? { header: h, field: fieldMap[i] } : null)
+        .filter(Boolean);
       document.getElementById('importPreviewHead').innerHTML =
-        '<tr>'+previewCols.map(h => '<th style="padding:8px 12px;white-space:nowrap;text-align:left;font-size:12px">'+h+'</th>').join('')+'</tr>';
+        '<tr>'+previewColumns.map(c => '<th style="padding:8px 12px;white-space:nowrap;text-align:left;font-size:12px">'+escapeHtmlText(c.header)+'</th>').join('')+
+        '<th style="padding:8px 12px;white-space:nowrap;text-align:left;font-size:12px">ผลตรวจ</th></tr>';
       document.getElementById('importPreviewBody').innerHTML =
         importRows.slice(0,5).map(r =>
-          '<tr>'+previewFields.map(f => '<td style="padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:12px">'+(r[f]||'–')+'</td>').join('')+'</tr>'
+          '<tr>'+previewColumns.map(c => '<td style="padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:12px">'+escapeHtmlText(r[c.field]||'–')+'</td>').join('')+
+          '<td style="padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:12px">'+importStatusBadge(r)+'</td></tr>'
         ).join('');
 
-      const validRows = importRows.filter(r => r.id_code);
       document.getElementById('importSummary').innerHTML =
-        '📋 พบ <strong>'+importRows.length+'</strong> แถว &nbsp;|&nbsp; ✅ Valid: <strong>'+validRows.length+'</strong> &nbsp;|&nbsp; ❌ ข้าม: <strong>'+(importRows.length-validRows.length)+'</strong> (ไม่มี ID Code)';
+        '📋 พบ <strong>'+importRows.length+'</strong> แถว &nbsp;|&nbsp; ✅ Valid: <strong>'+validRows.length+'</strong>' +
+        ' &nbsp;|&nbsp; 🆕 ใหม่: <strong>'+importAnalysis.newCount+'</strong>' +
+        ' &nbsp;|&nbsp; ✏️ อัปเดต: <strong>'+importAnalysis.updateCount+'</strong>' +
+        ' &nbsp;|&nbsp; 🔁 ซ้ำเดิม: <strong>'+importAnalysis.unchangedCount+'</strong>' +
+        ' &nbsp;|&nbsp; ❌ ข้าม: <strong>'+(importRows.length-validRows.length)+'</strong> (ไม่มี ID Code)';
       const errEl = document.getElementById('importErrors');
       if (errors.length) {
         errEl.style.display = 'block';
-        errEl.innerHTML = '⚠️ '+errors.slice(0,5).join('<br>')+(errors.length>5?'<br>...และอีก '+(errors.length-5)+' แถว':'');
+        errEl.innerHTML = '⚠️ '+errors.slice(0,5).map(escapeHtmlText).join('<br>')+(errors.length>5?'<br>...และอีก '+(errors.length-5)+' แถว':'');
+      } else if (importAnalysis.unchangedCount && !importAnalysis.actionIds.length) {
+        errEl.style.display = 'block';
+        errEl.innerHTML = 'ℹ️ ข้อมูลทั้งหมดมีอยู่แล้วและไม่มีการเปลี่ยนแปลง จึงไม่มีรายการให้ Import';
       } else { errEl.style.display = 'none'; }
-      document.getElementById('confirmImportBtn').disabled = validRows.length === 0;
+      document.getElementById('confirmImportBtn').disabled =
+        validRows.length === 0 || errors.length > 0 || importAnalysis.actionIds.length === 0;
       document.getElementById('importStep1').style.display = 'none';
       document.getElementById('importStep2').style.display = 'block';
     } catch(e) { showToast('อ่านไฟล์ไม่สำเร็จ: '+e.message, 'error'); }
@@ -879,40 +1070,56 @@ async function confirmImport() {
   document.getElementById('importStep2').style.display = 'none';
   document.getElementById('importProgress').style.display = 'block';
   document.getElementById('confirmImportBtn').disabled = true;
+  document.getElementById('importProgressBar').style.width = '0%';
+  document.getElementById('importProgressText').textContent = 'กำลังตรวจข้อมูล...';
   const CHUNK = 50;
   let done = 0, success = 0, failed = 0, failedCodes = [];
   try {
-    // ดึงข้อมูลเดิมของทุก id_code ที่จะ import มาเปรียบเทียบ
-    const idCodes = validRows.map(r => r.id_code);
-    const { data: existingData } = await sb.from('instruments')
-      .select('id,id_code,cert_no,cal_date,due_date')
-      .in('id_code', idCodes);
-    const existingMap = {};
-    (existingData || []).forEach(e => { existingMap[e.id_code] = e; });
+    const countsById = {};
+    validRows.forEach(row => { countsById[row.id_code] = (countsById[row.id_code] || 0) + 1; });
+    const duplicateIds = Object.keys(countsById).filter(id => countsById[id] > 1);
+    if (duplicateIds.length) {
+      document.getElementById('importStep2').style.display = 'block';
+      document.getElementById('importProgress').style.display = 'none';
+      document.getElementById('confirmImportBtn').disabled = false;
+      showToast('พบ ID Code ซ้ำในไฟล์: ' + duplicateIds.slice(0,5).join(', '), 'error');
+      return;
+    }
 
-    for (let i = 0; i < validRows.length; i += CHUNK) {
-      const chunk = validRows.slice(i, i + CHUNK);
-      // clean null-string values + auto-calc due_date ก่อน upsert
-      const cleanChunk = chunk.map(row => {
-        const clean = {};
-        Object.entries(row).forEach(([k, v]) => {
-          const s = String(v||'').trim();
-          clean[k] = (s === '' || s === '–' || s === '-') ? null : s;
-        });
-        // ถ้าไม่มี due_date แต่มี cal_date + cal_frequency → คำนวณอัตโนมัติ
-        if (!clean.due_date && clean.cal_date && clean.cal_frequency) {
-          clean.due_date = calcDueDateStr(clean.cal_date, clean.cal_frequency);
-        }
-        return clean;
+    // ดึงข้อมูลเดิมของทุก id_code ที่จะ import มาเปรียบเทียบ
+    const existingMap = await fetchExistingImportRows(validRows.map(r => r.id_code));
+    const analysis = analyzeImportRows(validRows, existingMap);
+    importAnalysis = { ...analysis, invalidRows: importAnalysis.invalidRows || [] };
+    const cleanRows = validRows
+      .map(row => prepareImportRowForDb(row))
+      .filter(row => {
+        const existing = existingMap[row.id_code];
+        return !existing || getImportDiff(existing, row).length > 0;
       });
+    const skipped = validRows.length - cleanRows.length;
+    const created = cleanRows.filter(row => !existingMap[row.id_code]).length;
+    const updated = cleanRows.length - created;
+
+    if (!cleanRows.length) {
+      document.getElementById('importStep2').style.display = 'block';
+      document.getElementById('importProgress').style.display = 'none';
+      document.getElementById('confirmImportBtn').disabled = true;
+      showToast('ไม่มีข้อมูลใหม่หรือข้อมูลที่เปลี่ยนแปลงให้ Import', 'success');
+      return;
+    }
+
+    for (let i = 0; i < cleanRows.length; i += CHUNK) {
+      const cleanChunk = cleanRows.slice(i, i + CHUNK);
 
       // บันทึกประวัติ calibration_history เฉพาะรายการที่ cert_no หรือ cal_date เปลี่ยน
       const historyRows = [];
       cleanChunk.forEach(row => {
         const orig = existingMap[row.id_code];
         if (!orig) return; // รายการใหม่ ยังไม่มีประวัติ
-        const certChanged = orig.cert_no && orig.cert_no !== row.cert_no;
-        const dateChanged = orig.cal_date && orig.cal_date !== row.cal_date;
+        const certChanged = Object.prototype.hasOwnProperty.call(row, 'cert_no') &&
+          orig.cert_no && importComparableValue(orig.cert_no, 'cert_no') !== importComparableValue(row.cert_no, 'cert_no');
+        const dateChanged = Object.prototype.hasOwnProperty.call(row, 'cal_date') &&
+          orig.cal_date && importComparableValue(orig.cal_date, 'cal_date') !== importComparableValue(row.cal_date, 'cal_date');
         if (certChanged || dateChanged) {
           historyRows.push({
             instrument_id: orig.id,
@@ -925,23 +1132,19 @@ async function confirmImport() {
           row.prev_cal_date = orig.cal_date || null;
         }
       });
-      console.log('[Import] existingMap keys:', Object.keys(existingMap).length);
-      console.log('[Import] historyRows to insert:', historyRows.length, historyRows);
       if (historyRows.length) {
         const { error: histErr } = await sb.from('calibration_history').insert(historyRows);
         if (histErr) {
           console.error('[Import] calibration_history insert error:', histErr.message, histErr.details, histErr.hint);
           showToast('⚠️ บันทึกประวัติไม่สำเร็จ: ' + histErr.message, 'error');
-        } else {
-          console.log('[Import] history inserted OK:', historyRows.length, 'rows');
         }
       }
 
       const { error } = await sb.from('instruments')
         .upsert(cleanChunk, { onConflict: 'id_code', ignoreDuplicates: false });
       if (error) {
-        failed += chunk.length;
-        failedCodes.push(...chunk.map(r => r.id_code));
+        failed += cleanChunk.length;
+        failedCodes.push(...cleanChunk.map(r => r.id_code));
         console.error('upsert error:', error.message, error.details, error.hint);
         document.getElementById('importProgressText').textContent = '❌ ' + error.message;
         document.getElementById('importStep2').style.display = 'block';
@@ -949,16 +1152,22 @@ async function confirmImport() {
         showToast('❌ Import ผิดพลาด: ' + error.message, 'error');
         return;
       } else {
-        success += chunk.length;
+        success += cleanChunk.length;
       }
-      done += chunk.length;
-      const pct = Math.round(done/validRows.length*100);
+      done += cleanChunk.length;
+      const pct = Math.round(done/cleanRows.length*100);
       document.getElementById('importProgressBar').style.width = pct+'%';
-      document.getElementById('importProgressText').textContent = 'กำลัง import... '+done+'/'+validRows.length+' แถว';
+      document.getElementById('importProgressText').textContent =
+        'กำลัง import... '+done+'/'+cleanRows.length+' รายการ' + (skipped ? ' (ข้ามซ้ำเดิม '+skipped+' รายการ)' : '');
       await new Promise(r => setTimeout(r, 30));
     }
-    await logAudit('แก้ไข', { id_code: 'IMPORT_BATCH', instrument_name: 'Import/Update batch '+success+' รายการ' }, null);
-    const msg = '✅ Import สำเร็จ '+success+' รายการ' + (failed ? ' | ❌ ล้มเหลว '+failed+' รายการ' : '');
+    await logAudit('แก้ไข', {
+      id_code: 'IMPORT_BATCH',
+      instrument_name: 'Import: เพิ่ม '+created+' / อัปเดต '+updated+' / ซ้ำเดิม '+skipped+' รายการ'
+    }, null);
+    const msg = '✅ Import สำเร็จ '+success+' รายการ' +
+      ' (เพิ่ม '+created+', อัปเดต '+updated+(skipped ? ', ข้ามซ้ำเดิม '+skipped : '')+')' +
+      (failed ? ' | ❌ ล้มเหลว '+failed+' รายการ' : '');
     showToast(msg, 'success');
     if (failed) console.warn('Failed id_codes:', failedCodes);
     closeImportModal();
