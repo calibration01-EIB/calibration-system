@@ -2147,6 +2147,8 @@ body.app-mode textarea:focus {
 .reg-audit-row.del .reg-row-icon { background: var(--red-light); color: var(--red); }
 .reg-audit-meta { display: flex; gap: 7px; flex-wrap: wrap; color: var(--text3); font-size: 11px; }
 .reg-empty { padding: 14px; text-align: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); border-radius: var(--radius); }
+#pageList tr.reg-cancelled td { background: rgba(220, 53, 69, .07); }
+#pageList tr.reg-cancelled td:first-child { box-shadow: inset 4px 0 0 var(--red); }
 @media (max-width: 760px) {
   .reg-metric-grid, .reg-info-grid { grid-template-columns: 1fr; }
   .reg-info-item.full { grid-column: auto; }
@@ -3277,15 +3279,15 @@ body.app-mode textarea:focus {
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
-<script src="js/02-dashboard.js?v=20260610-list-redesign2"></script>
-<script src="js/03-instruments.js?v=20260610-list-redesign2"></script>
+<script src="js/02-dashboard.js?v=20260610-list-redesign3"></script>
+<script src="js/03-instruments.js?v=20260610-list-redesign3"></script>
 <script src="js/04-reports.js?v=20260609-month-cards"></script>
 <script src="js/05-audit.js?v=20260609-cert-headings"></script>
 <script src="js/06-plan.js?v=20260609-category-fix2"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
 <script src="js/09-cert.js?v=20260609-cert-headings"></script>
-<script src="js/10-router.js?v=20260610-list-redesign2"></script>
+<script src="js/10-router.js?v=20260610-list-redesign3"></script>
 <script src="js/11-import-template-selection.js?v=20260609-category-fix2"></script>
 
 <!-- IMPORT EXCEL MODAL -->

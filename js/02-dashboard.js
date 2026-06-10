@@ -740,12 +740,12 @@ function renderTable() {
     const cancelled = d.calibration_cancelled === true
       || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
     let statusBadge, daysColor, daysText;
-    if (cancelled) { statusBadge = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>'; daysColor = 'var(--text3)'; daysText = 'ยกเลิกสอบเทียบ'; }
+    if (cancelled) { statusBadge = '<span class="badge badge-red">ยกเลิกสอบเทียบ</span>'; daysColor = 'var(--red)'; daysText = 'ยกเลิกสอบเทียบ'; }
     else if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; daysText = '–'; }
     else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysColor = 'var(--red)'; daysText = 'เกิน ' + Math.abs(days) + ' วัน'; }
     else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysColor = 'var(--amber)'; daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน'; }
     else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysColor = 'var(--green)'; daysText = 'อีก ' + days + ' วัน'; }
-    return `<tr onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" style="cursor:pointer${cancelled ? ';background:rgba(148,163,184,.08)' : ''}" title="คลิกเพื่อดูรายละเอียด">
+    return `<tr class="${cancelled ? 'reg-cancelled' : ''}" onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" style="cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
       <td>${rowNum}</td>
       <td><div class="reg-cell"><span class="reg-iconbox" style="color:${color};background:${color}14;border-color:${color}40"><i class="ti ${icon}"></i></span><div><div class="reg-name">${instrumentName}</div><div class="reg-sub">${escapeHtmlText(d.brand || '–')}</div></div></div></td>
       <td><div class="reg-stack"><strong>${idCode}</strong><span>${certNo}</span></div></td>

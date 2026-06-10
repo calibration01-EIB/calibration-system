@@ -116,7 +116,7 @@ function openInstrumentDetail(id) {
   const remarkClean = typeof window.stripCalibrationCancelMarker === 'function'
     ? window.stripCalibrationCancelMarker(d.remark) : d.remark;
   let statusBadge, dueExtra;
-  if (cancelled) { statusBadge = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>'; dueExtra = ''; }
+  if (cancelled) { statusBadge = '<span class="badge badge-red">ยกเลิกสอบเทียบ</span>'; dueExtra = ''; }
   else if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; dueExtra = ''; }
   else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; dueExtra = ` (เกิน ${Math.abs(days)} วัน)`; }
   else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; dueExtra = days === 0 ? ' (วันนี้)' : ` (อีก ${days} วัน)`; }
