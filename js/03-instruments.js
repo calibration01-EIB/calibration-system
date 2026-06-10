@@ -111,8 +111,13 @@ function openInstrumentDetail(id) {
   if (!d) return;
   const [letter, icon, color] = regTypeMeta(d.instrument_type);
   const days = d.days_left;
+  const cancelled = d.calibration_cancelled === true
+    || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
+  const remarkClean = typeof window.stripCalibrationCancelMarker === 'function'
+    ? window.stripCalibrationCancelMarker(d.remark) : d.remark;
   let statusBadge, dueExtra;
-  if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; dueExtra = ''; }
+  if (cancelled) { statusBadge = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>'; dueExtra = ''; }
+  else if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; dueExtra = ''; }
   else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; dueExtra = ` (เกิน ${Math.abs(days)} วัน)`; }
   else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; dueExtra = days === 0 ? ' (วันนี้)' : ` (อีก ${days} วัน)`; }
   else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; dueExtra = ` (อีก ${days} วัน)`; }
@@ -160,7 +165,8 @@ function openInstrumentDetail(id) {
       ${regDetailItem('หน่วยงาน', d.department)}
       ${regDetailItem('ความถี่สอบเทียบ', d.cal_frequency)}
       ${regDetailItem('ภายใน/ภายนอก', d.cal_type)}
-      ${regDetailItem('Remark', d.remark, true)}
+      ${regDetailItem('สถานะสอบเทียบ', cancelled ? 'ยกเลิกสอบเทียบ' : 'ใช้งาน / รอสอบเทียบ')}
+      ${regDetailItem('Remark', remarkClean, true)}
     </div>
 
     <div class="reg-section">ไฟล์ใบรับรอง</div>

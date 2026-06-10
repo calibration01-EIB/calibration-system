@@ -737,21 +737,25 @@ function renderTable() {
     const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
     const [letter, icon, color] = regTypeMeta(d.instrument_type);
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || '–';
+    const cancelled = d.calibration_cancelled === true
+      || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
     let statusBadge, daysColor, daysText;
-    if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; daysText = '–'; }
+    if (cancelled) { statusBadge = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>'; daysColor = 'var(--text3)'; daysText = 'ยกเลิกสอบเทียบ'; }
+    else if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; daysText = '–'; }
     else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysColor = 'var(--red)'; daysText = 'เกิน ' + Math.abs(days) + ' วัน'; }
     else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysColor = 'var(--amber)'; daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน'; }
     else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysColor = 'var(--green)'; daysText = 'อีก ' + days + ' วัน'; }
-    return `<tr onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" style="cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
+    return `<tr onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" style="cursor:pointer${cancelled ? ';background:rgba(148,163,184,.08)' : ''}" title="คลิกเพื่อดูรายละเอียด">
       <td>${rowNum}</td>
       <td><div class="reg-cell"><span class="reg-iconbox" style="color:${color};background:${color}14;border-color:${color}40"><i class="ti ${icon}"></i></span><div><div class="reg-name">${instrumentName}</div><div class="reg-sub">${escapeHtmlText(d.brand || '–')}</div></div></div></td>
       <td><div class="reg-stack"><strong>${idCode}</strong><span>${certNo}</span></div></td>
       <td><span class="reg-chip" style="background:${color}" title="${escapeHtmlAttr(d.instrument_type || '–')}">${escapeHtmlText(letter)}</span></td>
       <td><strong>${escapeHtmlText(d.department || '–')}</strong><br><span class="reg-sub">${machineLoc}</span></td>
       <td>${formatDate(d.cal_date)}<br><span class="reg-sub">${escapeHtmlText(d.cal_type || '–')}</span></td>
-      <td><strong>${formatDate(d.due_date)}</strong><br><span class="reg-sub" style="color:${daysColor}">${daysText}</span></td>
+      <td><strong>${cancelled ? '–' : formatDate(d.due_date)}</strong><br><span class="reg-sub" style="color:${daysColor}">${daysText}</span></td>
       <td>${statusBadge}</td>
       <td>${(()=>{
+        if (cancelled) return '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
         const ps = planStatusMap[d.id];
         if (!ps) return `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
         const sMap = {
@@ -776,7 +780,7 @@ function renderTable() {
       if (!d) return;
       const name = escapeJsSingle(d.instrument_name || '');
       const id = Number(d.id) || 0;
-      td.innerHTML = `<button class="btn-view" style="margin-right:4px" onclick="openInstrumentModal(${id})">✏️</button><button class="btn-del" onclick="deleteInstrument(${id},'${name}')">🗑️</button>`;
+      td.innerHTML = `<button class="btn-del" onclick="deleteInstrument(${id},'${name}')">🗑️</button>`;
     });
   }
   updateFileCounts(pageData);

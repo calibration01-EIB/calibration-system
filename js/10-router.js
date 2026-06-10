@@ -74,16 +74,6 @@ function filterByStatus(status) {
   const LEGACY_MARKER = '[[CAL_STATUS_CANCELLED]]';
   window.__calibrationListFixVersion = 14;
 
-  function escapeValue(value) {
-    if (typeof escapeHtml === 'function') return escapeHtml(value);
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
   function getRemarkLines(value) {
     return String(value || '').split(/\r?\n/);
   }
@@ -273,23 +263,7 @@ function filterByStatus(status) {
     else document.querySelector('#instrumentModal .modal-body')?.appendChild(field);
   }
 
-  function cleanRenderedRemarksAndStatus() {
-    if (!Array.isArray(filteredData)) return;
-    const start = ((typeof currentPage === 'number' ? currentPage : 1) - 1) * (typeof pageSize === 'number' ? pageSize : 100);
-    document.querySelectorAll('#dataTable tr').forEach((row, index) => {
-      const item = filteredData[start + index];
-      if (!item || !row.cells || row.cells.length < 22) return;
-      const cleanRemark = stripCalibrationCancelMarker(item.remark);
-      row.cells[20].innerHTML = cleanRemark ? `<span style="font-size:13px;color:#888">${escapeValue(cleanRemark)}</span>` : '–';
-      if (!isCalibrationCancelled(item)) return;
-      row.style.background = 'rgba(148,163,184,.06)';
-      row.cells[13].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
-      row.cells[14].innerHTML = '<span class="days-chip badge badge-gray">–</span>';
-      row.cells[17].innerHTML = '<span class="badge badge-gray">ยกเลิกสอบเทียบ</span>';
-      row.cells[18].innerHTML = '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
-    });
-  }
-
+  // หมายเหตุ: ตารางหน้า list แสดงสถานะยกเลิกสอบเทียบเองใน renderTable (02-dashboard.js)
   function cleanRenderedMobileCards() {
     const rows = window._mobileRows || [];
     document.querySelectorAll('#mobileCardList .mobile-card').forEach((card, index) => {
@@ -364,9 +338,7 @@ function filterByStatus(status) {
     renderTable = window.renderTable = function(...args) {
       normalizeRows(allData);
       normalizeRows(filteredData);
-      const result = originalRenderTable.apply(this, args);
-      cleanRenderedRemarksAndStatus();
-      return result;
+      return originalRenderTable.apply(this, args);
     };
   }
 
@@ -407,7 +379,6 @@ function filterByStatus(status) {
       ensureCancelStatusFilterOption();
       normalizeRows(allData);
       normalizeRows(filteredData);
-      cleanRenderedRemarksAndStatus();
       return result;
     };
   }
@@ -462,7 +433,6 @@ function filterByStatus(status) {
       ensureCancelStatusFilterOption();
       normalizeRows(allData);
       normalizeRows(filteredData);
-      cleanRenderedRemarksAndStatus();
       cleanRenderedMobileCards();
       return result;
     };
