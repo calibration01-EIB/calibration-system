@@ -2104,6 +2104,54 @@ body.app-mode textarea:focus {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ===== Instrument registry redesign (pageList) ===== */
+.reg-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.reg-stat { flex: 1 1 110px; min-width: 100px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: white; }
+.reg-stat span { display: block; color: var(--text3); font-size: 11px; }
+.reg-stat strong { display: block; margin-top: 2px; font-size: 19px; line-height: 1; }
+.reg-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+.reg-pill { flex: 0 0 auto; min-width: 104px; border: 1px solid var(--border); border-radius: var(--radius); background: white; padding: 8px 12px; text-align: left; cursor: pointer; font-family: var(--font); }
+.reg-pill span { display: block; color: var(--text3); font-size: 11px; white-space: nowrap; }
+.reg-pill strong { display: block; margin-top: 2px; color: var(--text); font-size: 16px; }
+.reg-pill.active { border-color: rgba(16,35,55,.3); background: #102337; }
+.reg-pill.active span, .reg-pill.active strong { color: #fff; }
+.reg-cell { display: flex; align-items: center; gap: 9px; min-width: 200px; }
+.reg-iconbox { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid; border-radius: var(--radius); font-size: 18px; }
+.reg-name { color: var(--text); font-weight: 700; }
+.reg-sub { color: var(--text3); font-size: 11px; }
+.reg-stack { display: grid; gap: 2px; font-family: var(--mono); line-height: 1.35; }
+.reg-stack strong { color: var(--text); font-size: 13px; font-weight: 700; }
+.reg-stack span { color: var(--text2); font-size: 12px; }
+.reg-chip { width: 40px; min-height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 800; box-shadow: inset 0 -1px 0 rgba(0,0,0,.16); }
+.reg-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+.reg-detail-title { display: flex; gap: 9px; align-items: center; min-width: 0; }
+.reg-detail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.reg-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-bottom: 10px; }
+.reg-metric { min-height: 50px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); padding: 6px 9px; }
+.reg-metric > span { display: block; color: var(--text3); font-size: 11px; font-weight: 600; }
+.reg-metric strong { display: block; margin-top: 2px; font-size: 13px; }
+.reg-section { display: flex; align-items: center; gap: 7px; margin: 12px 0 6px; color: var(--text); font-size: 12px; font-weight: 700; }
+.reg-section::before { content: ""; width: 3px; height: 14px; flex: 0 0 auto; border-radius: 999px; background: var(--accent); }
+.reg-section span:first-of-type { margin-right: auto; }
+.reg-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.reg-info-item { min-width: 0; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.reg-info-item.full { grid-column: 1 / -1; }
+.reg-info-item span { display: block; color: var(--text3); font-size: 11px; font-weight: 600; }
+.reg-info-item strong { display: block; margin-top: 1px; color: var(--text); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.reg-file-row, .reg-audit-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: white; padding: 7px 9px; margin-bottom: 6px; }
+.reg-audit-row { align-items: start; }
+.reg-row-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius); background: var(--accent-light); color: var(--accent); }
+.reg-audit-row.edit .reg-row-icon { background: var(--amber-light); color: var(--amber); }
+.reg-audit-row.add .reg-row-icon { background: var(--green-light); color: var(--green); }
+.reg-audit-row.del .reg-row-icon { background: var(--red-light); color: var(--red); }
+.reg-audit-meta { display: flex; gap: 7px; flex-wrap: wrap; color: var(--text3); font-size: 11px; }
+.reg-empty { padding: 14px; text-align: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); border-radius: var(--radius); }
+@media (max-width: 760px) {
+  .reg-metric-grid, .reg-info-grid { grid-template-columns: 1fr; }
+  .reg-info-item.full { grid-column: auto; }
+  .reg-detail-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
@@ -2284,6 +2332,14 @@ body.app-mode textarea:focus {
 
       <!-- หน้า รายการเครื่องมือ -->
    <div id="pageList" class="page-content" style="display:none">
+        <!-- STATS -->
+        <div class="reg-stats" aria-label="สรุปรายการเครื่องมือ">
+          <div class="reg-stat"><span>ทั้งหมด</span><strong id="listStatTotal">0</strong></div>
+          <div class="reg-stat"><span>เกินกำหนด</span><strong id="listStatOver" style="color:var(--red)">0</strong></div>
+          <div class="reg-stat"><span>ใกล้ครบ</span><strong id="listStatWarn" style="color:var(--amber)">0</strong></div>
+          <div class="reg-stat"><span>ปกติ</span><strong id="listStatOk" style="color:var(--green)">0</strong></div>
+        </div>
+
         <!-- ROW 4: FILTER + TABLE -->
         <div class="controls-bar">
           <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT..." oninput="filterData()">
@@ -2312,6 +2368,9 @@ body.app-mode textarea:focus {
           <button class="btn-add" id="btnImportExcel" onclick="openImportModal()" style="display:none;background:#5C6BC0;border-color:#3949AB">⬆️ Import Excel</button>
         </div>
 
+        <!-- CATEGORY PILLS -->
+        <nav id="listCategoryStrip" class="reg-pills" aria-label="หมวดเครื่องมือ"></nav>
+
         <!-- PAGINATION -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:15px;color:var(--text2)" id="paginationInfo">–</div>
@@ -2333,34 +2392,31 @@ body.app-mode textarea:focus {
             <thead>
               <tr>
                 <th>#</th>
-                <th>ประเภทเครื่องมือ</th>
-                <th>ชื่อเครื่องจักร</th>
-                <th>สถานที่ใช้งาน</th>
                 <th>เครื่องมือ</th>
-                <th>ยี่ห้อ</th>
-                <th>Range</th>
-                <th>Tolerance (±)</th>
-                <th>S/N</th>
+                <th>ID.No. / CERT.</th>
+                <th>หมวด</th>
                 <th>หน่วยงาน</th>
-                <th>ID Code</th>
-                <th>CERT.</th>
                 <th>วันสอบเทียบ</th>
                 <th>ครบกำหนด</th>
-                <th>เหลือ</th>
-                <th>ความถี่สอบเทียบ</th>
-                <th>ภายใน/ภายนอก</th>
                 <th>สถานะ</th>
                 <th>วางแผน</th>
                 <th>ไฟล์</th>
-                <th>Remark</th>
                 <th id="thManage" style="display:none">จัดการ</th>
               </tr>
             </thead>
-            <tbody id="dataTable"><tr><td colspan="22" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            <tbody id="dataTable"><tr><td colspan="11" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
           </table>
         </div>
         <div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
 
+   </div>
+
+   <!-- INSTRUMENT DETAIL MODAL -->
+   <div class="modal-overlay" id="instrumentDetailModal" onclick="if(event.target===this)closeInstrumentDetail()">
+     <div class="modal-box" style="max-width:860px">
+       <div class="modal-header"><h3>📋 รายละเอียดเครื่องมือ</h3><button class="btn-close" onclick="closeInstrumentDetail()">×</button></div>
+       <div class="modal-body" id="instrumentDetailBody"></div>
+     </div>
    </div>
 
             <!-- AUDIT LOG -->

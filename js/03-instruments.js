@@ -99,6 +99,150 @@ async function handleFileSelect(files) {
 
 function closeCertModal() { document.getElementById('certModal').classList.remove('open'); currentInstrumentId = null; }
 
+// ====================================================
+// INSTRUMENT DETAIL MODAL (registry redesign)
+// ====================================================
+function regDetailItem(label, value, full = false) {
+  return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
+}
+
+function openInstrumentDetail(id) {
+  const d = allData.find(x => x.id === id);
+  if (!d) return;
+  const [letter, icon, color] = regTypeMeta(d.instrument_type);
+  const days = d.days_left;
+  let statusBadge, dueExtra;
+  if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; dueExtra = ''; }
+  else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; dueExtra = ` (เกิน ${Math.abs(days)} วัน)`; }
+  else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; dueExtra = days === 0 ? ' (วันนี้)' : ` (อีก ${days} วัน)`; }
+  else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; dueExtra = ` (อีก ${days} วัน)`; }
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'editor';
+  const openCertCall = `openCertModal(${Number(d.id)||0},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
+
+  document.getElementById('instrumentDetailBody').innerHTML = `
+    <div class="reg-detail-head">
+      <div class="reg-detail-title">
+        <span class="reg-iconbox" style="color:${color};background:${color}14;border-color:${color}40"><i class="ti ${icon}"></i></span>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="reg-name" style="font-size:15px">${escapeHtmlText(d.instrument_name || '–')}</span>
+            ${statusBadge}
+          </div>
+          <div class="reg-sub" style="margin-top:2px">
+            <span class="reg-chip" style="background:${color};width:30px;min-height:20px;font-size:11px">${escapeHtmlText(letter)}</span>
+            ${escapeHtmlText((d.instrument_type || '–').split(' (')[0])} · ${escapeHtmlText(d.department || '–')}
+          </div>
+        </div>
+      </div>
+      <div class="reg-detail-actions">
+        ${canEdit ? `<button class="btn-view" onclick="closeInstrumentDetail();openInstrumentModal(${Number(d.id)||0})">✏️ แก้ไข</button>` : ''}
+        <button class="btn-view" onclick="closeInstrumentDetail();${openCertCall}">📎 จัดการไฟล์</button>
+        <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติสอบเทียบ</button>
+      </div>
+    </div>
+
+    <div class="reg-metric-grid">
+      <div class="reg-metric"><span>CERT.</span><strong style="font-family:var(--mono)">${escapeHtmlText(d.cert_no || '–')}</strong></div>
+      <div class="reg-metric"><span>ID.No.</span><strong style="font-family:var(--mono)">${escapeHtmlText(d.id_code || '–')}</strong></div>
+      <div class="reg-metric"><span>วันที่สอบเทียบ</span><strong>${formatDate(d.cal_date)}</strong></div>
+      <div class="reg-metric"><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div>
+    </div>
+
+    <div class="reg-section">รายละเอียดเครื่องมือ</div>
+    <div class="reg-info-grid">
+      ${regDetailItem('ประเภทเครื่องมือ', d.instrument_type)}
+      ${regDetailItem('ชื่อเครื่องจักร', d.machine_name)}
+      ${regDetailItem('ยี่ห้อ / รุ่น', d.brand)}
+      ${regDetailItem('สถานที่ใช้งาน', d.location)}
+      ${regDetailItem('Range', d.range_val)}
+      ${regDetailItem('Tolerance (±)', d.tolerance)}
+      ${regDetailItem('Serial No.', d.serial_no)}
+      ${regDetailItem('หน่วยงาน', d.department)}
+      ${regDetailItem('ความถี่สอบเทียบ', d.cal_frequency)}
+      ${regDetailItem('ภายใน/ภายนอก', d.cal_type)}
+      ${regDetailItem('Remark', d.remark, true)}
+    </div>
+
+    <div class="reg-section">ไฟล์ใบรับรอง</div>
+    <div id="regDetailFiles"><div class="reg-empty">กำลังโหลดไฟล์...</div></div>
+
+    <div class="reg-section">Audit Log</div>
+    <div id="regDetailAudit"><div class="reg-empty">กำลังโหลด...</div></div>
+  `;
+  document.getElementById('instrumentDetailModal').classList.add('open');
+  loadDetailFiles(d);
+  loadDetailAudit(d);
+}
+
+function closeInstrumentDetail() {
+  document.getElementById('instrumentDetailModal').classList.remove('open');
+}
+
+async function loadDetailFiles(d) {
+  const el = document.getElementById('regDetailFiles');
+  if (!el) return;
+  try {
+    const folder = `cert_${d.id}_${d.id_code}`;
+    const { data, error } = await sb.storage.from('certificates').list(folder);
+    if (error) throw error;
+    const files = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+    fileCountCache[d.id] = files.length;
+    if (!files.length) { el.innerHTML = '<div class="reg-empty">ยังไม่มีไฟล์</div>'; return; }
+    el.innerHTML = files.map(f => {
+      const icon = f.name.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️';
+      const size = f.metadata?.size ? Math.round(f.metadata.size / 1024) + ' KB' : '–';
+      return `<div class="reg-file-row">
+        <div class="reg-row-icon">${icon}</div>
+        <div>
+          <div class="reg-name" style="font-size:12px;overflow-wrap:anywhere">${escapeHtmlText(f.name)}</div>
+          <div class="reg-sub">${escapeHtmlText(size)}</div>
+        </div>
+        <button class="btn-view" onclick="viewFile('${folder}','${escapeJsSingle(f.name)}')">ดู</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="reg-empty" style="color:var(--red)">โหลดไฟล์ไม่สำเร็จ</div>';
+  }
+}
+
+async function loadDetailAudit(d) {
+  const el = document.getElementById('regDetailAudit');
+  if (!el) return;
+  try {
+    const { data, error } = await sb.from('audit_logs')
+      .select('created_at,username,action,changes')
+      .eq('instrument_id', d.id)
+      .order('created_at', { ascending: false })
+      .limit(8);
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) { el.innerHTML = '<div class="reg-empty">ยังไม่มี Audit Log</div>'; return; }
+    el.innerHTML = rows.map(log => {
+      const action = String(log.action || '');
+      const type = action.includes('ลบ') ? 'del' : action.includes('ไฟล์') ? 'file' : action.includes('เพิ่ม') ? 'add' : 'edit';
+      const icon = { del: '🗑️', file: '📎', add: '➕', edit: '✏️' }[type];
+      const detail = log.changes
+        ? Object.entries(log.changes).map(([field, ch]) => {
+            if (ch && typeof ch === 'object') return `${field}: ${ch.from || '–'} → ${ch.to || '–'}`;
+            return `${field}: ${ch}`;
+          }).join(' · ')
+        : 'สร้างรายการเครื่องมือ';
+      const when = log.created_at ? new Date(log.created_at).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+      return `<div class="reg-audit-row ${type}">
+        <div class="reg-row-icon">${icon}</div>
+        <div>
+          <div class="reg-name" style="font-size:12px">${escapeHtmlText(action || 'กิจกรรม')}</div>
+          <div class="reg-sub" style="overflow-wrap:anywhere">${escapeHtmlText(detail)}</div>
+          <div class="reg-audit-meta"><span>${escapeHtmlText(log.username || '–')}</span><span>${escapeHtmlText(when)}</span></div>
+        </div>
+        <span class="reg-sub" style="font-family:var(--mono)">${escapeHtmlText(d.id_code || '')}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="reg-empty" style="color:var(--red)">โหลด Audit Log ไม่สำเร็จ</div>';
+  }
+}
+
 const uploadArea = document.getElementById('uploadArea');
 uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));

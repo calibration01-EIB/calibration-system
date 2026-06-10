@@ -458,6 +458,52 @@ function populateFilters() {
   const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
   document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t)}</option>`).join('');
   document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option value="${escapeHtmlAttr(u)}">${escapeHtmlText(u)}</option>`).join('');
+  renderListCategoryPills();
+}
+
+// ===== Instrument registry redesign helpers =====
+const REG_TYPE_META = {
+  'มวล/น้ำหนัก (Mass/Weight)':                ['B', 'ti-scale', '#00897b'],
+  'อุณหภูมิ/ความชื้น (Temperature/Humidity)':  ['T', 'ti-temperature', '#d85a30'],
+  'ความยาว/มิติ (Length/Dimension)':           ['D', 'ti-ruler-measure', '#185fa5'],
+  'ความดัน/สุญญากาศ (Pressure/Vacuum)':        ['P', 'ti-gauge', '#534ab7'],
+  'การไหล/ปริมาตร (Flow/Volume)':              ['Q', 'ti-wave-sine', '#993556'],
+  'ความเร็วรอบ (Speed/Rotation)':              ['S', 'ti-rotate-clockwise-2', '#0f6e56'],
+  'เวลา (Time)':                               ['C', 'ti-clock', '#565f6a'],
+  'เคมี/ความเข้มข้น (Chemical/Concentration)': ['K', 'ti-flask', '#639922'],
+  'ความหนืด/ความหนาแน่น (Viscosity/Density)':  ['V', 'ti-droplet', '#2563eb'],
+  'ไฟฟ้า (Electrical)':                        ['E', 'ti-bolt', '#ba7517'],
+  'แสง/เสียง (Light/Sound)':                   ['L', 'ti-bulb', '#c2410c'],
+  'ความปลอดภัย (Safety)':                      ['F', 'ti-shield-check', '#dc3545'],
+  'แรงบิด/แรงกด (Torque/Force)':               ['N', 'ti-tool', '#7c3aed'],
+};
+function regTypeMeta(type) {
+  return REG_TYPE_META[type] || ['-', 'ti-tool', '#52667d'];
+}
+
+function renderListCategoryPills() {
+  const strip = document.getElementById('listCategoryStrip');
+  if (!strip) return;
+  const totals = {};
+  allData.forEach(d => { if (d.instrument_type) totals[d.instrument_type] = (totals[d.instrument_type] || 0) + 1; });
+  const current = document.getElementById('typeFilter')?.value || '';
+  const allPill = `<button class="reg-pill ${current ? '' : 'active'}" onclick="setListCategory('')">
+    <span>ทั้งหมด</span><strong>${allData.length.toLocaleString()}</strong>
+  </button>`;
+  const typePills = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+    const [letter] = regTypeMeta(type);
+    const label = type.split(' (')[0];
+    return `<button class="reg-pill ${current === type ? 'active' : ''}" onclick="setListCategory('${escapeJsSingle(type)}')">
+      <span>${escapeHtmlText(letter)} ${escapeHtmlText(label)}</span><strong>${count.toLocaleString()}</strong>
+    </button>`;
+  }).join('');
+  strip.innerHTML = allPill + typePills;
+}
+
+function setListCategory(type) {
+  const sel = document.getElementById('typeFilter');
+  if (sel) sel.value = type;
+  filterData();
 }
 
 function updateStats() {
@@ -476,6 +522,15 @@ function updateStats() {
   document.getElementById('statOk').textContent = okCount.toLocaleString();
   document.getElementById('statOverdue').textContent = ov.toLocaleString();
   document.getElementById('statWarning').textContent = wa.toLocaleString();
+
+  // stats บนหน้าทะเบียนเครื่องมือ
+  const lTotal = document.getElementById('listStatTotal');
+  if (lTotal) {
+    lTotal.textContent = total.toLocaleString();
+    document.getElementById('listStatOver').textContent = ov.toLocaleString();
+    document.getElementById('listStatWarn').textContent = wa.toLocaleString();
+    document.getElementById('listStatOk').textContent = okCount.toLocaleString();
+  }
 
   // summary box
   const el2Ok = document.getElementById('statOk2');
@@ -634,7 +689,7 @@ function filterData() {
     return true;
   });
   currentPage = 1;
-  updateStats(); renderTable();
+  updateStats(); renderTable(); renderListCategoryPills();
 }
 
 function resetFilters() {
@@ -649,7 +704,7 @@ function resetFilters() {
   if (activeMonthCard) { activeMonthCard.style.boxShadow=''; activeMonthCard.style.transform=''; activeMonthCard=null; }
   filteredData = [...allData];
   currentPage = 1;
-  updateStats(); renderTable();
+  updateStats(); renderTable(); renderListCategoryPills();
 }
 
 function formatDate(s) {
@@ -657,33 +712,13 @@ function formatDate(s) {
   return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-function typeBadge(t) {
-  if (!t) return '<span class="badge badge-gray">–</span>';
-  const map = {
-    'มวล/น้ำหนัก (Mass/Weight)': 'badge-blue',
-    'ความยาว/มิติ (Length/Dimension)': 'badge-purple',
-    'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'badge-amber',
-    'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'badge-gray',
-    'ความเร็วรอบ (Speed/Rotation)': 'badge-green',
-    'เวลา (Time)': 'badge-gray',
-    'เคมี/ความเข้มข้น (Chemical/Concentration)': 'badge-green',
-    'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'badge-blue',
-    'ไฟฟ้า (Electrical)': 'badge-amber',
-    'การไหล/ปริมาตร (Flow/Volume)': 'badge-blue',
-    'แสง/เสียง (Light/Sound)': 'badge-amber',
-    'ความปลอดภัย (Safety)': 'badge-red',
-    'แรงบิด/แรงกด (Torque/Force)': 'badge-purple',
-  };
-  return `<span class="badge ${map[t]||'badge-gray'}" style="font-size:13px">${escapeHtmlText(t)}</span>`;
-}
-
 function renderTable() {
   const tbody = document.getElementById('dataTable');
-  if (!filteredData.length) { 
-    tbody.innerHTML = '<tr><td colspan="22" class="no-data">ไม่พบข้อมูล</td></tr>';
+  if (!filteredData.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="no-data">ไม่พบข้อมูล</td></tr>';
     updatePaginationUI();
     renderMobileCards();
-    return; 
+    return;
   }
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize);
@@ -692,51 +727,43 @@ function renderTable() {
   const pageData = filteredData.slice(start, start + pageSize);
   updatePaginationUI();
   tbody.innerHTML = pageData.map((d, i) => {
-  const rowNum = start + i + 1;
+    const rowNum = start + i + 1;
+    const id = Number(d.id) || 0;
     const days = d.days_left;
     const idCode = escapeHtmlText(d.id_code || '–');
     const certNo = escapeHtmlText(d.cert_no || '–');
     const instrumentName = escapeHtmlText(d.instrument_name || '–');
     const planTitle = escapeHtmlAttr(planStatusMap[d.id]?.title || '');
-    const openCertCall = `openCertModal(${Number(d.id)||0},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
-    let statusBadge, daysClass;
-    if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysClass = 'badge-gray'; }
-    else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysClass = 'badge-red'; }
-    else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysClass = 'badge-amber'; }
-    else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysClass = 'badge-green'; }
-    return `<tr>
+    const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
+    const [letter, icon, color] = regTypeMeta(d.instrument_type);
+    const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || '–';
+    let statusBadge, daysColor, daysText;
+    if (days === null) { statusBadge = '<span class="badge badge-gray">–</span>'; daysColor = 'var(--text3)'; daysText = '–'; }
+    else if (days < 0) { statusBadge = '<span class="badge badge-red">🔴 เลยกำหนด</span>'; daysColor = 'var(--red)'; daysText = 'เกิน ' + Math.abs(days) + ' วัน'; }
+    else if (days <= 30) { statusBadge = '<span class="badge badge-amber">🟡 ใกล้ครบ</span>'; daysColor = 'var(--amber)'; daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน'; }
+    else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; daysColor = 'var(--green)'; daysText = 'อีก ' + days + ' วัน'; }
+    return `<tr onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" style="cursor:pointer" title="คลิกเพื่อดูรายละเอียด">
       <td>${rowNum}</td>
-      <td>${typeBadge(d.instrument_type)}</td>
-      <td>${escapeHtmlText(d.machine_name || '–')}</td>
-      <td>${escapeHtmlText(d.location || '–')}</td>
-      <td>${instrumentName}</td>
-      <td>${escapeHtmlText(d.brand || '–')}</td>
-      <td>${escapeHtmlText(d.range_val || '–')}</td>
-      <td style="font-family:var(--mono);font-size:20px">${d.tolerance ? '± '+escapeHtmlText(d.tolerance) : '–'}</td>
-      <td style="font-family:var(--mono);font-size:20px">${escapeHtmlText(d.serial_no || '–')}</td>
-      <td><strong>${escapeHtmlText(d.department || '–')}</strong></td>
-      <td><button onclick="openCalHistory(${Number(d.id)||0})" style="font-family:var(--mono);font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:3px" title="ดูประวัติสอบเทียบ">${idCode}</button></td>
-      <td style="font-family:var(--mono);font-size:20px">${certNo}</td>
-      <td>${formatDate(d.cal_date)}</td>
-      <td>${formatDate(d.due_date)}</td>
-      <td><span class="days-chip badge ${daysClass}">${days !== null ? days+' วัน' : '–'}</span></td>
-      <td>${escapeHtmlText(d.cal_frequency || '–')}</td>
-      <td>${d.cal_type ? '<span class="badge '+(d.cal_type==='ภายใน'?'badge-blue':'badge-purple')+'">'+(d.cal_type==='ภายใน'?'🏭 ภายใน':'🌐 ภายนอก')+'</span>' : '–'}</td>
+      <td><div class="reg-cell"><span class="reg-iconbox" style="color:${color};background:${color}14;border-color:${color}40"><i class="ti ${icon}"></i></span><div><div class="reg-name">${instrumentName}</div><div class="reg-sub">${escapeHtmlText(d.brand || '–')}</div></div></div></td>
+      <td><div class="reg-stack"><strong>${idCode}</strong><span>${certNo}</span></div></td>
+      <td><span class="reg-chip" style="background:${color}" title="${escapeHtmlAttr(d.instrument_type || '–')}">${escapeHtmlText(letter)}</span></td>
+      <td><strong>${escapeHtmlText(d.department || '–')}</strong><br><span class="reg-sub">${machineLoc}</span></td>
+      <td>${formatDate(d.cal_date)}<br><span class="reg-sub">${escapeHtmlText(d.cal_type || '–')}</span></td>
+      <td><strong>${formatDate(d.due_date)}</strong><br><span class="reg-sub" style="color:${daysColor}">${daysText}</span></td>
       <td>${statusBadge}</td>
       <td>${(()=>{
         const ps = planStatusMap[d.id];
-        if (!ps) return `<button onclick="goToPlanWithItem(${Number(d.id)||0})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        if (!ps) return `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
         const sMap = {
           pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#FAEEDA'],
           planned:      ['✅ วางแผนแล้ว','#3B6D11','#EAF3DE'],
           pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#E6F1FB'],
           completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
         };
-        const [lbl,color,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
-        return `<button onclick="goToPlanDetail(${Number(d.id)||0})" title="ดูแผน: ${planTitle}" style="font-size:11px;background:${bg};color:${color};border:1px solid ${color}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
+        const [lbl,color2,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
+        return `<button onclick="goToPlanDetail(${id})" title="ดูแผน: ${planTitle}" style="font-size:11px;background:${bg};color:${color2};border:1px solid ${color2}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
       })()}</td>
-      <td><button id="certbtn-${Number(d.id)||0}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
-      <td>${d.remark ? '<span style="font-size:13px;color:#888">'+escapeHtmlText(d.remark)+'</span>' : '–'}</td>
+      <td><button id="certbtn-${id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td style="white-space:nowrap" class="td-manage"></td>
     </tr>`;
   }).join('');
