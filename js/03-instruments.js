@@ -147,8 +147,8 @@ function openInstrumentDetail(id) {
     </div>
 
     <div class="reg-metric-grid">
-      <div class="reg-metric"><span>CERT.</span><strong style="font-family:var(--mono)">${escapeHtmlText(d.cert_no || '–')}</strong></div>
-      <div class="reg-metric"><span>ID.No.</span><strong style="font-family:var(--mono)">${escapeHtmlText(d.id_code || '–')}</strong></div>
+      <div class="reg-metric"><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div>
+      <div class="reg-metric"><span>ID.No.</span><strong>${escapeHtmlText(d.id_code || '–')}</strong></div>
       <div class="reg-metric"><span>วันที่สอบเทียบ</span><strong>${formatDate(d.cal_date)}</strong></div>
       <div class="reg-metric"><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div>
     </div>
@@ -241,7 +241,7 @@ async function loadDetailAudit(d) {
           <div class="reg-sub" style="overflow-wrap:anywhere">${escapeHtmlText(detail)}</div>
           <div class="reg-audit-meta"><span>${escapeHtmlText(log.username || '–')}</span><span>${escapeHtmlText(when)}</span></div>
         </div>
-        <span class="reg-sub" style="font-family:var(--mono)">${escapeHtmlText(d.id_code || '')}</span>
+        <span class="reg-sub">${escapeHtmlText(d.id_code || '')}</span>
       </div>`;
     }).join('');
   } catch(e) {
