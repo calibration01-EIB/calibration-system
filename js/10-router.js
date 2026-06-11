@@ -30,7 +30,7 @@ function showPage(page) {
   if (ts) ts.textContent = t[1];
 
   if (page === 'plan') { loadPlanConfirmBadge(); initPlanPage(); }
-  if (page === 'weights') loadStandardWeights();
+  if (page === 'weights') { loadStandardCerts(); loadStandardWeights(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
   if (page === 'cert') {

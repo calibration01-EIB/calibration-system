@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v26';
+const CACHE_NAME = 'calibration-app-v27';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
@@ -33,6 +33,7 @@ const APP_SHELL = [
   './js/08-weights.js',
   './js/09-cert.js',
   './js/10-router.js',
+  './js/12-standard-certs.js',
   IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
 

@@ -2145,6 +2145,24 @@ body.app-mode textarea:focus {
 .reg-empty { padding: 14px; text-align: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); border-radius: var(--radius); }
 #pageList tr.reg-cancelled td { background: rgba(220, 53, 69, .07); }
 #pageList tr.reg-cancelled td:first-child { box-shadow: inset 4px 0 0 var(--red); }
+
+/* ===== Standard certs (pageWeights tab) ===== */
+.sw-tab { min-height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: white; color: var(--text2); font-weight: 700; font-family: var(--font); font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+.sw-tab.active { background: #00695C; border-color: #00695C; color: #fff; }
+.sc-vals { width: 100%; border-collapse: collapse; }
+.sc-vals th { height: 34px; padding: 0 10px; text-align: left; font-size: 11px; background: var(--surface2); border-bottom: 1px solid var(--border); color: var(--text2); font-weight: 700; white-space: nowrap; }
+.sc-vals td { height: 36px; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: 12px; white-space: nowrap; }
+.sc-vals .num, .sc-vals th.num { text-align: right; }
+.sc-pass { color: var(--green); font-weight: 800; }
+.sc-fail { color: var(--red); font-weight: 800; }
+.sc-rows { width: 100%; border-collapse: collapse; }
+.sc-rows th { text-align: left; font-size: 11px; color: var(--text3); padding: 4px; background: var(--surface2); white-space: nowrap; }
+.sc-rows td { padding: 3px; }
+.sc-rows input { width: 100%; min-height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; font-family: var(--font); font-size: 12px; outline: none; box-sizing: border-box; }
+.sc-calc { border: 1px solid #a7e2ef; background: #e4f8fb; border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+.sc-calc-out { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; margin-top: 10px; }
+.sc-calc-out .reg-metric { background: #fff; }
+@media (max-width: 760px) { .sc-calc-out { grid-template-columns: 1fr; } }
 @media (max-width: 760px) {
   .reg-metric-grid, .reg-info-grid { grid-template-columns: 1fr; }
   .reg-info-item.full { grid-column: auto; }
@@ -2699,6 +2717,75 @@ body.app-mode textarea:focus {
 
       <div id="pageWeights" class="page-content" style="display:none">
 
+        <!-- TABS: ใบรับรองมาตรฐาน / ลูกตุ้มรายลูก -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบรับรองมาตรฐาน (Cert.)</button>
+          <button class="sw-tab" id="swTabWeights" onclick="switchSWTab('weights')">⚖️ ลูกตุ้มรายลูก</button>
+        </div>
+
+        <!-- ===== SECTION: STANDARD CERTS ===== -->
+        <div id="scSection">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+            <div style="background:#00695C;border-radius:14px;padding:14px 16px">
+              <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใบ Cert ทั้งหมด</div>
+              <div style="font-size:26px;font-weight:700;color:white;line-height:1" id="scTotal">–</div>
+            </div>
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใช้งานอยู่</div>
+              <div style="font-size:26px;font-weight:700;color:var(--green);line-height:1" id="scOk">–</div>
+            </div>
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใกล้หมดอายุ</div>
+              <div style="font-size:26px;font-weight:700;color:var(--amber);line-height:1" id="scWarn">–</div>
+            </div>
+            <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">หมดอายุ/มีใบใหม่แทน</div>
+              <div style="font-size:26px;font-weight:700;color:var(--red);line-height:1" id="scExpired">–</div>
+            </div>
+          </div>
+
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="scSearch" type="search" placeholder="🔍 ค้นหา Cert No., ชุดมาตรฐาน, S/N, รายการ..." oninput="renderSC()"
+              style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none">
+            <select id="scCatFilter" onchange="renderSC()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:130px">
+              <option value="">ทุกประเภท</option>
+            </select>
+            <select id="scStatusFilter" onchange="renderSC()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:140px">
+              <option value="">ทุกสถานะ</option>
+              <option value="ok">✅ ใช้งานอยู่</option>
+              <option value="warn">⚠️ ใกล้หมดอายุ</option>
+              <option value="expired">❌ หมดอายุ</option>
+              <option value="superseded">🔄 มีใบใหม่แทน</option>
+            </select>
+            <button id="scAddBtn" onclick="openSCEdit(null)" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มใบ Cert</button>
+          </div>
+
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
+            <div class="table-wrap" style="max-height:calc(100vh - 380px)">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Certificate</th>
+                    <th>ประเภท</th>
+                    <th>ชุดมาตรฐาน</th>
+                    <th>Class/Grade</th>
+                    <th>S/N</th>
+                    <th>จุดวัด</th>
+                    <th>วันสอบเทียบ</th>
+                    <th>ครบกำหนด</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="scTableBody"><tr><td colspan="9" class="no-data">กำลังโหลด...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text3)">💡 คลิกใบ Cert เพื่อดูตารางผลวัดรายจุด — โมดูลสอบเทียบจะใช้<strong>ใบล่าสุดที่ยังไม่หมดอายุ</strong>ของแต่ละชุดมาตรฐานเสมอ</div>
+        </div>
+
+        <!-- ===== SECTION: STANDARD WEIGHTS (เดิม) ===== -->
+        <div id="swSection" style="display:none">
+
         <!-- KPI Cards -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
           <div style="background:#00695C;border-radius:14px;padding:16px 18px;cursor:default">
@@ -2771,6 +2858,59 @@ body.app-mode textarea:focus {
                 <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+        </div><!-- /swSection -->
+      </div>
+
+      <!-- MODAL: Standard Cert Detail -->
+      <div class="modal-overlay" id="scDetailModal" onclick="if(event.target===this)closeSCDetail()">
+        <div class="modal-box" style="max-width:900px">
+          <div class="modal-header"><h3>📜 รายละเอียดใบรับรองมาตรฐาน</h3><button class="btn-close" onclick="closeSCDetail()">×</button></div>
+          <div class="modal-body" id="scDetailBody" style="padding:16px 20px 20px"></div>
+        </div>
+      </div>
+
+      <!-- MODAL: Standard Cert Edit -->
+      <div class="modal-overlay" id="scEditModal" onclick="if(event.target===this)closeSCEdit()">
+        <div class="modal-box" style="max-width:900px">
+          <div class="modal-header"><h3 id="scEditTitle">เพิ่มใบ Cert</h3><button class="btn-close" onclick="closeSCEdit()">×</button></div>
+          <div class="modal-body" style="padding:16px 20px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="sc-form">
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Certificate No. *</label><input id="scCertNo" type="text" placeholder="MM-0161-22" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ชุดมาตรฐาน (ID ภายใน) *</label><input id="scSetCode" type="text" placeholder="E2-CLCLRS01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ประเภทเครื่องมือมาตรฐาน</label>
+                <select id="scCategory" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;margin-top:4px">
+                  <option>มวล/น้ำหนัก</option><option>อุณหภูมิ</option><option>ความดัน</option><option>ความยาว/มิติ</option><option>ไฟฟ้า</option><option>อื่นๆ</option>
+                </select></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">รายการ (Measurement item)</label><input id="scItem" type="text" placeholder="Weight set (1 mg to 1 kg)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ผู้ผลิต</label><input id="scManufacturer" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Class / Grade</label><input id="scClass" type="text" placeholder="E2, Reference, 0.025 %FS" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Serial Number</label><input id="scSerial" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ห้องปฏิบัติการ (Issued by)</label><input id="scLab" type="text" placeholder="NIMT — Mass Laboratory" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">วันที่สอบเทียบ</label><input id="scMeasDate" type="date" onchange="scAutoDue()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div><label style="font-size:12px;font-weight:600;color:var(--text2)">รอบ (ปี)</label><input id="scInterval" type="number" value="2" min="1" onchange="scAutoDue()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+                <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ครบกำหนด</label><input id="scDueDate" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              </div>
+              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">สภาวะแวดล้อม / หมายเหตุ</label><textarea id="scRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px;resize:vertical"></textarea></div>
+              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">แนบไฟล์ใบ Cert (PDF)</label><input id="scFile" type="file" accept=".pdf,image/*" style="width:100%;margin-top:4px;font-size:13px;font-family:var(--font)"></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 6px">
+              <strong style="font-size:13px">ตารางผลวัด (ตามใบ Cert)</strong>
+              <button class="btn-view" type="button" onclick="addSCRow()">+ เพิ่มแถว</button>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="sc-rows">
+                <thead><tr><th style="width:90px">จุดวัด/ค่าพิกัด</th><th style="width:64px">หน่วย</th><th>รายละเอียด</th><th style="width:95px">Correction</th><th style="width:95px">U, k=2</th><th style="width:85px">เกณฑ์ ±</th><th style="width:70px">หน่วยค่าแก้</th><th style="width:36px"></th></tr></thead>
+                <tbody id="scValueRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-reset" type="button" onclick="closeSCEdit()">ยกเลิก</button>
+            <button class="btn-view" type="button" id="scSaveBtn" onclick="saveSC()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
           </div>
         </div>
       </div>
@@ -3275,8 +3415,9 @@ body.app-mode textarea:focus {
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
 <script src="js/09-cert.js?v=20260609-cert-headings"></script>
-<script src="js/10-router.js?v=20260610-list-redesign5"></script>
+<script src="js/10-router.js?v=20260610-std-certs"></script>
 <script src="js/11-import-template-selection.js?v=20260609-category-fix2"></script>
+<script src="js/12-standard-certs.js?v=20260610-std-certs"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
