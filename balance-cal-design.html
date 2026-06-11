@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance Calibration — Workflow Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #eef4f8; --surface: #fff; --surface2: #f7fafc; --line: #d9e5ee; --line-soft: #eaf0f5;
+  --text: #102337; --muted: #61758a; --soft: #8aa0b4;
+  --accent: #0788a6; --accent-soft: #e4f8fb;
+  --green: #168a4a; --green-soft: #ecfdf3; --amber: #ee7b12; --amber-soft: #fff5e9;
+  --red: #dc3545; --red-soft: #fff0f2; --blue: #2563eb; --violet: #7c3aed;
+  --radius: 8px; --shadow: 0 14px 34px rgba(25,58,90,.08);
+  --font: "IBM Plex Sans Thai", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+input[type=number] { text-align: right; }
+.page { width: min(1240px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 48px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.top h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+.top p { margin: 5px 0 0; color: var(--muted); max-width: 720px; }
+.badge-pill { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid rgba(8,136,166,.24); border-radius: 999px; background: var(--accent-soft); color: #06718b; font-weight: 700; white-space: nowrap; }
+.jump { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 12px; background: linear-gradient(180deg,rgba(248,251,255,.98),rgba(248,251,255,.85)); backdrop-filter: blur(12px); }
+.jump a { flex: 0 0 auto; text-decoration: none; color: var(--muted); min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-weight: 700; font-size: 12px; }
+.jump a:hover { color: var(--accent); border-color: rgba(8,136,166,.3); }
+.card { background: var(--surface); border: 1px solid rgba(37,99,235,.12); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.card-title { display: flex; align-items: center; gap: 10px; }
+.step-num { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; color: #fff; font-weight: 800; }
+.card h2 { margin: 0; font-size: 16px; }
+.card .hint { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.s1 { background: linear-gradient(135deg,#2563eb,#0891b2); }
+.s2 { background: linear-gradient(135deg,#0891b2,#00897b); }
+.s3 { background: linear-gradient(135deg,#f97316,#f59e0b); }
+.s4 { background: linear-gradient(135deg,#7c3aed,#2563eb); }
+.s5 { background: linear-gradient(135deg,#16a34a,#0891b2); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px 14px; }
+.field label { display: block; color: var(--muted); font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+.field input, .field select { width: 100%; min-height: 34px; border: 1px solid var(--line); border-radius: 7px; padding: 0 9px; background: #fff; color: var(--text); outline: none; }
+.field input:focus, .field select:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.field input[readonly] { background: var(--surface2); color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { height: 34px; padding: 0 9px; text-align: left; color: #31465b; background: #edf4f8; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.tbl td { height: 36px; padding: 2px 9px; border-bottom: 1px solid var(--line-soft); font-size: 12px; white-space: nowrap; }
+.tbl td.num, .tbl th.num { text-align: right; }
+.tbl input { width: 90px; min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; background: #fffdf2; }
+.tbl input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.calc { color: #06718b; font-weight: 700; }
+.pass { color: var(--green); font-weight: 800; }
+.fail { color: var(--red); font-weight: 800; }
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--accent-soft); color: #06718b; border: 1px solid #a7e2ef; white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status.ok { color: var(--green); background: var(--green-soft); border: 1px solid #b7efca; }
+.status.bad { color: var(--red); background: var(--red-soft); border: 1px solid #ffc8d0; }
+.note { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--line); color: var(--muted); font-size: 12px; margin-top: 10px; }
+.section-sub { display: flex; align-items: center; gap: 7px; margin: 14px 0 8px; font-size: 12px; font-weight: 800; }
+.section-sub::before { content: ""; width: 3px; height: 14px; border-radius: 999px; background: var(--accent); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.kpi { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface2); padding: 8px 10px; }
+.kpi span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
+.kpi strong { display: block; margin-top: 2px; font-size: 14px; }
+.cert-preview { border: 1.5px solid var(--line); border-radius: var(--radius); background: #fff; padding: 18px 22px; max-width: 760px; margin: 0 auto; font-size: 12px; }
+.cert-preview h3 { text-align: center; letter-spacing: 2px; margin: 0 0 4px; font-size: 15px; }
+.cert-preview .lab { text-align: center; color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+.cp-row { display: grid; grid-template-columns: 180px 1fr; gap: 6px; padding: 2px 0; }
+.cp-row span { color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+@media (max-width: 860px) {
+  .grid2, .grid3, .kpis { grid-template-columns: 1fr; }
+  .top { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div>
+      <h1>สอบเทียบเครื่องชั่ง — Workflow Design</h1>
+      <p>แทนไฟล์ Excel ทั้งใบ: เลือกเครื่อง → ดึงตุ้มจากใบ Cert Standard → กรอกผลดิบ → ระบบคำนวณ Correction + งบความไม่แน่นอน + ประเมิน PASS/FAIL → ออกใบรับรอง (ตัวเลขตัวอย่างชุดนี้มาจากงานจริง 26B232-0 เพื่อเทียบผลกับ Excel ได้ตรง ๆ)</p>
+    </div>
+    <span class="badge-pill">Mockup — คำนวณจริงทั้งหน้า</span>
+  </header>
+
+  <nav class="jump">
+    <a href="#st1"><i class="ti ti-scale"></i>1 เครื่อง+เกณฑ์</a>
+    <a href="#st2"><i class="ti ti-certificate"></i>2 ตุ้มมาตรฐาน/จุดทดสอบ</a>
+    <a href="#st3"><i class="ti ti-clipboard-text"></i>3 บันทึกผลดิบ</a>
+    <a href="#st4"><i class="ti ti-math-function"></i>4 ความไม่แน่นอน</a>
+    <a href="#st5"><i class="ti ti-rosette-discount-check"></i>5 ประเมิน + ใบ Cert</a>
+  </nav>
+
+  <!-- ============ STEP 1 ============ -->
+  <section class="card" id="st1">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="step-num s1">1</span>
+        <div><h2>เครื่องชั่ง + เกณฑ์การยอมรับ</h2><p class="hint">ระบบจริงจะดึงจากทะเบียนเครื่องมือ — เลือก ID.No. แล้วข้อมูลมาเอง</p></div>
+      </div>
+      <span class="chip"><i class="ti ti-database"></i> จากทะเบียนเครื่องมือ</span>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>ID.No.</label><input value="QTB2BB02-WI01" readonly></div>
+      <div class="field"><label>ยี่ห้อ / รุ่น</label><input value="Sartorius / BP3100-S" readonly></div>
+      <div class="field"><label>Serial No.</label><input value="13006505" readonly></div>
+      <div class="field"><label>พิกัด (Max)</label><input id="iCap" type="number" value="3100"> </div>
+      <div class="field"><label>ความละเอียด d (g)</label><input id="iRes" type="number" step="any" value="0.01"></div>
+      <div class="field"><label>User Range (g)</label><input value="1 – 2000" ></div>
+    </div>
+    <div class="section-sub">Tolerance ตามช่วงใช้งาน (แก้ไขได้)</div>
+    <div class="table-wrap"><table class="tbl" style="max-width:560px">
+      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">Tolerance ± (g)</th></tr></thead>
+      <tbody id="tolRows"></tbody>
+    </table></div>
+  </section>
+
+  <!-- ============ STEP 2 ============ -->
+  <section class="card" id="st2">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="step-num s2">2</span>
+        <div><h2>ตุ้มมาตรฐาน + จุดทดสอบ</h2><p class="hint">ค่าแก้และ U ดึงจากหน้า "ใบรับรองมาตรฐาน" อัตโนมัติ — จุดที่รวมตุ้มหลายลูกระบบจะบวกค่าแก้และบวก U ให้</p></div>
+      </div>
+      <span class="chip"><i class="ti ti-certificate"></i> จากใบ Cert: 26M004-0 + 26M005-0 (Class F1)</span>
+    </div>
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้รวม (g)</th><th class="num">Conventional mass (g)</th><th class="num">U ตุ้มรวม (mg)</th></tr></thead>
+      <tbody id="pointRows"></tbody>
+    </table></div>
+    <div class="note"><i class="ti ti-info-circle"></i><div>ในระบบจริง: เลือกชุดมาตรฐาน → ระบบเสนอวิธีประกอบตุ้มให้แต่ละจุดอัตโนมัติ (แก้ได้) และเตือนถ้าใบ Cert ตุ้มหมดอายุ — จุดทดสอบเพิ่ม/ลด/แก้ค่าได้ต่อการสอบเทียบแต่ละครั้ง</div></div>
+  </section>
+
+  <!-- ============ STEP 3 ============ -->
+  <section class="card" id="st3">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="step-num s3">3</span>
+        <div><h2>บันทึกผลดิบ</h2><p class="hint">ช่องพื้นเหลือง = กรอกเอง · ตัวเลขสีฟ้า = ระบบคำนวณสด</p></div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="field"><label>วันที่สอบเทียบ</label><input type="date" value="2026-04-24"></div>
+      <div class="field"><label>อุณหภูมิ เริ่ม–สิ้นสุด (°C)</label><div style="display:flex;gap:6px"><input type="number" step="any" value="24.9"><input type="number" step="any" value="25.6"></div></div>
+      <div class="field"><label>ความชื้น เริ่ม–สิ้นสุด (%RH)</label><div style="display:flex;gap:6px"><input type="number" step="any" value="62.6"><input type="number" step="any" value="63.8"></div></div>
+    </div>
+
+    <div class="section-sub">3.1 Repeatability — จุดใช้งาน <input id="repPoint" type="number" value="2000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g (10 ครั้ง)</div>
+    <div class="table-wrap"><table class="tbl" style="max-width:880px">
+      <thead><tr><th>ครั้งที่</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
+      <tbody><tr id="repRow"><td>อ่านได้ (g)</td></tr></tbody>
+    </table></div>
+    <div class="kpis" style="max-width:680px;margin-top:8px">
+      <div class="kpi"><span>Average</span><strong class="calc" id="repAvg">–</strong></div>
+      <div class="kpi"><span>Std. Deviation S(WR)</span><strong class="calc" id="repStd">–</strong></div>
+      <div class="kpi"><span>Max diff successive</span><strong class="calc" id="repMaxDiff">–</strong></div>
+      <div class="kpi"><span>u(R) = S/√3 (mg)</span><strong class="calc" id="repUr">–</strong></div>
+    </div>
+
+    <div class="section-sub">3.2 Error of indication — อ่าน 3 ซ้ำต่อจุด</div>
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>จุด (g)</th><th class="num">Conv. mass (g)</th><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th><th class="num">Correction (g)</th><th class="num">S(WR)</th></tr></thead>
+      <tbody id="errRows"></tbody>
+    </table></div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="section-sub">3.3 Eccentricity — ตุ้ม <input id="eccWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g</div>
+        <table class="tbl">
+          <thead><tr><th>ตำแหน่ง</th><th>อ่านได้ (g)</th><th class="num">ต่างจากกลาง (g)</th></tr></thead>
+          <tbody id="eccRows"></tbody>
+          <tfoot><tr><td colspan="2" style="font-weight:700">ความคลาดเคลื่อนสูงสุด</td><td class="num"><strong class="calc" id="eccMax">–</strong></td></tr></tfoot>
+        </table>
+      </div>
+      <div>
+        <div class="section-sub">3.4 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g</div>
+        <table class="tbl">
+          <thead><tr><th class="num">ตุ้มตรวจสอบ (g)</th><th>อ่านได้ (g)</th><th class="num">ผลต่าง (g)</th></tr></thead>
+          <tbody id="tareRows"></tbody>
+        </table>
+        <div class="note" style="margin-top:8px"><i class="ti ti-adjustments"></i><div>Sensitivity test: ไม่ใช้กับงานนี้ (เปิด/ปิดได้ต่อเครื่อง)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 4 ============ -->
+  <section class="card" id="st4">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="step-num s4">4</span>
+        <div><h2>งบความไม่แน่นอน (อัตโนมัติทุกจุด)</h2><p class="hint">สูตรเดียวกับ FRM-CAL92: WS=U/2 · Drift=U/√3 · รอบจอ ×2 = (d/2)/√3 · Air buoyancy 1 ppm/√3 · Repeatability — รวม RSS × k=2</p></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:12px;color:var(--muted);font-weight:700"><input type="checkbox" id="roundUpU" checked onchange="recalc()"> ปัด U ขึ้นเป็น mg เต็ม เมื่อ ≥ 8.5 mg (ตามแนวทางในไฟล์)</label>
+      </div>
+    </div>
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>จุด (g)</th><th class="num">u WS</th><th class="num">u Drift</th><th class="num">u do</th><th class="num">u d</th><th class="num">u Ab</th><th class="num">u R</th><th class="num">u รวม (mg)</th><th class="num">U (k=2) mg</th><th class="num">U ใช้รายงาน</th></tr></thead>
+      <tbody id="uncRows"></tbody>
+    </table></div>
+    <div class="note"><i class="ti ti-square-root-2"></i><div>เลือกจุดดูที่มา: <span id="uncDetail" class="calc">–</span></div></div>
+  </section>
+
+  <!-- ============ STEP 5 ============ -->
+  <section class="card" id="st5">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="step-num s5">5</span>
+        <div><h2>ใบประเมินผล + ใบรับรอง</h2><p class="hint">Error = −Correction (ปัดเป็น mg) · PASS เมื่อ Error ± U อยู่ใน ±Tolerance ของช่วงนั้น · อนุมัติ 2 ชั้น (EIB + Owner)</p></div>
+      </div>
+      <span id="overallBadge" class="status ok">รอคำนวณ</span>
+    </div>
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>จุด (g)</th><th class="num">Error (g)</th><th class="num">U ± (g)</th><th class="num">Error + U</th><th class="num">Error − U</th><th class="num">Tolerance ± (g)</th><th>ผล</th></tr></thead>
+      <tbody id="evalRows"></tbody>
+    </table></div>
+
+    <div class="section-sub" style="margin-top:18px">ตัวอย่างหน้า 3 ของใบรับรอง (Departure of indication)</div>
+    <div class="cert-preview">
+      <h3>CERTIFICATE OF CALIBRATION</h3>
+      <div class="lab">INTERNATIONAL LABORATORIES CORP., LTD. — CALIBRATION LABORATORY · CERT NO. <strong>26B232-0</strong> · PAGE 3 OF 3</div>
+      <div class="cp-row"><span>EQUIPMENT</span><strong>ELECTRONIC BALANCE 3100 g (d = 0.01 g)</strong></div>
+      <div class="cp-row"><span>ID / SERIAL</span><strong>QTB2BB02-WI01 · 13006505</strong></div>
+      <div class="cp-row"><span>REFERENCE STANDARDS</span><strong>F1 Weight set 158880 (26M004-0) · F1 1 kg/2 kg (26M005-0)</strong></div>
+      <div style="border-top:1px solid var(--line);margin:8px 0"></div>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th class="num">NOMINAL (g)</th><th class="num">CONVENTIONAL MASS (g)</th><th class="num">DISPLAYED (g)</th><th class="num">CORRECTION (g)</th><th class="num">UNCERTAINTY ± (mg)</th></tr></thead>
+        <tbody id="certRows"></tbody>
+      </table></div>
+      <p style="color:var(--muted);font-size:11px;margin:10px 0 0">THE REPORTED EXPANDED UNCERTAINTY IS BASED ON A STANDARD UNCERTAINTY MULTIPLIED BY A COVERAGE FACTOR k = 2, PROVIDING A LEVEL OF CONFIDENCE OF APPROXIMATELY 95%</p>
+    </div>
+    <div class="note"><i class="ti ti-route"></i><div>ในระบบจริง: บันทึกเป็น "งานสอบเทียบ" สถานะ ร่าง → รอทบทวน (EIB) → รออนุมัติ (Owner) → ออกเลข Cert จาก <code>cert_sequences</code> อัตโนมัติ → สร้าง PDF 3 หน้า + ใบประเมินผล → อัปเดต cal_date/due_date ในทะเบียนเครื่องมือ + บันทึก calibration_history</div></div>
+  </section>
+</main>
+
+<script>
+// ===== ข้อมูลตั้งต้น (จากงานจริง 26B232-0) =====
+// ตุ้มมาตรฐาน: ค่าแก้ (g) และ U (mg) ต่อจุด — ในระบบจริงดึงจาก standard_cert_values
+const POINTS = [
+  { nominal: 1,    comp: 'F1 1 g',          corr: 0.000004, U: 0.03 },
+  { nominal: 10,   comp: 'F1 10 g',         corr: 0.000047, U: 0.06 },
+  { nominal: 20,   comp: 'F1 20 g',         corr: 0.000079, U: 0.08 },
+  { nominal: 50,   comp: 'F1 50 g',         corr: -0.00001, U: 0.10 },
+  { nominal: 100,  comp: 'F1 100 g',        corr: -0.00007, U: 0.16 },
+  { nominal: 200,  comp: 'F1 200 g',        corr: 0.00017,  U: 0.30 },
+  { nominal: 500,  comp: 'F1 500 g',        corr: 0.0001,   U: 0.80 },
+  { nominal: 1000, comp: 'F1 1 kg',         corr: -0.0022,  U: 1.60 },
+  { nominal: 2000, comp: 'F1 2 kg',         corr: -0.0026,  U: 3.00 },
+  { nominal: 3000, comp: 'F1 1 kg + 2 kg',  corr: -0.0048,  U: 4.60 },
+];
+// ค่าที่อ่านได้จริงจากงาน 26B232-0
+const READS = { 1:[1,1,1], 10:[10,10,10], 20:[20,20,20], 50:[50,50,50], 100:[100,100,100],
+  200:[200,200,200], 500:[500,500,500], 1000:[1000,1000,1000], 2000:[2000,2000,2000], 3000:[2999.99,2999.99,2999.99] };
+const REP_READS = [2000,2000,2000,2000,2000,2000,2000,2000,2000,2000];
+const ECC = [['Middle (1)',1000],['Front left (2)',1000],['Back left (3)',1000.01],['Back right (4)',999.99],['Front right (5)',999.99]];
+const TARE = [[500,500],[2000,2000]];
+let TOLS = [
+  { from: 0, to: 300, tol: 0.05 },
+  { from: 300, to: 1000, tol: 0.10 },
+  { from: 1000, to: 3100, tol: 0.15 },
+];
+
+const byId = id => document.getElementById(id);
+const fmt = (v, d = 6) => Number.isFinite(v) ? parseFloat(v.toFixed(d)).toString() : '–';
+
+function stdev(arr) {
+  if (arr.length < 2) return 0;
+  const m = arr.mean ?? arr.reduce((a,b)=>a+b,0)/arr.length;
+  return Math.sqrt(arr.reduce((s,x)=>s+(x-m)**2,0)/(arr.length-1));
+}
+
+// ===== build inputs =====
+function buildStatic() {
+  byId('tolRows').innerHTML = TOLS.map((t,i) => `<tr>
+    <td>ช่วงที่ ${i+1}</td>
+    <td class="num"><input type="number" step="any" value="${t.from}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
+    <td class="num"><input type="number" step="any" value="${t.to}" onchange="TOLS[${i}].to=+this.value;recalc()"></td>
+    <td class="num"><input type="number" step="any" value="${t.tol}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
+  </tr>`).join('');
+
+  byId('repRow').innerHTML = '<td>อ่านได้ (g)</td>' + REP_READS.map((v,i) =>
+    `<td><input type="number" step="any" class="repIn" value="${v}" oninput="recalc()" style="width:72px"></td>`).join('');
+
+  byId('errRows').innerHTML = POINTS.map((p,i) => `<tr>
+    <td><strong>${p.nominal}</strong> <span class="chip" style="margin-left:4px">${p.comp}</span></td>
+    <td class="num calc" id="cm${i}">–</td>
+    ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${READS[p.nominal][j]}" oninput="recalc()"></td>`).join('')}
+    <td class="num calc" id="avg${i}">–</td>
+    <td class="num calc" id="cor${i}">–</td>
+    <td class="num calc" id="sd${i}">–</td>
+  </tr>`).join('');
+
+  byId('eccRows').innerHTML = ECC.map((e,i) => `<tr>
+    <td>${e[0]}</td>
+    <td><input type="number" step="any" class="eccIn" value="${e[1]}" oninput="recalc()"></td>
+    <td class="num calc" id="eccD${i}">–</td>
+  </tr>`).join('');
+
+  byId('tareRows').innerHTML = TARE.map((t,i) => `<tr>
+    <td class="num">${t[0]}</td>
+    <td><input type="number" step="any" class="tareIn" value="${t[1]}" oninput="recalc()"></td>
+    <td class="num calc" id="tareD${i}">–</td>
+  </tr>`).join('');
+
+  byId('pointRows').innerHTML = POINTS.map((p,i) => `<tr>
+    <td><strong>${p.nominal}</strong></td>
+    <td><span class="chip">${p.comp}</span></td>
+    <td class="num">${fmt(p.corr,6)}</td>
+    <td class="num calc">${fmt(p.nominal + p.corr, 6)}</td>
+    <td class="num">${fmt(p.U,3)}</td>
+  </tr>`).join('');
+}
+
+// ===== คำนวณทั้งหน้า =====
+function recalc() {
+  const d = parseFloat(byId('iRes').value) || 0.01;
+
+  // 3.1 repeatability
+  const reps = [...document.querySelectorAll('.repIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
+  const repAvg = reps.length ? reps.reduce((a,b)=>a+b,0)/reps.length : NaN;
+  const repStd = stdev(reps);
+  let maxDiff = 0;
+  for (let i = 1; i < reps.length; i++) maxDiff = Math.max(maxDiff, Math.abs(reps[i]-reps[i-1]));
+  const uR_mg = (repStd / 1.732) * 1000;          // ตามชีต uncert: N6=(S/1.732)*1000
+  byId('repAvg').textContent = fmt(repAvg, 4) + ' g';
+  byId('repStd').textContent = fmt(repStd, 6) + ' g';
+  byId('repMaxDiff').textContent = fmt(maxDiff, 4) + ' g';
+  byId('repUr').textContent = fmt(uR_mg, 4);
+
+  // 3.2 error per point
+  const rows = POINTS.map((p, i) => {
+    const reads = [0,1,2].map(j => parseFloat(document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`).value)).filter(Number.isFinite);
+    const avg = reads.length ? reads.reduce((a,b)=>a+b,0)/reads.length : NaN;
+    const conv = p.nominal + p.corr;
+    const corr = conv - avg;                       // Correction = conv mass − ค่าเฉลี่ยที่อ่าน
+    const sd = stdev(reads);
+    byId('cm'+i).textContent = fmt(conv, 6);
+    byId('avg'+i).textContent = fmt(avg, 4);
+    byId('cor'+i).textContent = fmt(corr, 6);
+    byId('sd'+i).textContent = fmt(sd, 6);
+    return { ...p, avg, conv, corrBal: corr, sd };
+  });
+
+  // 3.3 ecc / 3.4 tare
+  const eccVals = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
+  let eccMax = 0;
+  eccVals.forEach((v, i) => {
+    const diff = i === 0 ? 0 : v - eccVals[0];
+    byId('eccD'+i).textContent = fmt(diff, 4);
+    if (Math.abs(diff) > Math.abs(eccMax)) eccMax = diff;
+  });
+  byId('eccMax').textContent = fmt(eccMax, 4) + ' g';
+  [...document.querySelectorAll('.tareIn')].forEach((el, i) => {
+    byId('tareD'+i).textContent = fmt(TARE[i][0] - parseFloat(el.value), 4);
+  });
+
+  // 4 uncertainty budget per point — สูตร FRM-CAL92
+  const SQ3 = 1.7321;
+  const d_mg = (d * 1000) / 2;                     // 5 mg เมื่อ d=0.01 g
+  const roundUp = byId('roundUpU').checked;
+  byId('uncRows').innerHTML = rows.map((p, i) => {
+    const uWS = p.U / 2;
+    const uDS = p.U / SQ3;
+    const udo = d_mg / SQ3, ud = d_mg / SQ3;
+    const uAb = (p.nominal * 1000 * 1 / 1e6) / SQ3; // 1 ppm ของจุด (mg)
+    const uRr = uR_mg;
+    const uc = Math.sqrt(uWS**2 + uDS**2 + udo**2 + ud**2 + uAb**2 + uRr**2);
+    const U2 = uc * 2;
+    const Urep = roundUp && U2 >= 8.5 ? Math.ceil(U2) : U2;
+    p.Ufinal_mg = Urep;
+    return `<tr onclick="showUncDetail(${i})" style="cursor:pointer">
+      <td><strong>${p.nominal}</strong></td>
+      <td class="num">${fmt(uWS,4)}</td><td class="num">${fmt(uDS,4)}</td>
+      <td class="num">${fmt(udo,4)}</td><td class="num">${fmt(ud,4)}</td>
+      <td class="num">${fmt(uAb,4)}</td><td class="num">${fmt(uRr,4)}</td>
+      <td class="num calc">${fmt(uc,4)}</td>
+      <td class="num calc">${fmt(U2,4)}</td>
+      <td class="num"><strong class="calc">${fmt(Urep, 4)}</strong></td>
+    </tr>`;
+  }).join('');
+  window._rows = rows;
+
+  // 5 evaluation — Error = −Correction (ปัดเป็น mg), PASS เมื่อ |Error|+U ≤ Tol
+  let allPass = true;
+  byId('evalRows').innerHTML = rows.map(p => {
+    const errG = Math.round(-p.corrBal * 1000) / 1000;     // ปัดเป็น mg ตามใบประเมิน
+    const Ug = p.Ufinal_mg / 1000;
+    const tol = TOLS.find(t => p.nominal > t.from && p.nominal <= t.to)?.tol ?? TOLS[TOLS.length-1].tol;
+    const pass = (errG + Ug) <= tol && (errG - Ug) >= -tol;
+    if (!pass) allPass = false;
+    return `<tr>
+      <td><strong>${p.nominal}</strong></td>
+      <td class="num">${fmt(errG,3)}</td>
+      <td class="num">${fmt(Ug,4)}</td>
+      <td class="num">${fmt(errG+Ug,4)}</td>
+      <td class="num">${fmt(errG-Ug,4)}</td>
+      <td class="num">${fmt(tol,3)}</td>
+      <td class="${pass?'pass':'fail'}">${pass?'✓ PASS':'✗ FAIL'}</td>
+    </tr>`;
+  }).join('');
+  const ob = byId('overallBadge');
+  ob.className = 'status ' + (allPass ? 'ok' : 'bad');
+  ob.textContent = allPass ? 'ผลรวม: PASS ทุกจุด' : 'ผลรวม: มีจุด FAIL';
+
+  // cert preview
+  byId('certRows').innerHTML = rows.map(p => `<tr>
+    <td class="num">${p.nominal}</td>
+    <td class="num">${fmt(p.conv,6)}</td>
+    <td class="num">${fmt(p.avg,4)}</td>
+    <td class="num">${fmt(p.corrBal,6)}</td>
+    <td class="num">${fmt(p.Ufinal_mg,4)}</td>
+  </tr>`).join('');
+}
+
+function showUncDetail(i) {
+  const p = window._rows[i];
+  byId('uncDetail').innerHTML =
+    `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (5/√3)² + (5/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=2 → U = ${fmt(p.Ufinal_mg,4)} mg`;
+}
+
+buildStatic();
+recalc();
+byId('iRes').addEventListener('input', recalc);
+</script>
+</body>
+</html>
