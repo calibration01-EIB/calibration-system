@@ -137,6 +137,8 @@ table td, table th { white-space: nowrap; }
 // CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)
 // ====================================================
 const CATEGORY_ICONS = {
+  'เครื่องชั่ง (Balance)': 'ti-scale',
+  'ตุ้มน้ำหนักมาตรฐาน (Mass)': 'ti-weight',
   'มวล/น้ำหนัก (Mass/Weight)': 'ti-weight',
   'ความยาว/มิติ (Length/Dimension)': 'ti-ruler',
   'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'ti-temperature',
@@ -155,8 +157,12 @@ const CATEGORY_ICONS = {
 
 const CATEGORY_DEFS = [
   {
-    name: 'มวล/น้ำหนัก (Mass/Weight)',
-    aliases: ['mass/weight', 'mass', 'weight', 'balance', 'scale', 'weigh', 'น้ำหนัก', 'มวล', 'เครื่องชั่ง']
+    name: 'เครื่องชั่ง (Balance)',
+    aliases: ['balance', 'electronic balance', 'analytical balance', 'precision balance', 'scale', 'weighing scale', 'weighing machine', 'เครื่องชั่ง']
+  },
+  {
+    name: 'ตุ้มน้ำหนักมาตรฐาน (Mass)',
+    aliases: ['mass', 'mass set', 'standard weight', 'reference weight', 'weight set', 'weights', 'ตุ้มน้ำหนัก', 'มวลมาตรฐาน', 'ลูกตุ้ม']
   },
   {
     name: 'ความยาว/มิติ (Length/Dimension)',
@@ -253,14 +259,21 @@ function matchCategoryFromText(value) {
 
 function getInstrumentCategory(row) {
   const rawType = String(row?.instrument_type || row?.category || '').trim();
-  const typeMatch = matchCategoryFromText(rawType);
-  if (typeMatch) return typeMatch;
-  if (rawType) return 'อื่นๆ (Others)';
-
   const haystack = normalizeCategoryText([
     row?.instrument_name,
     row?.brand
   ].filter(Boolean).join(' '));
+
+  const rawKey = normalizeCategoryKey(rawType);
+  if (['มวล/น้ำหนัก mass/weight', 'มวล/น้ำหนัก', 'mass/weight'].includes(rawKey)) {
+    const massDef = CATEGORY_DEFS.find(cat => cat.name === 'ตุ้มน้ำหนักมาตรฐาน (Mass)');
+    if (massDef && massDef.aliases.some(alias => categoryAliasMatches(haystack, alias))) return massDef.name;
+    return 'เครื่องชั่ง (Balance)';
+  }
+
+  const typeMatch = matchCategoryFromText(rawType);
+  if (typeMatch) return typeMatch;
+  if (rawType) return 'อื่นๆ (Others)';
 
   const match = CATEGORY_DEFS.find(cat =>
     cat.name !== 'อื่นๆ (Others)' && cat.aliases.some(alias => categoryAliasMatches(haystack, alias))

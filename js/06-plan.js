@@ -799,7 +799,7 @@ function downloadTemplate() {
   const headers = ['ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
     'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','หน่วยงาน','ID Code','CERT.',
     'วันสอบเทียบ','วันครบกำหนด','ความถี่สอบเทียบ','ภายใน/ภายนอก','Remark'];
-  const example = ['มวล/น้ำหนัก (Mass/Weight)','MIX 1000L','ตึก 5/1','Electronic Balance',
+  const example = ['เครื่องชั่ง (Balance)','MIX 1000L','ตึก 5/1','Electronic Balance',
     'AND/GF-3000','30 kg','0.01 g','A1234567','PMP1','PMP1BB01-WI01','25B001-0',
     '2025-01-15','2026-01-15','1 ครั้ง/ปี','ภายนอก',''];
   const wb = XLSX.utils.book_new();
@@ -834,6 +834,19 @@ function resetImport() {
 function normalizeImportBlank(value) {
   const s = String(value ?? '').trim();
   return (s === '' || s === '–' || s === '-') ? null : s;
+}
+
+function normalizeImportInstrumentType(row) {
+  const raw = String(row.instrument_type || '').trim();
+  if (!raw) return raw;
+  const key = raw.toLowerCase().replace(/\s+/g, ' ');
+  if (key === 'เครื่องชั่ง' || key === 'balance' || key === 'เครื่องชั่ง (balance)') return 'เครื่องชั่ง (Balance)';
+  if (key === 'ตุ้มน้ำหนักมาตรฐาน' || key === 'mass' || key === 'weight' || key === 'ตุ้มน้ำหนักมาตรฐาน (mass)') return 'ตุ้มน้ำหนักมาตรฐาน (Mass)';
+  if (key === 'มวล/น้ำหนัก' || key === 'มวล/น้ำหนัก (mass/weight)' || key === 'mass/weight') {
+    const code = typeof getCertTypeCode === 'function' ? getCertTypeCode(raw, row.instrument_name || '') : '';
+    return code === 'M' ? 'ตุ้มน้ำหนักมาตรฐาน (Mass)' : 'เครื่องชั่ง (Balance)';
+  }
+  return raw;
 }
 
 function importComparableValue(value, field) {
@@ -889,6 +902,10 @@ function prepareImportRowForDb(row) {
   });
   if (!clean.due_date && clean.cal_date && clean.cal_frequency) {
     clean.due_date = calcDueDateStr(clean.cal_date, clean.cal_frequency);
+  }
+  if (clean.instrument_type) {
+    clean.instrument_type = normalizeImportInstrumentType(clean);
+    clean.category = clean.instrument_type;
   }
   return clean;
 }
@@ -997,7 +1014,10 @@ function handleImportFile(file) {
           } else { val = String(val || '').trim(); }
           if (val) obj[field] = val;
         });
-        if (obj.instrument_type) obj.category = obj.instrument_type;
+        if (obj.instrument_type) {
+          obj.instrument_type = normalizeImportInstrumentType(obj);
+          obj.category = obj.instrument_type;
+        }
         if (!obj.id_code) errors.push('แถว '+(rowIdx+2)+': ไม่มี ID Code');
         return obj;
       }).filter(o => Object.keys(o).length > 0);

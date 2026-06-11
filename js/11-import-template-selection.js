@@ -10,7 +10,7 @@
   ];
 
   const TEMPLATE_EXAMPLE = [
-    'มวล/น้ำหนัก (Mass/Weight)', 'MIX 1000L', 'ตึก 5/1', 'Electronic Balance',
+    'เครื่องชั่ง (Balance)', 'MIX 1000L', 'ตึก 5/1', 'Electronic Balance',
     'AND/GF-3000', '30 kg', '0.01 g', 'A1234567', 'PMP1', 'PMP1BB01-WI01', '25B001-0',
     '2025-01-15', '2026-01-15', '1 ครั้ง/ปี', 'ภายนอก', ''
   ];

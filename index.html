@@ -2881,7 +2881,7 @@ body.app-mode textarea:focus {
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ชุดมาตรฐาน (ID ภายใน) *</label><input id="scSetCode" type="text" placeholder="E2-CLCLRS01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ประเภทเครื่องมือมาตรฐาน</label>
                 <select id="scCategory" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;margin-top:4px">
-                  <option>มวล/น้ำหนัก</option><option>อุณหภูมิ</option><option>ความดัน</option><option>ความยาว/มิติ</option><option>ไฟฟ้า</option><option>อื่นๆ</option>
+                  <option>ตุ้มน้ำหนักมาตรฐาน</option><option>เครื่องชั่ง</option><option>อุณหภูมิ</option><option>ความดัน</option><option>ความยาว/มิติ</option><option>ไฟฟ้า</option><option>อื่นๆ</option>
                 </select></div>
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">รายการ (Measurement item)</label><input id="scItem" type="text" placeholder="Weight set (1 mg to 1 kg)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ผู้ผลิต</label><input id="scManufacturer" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
@@ -3242,7 +3242,8 @@ body.app-mode textarea:focus {
           <label>ประเภทเครื่องมือ</label>
           <select id="iCategory" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
             <option value="">-- เลือกกลุ่ม --</option>
-            <option value="มวล/น้ำหนัก (Mass/Weight)">มวล/น้ำหนัก (Mass/Weight)</option>
+            <option value="เครื่องชั่ง (Balance)">เครื่องชั่ง (Balance)</option>
+            <option value="ตุ้มน้ำหนักมาตรฐาน (Mass)">ตุ้มน้ำหนักมาตรฐาน (Mass)</option>
             <option value="ความยาว/มิติ (Length/Dimension)">ความยาว/มิติ (Length/Dimension)</option>
             <option value="อุณหภูมิ/ความชื้น (Temperature/Humidity)">อุณหภูมิ/ความชื้น (Temperature/Humidity)</option>
             <option value="ความดัน/สุญญากาศ (Pressure/Vacuum)">ความดัน/สุญญากาศ (Pressure/Vacuum)</option>
@@ -3407,17 +3408,17 @@ body.app-mode textarea:focus {
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
-<script src="js/02-dashboard.js?v=20260610-list-redesign5"></script>
+<script src="js/02-dashboard.js?v=20260611-balance-mass-split"></script>
 <script src="js/03-instruments.js?v=20260610-list-redesign5"></script>
-<script src="js/04-reports.js?v=20260609-month-cards"></script>
-<script src="js/05-audit.js?v=20260609-cert-headings"></script>
-<script src="js/06-plan.js?v=20260610-import-duplicates"></script>
+<script src="js/04-reports.js?v=20260611-balance-mass-split"></script>
+<script src="js/05-audit.js?v=20260611-balance-mass-split"></script>
+<script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
 <script src="js/09-cert.js?v=20260609-cert-headings"></script>
 <script src="js/10-router.js?v=20260610-std-certs"></script>
-<script src="js/11-import-template-selection.js?v=20260609-category-fix2"></script>
-<script src="js/12-standard-certs.js?v=20260610-std-certs"></script>
+<script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
+<script src="js/12-standard-certs.js?v=20260611-balance-mass-split"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">

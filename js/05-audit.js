@@ -132,6 +132,8 @@ function renderAuditTable() {
 // CERT TYPE MAP — instrument_type / instrument_name → type_code
 // ====================================================
 const CERT_TYPE_MAP = {
+  'เครื่องชั่ง (Balance)':                   'B',
+  'ตุ้มน้ำหนักมาตรฐาน (Mass)':                'M',
   'มวล/น้ำหนัก (Mass/Weight)':               'B',
   'ความยาว/มิติ (Length/Dimension)':          'L',
   'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'T',
@@ -162,8 +164,8 @@ function getCertTypeCode(instrumentType, instrumentName = '') {
     ['W', /timer|stopwatch|\btime\b|เวลา/],
     ['P', /pressure|ความดัน/],
     ['F', /force|torque|แรงบิด|แรงกด/],
-    ['M', /\bmass\b|\bweight\b|weight\s*set|\bweights\b|ตุ้มน้ำหนัก/],
-    ['B', /\bbalance\b|electronic\s*scale|weighing\s*scale|เครื่องชั่ง/],
+    ['M', /\bmass\b|\bweight\s*set\b|\bweights\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน/],
+    ['B', /\bbalance\b|electronic\s*scale|weighing\s*scale|weighing\s*machine|เครื่องชั่ง/],
   ];
   for (const [code, pattern] of nameRules) {
     if (pattern.test(name)) return code;

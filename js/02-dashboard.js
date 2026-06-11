@@ -454,7 +454,7 @@ async function fetchFromSupabase() {
 // DASHBOARD
 // ====================================================
 function populateFilters() {
-  const types = [...new Set(allData.map(d => d.instrument_type))].filter(Boolean).sort();
+  const types = [...new Set(allData.map(d => getDisplayInstrumentType(d)))].filter(Boolean).sort();
   const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
   document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t)}</option>`).join('');
   document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option value="${escapeHtmlAttr(u)}">${escapeHtmlText(u)}</option>`).join('');
@@ -463,6 +463,8 @@ function populateFilters() {
 
 // ===== Instrument registry redesign helpers =====
 const REG_TYPE_META = {
+  'เครื่องชั่ง (Balance)':                    ['B', 'ti-scale', '#00897b'],
+  'ตุ้มน้ำหนักมาตรฐาน (Mass)':                 ['M', 'ti-weight', '#639922'],
   'มวล/น้ำหนัก (Mass/Weight)':                ['B', 'ti-scale', '#00897b'],
   'อุณหภูมิ/ความชื้น (Temperature/Humidity)':  ['T', 'ti-temperature', '#d85a30'],
   'ความยาว/มิติ (Length/Dimension)':           ['D', 'ti-ruler-measure', '#185fa5'],
@@ -477,15 +479,30 @@ const REG_TYPE_META = {
   'ความปลอดภัย (Safety)':                      ['F', 'ti-shield-check', '#dc3545'],
   'แรงบิด/แรงกด (Torque/Force)':               ['N', 'ti-tool', '#7c3aed'],
 };
-function regTypeMeta(type) {
-  return REG_TYPE_META[type] || ['-', 'ti-tool', '#52667d'];
+
+function getDisplayInstrumentType(row) {
+  const rawType = String(row?.instrument_type || '').trim();
+  const rawKey = rawType.toLowerCase().replace(/\s+/g, ' ');
+  if (rawKey === 'มวล/น้ำหนัก' || rawKey === 'มวล/น้ำหนัก (mass/weight)' || rawKey === 'mass/weight') {
+    const code = typeof getCertTypeCode === 'function' ? getCertTypeCode(rawType, row?.instrument_name || '') : '';
+    return code === 'M' ? 'ตุ้มน้ำหนักมาตรฐาน (Mass)' : 'เครื่องชั่ง (Balance)';
+  }
+  return rawType;
+}
+
+function regTypeMeta(type, row) {
+  const displayType = row ? getDisplayInstrumentType(row) : type;
+  return REG_TYPE_META[displayType] || REG_TYPE_META[type] || ['-', 'ti-tool', '#52667d'];
 }
 
 function renderListCategoryPills() {
   const strip = document.getElementById('listCategoryStrip');
   if (!strip) return;
   const totals = {};
-  allData.forEach(d => { if (d.instrument_type) totals[d.instrument_type] = (totals[d.instrument_type] || 0) + 1; });
+  allData.forEach(d => {
+    const type = getDisplayInstrumentType(d);
+    if (type) totals[type] = (totals[type] || 0) + 1;
+  });
   const current = document.getElementById('typeFilter')?.value || '';
   const allPill = `<button class="reg-pill ${current ? '' : 'active'}" onclick="setListCategory('')">
     <span>ทั้งหมด</span><strong>${allData.length.toLocaleString()}</strong>
@@ -659,7 +676,7 @@ function filterData() {
 
   filteredData = allData.filter(d => {
     if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
-    if (type && d.instrument_type !== type) return false;
+    if (type && getDisplayInstrumentType(d) !== type) return false;
     if (unit && d.department !== unit) return false;
     // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
     if (activeCategory && activeCategory !== 'all') {
@@ -726,7 +743,8 @@ function renderTable() {
     const instrumentName = escapeHtmlText(d.instrument_name || '–');
     const planTitle = escapeHtmlAttr(planStatusMap[d.id]?.title || '');
     const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
-    const [letter, icon, color] = regTypeMeta(d.instrument_type);
+    const displayType = getDisplayInstrumentType(d);
+    const [letter, icon, color] = regTypeMeta(displayType, d);
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || '–';
     const cancelled = d.calibration_cancelled === true
       || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
@@ -740,7 +758,7 @@ function renderTable() {
       <td>${rowNum}</td>
       <td><div class="reg-cell"><span class="reg-iconbox" style="color:${color};background:${color}14;border-color:${color}40"><i class="ti ${icon}"></i></span><div><div class="reg-name">${instrumentName}</div><div class="reg-sub">${escapeHtmlText(d.brand || '–')}</div></div></div></td>
       <td><div class="reg-stack"><strong>${idCode}</strong><span>${certNo}</span></div></td>
-      <td><span class="reg-chip" style="background:${color}" title="${escapeHtmlAttr(d.instrument_type || '–')}">${escapeHtmlText(letter)}</span></td>
+      <td><span class="reg-chip" style="background:${color}" title="${escapeHtmlAttr(displayType || d.instrument_type || '–')}">${escapeHtmlText(letter)}</span></td>
       <td><strong>${escapeHtmlText(d.department || '–')}</strong><br><span class="reg-sub">${machineLoc}</span></td>
       <td>${formatDate(d.cal_date)}<br><span class="reg-sub">${escapeHtmlText(d.cal_type || '–')}</span></td>
       <td><strong>${cancelled ? '–' : formatDate(d.due_date)}</strong><br><span class="reg-sub" style="color:${daysColor}">${daysText}</span></td>

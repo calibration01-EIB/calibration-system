@@ -7,7 +7,9 @@ let scEditingId = null;
 let scDetailId = null;
 
 const SC_CATEGORIES = {
-  'มวล/น้ำหนัก':  ['⚖️', '#00897b'],
+  'ตุ้มน้ำหนักมาตรฐาน': ['⚖️', '#639922'],
+  'เครื่องชั่ง':         ['⚖️', '#00897b'],
+  'มวล/น้ำหนัก':         ['⚖️', '#00897b'],
   'อุณหภูมิ':     ['🌡️', '#d85a30'],
   'ความดัน':      ['🎛️', '#534ab7'],
   'ความยาว/มิติ': ['📏', '#185fa5'],
@@ -143,7 +145,7 @@ function openSCDetail(id) {
   const st = scStatus(c);
   const [icon, color] = scCatMeta(c.category);
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
-  const isMass = c.category === 'มวล/น้ำหนัก';
+  const isMass = ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category);
   document.getElementById('scDetailBody').innerHTML = `
     <div class="reg-detail-head">
       <div class="reg-detail-title">
@@ -301,7 +303,7 @@ function openSCEdit(id) {
   set('scLab', c?.lab); set('scMeasDate', c?.measurement_date);
   set('scInterval', c?.interval_years ?? 2); set('scDueDate', c?.due_date);
   set('scRemark', c?.remark);
-  document.getElementById('scCategory').value = c?.category || 'มวล/น้ำหนัก';
+  document.getElementById('scCategory').value = c?.category === 'มวล/น้ำหนัก' ? 'ตุ้มน้ำหนักมาตรฐาน' : (c?.category || 'ตุ้มน้ำหนักมาตรฐาน');
   document.getElementById('scFile').value = '';
   document.getElementById('scValueRows').innerHTML = '';
   (c?.values?.length ? c.values : [null]).forEach(r => addSCRow(r));
