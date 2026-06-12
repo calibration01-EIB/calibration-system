@@ -61,26 +61,40 @@ function renderMobileCards() {
   el.innerHTML = rows.map((d, i) => {
     const id = Number(d.id) || 0;
     const days = d.days_left;
+    const cancelled = d.calibration_cancelled === true
+      || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
     let badgeClass = 'ok';
-    let badgeText = '&#x0E1B;&#x0E01;&#x0E15;&#x0E34;';
-    let daysText = days !== null ? String(days) + ' &#x0E27;&#x0E31;&#x0E19;' : '-';
-    if (days !== null && days < 0) {
+    let badgeText = 'ปกติ';
+    let daysText = days !== null ? 'อีก ' + days + ' วัน' : '-';
+    if (cancelled) {
       badgeClass = 'overdue';
-      badgeText = '&#x0E40;&#x0E01;&#x0E34;&#x0E19;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;';
+      badgeText = 'ยกเลิก';
+      daysText = 'ยกเลิกสอบเทียบ';
+    } else if (days !== null && days < 0) {
+      badgeClass = 'overdue';
+      badgeText = 'เกินกำหนด';
+      daysText = 'เกิน ' + Math.abs(days) + ' วัน';
     } else if (days !== null && days <= 30) {
       badgeClass = 'warn';
-      badgeText = '&#x0E43;&#x0E01;&#x0E25;&#x0E49;&#x0E04;&#x0E23;&#x0E1A;';
+      badgeText = 'ใกล้ครบ';
+      daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน';
     }
+    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
     const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
-    const typShort = (d.instrument_type || '-').split(' (')[0];
+    const dueLine = d.due_date && !cancelled ? dueDate + ' (' + daysText + ')' : (cancelled ? daysText : dueDate);
+    const displayType = getDisplayInstrumentType(d);
+    const typShort = (displayType || d.instrument_type || '-').split(' (')[0];
+    const [letter, icon, color] = regTypeMeta(displayType, d);
     const title = escapeHtmlText(d.instrument_name || '-');
     const certNo = escapeHtmlText(d.cert_no || '-');
     const idCode = escapeHtmlText(d.id_code || '-');
     const serialNo = escapeHtmlText(d.serial_no || '-');
     const typeText = escapeHtmlText(typShort);
-    const dueText = escapeHtmlText(dueDate);
-    const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' &middot; ') || '-';
-    const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' &middot; ') || escapeHtmlText(d.department || '-');
+    const calText = escapeHtmlText(calDate + (d.cal_type ? ' · ' + d.cal_type : ''));
+    const dueText = escapeHtmlText(dueLine);
+    const idCertLine = [d.id_code, d.cert_no].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
+    const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
+    const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || escapeHtmlText(d.department || '-');
     const ps = planStatusMap[d.id];
     const sMap = {
       pending_plan: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E41;&#x0E1C;&#x0E19;', '#854F0B', '#FAEEDA'],
@@ -88,32 +102,37 @@ function renderMobileCards() {
       pending_cert: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E2A;&#x0E2D;&#x0E1A;', '#185FA5', '#E6F1FB'],
       completed:    ['&#x0E2A;&#x0E2D;&#x0E1A;&#x0E40;&#x0E17;&#x0E35;&#x0E22;&#x0E1A;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#0F6E56', '#E1F5EE'],
     };
-    const planMeta = ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['&#x0E22;&#x0E31;&#x0E07;&#x0E44;&#x0E21;&#x0E48;&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;', '#52667d', '#f2f6fb'];
+    const planMeta = cancelled
+      ? ['ไม่ต้องวางแผน', '#8A1F1F', '#FCEBEB']
+      : (ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
     const planBadge = '<div class="mobile-plan-row"><span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span></div>';
-    const planBtn = ps
-      ? '<button class="mobile-card-action primary" onclick="goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>&#x0E41;&#x0E1C;&#x0E19;</span></button>'
-      : '<button class="mobile-card-action primary" onclick="goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;</span></button>';
-    return '<article class="mobile-card mobile-card--' + badgeClass + '">' +
+    const planBtn = cancelled
+      ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
+      : (ps
+        ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>แผน</span></button>'
+        : '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>');
+    return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
       '<div class="mobile-card-head">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div class="mobile-card-kicker">' + idCode + '</div>' +
-          '<div class="mobile-card-title">' + title + '</div>' +
-          '<div class="mobile-card-sub">' + brandDept + '</div>' +
+        '<span class="mobile-type-mark" style="color:' + color + ';background:' + color + '14;border-color:' + color + '40"><i class="ti ' + icon + '"></i><b>' + escapeHtmlText(letter) + '</b></span>' +
+        '<div class="mobile-card-main">' +
+          '<div class="mobile-card-title-row">' +
+            '<div class="mobile-card-title">' + title + '</div>' +
+            '<span class="mobile-badge ' + badgeClass + '">' + escapeHtmlText(badgeText) + '</span>' +
+          '</div>' +
+          '<div class="mobile-card-sub">' + idCertLine + '</div>' +
+          '<div class="mobile-card-kicker">' + typeText + ' · ' + brandDept + '</div>' +
         '</div>' +
-        '<span class="mobile-badge ' + badgeClass + '">' + badgeText + '</span>' +
       '</div>' +
       '<div class="mobile-card-grid">' +
-        '<div class="mobile-field"><span>CERT.</span><strong>' + certNo + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E04;&#x0E23;&#x0E1A;&#x0E01;&#x0E33;&#x0E2B;&#x0E19;&#x0E14;</span><strong>' + dueText + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E04;&#x0E07;&#x0E40;&#x0E2B;&#x0E25;&#x0E37;&#x0E2D;</span><strong>' + daysText + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E1B;&#x0E23;&#x0E30;&#x0E40;&#x0E20;&#x0E17;</span><strong>' + typeText + '</strong></div>' +
+        '<div class="mobile-field"><span>สอบเทียบ</span><strong>' + calText + '</strong></div>' +
+        '<div class="mobile-field"><span>ครบกำหนด</span><strong>' + dueText + '</strong></div>' +
         '<div class="mobile-field"><span>S/N</span><strong>' + serialNo + '</strong></div>' +
-        '<div class="mobile-field"><span>&#x0E08;&#x0E38;&#x0E14;&#x0E43;&#x0E0A;&#x0E49;&#x0E07;&#x0E32;&#x0E19;</span><strong>' + machineLoc + '</strong></div>' +
+        '<div class="mobile-field"><span>จุดใช้งาน</span><strong>' + machineLoc + '</strong></div>' +
       '</div>' +
       planBadge +
       '<div class="mobile-card-actions">' +
-        '<button class="mobile-card-action" onclick="mobileEdit(' + i + ')"><i class="ti ti-pencil"></i><span>&#x0E41;&#x0E01;&#x0E49;&#x0E44;&#x0E02;</span></button>' +
-        '<button class="mobile-card-action" onclick="mobileCert(' + i + ')"><i class="ti ti-paperclip"></i><span>Cert</span></button>' +
+        '<button class="mobile-card-action" onclick="event.stopPropagation();openInstrumentDetail(' + id + ')"><i class="ti ti-eye"></i><span>ดู</span></button>' +
+        '<button class="mobile-card-action" onclick="event.stopPropagation();mobileCert(' + i + ')"><i class="ti ti-paperclip"></i><span>ไฟล์</span></button>' +
         planBtn +
       '</div>' +
     '</article>';

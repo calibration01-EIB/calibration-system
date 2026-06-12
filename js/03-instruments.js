@@ -141,8 +141,8 @@ function openInstrumentDetail(id) {
       </div>
       <div class="reg-detail-actions">
         ${canEdit ? `<button class="btn-view" onclick="closeInstrumentDetail();openInstrumentModal(${Number(d.id)||0})">✏️ แก้ไข</button>` : ''}
-        <button class="btn-view" onclick="closeInstrumentDetail();${openCertCall}">📎 จัดการไฟล์</button>
-        <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติสอบเทียบ</button>
+        <button class="btn-view" onclick="closeInstrumentDetail();${openCertCall}">📎 ไฟล์</button>
+        <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติ</button>
       </div>
     </div>
 

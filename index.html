@@ -2168,6 +2168,298 @@ body.app-mode textarea:focus {
   .reg-info-item.full { grid-column: auto; }
   .reg-detail-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+@media (max-width: 768px) {
+  body.app-mode #listCategoryStrip {
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  body.app-mode #listCategoryStrip .reg-pill {
+    min-width: 86px;
+    padding: 6px 9px;
+  }
+
+  body.app-mode #listCategoryStrip .reg-pill span {
+    font-size: 10px;
+  }
+
+  body.app-mode #listCategoryStrip .reg-pill strong {
+    font-size: 14px;
+  }
+
+  body.app-mode #mobileCardList.mobile-visible {
+    display: grid !important;
+    gap: 8px !important;
+    padding-bottom: 6px !important;
+  }
+
+  body.app-mode .mobile-card {
+    margin-bottom: 0 !important;
+    border-color: rgba(8, 145, 178, .18) !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .07) !important;
+    touch-action: manipulation;
+  }
+
+  body.app-mode .mobile-card:active {
+    transform: scale(.995);
+  }
+
+  body.app-mode .mobile-card::before {
+    width: 3px !important;
+  }
+
+  body.app-mode .mobile-card-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    padding: 10px 10px 7px 13px !important;
+    gap: 8px !important;
+  }
+
+  body.app-mode .mobile-type-mark {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: grid;
+    place-items: center;
+    border: 1px solid;
+    border-radius: 8px;
+    line-height: 1;
+  }
+
+  body.app-mode .mobile-type-mark i {
+    font-size: 16px;
+    grid-area: 1 / 1;
+  }
+
+  body.app-mode .mobile-type-mark b {
+    align-self: end;
+    justify-self: end;
+    margin: 0 3px 3px 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  body.app-mode .mobile-card-main {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  body.app-mode .mobile-card-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 7px;
+  }
+
+  body.app-mode .mobile-card-title {
+    font-size: 14px !important;
+    line-height: 1.22 !important;
+    -webkit-line-clamp: 1 !important;
+  }
+
+  body.app-mode .mobile-card-sub {
+    margin-top: 2px;
+    color: #2d4a65 !important;
+    font-family: var(--mono);
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.app-mode .mobile-card-kicker {
+    margin-top: 2px;
+    color: var(--text3) !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.app-mode .mobile-badge {
+    min-height: 22px !important;
+    padding: 2px 7px !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    flex: 0 0 auto;
+  }
+
+  body.app-mode .mobile-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 0 10px 8px 13px !important;
+  }
+
+  body.app-mode .mobile-field {
+    min-height: 42px !important;
+    padding: 6px 7px !important;
+    background: #f7fbff !important;
+  }
+
+  body.app-mode .mobile-field span {
+    font-size: 9.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  body.app-mode .mobile-field strong {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  body.app-mode .mobile-plan-row {
+    padding: 0 10px 8px 13px !important;
+  }
+
+  body.app-mode .mobile-plan-badge {
+    min-height: 24px !important;
+    padding: 3px 8px !important;
+    font-size: 10.5px !important;
+  }
+
+  body.app-mode .mobile-card-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 8px 10px 10px 13px !important;
+  }
+
+  body.app-mode .mobile-card-action {
+    min-height: 34px !important;
+    gap: 5px !important;
+    font-size: 11.5px !important;
+  }
+
+  body.app-mode .mobile-card-action i {
+    font-size: 15px !important;
+  }
+
+  body.app-mode .mobile-card-action:disabled {
+    background: #eef2f6 !important;
+    border-color: #d8e1ea !important;
+    color: #718096 !important;
+    cursor: not-allowed !important;
+    opacity: .75;
+  }
+
+  body.app-mode #instrumentDetailModal .modal-box {
+    max-height: calc(100dvh - 36px) !important;
+  }
+
+  body.app-mode #instrumentDetailModal .modal-header {
+    padding: 10px 12px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .modal-header h3 {
+    font-size: 13px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .modal-body {
+    padding: 12px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-head {
+    gap: 8px !important;
+    margin-bottom: 9px !important;
+    padding-bottom: 9px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-title {
+    gap: 8px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-title .reg-iconbox {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-actions .btn-view {
+    min-height: 34px !important;
+    padding: 0 8px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-metric {
+    min-height: 44px !important;
+    padding: 6px 8px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-metric > span {
+    font-size: 10px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-metric strong {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-section {
+    margin: 10px 0 5px !important;
+    font-size: 11.5px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0 10px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-info-item {
+    padding: 4px 0 !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-info-item.full {
+    grid-column: 1 / -1 !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-info-item span {
+    font-size: 10px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-info-item strong {
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-file-row,
+  body.app-mode #instrumentDetailModal .reg-audit-row {
+    grid-template-columns: 24px minmax(0, 1fr) auto !important;
+    gap: 6px !important;
+    padding: 6px 7px !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-row-icon {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body.app-mode .mobile-card-grid,
+  body.app-mode #instrumentDetailModal .reg-metric-grid,
+  body.app-mode #instrumentDetailModal .reg-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body.app-mode #instrumentDetailModal .reg-detail-actions {
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)) !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -3408,8 +3700,8 @@ body.app-mode textarea:focus {
 
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/01-core.js?v=20260609-category-fix2"></script>
-<script src="js/02-dashboard.js?v=20260611-balance-mass-split"></script>
-<script src="js/03-instruments.js?v=20260610-list-redesign5"></script>
+<script src="js/02-dashboard.js?v=20260612-mobile-compact"></script>
+<script src="js/03-instruments.js?v=20260612-mobile-compact"></script>
 <script src="js/04-reports.js?v=20260611-balance-mass-split"></script>
 <script src="js/05-audit.js?v=20260611-balance-mass-split"></script>
 <script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
