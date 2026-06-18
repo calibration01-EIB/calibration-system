@@ -2523,7 +2523,7 @@ body.app-mode textarea:focus {
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
-        <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">⚖️</span> Standard Weights</div>
+        <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">📜</span> ใบ Cert Reference</div>
       </nav>
       <div class="sidebar-user">
         <div class="user-avatar" id="sidebarInitial">A</div>
@@ -3009,9 +3009,9 @@ body.app-mode textarea:focus {
 
       <div id="pageWeights" class="page-content" style="display:none">
 
-        <!-- TABS: ใบรับรองมาตรฐาน / ลูกตุ้มรายลูก -->
+        <!-- TABS: ใบ Cert Reference / ลูกตุ้มรายลูก -->
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบรับรองมาตรฐาน (Cert.)</button>
+          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบ Cert Reference</button>
           <button class="sw-tab" id="swTabWeights" onclick="switchSWTab('weights')">⚖️ ลูกตุ้มรายลูก</button>
         </div>
 
@@ -3158,7 +3158,7 @@ body.app-mode textarea:focus {
       <!-- MODAL: Standard Cert Detail -->
       <div class="modal-overlay" id="scDetailModal" onclick="if(event.target===this)closeSCDetail()">
         <div class="modal-box" style="max-width:900px">
-          <div class="modal-header"><h3>📜 รายละเอียดใบรับรองมาตรฐาน</h3><button class="btn-close" onclick="closeSCDetail()">×</button></div>
+          <div class="modal-header"><h3>📜 รายละเอียดใบ Cert Reference</h3><button class="btn-close" onclick="closeSCDetail()">×</button></div>
           <div class="modal-body" id="scDetailBody" style="padding:16px 20px 20px"></div>
         </div>
       </div>
@@ -3330,8 +3330,8 @@ body.app-mode textarea:focus {
     <div style="font-size:10px;color:#888">Cert</div>
   </div>
   <div class="mobile-nav-item" data-page="weights" onclick="showPage('weights')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">⚖️</div>
-    <div style="font-size:10px;color:#888">Weights</div>
+    <div style="font-size:22px">📜</div>
+    <div style="font-size:10px;color:#888">Cert Ref</div>
   </div>
   <div class="mobile-nav-item" onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">↩️</div>

@@ -1,5 +1,5 @@
 /* ===== 12-standard-certs.js ===== */
-// ใบรับรองมาตรฐาน (Cert. Standard) — เก็บใบ cert ของเครื่องมือมาตรฐานพร้อมตารางผลวัดรายจุด
+// ใบ Cert Reference — เก็บใบ cert ของเครื่องมือมาตรฐานพร้อมตารางผลวัดรายจุด
 // ค่าจากหน้านี้ (ค่าจริง + U) ใช้เป็นต้นทางการคำนวณตอนออกใบ cert สอบเทียบภายใน
 // ====================================================
 let scData = [];
@@ -267,7 +267,7 @@ async function uploadSCFiles(files) {
       if (error) throw error;
       names.push(file.name);
     }
-    await logAudit('อัพโหลดไฟล์', { id: c.id, id_code: c.set_code, instrument_name: 'Cert Standard ' + c.cert_no }, { ไฟล์: { from: '–', to: names.join(', ') } });
+    await logAudit('อัพโหลดไฟล์', { id: c.id, id_code: c.set_code, instrument_name: 'Cert Reference ' + c.cert_no }, { ไฟล์: { from: '–', to: names.join(', ') } });
     showToast('อัพโหลดสำเร็จ', 'success');
     document.getElementById('scDetailFileInput').value = '';
     loadSCFiles(c);
@@ -386,8 +386,8 @@ async function saveSC() {
 
     const label = certNo + ' (' + setCode + ' · ' + rows.length + ' จุด)';
     await logAudit(scEditingId ? 'แก้ไข' : 'เพิ่ม',
-      { id: certId, id_code: setCode, instrument_name: 'Cert Standard ' + certNo },
-      { 'ใบ Cert มาตรฐาน': { from: scEditingId ? label : '–', to: label } });
+      { id: certId, id_code: setCode, instrument_name: 'Cert Reference ' + certNo },
+      { 'ใบ Cert Reference': { from: scEditingId ? label : '–', to: label } });
     showToast(scEditingId ? 'แก้ไขใบ Cert แล้ว' : 'เพิ่มใบ Cert แล้ว', 'success');
     closeSCEdit();
     await loadStandardCerts();
@@ -407,8 +407,8 @@ async function deleteSC(id) {
   try {
     const { error } = await sb.from('standard_certs').delete().eq('id', id);
     if (error) throw error;
-    await logAudit('ลบ', { id, id_code: c.set_code, instrument_name: 'Cert Standard ' + c.cert_no },
-      { 'ใบ Cert มาตรฐาน': { from: c.cert_no, to: '(ลบแล้ว)' } });
+    await logAudit('ลบ', { id, id_code: c.set_code, instrument_name: 'Cert Reference ' + c.cert_no },
+      { 'ใบ Cert Reference': { from: c.cert_no, to: '(ลบแล้ว)' } });
     showToast('ลบใบ Cert แล้ว', 'success');
     closeSCDetail();
     await loadStandardCerts();
