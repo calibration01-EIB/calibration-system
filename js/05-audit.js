@@ -157,7 +157,8 @@ const CERT_TYPE_MAP = {
 
 function getCertTypeCode(instrumentType, instrumentName = '') {
   const type = String(instrumentType || '').trim();
-  const name = [type, instrumentName].filter(Boolean).join(' ').toLowerCase();
+  const name = String(instrumentName || '').toLowerCase();
+  const typeText = type.toLowerCase();
   const nameRules = [
     ['C', /\bph\b|p\.h\.|viscometer|visco|\bdo\s*meter\b|dissolved\s*oxygen|ความหนืด/],
     ['D', /digital\s*caliper|digitol\s*caliper|vernier\s*caliper|\bcaliper\b|ดิจิตอล|เวอร์เนียร์/],
@@ -176,7 +177,12 @@ function getCertTypeCode(instrumentType, instrumentName = '') {
   for (const [code, pattern] of nameRules) {
     if (pattern.test(name)) return code;
   }
-  return CERT_TYPE_MAP[type] || '';
+  const mappedType = CERT_TYPE_MAP[type] || '';
+  if (mappedType) return mappedType;
+  for (const [code, pattern] of nameRules) {
+    if (pattern.test(typeText)) return code;
+  }
+  return '';
 }
 
 

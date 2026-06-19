@@ -540,6 +540,19 @@ function isBalanceInstrumentType(value) {
   return /\bbalance\b|electronic\s*scale|weighing\s*scale|weighing\s*machine|เครื่องชั่ง/i.test(key);
 }
 
+function isMassInstrumentType(value) {
+  const key = normalizeInstrumentTypeKey(value);
+  if (!key) return false;
+  return /\bmass\b|\bweight\s*set\b|\bweights\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน|ลูกตุ้ม/i.test(key);
+}
+
+function inferBalanceMassDisplayType(row) {
+  const text = [row?.instrument_name, row?.brand].filter(Boolean).join(' ');
+  if (isBalanceInstrumentType(text) && !isMassInstrumentType(text)) return BALANCE_DISPLAY_TYPE;
+  if (isMassInstrumentType(text)) return 'ตุ้มน้ำหนักมาตรฐาน (Mass)';
+  return '';
+}
+
 function expandInstrumentTypeFilter(types) {
   const source = Array.isArray(types) ? types.filter(Boolean) : [];
   const expanded = new Set(source);
@@ -552,8 +565,11 @@ function expandInstrumentTypeFilter(types) {
 function getDisplayInstrumentType(row) {
   const rawType = String(row?.instrument_type || '').trim();
   const rawKey = rawType.toLowerCase().replace(/\s+/g, ' ');
+  const inferredBalanceMass = inferBalanceMassDisplayType(row);
+  if (inferredBalanceMass === BALANCE_DISPLAY_TYPE) return BALANCE_DISPLAY_TYPE;
   if (isBalanceInstrumentType(rawType)) return BALANCE_DISPLAY_TYPE;
   if (rawKey === 'มวล/น้ำหนัก' || rawKey === 'มวล/น้ำหนัก (mass/weight)' || rawKey === 'mass/weight') {
+    if (inferredBalanceMass) return inferredBalanceMass;
     const code = typeof getCertTypeCode === 'function' ? getCertTypeCode(rawType, row?.instrument_name || '') : '';
     return code === 'M' ? 'ตุ้มน้ำหนักมาตรฐาน (Mass)' : 'เครื่องชั่ง (Balance)';
   }
