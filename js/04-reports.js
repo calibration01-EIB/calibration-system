@@ -265,11 +265,18 @@ function getInstrumentCategory(row) {
   ].filter(Boolean).join(' '));
 
   const rawKey = normalizeCategoryKey(rawType);
+  const balanceDef = CATEGORY_DEFS.find(cat => cat.name === 'เครื่องชั่ง (Balance)');
   if (['มวล/น้ำหนัก mass/weight', 'มวล/น้ำหนัก', 'mass/weight'].includes(rawKey)) {
     const massDef = CATEGORY_DEFS.find(cat => cat.name === 'ตุ้มน้ำหนักมาตรฐาน (Mass)');
+    if (balanceDef && balanceDef.aliases.some(alias => categoryAliasMatches(haystack, alias))) return balanceDef.name;
     if (massDef && massDef.aliases.some(alias => categoryAliasMatches(haystack, alias))) return massDef.name;
     return 'เครื่องชั่ง (Balance)';
   }
+
+  const massDef = CATEGORY_DEFS.find(cat => cat.name === 'ตุ้มน้ำหนักมาตรฐาน (Mass)');
+  const haystackLooksBalance = balanceDef && balanceDef.aliases.some(alias => categoryAliasMatches(haystack, alias));
+  const haystackLooksMass = massDef && massDef.aliases.some(alias => categoryAliasMatches(haystack, alias));
+  if (haystackLooksBalance && !haystackLooksMass) return balanceDef.name;
 
   const typeMatch = matchCategoryFromText(rawType);
   if (typeMatch) return typeMatch;
