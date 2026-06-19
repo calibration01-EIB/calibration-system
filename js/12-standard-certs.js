@@ -18,11 +18,11 @@ const SC_CATEGORIES = {
 function scCatMeta(cat) { return SC_CATEGORIES[cat] || ['🧰', '#52667d']; }
 
 function switchSWTab(tab) {
-  const certs = tab === 'certs';
-  document.getElementById('scSection').style.display = certs ? '' : 'none';
-  document.getElementById('swSection').style.display = certs ? 'none' : '';
-  document.getElementById('swTabCerts').classList.toggle('active', certs);
-  document.getElementById('swTabWeights').classList.toggle('active', !certs);
+  const sections = { certs: 'scSection', weights: 'swSection', cmc: 'cmcSection' };
+  const buttons = { certs: 'swTabCerts', weights: 'swTabWeights', cmc: 'swTabCmc' };
+  Object.entries(sections).forEach(([t, sec]) => { const el = document.getElementById(sec); if (el) el.style.display = (t === tab) ? '' : 'none'; });
+  Object.entries(buttons).forEach(([t, id]) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', t === tab); });
+  if (tab === 'cmc' && typeof loadCmcScope === 'function') loadCmcScope();
 }
 
 async function loadStandardCerts() {
@@ -78,6 +78,46 @@ function scFmtTrue(r) {
 }
 function scSigned(v) { return (Number(v) > 0 ? '+' : '') + Number(v); }
 function scPass(r) { return Math.abs(Number(r.correction)) + Number(r.uncertainty) <= Number(r.mpe); }
+
+// ===== Drift เทียบใบครั้งก่อน (FRM-CAL92 5.1.2) — Dₛ = max(U, |Δค่าแก้|) =====
+// ใบก่อนหน้า = ชุด+ซีเรียลเดียวกัน วันที่สอบเทียบเก่ากว่า เลือกใบที่ใหม่ที่สุดในกลุ่มนั้น
+function scPreviousCert(c) {
+  const prior = scData.filter(o => o.id !== c.id && o.set_code === c.set_code && o.serial_no === c.serial_no
+    && o.measurement_date && c.measurement_date && new Date(o.measurement_date) < new Date(c.measurement_date));
+  if (!prior.length) return null;
+  return prior.reduce((a, b) => new Date(b.measurement_date) > new Date(a.measurement_date) ? b : a);
+}
+// จับคู่จุดวัดด้วย ค่าพิกัด + หน่วย + marking
+function scMatchRow(cert, row) {
+  if (!cert) return null;
+  return (cert.values || []).find(r => Number(r.nominal_value) === Number(row.nominal_value)
+    && r.unit === row.unit && (r.marking || '') === (row.marking || ''));
+}
+function scRowDrift(c, row, prev) {
+  prev = prev !== undefined ? prev : scPreviousCert(c);
+  const prevRow = scMatchRow(prev, row);
+  if (!prev || !prevRow) return { hasPrev: false, prev, prevRow: null, drift: 0, Ds: Number(row.uncertainty) };
+  const drift = Math.abs(Number(row.correction) - Number(prevRow.correction));
+  return { hasPrev: true, prev, prevRow, drift, Ds: Math.max(Number(row.uncertainty), drift) };
+}
+// ใบมวลล่าสุดของชุด/ซีเรียล + ดึงค่า correction/U/Dₛ ให้ตุ้มรายลูก (ใช้โดยแท็บลูกตุ้ม — เตรียมไว้)
+function scLatestMassCert(serial, setCode) {
+  const m = scData.filter(c => ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category)
+    && c.serial_no === serial && (!setCode || c.set_code === setCode));
+  if (!m.length) return null;
+  return m.reduce((a, b) => new Date(b.measurement_date || 0) > new Date(a.measurement_date || 0) ? b : a);
+}
+function stdValueFor(w) {
+  const cert = scLatestMassCert(w.serial_no, w.set_code);
+  if (!cert) return { hasCert: false };
+  const cand = (cert.values || []).filter(r => Number(r.nominal_value) === Number(w.nominal_value) && r.unit === w.unit);
+  if (!cand.length) return { hasCert: true, hasRow: false, cert };
+  const row = (w.marking ? cand.find(r => (r.marking || '') === (w.marking || '')) : null) || cand[0];
+  const dr = scRowDrift(cert, row);
+  return { hasCert: true, hasRow: true, cert, prev: dr.prev,
+    correction: Number(row.correction), U: Number(row.uncertainty), corr_unit: row.corr_unit,
+    actual: scTrueValue(row), Ds: dr.Ds, drift: dr.drift, hasPrev: dr.hasPrev };
+}
 
 function scFiltered() {
   const q = (document.getElementById('scSearch')?.value || '').trim().toLowerCase();
@@ -146,6 +186,8 @@ function openSCDetail(id) {
   const [icon, color] = scCatMeta(c.category);
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   const isMass = ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category);
+  const scPrev = scPreviousCert(c);
+  const showDrift = !!scPrev;
   document.getElementById('scDetailBody').innerHTML = `
     <div class="reg-detail-head">
       <div class="reg-detail-title">
@@ -177,20 +219,25 @@ function openSCDetail(id) {
     </div>
 
     <div class="reg-section"><span>ผลวัด — ค่าแก้ &amp; เกณฑ์ยอมรับ${isMass ? ' (Conventional mass · OIML R 111-1)' : ''}</span><span class="reg-sub">${c.values.length} จุด</span></div>
+    ${showDrift ? `<div class="reg-sub" style="margin:-2px 0 6px;color:#534ab7">↺ Drift เทียบใบครั้งก่อน <strong>${escapeHtmlText(scPrev.cert_no)}</strong> (${fmtDateTH(scPrev.measurement_date)}) · Dₛ = max(U, |Δค่าแก้|) ตาม FRM-CAL92 5.1.2</div>` : ''}
     <div style="overflow-x:auto">
       <table class="sc-vals">
-        <thead><tr><th>#</th><th>จุดวัด</th><th>รายละเอียด</th><th class="num">Correction</th><th class="num">ค่าจริง</th><th class="num">U, k=2</th><th class="num">เกณฑ์ ±</th><th>ผล</th></tr></thead>
+        <thead><tr><th>#</th><th>จุดวัด</th><th>รายละเอียด</th><th class="num">Correction</th><th class="num">ค่าจริง</th><th class="num">U, k=2</th>${showDrift ? '<th class="num">Drift</th><th class="num">Dₛ</th>' : ''}<th class="num">เกณฑ์ ±</th><th>ผล</th></tr></thead>
         <tbody>
-          ${c.values.map((r, i) => `<tr>
+          ${c.values.map((r, i) => {
+            const dr = showDrift ? scRowDrift(c, r, scPrev) : null;
+            return `<tr>
             <td style="color:var(--text3)">${i + 1}</td>
             <td><strong>${r.nominal_value} ${escapeHtmlText(r.unit)}</strong></td>
             <td style="color:var(--text3)">${escapeHtmlText(r.marking || '–')}</td>
             <td class="num">${scSigned(r.correction)} ${escapeHtmlText(r.corr_unit)}</td>
             <td class="num"><strong>${scFmtTrue(r)}</strong></td>
             <td class="num">${r.uncertainty} ${escapeHtmlText(r.corr_unit)}</td>
+            ${showDrift ? `<td class="num ${dr.hasPrev && dr.drift > Number(r.uncertainty) ? 'sc-fail' : ''}">${dr.hasPrev ? parseFloat(dr.drift.toFixed(6)) : '–'}</td><td class="num"><strong>${parseFloat(dr.Ds.toFixed(6))} ${escapeHtmlText(r.corr_unit)}</strong></td>` : ''}
             <td class="num">${r.mpe} ${escapeHtmlText(r.corr_unit)}</td>
             <td class="${scPass(r) ? 'sc-pass' : 'sc-fail'}">${scPass(r) ? '✓ ผ่าน' : '✗ เกิน'}</td>
-          </tr>`).join('')}
+          </tr>`;
+          }).join('')}
         </tbody>
       </table>
     </div>
@@ -221,9 +268,12 @@ function renderSCCalc() {
   if (!c || !out) return;
   const r = c.values[Number(document.getElementById('scCalcPick')?.value) || 0];
   if (!r) { out.innerHTML = ''; return; }
+  const dr = scRowDrift(c, r);
   out.innerHTML = `
     <div class="reg-metric"><span>ค่าจริงของจุดวัด</span><strong>${scFmtTrue(r)}</strong></div>
     <div class="reg-metric"><span>ความไม่แน่นอนมาตรฐาน u = U/2</span><strong>${parseFloat((Number(r.uncertainty) / 2).toFixed(6))} ${escapeHtmlText(r.corr_unit)}</strong></div>
+    ${dr.hasPrev ? `<div class="reg-metric"><span>Drift = |ค่าแก้ปัจจุบัน − ครั้งก่อน (${scSigned(dr.prevRow.correction)})|</span><strong>${parseFloat(dr.drift.toFixed(6))} ${escapeHtmlText(r.corr_unit)}</strong></div>
+    <div class="reg-metric"><span>Dₛ = max(U, Drift) → ใช้ Dₛ/√3 ในงบ Uncer</span><strong>${parseFloat(dr.Ds.toFixed(6))} ${escapeHtmlText(r.corr_unit)}</strong></div>` : `<div class="reg-metric"><span>Drift</span><strong>ไม่มีใบครั้งก่อน → Dₛ = U</strong></div>`}
     <div class="reg-metric"><span>เทียบเกณฑ์ยอมรับ</span><strong>|${scSigned(r.correction)}| + ${r.uncertainty} ≤ ${r.mpe} ${escapeHtmlText(r.corr_unit)}</strong></div>
   `;
 }

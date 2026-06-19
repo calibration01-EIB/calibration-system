@@ -164,6 +164,16 @@ button { cursor: pointer; }
   .info-item.full, .field.full { grid-column: auto; }
   .modal { padding: 10px; align-items: flex-end; }
 }
+.viewtabs { display: flex; gap: 6px; margin: 14px 0 0; border-bottom: 2px solid var(--line); }
+.vtab { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; padding: 9px 16px; font: inherit; font-weight: 700; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 6px 6px 0 0; }
+.vtab:hover { background: rgba(0,0,0,.04); }
+.vtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.src-cell { font-size: 11px; color: var(--muted); }
+.drift-pill { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.drift-pill.u { background: #e8f5e9; color: #2e7d32; }
+.drift-pill.d { background: #fff3e0; color: #c25e00; }
+.drift-pill.one { background: #eef0fb; color: #534ab7; }
+.drift-pill.none { background: #fce8e8; color: #b03030; }
 </style>
 </head>
 <body>
@@ -181,6 +191,12 @@ button { cursor: pointer; }
     </div>
   </header>
 
+  <nav class="viewtabs">
+    <button class="vtab active" id="tabCerts" onclick="switchView('certs')"><i class="ti ti-certificate-2"></i> ใบ Cert Reference</button>
+    <button class="vtab" id="tabWeights" onclick="switchView('weights')"><i class="ti ti-scale"></i> ลูกตุ้มรายลูก</button>
+  </nav>
+
+  <div id="viewCerts">
   <section class="toolbar">
     <label class="searchbox" for="searchInput">
       <i class="ti ti-search"></i>
@@ -227,6 +243,38 @@ button { cursor: pointer; }
   <div class="note"><i class="ti ti-info-circle"></i><div>
     คลิกใบ Cert เพื่อดูตารางผลวัดรายลูกและทดลองดึงค่าไปใช้คำนวณ — ระบบจะเลือก<strong>ใบล่าสุดที่ยังไม่หมดอายุ</strong>ของแต่ละชุดมาตรฐานให้โมดูลสอบเทียบโดยอัตโนมัติ ใบเก่าจะถูกขึ้นป้าย "มีใบใหม่แทน" และเก็บไว้เป็นประวัติ
   </div></div>
+  </div><!-- /viewCerts -->
+
+  <div id="viewWeights" style="display:none">
+    <section class="toolbar">
+      <label class="searchbox" for="wSearch"><i class="ti ti-search"></i>
+        <input id="wSearch" type="search" placeholder="ค้นหา ID Code, S/N, ชุด, ค่าพิกัด">
+      </label>
+      <select id="wSetFilter" class="select"><option value="">ทุกชุดมาตรฐาน</option></select>
+      <span class="count-label" id="wCount" style="margin-left:auto;align-self:center">0 ลูก</span>
+    </section>
+
+    <div class="note" style="background:#eef0fb;border-color:#534ab740;color:#3b3680"><i class="ti ti-link"></i><div>
+      ค่าแก้ (Correction) · U · Dₛ ของตุ้มแต่ละลูก <b>ดึงอัตโนมัติจากใบ Cert ล่าสุด</b> ของชุดนั้น (จับคู่ด้วย S/N + ค่าพิกัด + marking) — ไม่กรอกซ้ำ · <b>Dₛ = max(U, drift)</b> คิด drift เทียบใบครั้งก่อนให้เอง · แก้ค่าได้ที่แท็บ "ใบ Cert Reference"
+    </div></div>
+
+    <section class="registry">
+      <div class="registry-head">
+        <h2><i class="ti ti-scale"></i> ทะเบียนลูกตุ้มมาตรฐาน (รายลูก)</h2>
+        <span class="count-label" id="wResultCount">0 ลูก</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr>
+            <th>ID Code</th><th>ชุด</th><th>S/N</th><th>ค่าพิกัด</th><th>marking</th><th>Class</th>
+            <th class="num">ค่าแก้ (จาก cert)</th><th class="num">ค่าจริง</th><th class="num">U (k=2)</th><th class="num">Dₛ</th>
+            <th>ใบ cert ล่าสุด</th><th>Drift</th>
+          </tr></thead>
+          <tbody id="weightBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div><!-- /viewWeights -->
 </main>
 
 <!-- DETAIL MODAL -->
@@ -316,6 +364,13 @@ const SET_ROWS = [
   [500,'g','none',0.03,0.25,0.8],
   [1,'kg','none',-0.49,0.50,1.6],
 ];
+// ค่าแก้ใบครั้งก่อน (2022) — ต่างจาก 2025 เล็กน้อยเพื่อให้เห็น drift (เฉพาะจุดที่ใช้สอบเทียบเครื่องชั่งทั่วไป)
+const SET_ROWS_PREV = SET_ROWS.map(r => {
+  // บางจุดตั้งให้ drift > U เพื่อโชว์ว่า Dₛ = max(U, drift) เลือก drift (เช่น 50g, 200g, 1kg)
+  const deltas = { '1g': 0.015, '10g': -0.03, '20g': 0.02, '50g': 0.05, '100g': -0.04, '200g': 0.15, '500g': -0.2, '1kg': 0.6 };
+  const key = r[0] + r[1];
+  return key in deltas ? [r[0], r[1], r[2], +(r[3] + deltas[key]).toFixed(4), r[4], r[5]] : r.slice();
+});
 // แถวผลวัดทั่วไป: corr_unit คือหน่วยของ Correction / U / เกณฑ์ (mg, °C, bar, mm, ...)
 const mkRows = (list, corrUnit = 'mg') => list.map(([nominal_value, unit, marking, correction, uncertainty, mpe]) =>
   ({ nominal_value, unit, marking, correction, uncertainty, mpe, corr_unit: corrUnit }));
@@ -344,7 +399,7 @@ let certs = [
     lab: 'NIMT — Mass Laboratory', measurement_date: '2022-10-11', due_date: '2024-10-11', interval_years: 2,
     remark: '(21.8 ± 0.3) °C, RH (53.0 ± 5.0) %, (1 012.4 ± 5.0) hPa · OIML R 111-1',
     file: { name: 'E2-CLCLRS01 1mg-1kg 22.pdf', size: '1.1 MB' },
-    rows: mkRows(SET_ROWS),
+    rows: mkRows(SET_ROWS_PREV),
   },
   {
     id: 3, cert_no: 'MM-0162-22', set_code: 'E2-CLCLRS02', category: 'มวล/น้ำหนัก', item: 'Weight 2 kg',
@@ -406,6 +461,31 @@ let certs = [
   },
 ];
 
+// ===== ทะเบียนลูกตุ้มรายลูก (เทียบ standard_weights) — ไม่เก็บค่าแก้/U เอง ดึงจากใบ cert =====
+let WEIGHTS = [
+  // ชุด E2-CLCLRS01 (S/N 15885) — มีใบล่าสุด MM-0148-25 + ใบก่อน MM-0161-22 → คิด drift ได้
+  { id_code:'CLW-001', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:100, unit:'mg', marking:'triangle, wire', class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-002', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:500, unit:'mg', marking:'pentagon, wire', class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-003', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:1,   unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-004', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:2,   unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-005', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:2,   unit:'g',  marking:'point', class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-006', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:5,   unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-007', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:10,  unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-008', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:20,  unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-009', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:50,  unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-010', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:100, unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-011', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:200, unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-012', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:500, unit:'g',  marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  { id_code:'CLW-013', set_code:'E2-CLCLRS01', serial_no:'15885', nominal_value:1,   unit:'kg', marking:'none',  class_grade:'E2', due_date:'2027-10-15', location:'ตู้ A1' },
+  // ชุด E2-CLCLRS02 — ลูกใหญ่ คนละ S/N · ใบเดียว (ไม่มีใบก่อน) → Dₛ = U
+  { id_code:'CLW-020', set_code:'E2-CLCLRS02', serial_no:'15849', nominal_value:2,  unit:'kg', marking:'none', class_grade:'E2', due_date:'2026-07-04', location:'ตู้ B1' },
+  { id_code:'CLW-021', set_code:'E2-CLCLRS02', serial_no:'15850', nominal_value:5,  unit:'kg', marking:'none', class_grade:'E2', due_date:'2027-02-10', location:'ตู้ B1' },
+  { id_code:'CLW-022', set_code:'E2-CLCLRS02', serial_no:'15851', nominal_value:10, unit:'kg', marking:'none', class_grade:'E2', due_date:'2026-05-20', location:'ตู้ B1' },
+  { id_code:'CLW-023', set_code:'E2-CLCLRS02', serial_no:'15852', nominal_value:20, unit:'kg', marking:'none', class_grade:'E2', due_date:'2026-12-02', location:'ตู้ B1' },
+  // ลูกที่ยังไม่มีใบ cert → ต้องเตือน
+  { id_code:'CLW-099', set_code:'F1-NEW01', serial_no:'90001', nominal_value:50, unit:'kg', marking:'none', class_grade:'F1', due_date:'', location:'ตู้ C1' },
+];
+
 let editingId = null;
 let detailId = null;
 const byId = id => document.getElementById(id);
@@ -455,6 +535,28 @@ function rowPass(row) {
   return Math.abs(row.correction) + row.uncertainty <= row.mpe;
 }
 function fmtSigned(v) { return (v > 0 ? '+' : '') + v; }
+
+// ===== Drift เทียบใบรับรองครั้งก่อน (FRM-CAL92 5.1.2) =====
+// ใบก่อนหน้า = ชุด+ซีเรียลเดียวกัน วันที่สอบเทียบเก่ากว่า เลือกใบที่ใหม่ที่สุดในกลุ่มนั้น
+function previousCert(c) {
+  const prior = certs.filter(o => o.id !== c.id && o.set_code === c.set_code && o.serial_no === c.serial_no
+    && new Date(o.measurement_date) < new Date(c.measurement_date));
+  if (!prior.length) return null;
+  return prior.reduce((a, b) => new Date(b.measurement_date) > new Date(a.measurement_date) ? b : a);
+}
+// จับคู่จุดวัดด้วย ค่าพิกัด+หน่วย+marking
+function matchRow(cert, row) {
+  return cert ? cert.rows.find(r => r.nominal_value === row.nominal_value && r.unit === row.unit
+    && (r.marking || '') === (row.marking || '')) : null;
+}
+// drift ต่อจุด + D_s = max(U, |Δค่าแก้|) — ทุกค่าหน่วยเดียวกับ corr_unit ของแถว
+function rowDrift(c, row, prev) {
+  prev = prev !== undefined ? prev : previousCert(c);
+  const prevRow = matchRow(prev, row);
+  if (!prev || !prevRow) return { hasPrev: false, prev, prevRow: null, drift: 0, Ds: row.uncertainty };
+  const drift = Math.abs(row.correction - prevRow.correction);
+  return { hasPrev: true, prev, prevRow, drift, Ds: Math.max(row.uncertainty, drift) };
+}
 
 function filtered() {
   const q = byId('searchInput').value.trim().toLowerCase();
@@ -517,6 +619,82 @@ function renderTable() {
 
 function renderAll() { renderStats(); renderSetFilter(); renderTable(); }
 
+// ===== ลูกตุ้มรายลูก: ดึงค่าจากใบ cert ล่าสุด (single source of truth) =====
+// ใบล่าสุดของชุด/ซีเรียล (มวล) — จับคู่ค่าด้วย S/N + ค่าพิกัด + หน่วย + marking
+function latestMassCert(serial, setCode) {
+  const m = certs.filter(c => c.category === 'มวล/น้ำหนัก' && c.serial_no === serial && (!setCode || c.set_code === setCode));
+  if (!m.length) return null;
+  return m.reduce((a, b) => new Date(b.measurement_date) > new Date(a.measurement_date) ? b : a);
+}
+function stdValueFor(w) {
+  const cert = latestMassCert(w.serial_no, w.set_code);
+  if (!cert) return { hasCert: false };
+  const row = cert.rows.find(r => r.nominal_value === w.nominal_value && r.unit === w.unit && (r.marking || '') === (w.marking || ''));
+  if (!row) return { hasCert: true, hasRow: false, cert };
+  const dr = rowDrift(cert, row);   // ใช้ previousCert(cert) ภายใน → Dₛ = max(U, drift)
+  return { hasCert: true, hasRow: true, cert, prev: dr.prev,
+    correction: row.correction, U: row.uncertainty, corr_unit: row.corr_unit,
+    actual: trueValue(row), Ds: dr.Ds, drift: dr.drift, hasPrev: dr.hasPrev };
+}
+function renderWeightSetFilter() {
+  const sets = [...new Set(WEIGHTS.map(w => w.set_code))];
+  const cur = byId('wSetFilter').value;
+  byId('wSetFilter').innerHTML = '<option value="">ทุกชุดมาตรฐาน</option>' + sets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  byId('wSetFilter').value = cur;
+}
+function renderWeights() {
+  const q = (byId('wSearch').value || '').trim().toLowerCase();
+  const setF = byId('wSetFilter').value;
+  const list = WEIGHTS.filter(w => {
+    const mq = !q || [w.id_code, w.serial_no, w.set_code, w.nominal_value + w.unit].some(v => String(v ?? '').toLowerCase().includes(q));
+    return mq && (!setF || w.set_code === setF);
+  });
+  byId('wCount').textContent = list.length + ' ลูก';
+  byId('wResultCount').textContent = list.length + ' ลูก';
+  byId('weightBody').innerHTML = list.map(w => {
+    const v = stdValueFor(w);
+    let corr = '–', actual = '–', uu = '–', ds = '–', certC, drift;
+    if (!v.hasCert) {
+      certC = '<span class="src-cell">ยังไม่มีใบ cert</span>';
+      drift = '<span class="drift-pill none">ไม่มีใบ</span>';
+    } else if (!v.hasRow) {
+      certC = `<span class="src-cell">${escapeHtml(v.cert.cert_no)}</span>`;
+      drift = '<span class="drift-pill none">ไม่ตรงจุด</span>';
+    } else {
+      corr = `${fmtSigned(v.correction)} ${v.corr_unit}`;
+      actual = `<strong>${parseFloat(v.actual.toFixed(8))} ${w.unit}</strong>`;
+      uu = `${v.U} ${v.corr_unit}`;
+      ds = `<strong>${parseFloat(v.Ds.toFixed(6))} ${v.corr_unit}</strong>`;
+      certC = `<span class="src-cell">${escapeHtml(v.cert.cert_no)}<br>${fmtDate(v.cert.measurement_date)}</span>`;
+      drift = !v.hasPrev ? '<span class="drift-pill one">ใบเดียว → U</span>'
+        : v.drift > v.U ? `<span class="drift-pill d">drift ${parseFloat(v.drift.toFixed(4))} &gt; U</span>`
+        : '<span class="drift-pill u">≤ U</span>';
+    }
+    return `<tr>
+      <td><strong>${escapeHtml(w.id_code)}</strong></td>
+      <td>${escapeHtml(w.set_code)}</td>
+      <td>${escapeHtml(w.serial_no)}</td>
+      <td><strong>${w.nominal_value} ${w.unit}</strong></td>
+      <td class="src-cell">${escapeHtml(w.marking || '–')}</td>
+      <td>${escapeHtml(w.class_grade || '–')}</td>
+      <td class="num">${corr}</td>
+      <td class="num">${actual}</td>
+      <td class="num">${uu}</td>
+      <td class="num">${ds}</td>
+      <td>${certC}</td>
+      <td>${drift}</td>
+    </tr>`;
+  }).join('');
+}
+function switchView(v) {
+  const isW = v === 'weights';
+  byId('viewCerts').style.display = isW ? 'none' : '';
+  byId('viewWeights').style.display = isW ? '' : 'none';
+  byId('tabCerts').classList.toggle('active', !isW);
+  byId('tabWeights').classList.toggle('active', isW);
+  if (isW) { renderWeightSetFilter(); renderWeights(); }
+}
+
 // ===== DETAIL =====
 function openDetail(id) {
   const c = certs.find(x => x.id === id);
@@ -524,6 +702,8 @@ function openDetail(id) {
   detailId = id;
   const st = certStatus(c);
   const cm = catMeta(c.category);
+  const prevCert = previousCert(c);
+  const showDrift = !!prevCert;
   byId('detailBody').innerHTML = `
     <div class="detail-head">
       <div class="detail-title">
@@ -537,6 +717,7 @@ function openDetail(id) {
         </div>
       </div>
       <div class="detail-actions">
+        ${c.category === 'มวล/น้ำหนัก' ? `<button class="btn sm primary" onclick="useForCalibration(${c.id})"><i class="ti ti-scale"></i> ใช้ชุดนี้สอบเทียบ →</button>` : ''}
         <button class="btn sm" onclick="closeDetail();openEdit(${c.id})"><i class="ti ti-pencil"></i> แก้ไข</button>
         ${c.file ? `<button class="btn sm" onclick="showToastMsg('เปิดไฟล์ ${escapeHtml(c.file.name)}')"><i class="ti ti-file-text"></i> เปิด PDF</button>` : ''}
       </div>
@@ -560,16 +741,18 @@ function openDetail(id) {
     </div>
 
     <div class="section-title"><span>ผลวัด — ค่าแก้ &amp; เกณฑ์ยอมรับ${c.category === 'มวล/น้ำหนัก' ? ' (Conventional mass · OIML R 111-1)' : ''}</span><span class="sub">${c.rows.length} จุด</span></div>
+    ${showDrift ? `<div class="sub" style="margin:-2px 0 6px;color:#534ab7"><i class="ti ti-git-compare"></i> Drift เทียบใบครั้งก่อน <strong>${escapeHtml(prevCert.cert_no)}</strong> (${fmtDate(prevCert.measurement_date)}) · Dₛ = max(U, |Δค่าแก้|) ตาม FRM-CAL92 5.1.2</div>` : ''}
     <div class="table-wrap">
       <table class="vals">
         <thead><tr>
           <th>#</th><th>จุดวัด / ค่าพิกัด</th><th>รายละเอียด</th>
           <th class="num">Correction</th><th class="num">ค่าจริง</th>
-          <th class="num">U, k=2</th><th class="num">เกณฑ์ ±</th><th>ผล</th>
+          <th class="num">U, k=2</th>${showDrift ? '<th class="num">Drift</th><th class="num">Dₛ</th>' : ''}<th class="num">เกณฑ์ ±</th><th>ผล</th>
         </tr></thead>
         <tbody>
           ${c.rows.map((r, i) => {
             const pass = rowPass(r);
+            const dr = showDrift ? rowDrift(c, r, prevCert) : null;
             return `<tr>
               <td class="sub">${i + 1}</td>
               <td><strong>${r.nominal_value} ${r.unit}</strong></td>
@@ -577,6 +760,7 @@ function openDetail(id) {
               <td class="num">${fmtSigned(r.correction)} ${r.corr_unit}</td>
               <td class="num"><strong>${fmtTrue(r)}</strong></td>
               <td class="num">${r.uncertainty} ${r.corr_unit}</td>
+              ${showDrift ? `<td class="num ${dr.hasPrev && dr.drift > r.uncertainty ? 'fail' : 'sub'}">${dr.hasPrev ? parseFloat(dr.drift.toFixed(6)) : '–'}</td><td class="num"><strong>${parseFloat(dr.Ds.toFixed(6))} ${r.corr_unit}</strong></td>` : ''}
               <td class="num">${r.mpe} ${r.corr_unit}</td>
               <td class="${pass ? 'pass' : 'fail'}">${pass ? '✓ ผ่าน' : '✗ เกิน'}</td>
             </tr>`;
@@ -603,13 +787,45 @@ function renderCalc() {
   const c = certs.find(x => x.id === detailId);
   if (!c) return;
   const r = c.rows[Number(byId('calcPick').value) || 0];
+  const dr = rowDrift(c, r);
   byId('calcOut').innerHTML = `
     <div class="metric"><span>ค่าจริงของจุดวัด</span><strong>${fmtTrue(r)}</strong></div>
     <div class="metric"><span>ความไม่แน่นอนมาตรฐาน u = U/2</span><strong>${parseFloat((r.uncertainty / 2).toFixed(6))} ${r.corr_unit}</strong></div>
+    ${dr.hasPrev ? `<div class="metric"><span>Drift = |ค่าแก้ปัจจุบัน − ครั้งก่อน (${fmtSigned(dr.prevRow.correction)})|</span><strong>${parseFloat(dr.drift.toFixed(6))} ${r.corr_unit}</strong></div>
+    <div class="metric"><span>Dₛ = max(U, Drift) → ใช้คิด u(Dₛ) = Dₛ/√3</span><strong>${parseFloat(dr.Ds.toFixed(6))} ${r.corr_unit}</strong></div>` : `<div class="metric"><span>Drift</span><strong>ไม่มีใบครั้งก่อน → Dₛ = U</strong></div>`}
     <div class="metric"><span>เทียบเกณฑ์ยอมรับ</span><strong>|${fmtSigned(r.correction)}| + ${r.uncertainty} ≤ ${r.mpe} ${r.corr_unit}</strong></div>
   `;
 }
 function closeDetail() { byId('detailModal').classList.remove('open'); detailId = null; }
+
+// ===== ส่งชุดตุ้มเข้าโมดูลสอบเทียบเครื่องชั่ง (balance-cal-design) =====
+// แปลงทุกค่าเป็น mg (corr เป็น g) เพื่อให้ balance-cal ใช้ตรง · ส่ง Dₛ = max(U, drift) ต่อจุด
+function useForCalibration(id) {
+  const c = certs.find(x => x.id === id);
+  if (!c) return;
+  const prev = previousCert(c);
+  const toMg = u => MASS_MG[u] || 1;            // mg:1, g:1000, kg:1e6
+  const weights = c.rows.filter(r => MASS_MG[r.unit]).map(r => {
+    const dr = rowDrift(c, r, prev);
+    const f = toMg(r.corr_unit);
+    return {
+      nominal_g: r.nominal_value * toMg(r.unit) / 1000,
+      marking: r.marking || '',
+      corr_g: r.correction * f / 1000,
+      U_mg: r.uncertainty * f,
+      Ds_mg: dr.Ds * f,
+    };
+  });
+  const payload = {
+    cert_no: c.cert_no, set_code: c.set_code, serial_no: c.serial_no,
+    class_grade: c.class_grade, item: c.item, due_date: c.due_date,
+    measurement_date: c.measurement_date, prev_cert_no: prev ? prev.cert_no : null,
+    weights,
+  };
+  const json = JSON.stringify(payload);
+  try { localStorage.setItem('stdData', json); } catch (e) {}
+  window.open('balance-cal-design.html#std=' + encodeURIComponent(json), '_blank');
+}
 
 // ===== EDIT =====
 function valueRowHtml(r) {
@@ -722,6 +938,8 @@ byId('setFilter').addEventListener('change', renderTable);
 byId('statusFilter').addEventListener('change', renderTable);
 byId('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') closeDetail(); });
 byId('editModal').addEventListener('click', e => { if (e.target.id === 'editModal') closeEdit(); });
+byId('wSearch').addEventListener('input', renderWeights);
+byId('wSetFilter').addEventListener('change', renderWeights);
 
 renderAll();
 </script>

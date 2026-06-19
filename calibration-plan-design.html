@@ -392,7 +392,7 @@ button, input, select { font: inherit; }
                 <td><div class="instrument-cell"><span class="iconbox green"><i class="ti ti-scale"></i></span><div><div class="name">Precision Balance 6.2kg</div><div class="sub">B Balance · Ametek T-1358</div></div></div></td>
                 <td>Production 2</td>
                 <td><strong>15 มิ.ย. 69</strong></td>
-                <td><span class="status warn">ใกล้ครบ 5 วัน</span></td>
+                <td><span class="status warn">ใกล้ครบ 5 วัน</span> <button class="btn primary sm" onclick="openBalanceCal()"><i class="ti ti-scale"></i> สอบเทียบ →</button></td>
               </tr>
               <tr>
                 <td><input class="checkbox" type="checkbox"></td>
@@ -774,5 +774,18 @@ button, input, select { font: inherit; }
     <div class="note"><i class="ti ti-git-branch"></i><div>สถานะแผนตลอด flow: <span class="status wait">รออนุมัติ</span> → <span class="status appr">รอหน่วยงานยืนยัน</span> → <span class="status conf">ยืนยันครบ พร้อมสอบเทียบ</span> &nbsp;(หากถูกปฏิเสธ → <span class="status rej">ปฏิเสธ</span> ส่งกลับผู้วางแผนพร้อมเหตุผล)</div></div>
   </section>
 </main>
+<script>
+// ประตูเข้า "หน้าข้อมูลสอบเทียบ" (balance-cal-design) พร้อมข้อมูลเครื่องมือที่เลือก
+function openBalanceCal() {
+  const inst = {
+    from: 'แผนสอบเทียบ',
+    name: 'Precision Balance 6.2kg', name_th: 'เครื่องชั่งละเอียด 6.2 กก.',
+    id_code: 'CAL-02634', asset: 'CAL-02634', manufacturer: 'Ametek', model: 'T-1358',
+    serial: '', capacity: '6200', resolution: '0.01', accuracy_class: 'II',
+    section: 'Production 2', unit_dept: 'Production 2', date_recv: '',
+  };
+  window.open('balance-cal-design.html#inst=' + encodeURIComponent(JSON.stringify(inst)), '_blank');
+}
+</script>
 </body>
 </html>
