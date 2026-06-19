@@ -133,6 +133,11 @@ function renderAuditTable() {
 // ====================================================
 const CERT_TYPE_MAP = {
   'เครื่องชั่ง (Balance)':                   'B',
+  'เครื่องชั่ง':                              'B',
+  'Balance':                                  'B',
+  'Electronic Balance':                       'B',
+  'Analytical Balance':                       'B',
+  'Precision Balance':                        'B',
   'ตุ้มน้ำหนักมาตรฐาน (Mass)':                'M',
   'มวล/น้ำหนัก (Mass/Weight)':               'B',
   'ความยาว/มิติ (Length/Dimension)':          'L',
@@ -151,7 +156,8 @@ const CERT_TYPE_MAP = {
 };
 
 function getCertTypeCode(instrumentType, instrumentName = '') {
-  const name = String(instrumentName || '').toLowerCase();
+  const type = String(instrumentType || '').trim();
+  const name = [type, instrumentName].filter(Boolean).join(' ').toLowerCase();
   const nameRules = [
     ['C', /\bph\b|p\.h\.|viscometer|visco|\bdo\s*meter\b|dissolved\s*oxygen|ความหนืด/],
     ['D', /digital\s*caliper|digitol\s*caliper|vernier\s*caliper|\bcaliper\b|ดิจิตอล|เวอร์เนียร์/],
@@ -170,7 +176,7 @@ function getCertTypeCode(instrumentType, instrumentName = '') {
   for (const [code, pattern] of nameRules) {
     if (pattern.test(name)) return code;
   }
-  return CERT_TYPE_MAP[instrumentType] || '';
+  return CERT_TYPE_MAP[type] || '';
 }
 
 

@@ -4,15 +4,22 @@
 let planSelectedItems = []; // เครื่องมือที่เลือก
 let planFilteredItems = []; // เครื่องมือที่กรองแล้ว
 let planFileObj = null;     // ไฟล์ที่แนบ
+const PLAN_RENDER_BATCH = 80;
+let planRenderLimit = PLAN_RENDER_BATCH;
+let planItemsCache = {};
+
+function getPlanInstrumentType(row) {
+  return typeof getDisplayInstrumentType === 'function'
+    ? getDisplayInstrumentType(row)
+    : (row?.instrument_type || '');
+}
 
 // --- Switch tabs ---
 function switchPlanTab(tab) {
   ['new','list','confirm','history'].forEach(t => {
     const el = document.getElementById('planTab-' + t);
     if (!el) return;
-    el.style.background = t === tab ? '#00695C' : 'transparent';
-    el.style.color = t === tab ? 'white' : 'var(--text2)';
-    el.style.fontWeight = t === tab ? '600' : '500';
+    el.classList.toggle('active', t === tab);
   });
   document.getElementById('planTabNew').style.display = tab === 'new' ? 'block' : 'none';
   document.getElementById('planTabList').style.display = tab === 'list' ? 'block' : 'none';
@@ -23,31 +30,43 @@ function switchPlanTab(tab) {
   if (tab === 'history') loadPlanHistory();
 }
 
+function setPlanStep(step) {
+  const marks = [1, 2, 3].map(n => document.getElementById('planStepMark' + n));
+  marks.forEach((el, idx) => {
+    if (!el) return;
+    const n = idx + 1;
+    el.classList.toggle('active', n === step);
+    el.classList.toggle('done', n < step);
+  });
+}
+
 // --- Init plan page ---
 function initPlanPage() {
   if (!allData.length) { setTimeout(initPlanPage, 500); return; }
 
   // populate filters (ทำแค่ครั้งแรก)
-  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const types = [...new Set(allData.map(getPlanInstrumentType).filter(Boolean))].sort();
   const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
   const tSel = document.getElementById('planFilterType');
   const dSel = document.getElementById('planFilterDept');
   if (tSel && tSel.options.length <= 1) {
-    tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${t}">${t.split(' (')[0]}</option>`).join('');
+    tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t.split(' (')[0])}</option>`).join('');
   }
   if (dSel && dSel.options.length <= 1) {
-    dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${escapeHtmlAttr(d)}">${escapeHtmlText(d)}</option>`).join('');
   }
 
   // ถ้ามี planSelectedItems รอ pre-select ให้ filter ตาม type ของ item นั้น
   if (planSelectedItems.length > 0) {
     const firstItem = planSelectedItems[0];
     const tSel2 = document.getElementById('planFilterType');
-    if (tSel2 && firstItem.instrument_type) tSel2.value = firstItem.instrument_type;
+    const firstType = getPlanInstrumentType(firstItem);
+    if (tSel2 && firstType) tSel2.value = firstType;
   }
 
   // โหลดข้อมูลทันที ไม่ reset planSelectedItems
   filterPlanInstruments();
+  setPlanStep(document.getElementById('planStep2')?.style.display === 'block' ? 2 : 1);
 
   // แสดง tab confirm เฉพาะ admin
   const role = currentUser?.role;
@@ -62,12 +81,18 @@ function initPlanPage() {
 
 // --- Filter เครื่องมือ ---
 function filterPlanInstruments() {
+  const q      = document.getElementById('planFilterSearch')?.value?.trim().toLowerCase() || '';
   const type   = document.getElementById('planFilterType')?.value?.trim() || '';
   const dept   = document.getElementById('planFilterDept')?.value?.trim() || '';
   const status = document.getElementById('planFilterStatus')?.value?.trim() || '';
 
   planFilteredItems = allData.filter(d => {
-    if (type && d.instrument_type !== type) return false;
+    if (q) {
+      const hay = [d.id_code, d.cert_no, d.serial_no, d.instrument_name, d.instrument_type, getPlanInstrumentType(d), d.department, d.location, d.machine_name]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (type && getPlanInstrumentType(d) !== type) return false;
     if (dept && d.department !== dept) return false;
     if (status) {
       const days = d.days_left;
@@ -77,41 +102,55 @@ function filterPlanInstruments() {
     }
     return true;
   });
+  planRenderLimit = PLAN_RENDER_BATCH;
   renderPlanInstrumentTable();
 }
 
 function renderPlanInstrumentTable() {
   const tbody = document.getElementById('planInstrumentBody');
   if (!tbody) return;
-  document.getElementById('planFilterCount').textContent = `แสดง ${planFilteredItems.length.toLocaleString()} รายการ`;
+  updatePlanMetrics();
   if (!planFilteredItems.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">ไม่พบข้อมูล</td></tr>';
+    const moreWrap = document.getElementById('planLoadMoreWrap');
+    if (moreWrap) moreWrap.style.display = 'none';
     return;
   }
-  const bd = 'border-bottom:1px solid var(--border)';
   let firstSelectedIdx = -1;
-  tbody.innerHTML = planFilteredItems.map((d, i) => {
+  const visibleItems = planFilteredItems.slice(0, planRenderLimit);
+  tbody.innerHTML = visibleItems.map((d, i) => {
     const days = d.days_left;
     const isSelected = planSelectedItems.some(s => s.id == d.id);
     if (isSelected && firstSelectedIdx === -1) firstSelectedIdx = i;
     const checked = isSelected ? 'checked' : '';
-    const rowBg = isSelected ? 'background:#e8f5e9;' : '';
     let badge = '';
-    if (days !== null && days < 0) badge = `<span style="background:var(--red-light);color:var(--red);font-size:11px;padding:2px 8px;border-radius:20px">เกินกำหนด</span>`;
-    else if (days !== null && days <= 30) badge = `<span style="background:var(--amber-light);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
-    else badge = `<span style="background:var(--green-light);color:var(--green);font-size:11px;padding:2px 8px;border-radius:20px">ปกติ</span>`;
+    if (days !== null && days < 0) badge = '<span class="badge badge-red">เกินกำหนด</span>';
+    else if (days !== null && days <= 30) badge = `<span class="badge badge-amber">ใกล้ครบ ${days} วัน</span>`;
+    else badge = '<span class="badge badge-green">ปกติ</span>';
     const due = d.due_date ? d.due_date.slice(0,10).split('-').reverse().join('/') : '–';
-    const typShort = (d.instrument_type||'–').split(' (')[0];
-    return `<tr style="${rowBg}" id="planRow_${i}">
-      <td style="padding:8px 12px;${bd};text-align:center"><input type="checkbox" ${checked} onchange="togglePlanItem(${i}, this)"></td>
-      <td style="padding:8px 12px;${bd};color:var(--accent);font-weight:600">${d.id_code||'–'}</td>
-      <td style="padding:8px 12px;${bd};font-weight:500">${d.instrument_name||'–'}</td>
-      <td style="padding:8px 12px;${bd};color:var(--text2);font-size:12px">${typShort}</td>
-      <td style="padding:8px 12px;${bd};color:var(--text2)">${d.department||'–'}</td>
-      <td style="padding:8px 12px;${bd};color:var(--text2)">${due}</td>
-      <td style="padding:8px 12px;${bd};text-align:center">${badge}</td>
+    const typShort = (getPlanInstrumentType(d) || d.instrument_type || '–').split(' (')[0];
+    return `<tr class="${isSelected ? 'is-selected' : ''}" id="planRow_${i}">
+      <td class="plan-check"><input type="checkbox" ${checked} onchange="togglePlanItem(${i}, this)"></td>
+      <td class="plan-id">${escapeHtmlText(d.id_code || '–')}</td>
+      <td class="plan-name">${escapeHtmlText(d.instrument_name || '–')}</td>
+      <td class="plan-muted">${escapeHtmlText(typShort)}</td>
+      <td class="plan-muted">${escapeHtmlText(d.department || '–')}</td>
+      <td class="plan-muted">${escapeHtmlText(due)}</td>
+      <td style="text-align:center">${badge}</td>
     </tr>`;
   }).join('');
+
+  const filterCount = document.getElementById('planFilterCount');
+  if (filterCount) filterCount.textContent = `แสดง ${visibleItems.length.toLocaleString()} จาก ${planFilteredItems.length.toLocaleString()} รายการ`;
+  const moreWrap = document.getElementById('planLoadMoreWrap');
+  const moreText = document.getElementById('planLoadMoreText');
+  if (moreWrap) moreWrap.style.display = planRenderLimit < planFilteredItems.length ? 'flex' : 'none';
+  if (moreText) moreText.textContent = `แสดงเพิ่มอีก ${Math.min(PLAN_RENDER_BATCH, planFilteredItems.length - planRenderLimit).toLocaleString()} รายการ`;
+  const checkAll = document.getElementById('planCheckAll');
+  if (checkAll) {
+    checkAll.checked = planFilteredItems.length > 0 && planFilteredItems.every(d => planSelectedItems.some(s => s.id == d.id));
+    checkAll.indeterminate = !checkAll.checked && planFilteredItems.some(d => planSelectedItems.some(s => s.id == d.id));
+  }
   updatePlanSelectCount();
 
   // scroll ไปหารายการที่ pre-select
@@ -121,6 +160,11 @@ function renderPlanInstrumentTable() {
       if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
   }
+}
+
+function loadMorePlanRows() {
+  planRenderLimit += PLAN_RENDER_BATCH;
+  renderPlanInstrumentTable();
 }
 
 function togglePlanItem(idx, cb) {
@@ -156,6 +200,20 @@ function clearPlanSelection() {
 function updatePlanSelectCount() {
   const el = document.getElementById('planSelectCount');
   if (el) el.textContent = `เลือก ${planSelectedItems.length} รายการ`;
+  updatePlanMetrics();
+}
+
+function updatePlanMetrics() {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = Number(val || 0).toLocaleString();
+  };
+  const overdue = planFilteredItems.filter(d => d.days_left !== null && d.days_left < 0).length;
+  const warning = planFilteredItems.filter(d => d.days_left !== null && d.days_left >= 0 && d.days_left <= 30).length;
+  set('planMetricFiltered', planFilteredItems.length);
+  set('planMetricSelected', planSelectedItems.length);
+  set('planMetricOverdue', overdue);
+  set('planMetricWarning', warning);
 }
 
 // --- Step 2 ---
@@ -163,23 +221,18 @@ function goToPlanStep2() {
   if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
   document.getElementById('planStep1').style.display = 'none';
   document.getElementById('planStep2').style.display = 'block';
-  // update step badges
-  document.getElementById('stepBadge2').style.background = '#00695C';
-  document.getElementById('stepBadge2').style.color = 'white';
-  document.getElementById('stepLabel2').style.color = '#00695C';
+  setPlanStep(2);
   // แสดงรายการเครื่องมือที่เลือก
   document.getElementById('planStep2Count').textContent = planSelectedItems.length;
   document.getElementById('planSelectedList').innerHTML = planSelectedItems.map(d =>
-    `<span style="background:var(--green-light);color:var(--green);font-size:11px;padding:3px 10px;border-radius:20px">${d.id_code||d.instrument_name}</span>`
+    `<span class="plan-pill" title="${escapeHtmlAttr(d.instrument_name || '')}">${escapeHtmlText(d.id_code || d.instrument_name || '–')}</span>`
   ).join('');
 }
 
 function backToPlanStep1() {
   document.getElementById('planStep2').style.display = 'none';
   document.getElementById('planStep1').style.display = 'block';
-  document.getElementById('stepBadge2').style.background = 'var(--surface2)';
-  document.getElementById('stepBadge2').style.color = 'var(--text3)';
-  document.getElementById('stepLabel2').style.color = 'var(--text3)';
+  setPlanStep(1);
 }
 
 // --- File handling ---
@@ -189,7 +242,7 @@ function handlePlanFileSelect(input) {
 
 function handlePlanDrop(e) {
   e.preventDefault();
-  document.getElementById('planDropZone').style.borderColor = 'var(--border)';
+  document.getElementById('planDropZone')?.classList.remove('dragover');
   if (e.dataTransfer.files[0]) setPlanFile(e.dataTransfer.files[0]);
 }
 
@@ -239,7 +292,7 @@ async function submitPlan() {
     const items = planSelectedItems.map(d => ({
       plan_id: plan.id,
       instrument_id: d.id,
-      instrument_type: d.instrument_type,
+      instrument_type: getPlanInstrumentType(d),
       department: d.department,
       instrument_name: d.instrument_name,
       id_code: d.id_code
@@ -258,6 +311,7 @@ async function submitPlan() {
     document.getElementById('planDate').value = '';
     clearPlanFile();
     backToPlanStep1();
+    setPlanStep(1);
     filterPlanInstruments();
 
     // update badge
@@ -273,15 +327,16 @@ async function submitPlan() {
 async function loadPlanList() {
   const el = document.getElementById('planListContainer');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
+  el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
 
   const { data, error } = await sb.from('calibration_plans')
     .select('*, calibration_plan_items(id, id_code, instrument_name, instrument_type, department, instrument_id)')
     .order('created_at', { ascending: false });
-  if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
-  if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ยังไม่มีแผนการสอบเทียบ</div>'; return; }
+  if (error) { el.innerHTML = '<div class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ</div>'; return; }
+  if (!data?.length) { el.innerHTML = '<div class="no-data">ยังไม่มีแผนการสอบเทียบ</div>'; return; }
 
   const isAdmin = currentUser?.role === 'admin';
+  planItemsCache = {};
 
   const statusMap = {
     pending_plan: { lbl:'🟡 รอ Admin ยืนยันแผน', color:'#854F0B', bg:'#FAEEDA' },
@@ -294,54 +349,34 @@ async function loadPlanList() {
   el.innerHTML = data.map(p => {
     const s = statusMap[p.status] || { lbl:'–', color:'#888', bg:'#f5f5f5' };
     const items = p.calibration_plan_items || [];
+    const cacheId = 'items_' + p.id;
+    planItemsCache[cacheId] = { items, confirm: false };
     const cnt = items.length;
     const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
     const created = p.created_at ? new Date(p.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
     const canAttachCert = p.status === 'planned' && (currentUser?.role === 'editor' || currentUser?.role === 'admin');
 
-    // สร้าง rows เครื่องมือ
-    const itemRows = items.map(it => {
-      const inst = allData.find(d => d.id == it.instrument_id);
-      const days = inst?.days_left;
-      let badge = '';
-      if (days !== null && days !== undefined) {
-        if (days < 0) badge = `<span style="background:#FCEBEB;color:#A32D2D;font-size:11px;padding:1px 8px;border-radius:20px">เกินกำหนด</span>`;
-        else if (days <= 30) badge = `<span style="background:#FAEEDA;color:#854F0B;font-size:11px;padding:1px 8px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
-        else badge = `<span style="background:#EAF3DE;color:#3B6D11;font-size:11px;padding:1px 8px;border-radius:20px">ปกติ</span>`;
-      }
-      const due = inst?.due_date ? inst.due_date.slice(0,10).split('-').reverse().join('/') : '–';
-      return `<div style="display:grid;grid-template-columns:160px 1fr 100px 100px;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:12px">
-        <span style="color:var(--accent);font-weight:600">${it.id_code||'–'}</span>
-        <span style="color:var(--text)">${it.instrument_name||'–'} <span style="color:var(--text3)">· ${it.department||'–'}</span></span>
-        <span style="color:var(--text3)">Due: ${due}</span>
-        <span>${badge}</span>
-      </div>`;
-    }).join('');
-
-    return `<div style="background:white;border:0.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:0">
-      <div style="padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    return `<div class="plan-card">
+      <div class="plan-card-main">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-            <span style="font-size:15px;font-weight:600;color:var(--text)">${p.title}</span>
-            <span style="background:${s.bg};color:${s.color};font-size:11px;padding:2px 10px;border-radius:20px;font-weight:500">${s.lbl}</span>
+          <div class="plan-card-title">
+            <span>${escapeHtmlText(p.title || '–')}</span>
+            <span class="badge" style="background:${s.bg};color:${s.color}">${s.lbl}</span>
           </div>
-          <div style="font-size:12px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;·&nbsp; ${cnt} เครื่องมือ &nbsp;·&nbsp; สร้างโดย: ${p.created_by} &nbsp;·&nbsp; ${created}</div>
-          ${p.status === 'rejected' && p.reject_reason ? `<div style="margin-top:5px;font-size:11px;background:#FCEBEB;color:#A32D2D;padding:4px 10px;border-radius:6px;display:inline-block">⚠️ สาเหตุ: ${p.reject_reason}</div>` : ''}
+          <div class="plan-card-meta">วันนัดสอบ: ${escapeHtmlText(date)} · ${cnt.toLocaleString()} เครื่องมือ · สร้างโดย: ${escapeHtmlText(p.created_by || '–')} · ${escapeHtmlText(created)}</div>
+          ${p.status === 'rejected' && p.reject_reason ? `<div class="badge badge-red" style="margin-top:6px">สาเหตุ: ${escapeHtmlText(p.reject_reason)}</div>` : ''}
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          ${p.plan_file_url ? `<button onclick="viewPlanFile('${p.plan_file_url}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📄 ไฟล์แผน</button>` : ''}
-          ${cnt > 0 ? `<button onclick="togglePlanItems('items_${p.id}')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">📋 รายการ (${cnt})</button>` : ''}
-          ${p.cert_file_url ? `<button onclick="viewPlanFile('${p.cert_file_url}')" style="padding:5px 10px;background:#EAF3DE;border:1px solid #C0DD97;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#3B6D11;display:flex;align-items:center;gap:4px">📋 ดูไฟล์ Cert</button>` : ''}
-          ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" style="padding:5px 10px;background:#E6F1FB;border:1px solid #B5D4F4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#185FA5;font-weight:600">📎 แนบไฟล์หลังสอบ</button>` : ''}
-          ${ `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 10px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6;display:flex;align-items:center;gap:4px">🕐 ประวัติ</button>` }
-          ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" style="padding:5px 10px;background:#FFF7E6;border:1px solid #FCD34D;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#92400E;display:flex;align-items:center;gap:4px">✏️ แก้ไข</button>` : '' }
-          ${isAdmin ? `<button onclick="deletePlan('${p.id}')" style="padding:5px 10px;background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#A32D2D;display:flex;align-items:center;gap:4px">🗑 ลบ</button>` : ''}
+        <div class="plan-card-actions">
+          ${p.plan_file_url ? `<button onclick="viewPlanFile('${escapeJsSingle(p.plan_file_url)}')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์แผน</button>` : ''}
+          ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>รายการ (${cnt.toLocaleString()})</button>` : ''}
+          ${p.cert_file_url ? `<button onclick="viewPlanFile('${escapeJsSingle(p.cert_file_url)}')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
+          ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" class="plan-btn accent" type="button"><i class="ti ti-paperclip"></i>แนบไฟล์หลังสอบ</button>` : ''}
+          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
+          ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" class="plan-btn accent" type="button"><i class="ti ti-edit"></i>แก้ไข</button>` : '' }
+          ${isAdmin ? `<button onclick="deletePlan('${p.id}')" class="plan-btn danger" type="button"><i class="ti ti-trash"></i>ลบ</button>` : ''}
         </div>
       </div>
-      ${cnt > 0 ? `<div id="items_${p.id}" style="display:none;border-top:0.5px solid var(--border);background:var(--surface2);padding:10px 16px">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">รายการเครื่องมือ</div>
-        ${itemRows}
-      </div>` : ''}
+      ${cnt > 0 ? `<div id="${cacheId}" class="plan-items-panel"></div>` : ''}
     </div>`;
   }).join('');
 }
@@ -349,7 +384,43 @@ async function loadPlanList() {
 function togglePlanItems(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const opening = el.style.display !== 'block';
+  if (opening && !el.dataset.rendered) {
+    const cached = planItemsCache[id] || { items: [], confirm: false };
+    el.innerHTML = `<div class="plan-panel-sub" style="margin-bottom:6px">รายการเครื่องมือ</div>${renderPlanItemRows(cached.items, cached.confirm)}`;
+    el.dataset.rendered = '1';
+  }
+  el.style.display = opening ? 'block' : 'none';
+}
+
+function renderPlanItemRows(items, confirmMode) {
+  if (!items.length) return '<div class="no-data" style="padding:14px">ไม่มีรายการเครื่องมือ</div>';
+  return items.map((it, idx) => {
+    const inst = allData.find(d => d.id == it.instrument_id);
+    const days = inst?.days_left;
+    let badge = '';
+    if (days !== null && days !== undefined) {
+      if (days < 0) badge = '<span class="badge badge-red">เกินกำหนด</span>';
+      else if (days <= 30) badge = `<span class="badge badge-amber">ใกล้ครบ ${days} วัน</span>`;
+      else badge = '<span class="badge badge-green">ปกติ</span>';
+    }
+    const due = inst?.due_date ? inst.due_date.slice(0,10).split('-').reverse().join('/') : '–';
+    if (confirmMode) {
+      return `<div class="plan-item-row confirm">
+        <span class="plan-muted">${idx + 1}</span>
+        <span class="plan-id">${escapeHtmlText(it.id_code || '–')}</span>
+        <span>${escapeHtmlText(it.instrument_name || '–')} <span class="plan-muted">· ${escapeHtmlText(it.department || '–')}</span></span>
+        <span class="plan-muted">Due: ${escapeHtmlText(due)}</span>
+        <span>${badge}</span>
+      </div>`;
+    }
+    return `<div class="plan-item-row">
+      <span class="plan-id">${escapeHtmlText(it.id_code || '–')}</span>
+      <span>${escapeHtmlText(it.instrument_name || '–')} <span class="plan-muted">· ${escapeHtmlText(it.department || '–')}</span></span>
+      <span class="plan-muted">Due: ${escapeHtmlText(due)}</span>
+      <span>${badge}</span>
+    </div>`;
+  }).join('');
 }
 
 function viewPlanFile(url) {
@@ -363,7 +434,7 @@ function viewPlanFile(url) {
 async function loadPlanHistory() {
   const el = document.getElementById('planHistoryContainer');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">กำลังโหลด...</div>';
+  el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
 
   const filterAction = document.getElementById('historyFilterAction')?.value || '';
   // ดึงชื่อแผนทั้งหมดมา cache ก่อน
@@ -380,39 +451,41 @@ async function loadPlanHistory() {
   const { data, error } = await query;
   if (error) {
     console.error('plan_audit_log error:', error);
-    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--red);font-size:12px">โหลดไม่สำเร็จ: ' + error.message + '</div>';
+    el.innerHTML = `<div class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(error.message)}</div>`;
     return;
   }
   if (!data?.length) {
-    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">ยังไม่มีประวัติการดำเนินการ</div>';
+    el.innerHTML = '<div class="no-data">ยังไม่มีประวัติการดำเนินการ</div>';
     return;
   }
 
   const actionColor = {
-    'สร้างแผน':   { bg:'#E8F5E9', color:'#2E7D32', icon:'🆕' },
-    'แก้ไขแผน':  { bg:'#FFF8E1', color:'#F57F17', icon:'✏️' },
-    'อนุมัติแผน': { bg:'#E3F2FD', color:'#1565C0', icon:'✅' },
-    'ปฏิเสธแผน': { bg:'#FCEBEB', color:'#A32D2D', icon:'❌' },
-    'แนบไฟล์สอบ':{ bg:'#F3E5F5', color:'#6A1B9A', icon:'📎' },
-    'ยืนยันสอบ':  { bg:'#E0F7FA', color:'#00695C', icon:'🏆' },
-    'ลบแผน':     { bg:'#FFEBEE', color:'#B71C1C', icon:'🗑️' },
+    'สร้างแผน':   { bg:'#E8F5E9', color:'#2E7D32', icon:'ti-plus' },
+    'แก้ไขแผน':  { bg:'#FFF8E1', color:'#F57F17', icon:'ti-edit' },
+    'อนุมัติแผน': { bg:'#E3F2FD', color:'#1565C0', icon:'ti-check' },
+    'ปฏิเสธแผน': { bg:'#FCEBEB', color:'#A32D2D', icon:'ti-x' },
+    'แนบไฟล์สอบ':{ bg:'#F3E5F5', color:'#6A1B9A', icon:'ti-paperclip' },
+    'ยืนยันสอบ':  { bg:'#E0F7FA', color:'#00695C', icon:'ti-certificate' },
+    'ลบแผน':     { bg:'#FFEBEE', color:'#B71C1C', icon:'ti-trash' },
   };
 
   el.innerHTML = data.map(log => {
-    const ac = actionColor[log.action] || { bg:'#F5F5F5', color:'#666', icon:'📝' };
+    const ac = actionColor[log.action] || { bg:'#F5F5F5', color:'#666', icon:'ti-notes' };
     const dt = new Date(log.action_at);
     const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
     const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
     const planTitle = planMap[log.plan_id] || '(ถูกลบแล้ว)';
-    return `<div style="background:white;border:1px solid var(--border);border-left:4px solid ${ac.color};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:12px">
-      <div style="width:30px;height:30px;background:${ac.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${ac.icon}</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:12px;font-weight:600;color:${ac.color};background:${ac.bg};padding:1px 8px;border-radius:20px">${log.action}</span>
-          <span style="font-size:12px;color:var(--text);font-weight:500">${planTitle}</span>
+    return `<div class="plan-card" style="border-left:4px solid ${ac.color}">
+      <div class="plan-card-main" style="padding:10px 14px">
+        <div class="plan-history-icon" style="background:${ac.bg};color:${ac.color}"><i class="ti ${ac.icon}"></i></div>
+        <div class="plan-history-main">
+          <div class="plan-history-line">
+            <span class="badge" style="background:${ac.bg};color:${ac.color}">${escapeHtmlText(log.action || '–')}</span>
+            <span style="font-size:12px;color:var(--text);font-weight:700">${escapeHtmlText(planTitle)}</span>
+          </div>
+          ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${escapeHtmlText(log.note)}</div>` : ''}
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:700">${escapeHtmlText(log.action_by || '–')}</span> · ${escapeHtmlText(dateStr)} ${escapeHtmlText(timeStr)}</div>
         </div>
-        ${log.note ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${log.note}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">โดย <span style="color:var(--accent);font-weight:600">${log.action_by}</span> &nbsp;·&nbsp; ${dateStr} ${timeStr}</div>
       </div>
     </div>`;
   }).join('');
@@ -578,16 +651,18 @@ async function deletePlan(planId) {
 async function loadPlanConfirm() {
   const el = document.getElementById('planConfirmContainer');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">กำลังโหลด...</div>';
+  el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
   const { data, error } = await sb.from('calibration_plans')
     .select('*, calibration_plan_items(id, id_code, instrument_name, instrument_type, department, instrument_id)')
     .in('status', ['pending_plan', 'pending_cert'])
     .order('created_at', { ascending: false });
-  if (error) { el.innerHTML = '<div style="color:var(--red);padding:16px">โหลดไม่สำเร็จ</div>'; return; }
-  if (!data?.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">ไม่มีรายการรอยืนยัน ✅</div>'; return; }
+  if (error) { el.innerHTML = '<div class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ</div>'; return; }
+  if (!data?.length) { el.innerHTML = '<div class="no-data">ไม่มีรายการรอยืนยัน</div>'; return; }
 
   el.innerHTML = data.map(p => {
     const items = p.calibration_plan_items || [];
+    const cacheId = 'confirm_items_' + p.id;
+    planItemsCache[cacheId] = { items, confirm: true };
     const cnt = items.length;
     const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
     const isPendingPlan = p.status === 'pending_plan';
@@ -596,51 +671,26 @@ async function loadPlanConfirm() {
     const badgeBg = isPendingPlan ? '#fff8e1' : '#e3f2fd';
     const badgeColor = isPendingPlan ? '#F57F17' : '#1565C0';
 
-    // สร้าง rows รายการเครื่องมือ
-    const itemRows = items.map((it, idx) => {
-      const inst = allData.find(d => d.id == it.instrument_id);
-      const days = inst?.days_left;
-      let badge = '';
-      if (days !== null && days !== undefined) {
-        if (days < 0) badge = `<span style="background:#FCEBEB;color:#A32D2D;font-size:10px;padding:1px 6px;border-radius:20px">เกินกำหนด</span>`;
-        else if (days <= 30) badge = `<span style="background:#FAEEDA;color:#854F0B;font-size:10px;padding:1px 6px;border-radius:20px">ใกล้ครบ ${days}วัน</span>`;
-        else badge = `<span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:1px 6px;border-radius:20px">ปกติ</span>`;
-      }
-      const due = inst?.due_date ? inst.due_date.slice(0,10).split('-').reverse().join('/') : '–';
-      return `<div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:11px">
-        <span style="color:var(--text3);text-align:center">${idx+1}</span>
-        <span style="color:var(--accent);font-weight:600;font-family:var(--mono)">${it.id_code||'–'}</span>
-        <span style="color:var(--text)">${it.instrument_name||'–'} <span style="color:var(--text3)">· ${it.department||'–'}</span></span>
-        <span style="color:var(--text3)">Due: ${due}</span>
-        <span>${badge}</span>
-      </div>`;
-    }).join('');
-
-    return `<div style="background:white;border:1.5px solid ${isPendingPlan ? '#ffe082' : '#90caf9'};border-radius:14px;overflow:hidden">
-      <div style="padding:14px 18px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${p.title}</div>
-            <div style="font-size:11px;color:var(--text3)">วันนัดสอบ: ${date} &nbsp;|&nbsp; ${cnt} เครื่องมือ &nbsp;|&nbsp; ส่งโดย: ${p.created_by}</div>
+    return `<div class="plan-card" style="border-color:${isPendingPlan ? '#ffe082' : '#90caf9'}">
+      <div class="plan-card-main">
+        <div style="flex:1;min-width:0">
+          <div class="plan-card-title">
+            <span>${escapeHtmlText(p.title || '–')}</span>
+            <span class="badge" style="background:${badgeBg};color:${badgeColor}">${badgeLbl}</span>
           </div>
-          <span style="background:${badgeBg};color:${badgeColor};font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap;font-weight:500">${badgeLbl}</span>
+          <div class="plan-card-meta">วันนัดสอบ: ${escapeHtmlText(date)} · ${cnt.toLocaleString()} เครื่องมือ · ส่งโดย: ${escapeHtmlText(p.created_by || '–')}</div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${cnt > 0 ? `<button onclick="togglePlanItems('confirm_items_${p.id}')" style="padding:5px 12px;background:var(--accent-light);border:1px solid #c5d9ef;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--accent);font-weight:500">📋 รายการ (${cnt})</button>` : ''}
-          ${p.plan_file_url ? `<button onclick="window.open('${p.plan_file_url}','_blank')" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">📄 ดูไฟล์แผน</button>` : ''}
-          ${p.cert_file_url ? `<button onclick="window.open('${p.cert_file_url}','_blank')" style="padding:5px 12px;background:var(--green-light);border:1px solid #b8e0bf;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:var(--green)">📋 ดูไฟล์ Cert</button>` : ''}
-          ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" style="padding:5px 14px;background:#00695C;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันแผน</button>` : ''}
-          ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" style="padding:5px 14px;background:#1565C0;color:white;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">✅ ยืนยันสอบเทียบแล้ว</button>` : ''}
-          <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1px solid #f5c6c4;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer">❌ ปฏิเสธ</button>
-          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" style="padding:5px 12px;background:#F3F0FF;border:1px solid #C4B5FD;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;color:#5B21B6">🕐 ประวัติ</button>
+        <div class="plan-card-actions">
+          ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>รายการ (${cnt.toLocaleString()})</button>` : ''}
+          ${p.plan_file_url ? `<button onclick="window.open('${escapeJsSingle(p.plan_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์แผน</button>` : ''}
+          ${p.cert_file_url ? `<button onclick="window.open('${escapeJsSingle(p.cert_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
+          ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันแผน</button>` : ''}
+          ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันสอบเทียบแล้ว</button>` : ''}
+          <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" class="plan-btn danger" type="button"><i class="ti ti-x"></i>ปฏิเสธ</button>
+          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
         </div>
       </div>
-      ${cnt > 0 ? `<div id="confirm_items_${p.id}" style="display:none;border-top:1px solid var(--border);background:var(--surface2);padding:10px 18px">
-        <div style="display:grid;grid-template-columns:30px 140px 1fr 90px 80px;gap:8px;padding:4px 0;margin-bottom:4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">
-          <span>#</span><span>รหัส</span><span>เครื่องมือ</span><span>Due</span><span>สถานะ</span>
-        </div>
-        ${itemRows}
-      </div>` : ''}
+      ${cnt > 0 ? `<div id="${cacheId}" class="plan-items-panel"></div>` : ''}
     </div>`;
   }).join('');
 }
@@ -840,7 +890,7 @@ function normalizeImportInstrumentType(row) {
   const raw = String(row.instrument_type || '').trim();
   if (!raw) return raw;
   const key = raw.toLowerCase().replace(/\s+/g, ' ');
-  if (key === 'เครื่องชั่ง' || key === 'balance' || key === 'เครื่องชั่ง (balance)') return 'เครื่องชั่ง (Balance)';
+  if (key === 'เครื่องชั่ง' || key === 'balance' || key === 'เครื่องชั่ง (balance)' || key === 'electronic balance' || key === 'analytical balance' || key === 'precision balance' || key === 'electronic scale' || key === 'weighing scale' || key === 'weighing machine') return 'เครื่องชั่ง (Balance)';
   if (key === 'ตุ้มน้ำหนักมาตรฐาน' || key === 'mass' || key === 'weight' || key === 'ตุ้มน้ำหนักมาตรฐาน (mass)') return 'ตุ้มน้ำหนักมาตรฐาน (Mass)';
   if (key === 'มวล/น้ำหนัก' || key === 'มวล/น้ำหนัก (mass/weight)' || key === 'mass/weight') {
     const code = typeof getCertTypeCode === 'function' ? getCertTypeCode(raw, row.instrument_name || '') : '';
@@ -1258,7 +1308,7 @@ function initOldPlanPage() {
   }
   // Populate dept/type filters
   const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
-  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const types = [...new Set(allData.map(getPlanInstrumentType).filter(Boolean))].sort();
   const planDept = document.getElementById('planDept');
   const planType = document.getElementById('planType');
   if (planDept && planDept.options.length <= 1) {
@@ -1282,7 +1332,7 @@ function getPlanData() {
     const dd = new Date(d.due_date);
     if (dd.getFullYear() !== yearCE || dd.getMonth() + 1 !== month) return false;
     if (dept && d.department !== dept) return false;
-    if (type && d.instrument_type !== type) return false;
+    if (type && getPlanInstrumentType(d) !== type) return false;
     if (calType && d.cal_type !== calType) return false;
     return true;
   });
