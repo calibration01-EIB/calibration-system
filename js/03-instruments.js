@@ -106,10 +106,29 @@ function regDetailItem(label, value, full = false) {
   return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
 }
 
+// เปิดหน้าสอบเทียบเครื่องชั่ง (balance-cal) พร้อมข้อมูลเครื่องที่เลือก
+function openBalanceCal(id) {
+  const d = (allData || []).find(x => x.id === id);
+  if (!d) { if (typeof showToast === 'function') showToast('ไม่พบเครื่องมือ', 'error'); return; }
+  const inst = {
+    from: 'รายการเครื่องมือ',
+    instrument_id: Number(d.id) || null,
+    name: d.instrument_name || '', name_th: '',
+    id_code: d.id_code || '', asset: d.id_code || '',
+    manufacturer: d.brand || '', model: '', serial: d.serial_no || '',
+    capacity: '', resolution: '', accuracy_class: '',
+    user_range: d.range_val || '',
+    section: d.department || '', unit_dept: d.department || '', location: d.location || '',
+    date_recv: '',
+  };
+  window.open('balance-cal-design.html#inst=' + encodeURIComponent(JSON.stringify(inst)), '_blank');
+}
+
 function openInstrumentDetail(id) {
   const d = allData.find(x => x.id === id);
   if (!d) return;
-  const [letter, icon, color] = regTypeMeta(d.instrument_type);
+  const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+  const [letter, icon, color] = regTypeMeta(displayType, d);
   const days = d.days_left;
   const cancelled = d.calibration_cancelled === true
     || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
@@ -123,6 +142,7 @@ function openInstrumentDetail(id) {
   else { statusBadge = '<span class="badge badge-green">🟢 ปกติ</span>'; dueExtra = ` (อีก ${days} วัน)`; }
   const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'editor';
   const openCertCall = `openCertModal(${Number(d.id)||0},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
+  const isBalance = letter === 'B' || /ชั่ง|balance/i.test(displayType || d.instrument_type || '');
 
   document.getElementById('instrumentDetailBody').innerHTML = `
     <div class="reg-detail-head">
@@ -135,11 +155,12 @@ function openInstrumentDetail(id) {
           </div>
           <div class="reg-sub" style="margin-top:2px">
             <span class="reg-chip" style="background:${color};width:30px;min-height:20px;font-size:11px">${escapeHtmlText(letter)}</span>
-            ${escapeHtmlText((d.instrument_type || '–').split(' (')[0])} · ${escapeHtmlText(d.department || '–')}
+            ${escapeHtmlText((displayType || d.instrument_type || '–').split(' (')[0])} · ${escapeHtmlText(d.department || '–')}
           </div>
         </div>
       </div>
       <div class="reg-detail-actions">
+        ${isBalance && canEdit ? `<button class="btn-view" style="background:#00695C;color:#fff;border-color:#00695C" onclick="closeInstrumentDetail();openBalanceCal(${Number(d.id)||0})">⚖️ สอบเทียบ</button>` : ''}
         ${canEdit ? `<button class="btn-view" onclick="closeInstrumentDetail();openInstrumentModal(${Number(d.id)||0})">✏️ แก้ไข</button>` : ''}
         <button class="btn-view" onclick="closeInstrumentDetail();${openCertCall}">📎 ไฟล์</button>
         <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติ</button>
@@ -155,7 +176,7 @@ function openInstrumentDetail(id) {
 
     <div class="reg-section">รายละเอียดเครื่องมือ</div>
     <div class="reg-info-grid">
-      ${regDetailItem('ประเภทเครื่องมือ', d.instrument_type)}
+      ${regDetailItem('ประเภทเครื่องมือ', displayType)}
       ${regDetailItem('ชื่อเครื่องจักร', d.machine_name)}
       ${regDetailItem('ยี่ห้อ / รุ่น', d.brand)}
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
@@ -274,7 +295,7 @@ function renderUsersTable() {
     const date = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH') : '–';
     const isSelf = currentUser?.id === u.id;
     const typesList = (u.instrument_types && u.instrument_types.length > 0)
-      ? u.instrument_types.map(t => t.split(' (')[0]).join(', ')
+      ? u.instrument_types.map(t => (typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType({ instrument_type: t }) : t).split(' (')[0]).join(', ')
       : '<span style="color:var(--text3);font-size:12px">ทุกประเภท</span>';
     return `<tr>
       <td><strong>${u.name}</strong></td>
@@ -296,11 +317,12 @@ let editingUserId = null;
 async function loadInstrumentTypesForModal(selectedTypes) {
   const container = document.getElementById('uTypesContainer');
   // ดึงประเภทเครื่องมือทั้งหมดจาก allData
-  const types = [...new Set(allData.map(d => d.instrument_type).filter(Boolean))].sort();
+  const getType = d => typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+  const types = [...new Set(allData.map(getType).filter(Boolean))].sort();
   if (!types.length) {
     // ถ้ายังไม่มีข้อมูล ดึงจาก Supabase
     const { data } = await sb.from('instruments').select('instrument_type');
-    const dbTypes = [...new Set((data||[]).map(d => d.instrument_type).filter(Boolean))].sort();
+    const dbTypes = [...new Set((data||[]).map(getType).filter(Boolean))].sort();
     renderTypeCheckboxes(container, dbTypes, selectedTypes);
   } else {
     renderTypeCheckboxes(container, types, selectedTypes);
@@ -308,12 +330,12 @@ async function loadInstrumentTypesForModal(selectedTypes) {
 }
 
 function renderTypeCheckboxes(container, types, selectedTypes) {
-  const selected = selectedTypes || [];
+  const selected = (selectedTypes || []).map(t => typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType({ instrument_type: t }) : t);
   container.innerHTML = types.map(t => `
     <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;font-size:14px;border-radius:6px" 
            onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''">
-      <input type="checkbox" value="${t}" ${selected.includes(t) ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
-      <span>${t}</span>
+      <input type="checkbox" value="${escapeHtmlAttr(t)}" ${selected.includes(t) ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
+      <span>${escapeHtmlText(t)}</span>
     </label>
   `).join('');
 }
@@ -408,7 +430,11 @@ function openInstrumentModal(instrumentId) {
     const d = allData.find(x => x.id === instrumentId);
     if (!d) return;
 
-    document.getElementById('iCategory').value = d.instrument_type || '';
+    const categoryEl = document.getElementById('iCategory');
+    categoryEl.value = d.instrument_type || '';
+    if (!categoryEl.value && typeof getDisplayInstrumentType === 'function') {
+      categoryEl.value = getDisplayInstrumentType(d) || '';
+    }
     document.getElementById('iName').value = d.instrument_name || '';
     document.getElementById('iBrand').value = d.brand || '';
     document.getElementById('iRange').value = d.range_val || '';

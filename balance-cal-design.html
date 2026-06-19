@@ -3,55 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Balance Calibration — Workflow Design</title>
+<title>สอบเทียบเครื่องชั่ง — ป้อนข้อมูล → ออกใบรับรอง</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
 :root {
-  --bg: #eef4f8; --surface: #fff; --surface2: #f7fafc; --line: #d9e5ee; --line-soft: #eaf0f5;
-  --text: #102337; --muted: #61758a; --soft: #8aa0b4;
-  --accent: #0788a6; --accent-soft: #e4f8fb;
-  --green: #168a4a; --green-soft: #ecfdf3; --amber: #ee7b12; --amber-soft: #fff5e9;
-  --red: #dc3545; --red-soft: #fff0f2; --blue: #2563eb; --violet: #7c3aed;
-  --radius: 8px; --shadow: 0 14px 34px rgba(25,58,90,.08);
+  --bg: #e4eef0; --surface: #f6faf7; --surface2: #edf5f1; --surface3: #f2f6eb;
+  --input: #fbfcf7; --input-edit: #fff7dc; --line: #c7d9d7; --line-soft: #dbe7e4;
+  --text: #183042; --muted: #647a82; --soft: #8fa5aa;
+  --accent: #0e7f92; --accent-soft: #d8f1ef;
+  --green: #16784a; --green-soft: #e3f5e8; --amber: #d17a13; --amber-soft: #fff1cc;
+  --red: #c83f4b; --red-soft: #ffe9ed; --blue: #2d6fb0; --violet: #7163b5;
+  --radius: 8px; --shadow: 0 12px 28px rgba(32,71,84,.10);
   --font: "IBM Plex Sans Thai", sans-serif;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.45; }
+body { margin: 0; background: linear-gradient(180deg,#edf5f5 0%,var(--bg) 52%,#dfe9eb 100%); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.45; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 input[type=number] { text-align: right; }
-.page { width: min(1240px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 48px; }
-.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.page { width: min(1240px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 64px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid rgba(14,127,146,.16); border-radius: 10px; background: linear-gradient(135deg,rgba(246,250,247,.92),rgba(232,243,238,.82)); box-shadow: 0 8px 22px rgba(32,71,84,.07); }
 .top h1 { margin: 0; font-size: 22px; line-height: 1.2; }
-.top p { margin: 5px 0 0; color: var(--muted); max-width: 720px; }
-.badge-pill { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid rgba(8,136,166,.24); border-radius: 999px; background: var(--accent-soft); color: #06718b; font-weight: 700; white-space: nowrap; }
-.jump { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 12px; background: linear-gradient(180deg,rgba(248,251,255,.98),rgba(248,251,255,.85)); backdrop-filter: blur(12px); }
-.jump a { flex: 0 0 auto; text-decoration: none; color: var(--muted); min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-weight: 700; font-size: 12px; }
+.top p { margin: 5px 0 0; color: var(--muted); max-width: 760px; }
+.badge-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 14px; border: 1px solid rgba(22,120,74,.25); border-radius: 999px; background: var(--green-soft); color: #12633f; font-weight: 700; white-space: nowrap; }
+.jump { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 12px; background: linear-gradient(180deg,rgba(228,238,240,.96),rgba(228,238,240,.82)); backdrop-filter: blur(12px); }
+.jump a { flex: 0 0 auto; text-decoration: none; color: var(--muted); min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 700; font-size: 12px; }
 .jump a:hover { color: var(--accent); border-color: rgba(8,136,166,.3); }
-.card { background: var(--surface); border: 1px solid rgba(37,99,235,.12); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
+.card { background: linear-gradient(180deg,var(--surface) 0%,#f1f7f4 100%); border: 1px solid rgba(14,127,146,.16); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .card-title { display: flex; align-items: center; gap: 10px; }
 .step-num { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; color: #fff; font-weight: 800; }
 .card h2 { margin: 0; font-size: 16px; }
 .card .hint { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
-.s1 { background: linear-gradient(135deg,#2563eb,#0891b2); }
-.s2 { background: linear-gradient(135deg,#0891b2,#00897b); }
-.s3 { background: linear-gradient(135deg,#f97316,#f59e0b); }
-.s4 { background: linear-gradient(135deg,#7c3aed,#2563eb); }
-.s5 { background: linear-gradient(135deg,#16a34a,#0891b2); }
+.s1 { background: linear-gradient(135deg,#2d6fb0,#0e7f92); }
+.s2 { background: linear-gradient(135deg,#0e7f92,#3b8a72); }
+.s3 { background: linear-gradient(135deg,#d17a13,#d09a27); }
+.s4 { background: linear-gradient(135deg,#7163b5,#2d6fb0); }
+.s5 { background: linear-gradient(135deg,#16784a,#0e7f92); }
+.pagetag { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #e6eef2; color: #385a68; border: 1px solid #cbdbe0; white-space: nowrap; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px 14px; }
+.span2 { grid-column: span 2; }
 .field label { display: block; color: var(--muted); font-size: 11px; font-weight: 700; margin-bottom: 3px; }
-.field input, .field select { width: 100%; min-height: 34px; border: 1px solid var(--line); border-radius: 7px; padding: 0 9px; background: #fff; color: var(--text); outline: none; }
-.field input:focus, .field select:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
-.field input[readonly] { background: var(--surface2); color: var(--muted); }
+.field input, .field select, .field textarea { width: 100%; min-height: 34px; border: 1px solid var(--line); border-radius: 7px; padding: 0 9px; background: var(--input); color: var(--text); outline: none; }
+.field textarea { min-height: 34px; padding: 6px 9px; resize: vertical; line-height: 1.35; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.field input[readonly], .field.auto input { background: var(--surface2); color: var(--muted); }
+.field .lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.tag-auto { font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: #7a6312; background: var(--amber-soft); border: 1px solid #f6dca6; border-radius: 999px; padding: 1px 7px; }
+.tag-edit { font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: #0d7038; background: var(--green-soft); border: 1px solid #b7efca; border-radius: 999px; padding: 1px 7px; }
+.dual { display: flex; gap: 6px; align-items: center; }
+.dual input { flex: 1; }
+.dual span { color: var(--soft); font-size: 11px; }
 .tbl { width: 100%; border-collapse: collapse; }
-.tbl th { height: 34px; padding: 0 9px; text-align: left; color: #31465b; background: #edf4f8; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.tbl th { height: 34px; padding: 0 9px; text-align: left; color: #31465b; background: #e4f0ef; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tbl td { height: 36px; padding: 2px 9px; border-bottom: 1px solid var(--line-soft); font-size: 12px; white-space: nowrap; }
 .tbl td.num, .tbl th.num { text-align: right; }
-.tbl input { width: 90px; min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; background: #fffdf2; }
+.tbl input { width: 90px; min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; background: var(--input-edit); }
+.tbl input.txt { width: 100%; text-align: left; }
 .tbl input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
 .calc { color: #06718b; font-weight: 700; }
 .pass { color: var(--green); font-weight: 800; }
@@ -62,98 +74,233 @@ input[type=number] { text-align: right; }
 .status.ok { color: var(--green); background: var(--green-soft); border: 1px solid #b7efca; }
 .status.bad { color: var(--red); background: var(--red-soft); border: 1px solid #ffc8d0; }
 .note { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--line); color: var(--muted); font-size: 12px; margin-top: 10px; }
-.section-sub { display: flex; align-items: center; gap: 7px; margin: 14px 0 8px; font-size: 12px; font-weight: 800; }
+.section-sub { display: flex; align-items: center; gap: 7px; margin: 16px 0 8px; font-size: 12px; font-weight: 800; }
 .section-sub::before { content: ""; width: 3px; height: 14px; border-radius: 999px; background: var(--accent); }
+.subhead { display: flex; align-items: center; gap: 8px; margin: 18px 0 4px; font-size: 13px; font-weight: 800; color: #1c3450; }
+.subhead i { color: var(--accent); }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
-.kpi { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface2); padding: 8px 10px; }
+.kpi { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface3); padding: 8px 10px; }
 .kpi span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
 .kpi strong { display: block; margin-top: 2px; font-size: 14px; }
-.cert-preview { border: 1.5px solid var(--line); border-radius: var(--radius); background: #fff; padding: 18px 22px; max-width: 760px; margin: 0 auto; font-size: 12px; }
+.cert-preview { border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--input); padding: 18px 22px; max-width: 760px; margin: 0 auto; font-size: 12px; }
 .cert-preview h3 { text-align: center; letter-spacing: 2px; margin: 0 0 4px; font-size: 15px; }
 .cert-preview .lab { text-align: center; color: var(--muted); font-size: 11px; margin-bottom: 10px; }
 .cp-row { display: grid; grid-template-columns: 180px 1fr; gap: 6px; padding: 2px 0; }
 .cp-row span { color: var(--muted); }
 .table-wrap { overflow-x: auto; }
-@media (max-width: 860px) {
-  .grid2, .grid3, .kpis { grid-template-columns: 1fr; }
+.divider { border-top: 1px dashed var(--line); margin: 16px 0 4px; }
+.btn-cert { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 18px; border: none; border-radius: 8px; background: linear-gradient(135deg,#16784a,#0e7f92); color: #fff; font-weight: 800; box-shadow: 0 8px 18px rgba(13,112,56,.22); }
+.btn-cert:hover { filter: brightness(1.05); }
+@media (max-width: 980px) {
+  .grid2, .grid3, .grid4, .kpis { grid-template-columns: 1fr 1fr; }
+  .span2 { grid-column: span 2; }
+}
+@media (max-width: 620px) {
+  .grid2, .grid3, .grid4, .kpis { grid-template-columns: 1fr; }
+  .span2 { grid-column: auto; }
   .top { flex-direction: column; }
 }
+.wset { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+.wset-head { display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: var(--accent-soft); font-size: 12px; cursor: pointer; }
+.wset-head b { font-family: monospace; font-size: 12px; }
+.wset-sub { color: var(--muted); font-weight: 600; }
+.wset-cnt { margin-left: auto; color: var(--muted); font-size: 11px; }
+.wset-body { padding: 9px 11px; }
+.wpick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 7px; }
+.wpick { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; background: var(--surface); cursor: pointer; font-size: 12px; }
+.wpick:hover { border-color: var(--accent); }
+.wpick input { accent-color: var(--accent); }
+.wpick b { font-size: 13px; }
+.wpick .wid { color: var(--muted); font-size: 10px; margin-left: auto; }
+.wpick.dis { opacity: .5; cursor: not-allowed; background: #f3f4f6; }
+.wpick .exp { color: #b03030; font-size: 9px; font-weight: 700; }
+.pt-warn { background: #fce8e8; color: #b03030; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px; margin-left: 4px; }
+.rmset { border: 1px solid #f3c0c0; background: #fff4f4; color: #b03030; border-radius: 6px; min-height: 26px; padding: 0 8px; cursor: pointer; font-weight: 700; }
+.rmset:hover { background: #fce0e0; }
+.modebar { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
+.modebar .lbl { font-size: 12px; font-weight: 700; color: var(--muted); }
+.mbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; min-height: 34px; padding: 0 16px; font: inherit; font-weight: 700; font-size: 13px; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.mbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.cbar-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cbar-no { font-size: 13px; } .cbar-no b { font-family: monospace; }
+.cbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; min-height: 32px; padding: 0 12px; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.cbtn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cbtn.danger { color: #b03030; border-color: #f3c0c0; background: #fff4f4; }
+.cbadge { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.cbadge.st-draft { background: #eef1f0; color: #5a6b68; }
+.cbadge.st-issued { background: #fff6ec; color: #9a6112; border: 1px solid #ffd7a8; }
+.cbadge.st-signed { background: #e6f1fb; color: #185fa5; border: 1px solid #b5d4f4; }
+.cbadge.st-approved { background: #e1f5ee; color: #0f6e56; border: 1px solid #b6e6d6; }
+.cbadge.st-voided { background: #fcebeb; color: #a32d2d; border: 1px solid #f7c1c1; }
+.editStepBtn { border: 1px solid #f2dcb0; background: #fff8e1; color: #854f0b; border-radius: 7px; min-height: 30px; padding: 0 12px; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.editStepBtn:hover { background: #fdeecb; }
+body:not(.review) .editStepBtn { display: none; }
+/* โหมดกรอกข้อมูล/สอบเทียบ = ข้อ 1 เฉพาะข้อมูลเครื่อง+ผู้สอบเทียบ (เหมือนหัวใบบันทึกข้อมูลดิบ) + ข้อ 2,3 · ใบรายงานเต็ม (4,5 + เลขที่งาน/ลูกค้า) โชว์ตอนสรุป */
+body:not(.review) #st4, body:not(.review) #st5 { display: none; }
+body:not(.review) #st1 .review-only { display: none; }
+body:not(.review) .jump a:nth-child(4), body:not(.review) .jump a:nth-child(5) { display: none; }
+body.review #entryHint, body.review #certStatusBarBottom { display: none; }
+.card.locked { background: #fafbfa; }
+.card.locked input, .card.locked select, .card.locked textarea { background: #eef1f0 !important; color: #5a6b68; cursor: not-allowed; }
+.card.locked .wpick { opacity: .7; cursor: not-allowed; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <main class="page">
   <header class="top">
     <div>
-      <h1>สอบเทียบเครื่องชั่ง — Workflow Design</h1>
-      <p>แทนไฟล์ Excel ทั้งใบ: เลือกเครื่อง → ดึงตุ้มจากใบ Cert Standard → กรอกผลดิบ → ระบบคำนวณ Correction + งบความไม่แน่นอน + ประเมิน PASS/FAIL → ออกใบรับรอง (ตัวเลขตัวอย่างชุดนี้มาจากงานจริง 26B232-0 เพื่อเทียบผลกับ Excel ได้ตรง ๆ)</p>
+      <h1>สอบเทียบเครื่องชั่ง — ป้อนข้อมูล → ออกใบรับรอง</h1>
+      <p>กรอกครบทุกช่องในหน้านี้แล้วกด “ออกใบรับรอง” ระบบจะคำนวณ Correction + งบความไม่แน่นอน + ประเมิน PASS/FAIL และส่งข้อมูล <b>ทั้งหมด</b> เข้าแม่แบบใบรับรอง (cert-print-design) ทันที · ลำดับขั้นตอนเรียงตามหน้าในใบ Cert · ตัวเลขชุดนี้มาจากงานจริง 26B232-0 เพื่อเทียบกับ Excel ได้ตรง ๆ</p>
     </div>
-    <span class="badge-pill">Mockup — คำนวณจริงทั้งหน้า</span>
+    <span class="badge-pill"><i class="ti ti-circle-check"></i> ป้อนครบ → ใบ Cert ใช้ข้อมูลจริงทั้งใบ</span>
   </header>
 
   <nav class="jump">
-    <a href="#st1"><i class="ti ti-scale"></i>1 เครื่อง+เกณฑ์</a>
-    <a href="#st2"><i class="ti ti-certificate"></i>2 ตุ้มมาตรฐาน/จุดทดสอบ</a>
-    <a href="#st3"><i class="ti ti-clipboard-text"></i>3 บันทึกผลดิบ</a>
+    <a href="#st1"><i class="ti ti-file-description"></i>1 ข้อมูลงาน + เครื่องชั่ง</a>
+    <a href="#st2"><i class="ti ti-certificate"></i>2 ตุ้มมาตรฐาน + เกณฑ์</a>
+    <a href="#st3"><i class="ti ti-clipboard-text"></i>3 สภาวะแวดล้อม + ผลดิบ</a>
     <a href="#st4"><i class="ti ti-math-function"></i>4 ความไม่แน่นอน</a>
-    <a href="#st5"><i class="ti ti-rosette-discount-check"></i>5 ประเมิน + ใบ Cert</a>
+    <a href="#st5"><i class="ti ti-rosette-discount-check"></i>5 ประเมิน + ลงนาม + ออก Cert</a>
   </nav>
 
-  <!-- ============ STEP 1 ============ -->
+  <div class="modebar">
+    <span class="lbl"><i class="ti ti-switch-horizontal"></i> โหมด:</span>
+    <button class="mbtn active" id="mEntry" type="button" onclick="switchMode('entry')"><i class="ti ti-pencil"></i> กรอกข้อมูล / สอบเทียบ</button>
+    <button class="mbtn" id="mReview" type="button" onclick="switchMode('review')"><i class="ti ti-list-check"></i> สรุป / ตรวจทานก่อนออกใบ →</button>
+  </div>
+  <div id="certStatusBar" class="cbar"></div>
+  <div id="entryHint" class="note" style="margin:10px 0 0"><i class="ti ti-clipboard-check"></i><div>หน้านี้ = <b>ใบบันทึกข้อมูลดิบ</b> : ข้อมูลเครื่อง + ผู้สอบเทียบ/วันที่/สถานที่ (ข้อ 1) · <b>ข้อ 2 (ตุ้ม + จุดทดสอบ)</b> · <b>ข้อ 3 (สภาวะแวดล้อม + ผลดิบ)</b> · เสร็จแล้วกด <b>"สรุป / ตรวจทาน"</b> เพื่อดูใบรายงานทั้งใบแล้วออกใบรับรอง</div></div>
+  <div id="reviewBanner" style="display:none"></div>
+
+  <!-- ============ STEP 1 : Job + Equipment + Customer (→ Cert page 1-2) ============ -->
   <section class="card" id="st1">
     <div class="card-head">
       <div class="card-title">
         <span class="step-num s1">1</span>
-        <div><h2>เครื่องชั่ง + เกณฑ์การยอมรับ</h2><p class="hint">ระบบจริงจะดึงจากทะเบียนเครื่องมือ — เลือก ID.No. แล้วข้อมูลมาเอง</p></div>
+        <div><h2>ข้อมูลงาน + เครื่องชั่ง + ลูกค้า</h2><p class="hint">ส่วนหัวของใบรับรอง — ระบบจริงดึงจากทะเบียนเครื่องมือ/ใบสั่งงาน · ช่อง <span class="tag-auto">ออกโดยระบบ</span> ไม่ต้องกรอก</p></div>
       </div>
-      <span class="chip"><i class="ti ti-database"></i> จากทะเบียนเครื่องมือ</span>
+      <span class="pagetag"><i class="ti ti-files"></i> ↦ ใบ Cert หน้า 1–2</span>
     </div>
-    <div class="grid3">
-      <div class="field"><label>ID.No.</label><input value="QTB2BB02-WI01" readonly></div>
-      <div class="field"><label>ยี่ห้อ / รุ่น</label><input value="Sartorius / BP3100-S" readonly></div>
-      <div class="field"><label>Serial No.</label><input value="13006505" readonly></div>
-      <div class="field"><label>พิกัด (Max)</label><input id="iCap" type="number" value="3100"> </div>
+
+    <div id="instBanner" style="display:none"></div>
+    <div class="subhead review-only"><i class="ti ti-hash"></i> เลขที่งาน &amp; วันที่ (ออกโดยระบบ)</div>
+    <div class="grid4 review-only">
+      <div class="field auto"><div class="lbl-row"><label>Cert No.</label><span class="tag-auto">ออกตอนสอบเสร็จ</span></div><input id="fCertNo" value="" placeholder="— ยังไม่ออกเลข —" readonly></div>
+      <div class="field auto"><div class="lbl-row"><label>Job No.</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fJobNo" value="" placeholder="—" readonly></div>
+      <div class="field"><label>Request No.</label><input id="fReqNo" value="-"></div>
+      <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" readonly></div>
+      <div class="field auto"><div class="lbl-row"><label>วันที่ออกใบ</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fDateIssue" value="" placeholder="—" readonly></div>
+    </div>
+
+    <div class="subhead"><i class="ti ti-scale"></i> เครื่องชั่งที่สอบเทียบ</div>
+    <div class="grid4">
+      <div class="field"><label>ชื่อเครื่อง (EN)</label><input id="eEquip" value="ELECTRONIC  BALANCE"></div>
+      <div class="field"><label>ชื่อเครื่อง (TH)</label><input id="eEquipTh" value="เครื่องชั่งไฟฟ้า"></div>
+      <div class="field"><label>ID. No.</label><input id="eId" value="QTB2BB02-WI01"></div>
+      <div class="field"><label>Asset No.</label><input id="eAsset" value="701267"></div>
+      <div class="field"><label>ยี่ห้อ (Manufacturer)</label><input id="eMfr" value="Sartorius"></div>
+      <div class="field"><label>รุ่น (Model)</label><input id="eModel" value="BP3100-S"></div>
+      <div class="field"><label>Serial No.</label><input id="eSerial" value="13006505"></div>
+      <div class="field"><label>Accuracy Class</label><input id="eClass" value="-"></div>
+      <div class="field"><label>พิกัด Max (g)</label><input id="iCap" type="number" step="any" value="3100"></div>
       <div class="field"><label>ความละเอียด d (g)</label><input id="iRes" type="number" step="any" value="0.01"></div>
-      <div class="field"><label>User Range (g)</label><input value="1 – 2000" ></div>
+      <div class="field"><label>User Range (g)</label><input id="eUserRange" value="1 - 2000"></div>
+      <div class="field"><label>การปรับแต่ง (Adjusted)</label><select id="eAdjusted"><option value="without">without (ไม่ปรับ)</option><option value="with">with (ปรับแต่ง)</option></select></div>
+      <div class="field"><label>สภาพเครื่อง (Condition)</label><select id="eCondition"><option>USED ITEM</option><option>NEW ITEM</option></select></div>
     </div>
-    <div class="section-sub">Tolerance ตามช่วงใช้งาน (แก้ไขได้)</div>
-    <div class="table-wrap"><table class="tbl" style="max-width:560px">
-      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">Tolerance ± (g)</th></tr></thead>
-      <tbody id="tolRows"></tbody>
-    </table></div>
+
+    <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
+    <div class="grid4">
+      <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" type="date" value="2026-04-24"></div>
+      <div class="field"><label>วันที่สอบเทียบ</label><input id="iDate" type="date" value="2026-04-24"></div>
+      <div class="field"><label>ผู้สอบเทียบ</label><input id="fCalBy" value="WUTTIPONG  ATTAWAN"></div>
+      <div class="field"><label>สถานที่ติดตั้ง (Location)</label><input id="cLocation" value="B.3/3"></div>
+      <div class="field"><label>วิธีสอบเทียบ (Procedure)</label><input id="fProcedure" value="SWI-CAL-705"></div>
+    </div>
+
+    <div class="subhead review-only"><i class="ti ti-building"></i> ลูกค้า / เจ้าของเครื่อง &amp; ที่ตั้งใช้งาน</div>
+    <div class="grid2 review-only">
+      <div class="field span2"><div class="lbl-row"><label>เลือกลูกค้า (รายชื่อบริษัทที่บันทึกไว้)</label><span class="tag-edit">เลือกแล้วเติมให้</span></div><select id="cPick" onchange="pickClient(this.value)"></select></div>
+      <div class="field span2"><label>ชื่อลูกค้า</label><input id="cClientName" value="INTERNATIONAL  LABORATORIES  CORP.,LTD"></div>
+      <div class="field span2"><label>ที่อยู่ลูกค้า <span style="color:var(--soft);font-weight:400">(ขึ้นบรรทัดใหม่ = คนละแถวในใบ Cert)</span></label><textarea id="cAddr" rows="2">62 MU 8, BANGNA-TRAT ROAD, BANG CHALONG SUB-DISTRICT, BANG PHLI DISTRICT,
+SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
+      <div class="field"><label>หน่วยงาน (Section)</label><input id="cSection" value="Quality Test Bulk"></div>
+      <div class="field span2"><label>แผนก (Unit / Dept.)</label><input id="cUnitDept" value="Bulk / Powder & Lip"></div>
+    </div>
   </section>
 
-  <!-- ============ STEP 2 ============ -->
+  <!-- ============ STEP 2 : Standards + test points + tolerance (→ Cert page 2 / worksheet) ============ -->
   <section class="card" id="st2">
     <div class="card-head">
       <div class="card-title">
         <span class="step-num s2">2</span>
-        <div><h2>ตุ้มมาตรฐาน + จุดทดสอบ</h2><p class="hint">ค่าแก้และ U ดึงจากหน้า "ใบรับรองมาตรฐาน" อัตโนมัติ — จุดที่รวมตุ้มหลายลูกระบบจะบวกค่าแก้และบวก U ให้</p></div>
+        <div><h2>ตุ้มมาตรฐาน + จุดทดสอบ + เกณฑ์ยอมรับ</h2><p class="hint">ระบบจริงดึงตุ้ม + ค่าแก้ + U จากใบ Cert Standard อัตโนมัติ — จุดที่รวมตุ้มหลายลูก ระบบบวกค่าแก้และบวก U ให้</p></div>
       </div>
-      <span class="chip"><i class="ti ti-certificate"></i> จากใบ Cert: 26M004-0 + 26M005-0 (Class F1)</span>
+      <span class="pagetag"><i class="ti ti-certificate"></i> ↦ Reference Standards</span>
+    </div>
+
+    <div id="stdBanner" style="display:none"></div>
+    <div class="subhead"><i class="ti ti-weight"></i> รายการตุ้มน้ำหนักมาตรฐานที่ใช้</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--muted);font-weight:700"><i class="ti ti-plus"></i> เพิ่มชุดตุ้มจากทะเบียน</label>
+      <select id="stdAdd" onchange="addStdSet(this.value)" style="min-height:32px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--input);min-width:260px"></select>
     </div>
     <div class="table-wrap"><table class="tbl">
-      <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้รวม (g)</th><th class="num">Conventional mass (g)</th><th class="num">U ตุ้มรวม (mg)</th></tr></thead>
+      <thead><tr><th>ชื่อ</th><th>คลาส / รุ่น</th><th>Serial</th><th>ID Code</th><th>Cert No.</th><th>ครบกำหนด</th><th></th></tr></thead>
+      <tbody id="stdRows"></tbody>
+    </table></div>
+
+    <div class="subhead"><i class="ti ti-checkbox"></i> เลือกตุ้มที่ใช้ (จากทะเบียนลูกตุ้ม · เฉพาะที่ยังไม่หมดอายุ)</div>
+    <div class="note" style="margin-bottom:8px"><i class="ti ti-hand-finger"></i><div>ติ๊กตุ้มที่หยิบมาใช้จริงในงานนี้ — ระบบจับคู่เข้าจุดทดสอบให้ (จุดที่รวมหลายลูกบวกค่าแก้/U/Dₛ ให้) · ตุ้ม<b>หมดอายุ</b>จะติ๊กไม่ได้</div></div>
+    <div id="weightPicker"></div>
+
+    <div class="subhead"><i class="ti ti-list-numbers"></i> จุดทดสอบ + ค่าแก้ตุ้ม (Conventional mass)</div>
+    <div class="note" style="margin-bottom:8px"><i class="ti ti-history"></i><div>จุดทดสอบเริ่มต้น = <b>10 จุด ช่วงละพิกัด÷10</b> (ปรับ/เพิ่ม/ลบได้) · ระบบจับคู่ตุ้มที่ติ๊กให้อัตโนมัติ — จุดที่ตุ้มทำไม่ได้พอดีจะขึ้น "ตุ้มไม่พร้อม" · แก้ค่าแก้/U เองได้ (ช่องเหลือง) เพื่อทวนสอบ</div></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="genPoints()"><i class="ti ti-wand"></i> สร้างจุดอัตโนมัติ (พิกัด÷10)</button>
+      <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="addPoint()"><i class="ti ti-plus"></i> เพิ่มจุด</button>
+    </div>
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้ตุ้ม (g)</th><th class="num">ค่าตุ้ม + ค่าแก้ (g)</th><th class="num">Uncert. (mg)</th><th></th></tr></thead>
       <tbody id="pointRows"></tbody>
     </table></div>
-    <div class="note"><i class="ti ti-info-circle"></i><div>ในระบบจริง: เลือกชุดมาตรฐาน → ระบบเสนอวิธีประกอบตุ้มให้แต่ละจุดอัตโนมัติ (แก้ได้) และเตือนถ้าใบ Cert ตุ้มหมดอายุ — จุดทดสอบเพิ่ม/ลด/แก้ค่าได้ต่อการสอบเทียบแต่ละครั้ง</div></div>
+
+    <div class="subhead"><i class="ti ti-ruler-2"></i> Tolerance ตามช่วงใช้งาน (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
+    <div class="table-wrap"><table class="tbl" style="max-width:560px">
+      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">Tolerance ± (g)</th></tr></thead>
+      <tbody id="tolRows"></tbody>
+    </table></div>
+    <div class="note"><i class="ti ti-info-circle"></i><div>ในระบบจริง: เลือกชุดมาตรฐาน → ระบบเสนอวิธีประกอบตุ้มแต่ละจุดให้อัตโนมัติ (แก้ได้) และเตือนถ้าใบ Cert ตุ้มหมดอายุ</div></div>
   </section>
 
-  <!-- ============ STEP 3 ============ -->
+  <!-- ============ STEP 3 : Environment + raw data (→ worksheet page 4-5) ============ -->
   <section class="card" id="st3">
     <div class="card-head">
       <div class="card-title">
         <span class="step-num s3">3</span>
-        <div><h2>บันทึกผลดิบ</h2><p class="hint">ช่องพื้นเหลือง = กรอกเอง · ตัวเลขสีฟ้า = ระบบคำนวณสด</p></div>
+        <div><h2>สภาวะแวดล้อม + บันทึกผลดิบ</h2><p class="hint">ช่องพื้นเหลือง = กรอกเอง · ตัวเลขสีฟ้า = ระบบคำนวณสด</p></div>
       </div>
+      <span class="pagetag"><i class="ti ti-clipboard-data"></i> ↦ ใบ Cert หน้า 4–5 (Worksheet)</span>
     </div>
 
-    <div class="grid3">
-      <div class="field"><label>วันที่สอบเทียบ</label><input type="date" value="2026-04-24"></div>
-      <div class="field"><label>อุณหภูมิ เริ่ม–สิ้นสุด (°C)</label><div style="display:flex;gap:6px"><input type="number" step="any" value="24.9"><input type="number" step="any" value="25.6"></div></div>
-      <div class="field"><label>ความชื้น เริ่ม–สิ้นสุด (%RH)</label><div style="display:flex;gap:6px"><input type="number" step="any" value="62.6"><input type="number" step="any" value="63.8"></div></div>
+    <div class="subhead"><i class="ti ti-temperature"></i> สภาวะแวดล้อมขณะสอบเทียบ</div>
+    <div class="grid4">
+      <div class="field"><label>อุณหภูมิ เริ่ม–สิ้นสุด (°C)</label><div class="dual"><input class="tIn" type="number" step="any" value="24.9"><span>ถึง</span><input class="tIn" type="number" step="any" value="25.6"></div></div>
+      <div class="field"><label>ความชื้น เริ่ม–สิ้นสุด (%RH)</label><div class="dual"><input class="rhIn" type="number" step="any" value="62.6"><span>ถึง</span><input class="rhIn" type="number" step="any" value="63.8"></div></div>
+      <div class="field"><label>เวลาอุ่นเครื่อง (Warm-up)</label><div class="dual"><input class="wuIn txt" value="8:00"><span>ถึง</span><input class="wuIn txt" value="10:00"></div></div>
+      <div class="field"><label>เวลาสอบเทียบ (Cal. time)</label><div class="dual"><input class="ctIn txt" value="10:00"><span>ถึง</span><input class="ctIn txt" value="10:20"></div></div>
     </div>
 
-    <div class="section-sub">3.1 Repeatability — จุดใช้งาน <input id="repPoint" type="number" value="2000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g (10 ครั้ง)</div>
+    <div class="section-sub">3.1 Preload — จุด <input id="plPoint" type="number" value="3000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g (อ่าน 3 ซ้ำ)</div>
+    <div class="table-wrap"><table class="tbl" style="max-width:520px">
+      <thead><tr><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th></tr></thead>
+      <tbody><tr id="plRow"></tr></tbody>
+    </table></div>
+
+    <div class="section-sub">3.2 Repeatability — จุดใช้งาน <input id="repPoint" type="number" value="2000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g (10 ครั้ง)</div>
     <div class="table-wrap"><table class="tbl" style="max-width:880px">
       <thead><tr><th>ครั้งที่</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
       <tbody><tr id="repRow"><td>อ่านได้ (g)</td></tr></tbody>
@@ -165,7 +312,7 @@ input[type=number] { text-align: right; }
       <div class="kpi"><span>u(R) = S/√3 (mg)</span><strong class="calc" id="repUr">–</strong></div>
     </div>
 
-    <div class="section-sub">3.2 Error of indication — อ่าน 3 ซ้ำต่อจุด</div>
+    <div class="section-sub">3.3 Error of indication — อ่าน 3 ซ้ำต่อจุด</div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุด (g)</th><th class="num">Conv. mass (g)</th><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th><th class="num">Correction (g)</th><th class="num">S(WR)</th></tr></thead>
       <tbody id="errRows"></tbody>
@@ -173,7 +320,16 @@ input[type=number] { text-align: right; }
 
     <div class="grid2" style="margin-top:14px">
       <div>
-        <div class="section-sub">3.3 Eccentricity — ตุ้ม <input id="eccWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g</div>
+        <div class="section-sub">3.4 Eccentricity — ตุ้ม <input id="eccWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g</div>
+        <div style="display:flex;align-items:center;gap:8px;margin:2px 0 8px">
+          <label style="font-size:12px;color:var(--muted);font-weight:700">ลักษณะจานเครื่องชั่ง</label>
+          <select id="eccPan" onchange="drawPanPrev()" style="min-height:30px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input)">
+            <option value="0">สี่เหลี่ยม</option>
+            <option value="1">กลม</option>
+            <option value="2">สามเหลี่ยม</option>
+          </select>
+          <span id="eccPanPrev" style="display:inline-flex;align-items:center"></span>
+        </div>
         <table class="tbl">
           <thead><tr><th>ตำแหน่ง</th><th>อ่านได้ (g)</th><th class="num">ต่างจากกลาง (g)</th></tr></thead>
           <tbody id="eccRows"></tbody>
@@ -181,7 +337,7 @@ input[type=number] { text-align: right; }
         </table>
       </div>
       <div>
-        <div class="section-sub">3.4 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fffdf2"> g</div>
+        <div class="section-sub">3.5 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g</div>
         <table class="tbl">
           <thead><tr><th class="num">ตุ้มตรวจสอบ (g)</th><th>อ่านได้ (g)</th><th class="num">ผลต่าง (g)</th></tr></thead>
           <tbody id="tareRows"></tbody>
@@ -191,75 +347,71 @@ input[type=number] { text-align: right; }
     </div>
   </section>
 
-  <!-- ============ STEP 4 ============ -->
+  <div id="certStatusBarBottom" class="cbar" style="margin-top:14px"></div>
+
+  <!-- ============ STEP 4 : Uncertainty ============ -->
   <section class="card" id="st4">
     <div class="card-head">
       <div class="card-title">
         <span class="step-num s4">4</span>
-        <div><h2>งบความไม่แน่นอน (อัตโนมัติทุกจุด)</h2><p class="hint">สูตรเดียวกับ FRM-CAL92: WS=U/2 · Drift=U/√3 · รอบจอ ×2 = (d/2)/√3 · Air buoyancy 1 ppm/√3 · Repeatability — รวม RSS × k=2</p></div>
+        <div><h2>งบความไม่แน่นอน (อัตโนมัติทุกจุด)</h2><p class="hint">สูตรเดียวกับ FRM-CAL92: WS=U/2 · Drift=U/√3 · รอบจอ ×2 = (d/2)/√3 · Air buoyancy (ppm·N)/√3 · Repeatability — รวม RSS × k=2</p></div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:12px;color:var(--muted);font-weight:700"><input type="checkbox" id="roundUpU" checked onchange="recalc()"> ปัด U ขึ้นเป็น mg เต็ม เมื่อ ≥ 8.5 mg (ตามแนวทางในไฟล์)</label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;color:var(--muted);font-weight:700">วัสดุตุ้ม
+          <select id="abMaterial" onchange="recalc()" style="min-height:30px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input);margin-left:4px">
+            <option value="1">สแตนเลส/ทองเหลือง (1 ppm)</option>
+            <option value="3">เหล็กหล่อ (3 ppm)</option>
+            <option value="30">อะลูมิเนียม (30 ppm)</option>
+          </select>
+        </label>
+        <label style="font-size:12px;color:var(--muted);font-weight:700"><input type="checkbox" id="roundUpU" checked onchange="recalc()"> ปัดเศษ U รายงาน (≥1000g เต็มหน่วย mg · &lt;1000g 2 เลขนัยสำคัญ)</label>
       </div>
     </div>
+    <div class="note" style="margin-bottom:8px"><i class="ti ti-shield-check"></i><div>U รายงานถูกยกขั้นต่ำตาม <b>CMC</b> ที่ดึงจากฐานขอบข่ายที่รับรองอัตโนมัติ (ถ้า U คำนวณ ≤ CMC จะรายงานเป็น CMC) — คอลัมน์ CMC ด้านล่างคือค่าที่ระบบใช้</div></div>
     <div class="table-wrap"><table class="tbl">
-      <thead><tr><th>จุด (g)</th><th class="num">u WS</th><th class="num">u Drift</th><th class="num">u do</th><th class="num">u d</th><th class="num">u Ab</th><th class="num">u R</th><th class="num">u รวม (mg)</th><th class="num">U (k=2) mg</th><th class="num">U ใช้รายงาน</th></tr></thead>
+      <thead><tr><th>จุด (g)</th><th class="num">u WS</th><th class="num">u Drift</th><th class="num">u do</th><th class="num">u d</th><th class="num">u Ab</th><th class="num">u R</th><th class="num">u รวม</th><th class="num">Veff</th><th class="num">k</th><th class="num">U = k·uc</th><th class="num">CMC</th><th class="num">U รายงาน</th></tr></thead>
       <tbody id="uncRows"></tbody>
     </table></div>
     <div class="note"><i class="ti ti-square-root-2"></i><div>เลือกจุดดูที่มา: <span id="uncDetail" class="calc">–</span></div></div>
   </section>
 
-  <!-- ============ STEP 5 ============ -->
+  <!-- ============ STEP 5 : Evaluation + signers + issue cert ============ -->
   <section class="card" id="st5">
     <div class="card-head">
       <div class="card-title">
         <span class="step-num s5">5</span>
-        <div><h2>ใบประเมินผล + ใบรับรอง</h2><p class="hint">Error = −Correction (ปัดเป็น mg) · PASS เมื่อ Error ± U อยู่ใน ±Tolerance ของช่วงนั้น · อนุมัติ 2 ชั้น (EIB + Owner)</p></div>
+        <div><h2>ประเมินผล + ผู้ลงนาม + ออกใบรับรอง</h2><p class="hint">Error = −Correction (ปัดเป็น mg) · PASS เมื่อ Error ± U อยู่ใน ±Tolerance ของช่วงนั้น</p></div>
       </div>
-      <span id="overallBadge" class="status ok">รอคำนวณ</span>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span id="overallBadge" class="status ok">รอคำนวณ</span>
+        <button class="btn-cert" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นใบรับรอง</button>
+      </div>
     </div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุด (g)</th><th class="num">Error (g)</th><th class="num">U ± (g)</th><th class="num">Error + U</th><th class="num">Error − U</th><th class="num">Tolerance ± (g)</th><th>ผล</th></tr></thead>
       <tbody id="evalRows"></tbody>
     </table></div>
 
-    <div class="section-sub" style="margin-top:18px">ตัวอย่างหน้า 3 ของใบรับรอง (Departure of indication)</div>
-    <div class="cert-preview">
-      <h3>CERTIFICATE OF CALIBRATION</h3>
-      <div class="lab">INTERNATIONAL LABORATORIES CORP., LTD. — CALIBRATION LABORATORY · CERT NO. <strong>26B232-0</strong> · PAGE 3 OF 3</div>
-      <div class="cp-row"><span>EQUIPMENT</span><strong>ELECTRONIC BALANCE 3100 g (d = 0.01 g)</strong></div>
-      <div class="cp-row"><span>ID / SERIAL</span><strong>QTB2BB02-WI01 · 13006505</strong></div>
-      <div class="cp-row"><span>REFERENCE STANDARDS</span><strong>F1 Weight set 158880 (26M004-0) · F1 1 kg/2 kg (26M005-0)</strong></div>
-      <div style="border-top:1px solid var(--line);margin:8px 0"></div>
-      <div class="table-wrap"><table class="tbl">
-        <thead><tr><th class="num">NOMINAL (g)</th><th class="num">CONVENTIONAL MASS (g)</th><th class="num">DISPLAYED (g)</th><th class="num">CORRECTION (g)</th><th class="num">UNCERTAINTY ± (mg)</th></tr></thead>
-        <tbody id="certRows"></tbody>
-      </table></div>
-      <p style="color:var(--muted);font-size:11px;margin:10px 0 0">THE REPORTED EXPANDED UNCERTAINTY IS BASED ON A STANDARD UNCERTAINTY MULTIPLIED BY A COVERAGE FACTOR k = 2, PROVIDING A LEVEL OF CONFIDENCE OF APPROXIMATELY 95%</p>
+    <div class="subhead"><i class="ti ti-signature"></i> ผู้ลงนามในใบรับรอง</div>
+    <div class="grid3">
+      <div class="field"><label>ผู้ทบทวน / Technical Manager</label><input id="sTechMgr" value="PRASERT    PLAINPRASERT"></div>
+      <div class="field"><label>ผู้อนุมัติ / Lab Director</label><input id="sDirector" value="DR.WANLOP   CHUSATTAYANOND"></div>
+      <div class="field"><label>ผู้เซ็นออกใบ (Approver)</label><select id="sApprover"><option value="tech_mgr">Technical Manager</option><option value="director">Lab Director</option></select></div>
     </div>
-    <div class="note"><i class="ti ti-route"></i><div>ในระบบจริง: บันทึกเป็น "งานสอบเทียบ" สถานะ ร่าง → รอทบทวน (EIB) → รออนุมัติ (Owner) → ออกเลข Cert จาก <code>cert_sequences</code> อัตโนมัติ → สร้าง PDF 3 หน้า + ใบประเมินผล → อัปเดต cal_date/due_date ในทะเบียนเครื่องมือ + บันทึก calibration_history</div></div>
+
+    <div class="note"><i class="ti ti-route"></i><div>ในระบบจริง: บันทึกเป็น “งานสอบเทียบ” สถานะ ร่าง → รอทบทวน (EIB) → รออนุมัติ (Owner) → ออกเลข Cert จาก <code>cert_sequences</code> อัตโนมัติ → สร้าง PDF + ใบประเมินผล → อัปเดต cal_date/due_date ในทะเบียนเครื่องมือ</div></div>
   </section>
 </main>
 
 <script>
 // ===== ข้อมูลตั้งต้น (จากงานจริง 26B232-0) =====
-// ตุ้มมาตรฐาน: ค่าแก้ (g) และ U (mg) ต่อจุด — ในระบบจริงดึงจาก standard_cert_values
-const POINTS = [
-  { nominal: 1,    comp: 'F1 1 g',          corr: 0.000004, U: 0.03 },
-  { nominal: 10,   comp: 'F1 10 g',         corr: 0.000047, U: 0.06 },
-  { nominal: 20,   comp: 'F1 20 g',         corr: 0.000079, U: 0.08 },
-  { nominal: 50,   comp: 'F1 50 g',         corr: -0.00001, U: 0.10 },
-  { nominal: 100,  comp: 'F1 100 g',        corr: -0.00007, U: 0.16 },
-  { nominal: 200,  comp: 'F1 200 g',        corr: 0.00017,  U: 0.30 },
-  { nominal: 500,  comp: 'F1 500 g',        corr: 0.0001,   U: 0.80 },
-  { nominal: 1000, comp: 'F1 1 kg',         corr: -0.0022,  U: 1.60 },
-  { nominal: 2000, comp: 'F1 2 kg',         corr: -0.0026,  U: 3.00 },
-  { nominal: 3000, comp: 'F1 1 kg + 2 kg',  corr: -0.0048,  U: 4.60 },
-];
-// ค่าที่อ่านได้จริงจากงาน 26B232-0
+// จุดทดสอบ — comp ไม่ใช้แล้ว (จับคู่ตุ้มจากค่าพิกัดผ่าน comboFor) · ค่าแก้/U ตั้งโดย assignWeights
+// ดีฟอลต์ = ชุดที่ทวนสอบกับ Excel · ปุ่ม "สร้างจุดอัตโนมัติ" จะแทนด้วย 10 จุด ช่วงละพิกัด÷10
+let POINTS = [1,10,20,50,100,200,500,1000,2000,3000].map(n => ({ nominal: n, corr: 0, U: 0 }));
 const READS = { 1:[1,1,1], 10:[10,10,10], 20:[20,20,20], 50:[50,50,50], 100:[100,100,100],
   200:[200,200,200], 500:[500,500,500], 1000:[1000,1000,1000], 2000:[2000,2000,2000], 3000:[2999.99,2999.99,2999.99] };
 const REP_READS = [2000,2000,2000,2000,2000,2000,2000,2000,2000,2000];
+const PL_READS = [2999.99, 2999.99, 2999.99];
 const ECC = [['Middle (1)',1000],['Front left (2)',1000],['Back left (3)',1000.01],['Back right (4)',999.99],['Front right (5)',999.99]];
 const TARE = [[500,500],[2000,2000]];
 let TOLS = [
@@ -267,9 +419,126 @@ let TOLS = [
   { from: 300, to: 1000, tol: 0.10 },
   { from: 1000, to: 3100, tol: 0.15 },
 ];
+// ฐาน CMC (mock ขอบข่ายที่รับรอง) — ระบบจริงดึงจากตาราง cmc_scope · ค่าตัวอย่าง แทนด้วยค่าจริงจากไฟล์ขอบข่าย
+const CMC_SCOPE = {
+  accred_no: 'ACC-MASS-001', quantity: 'มวล (Mass)', instrument: 'เครื่องชั่งไฟฟ้า',
+  valid_from: '2025-03-01', valid_to: '2028-02-29',
+  ranges: [
+    { from: 0,    to: 300,  cmc: 3 },
+    { from: 300,  to: 1000, cmc: 5 },
+    { from: 1000, to: 3100, cmc: 8 },
+  ],
+};
+let CMC = CMC_SCOPE.ranges;   // ดึงช่วง CMC จากฐาน
+const cmcFor = nominal => (CMC.find(c => nominal > c.from && nominal <= c.to) || CMC[CMC.length-1] || {}).cmc || 0;
+// ===== ทะเบียนชุดตุ้มมาตรฐาน (หลายชุดหลาย ID) — ระบบจริงดึงจาก standard_weights + ใบ cert ล่าสุด =====
+// แต่ละชุดมีลูกตุ้มพร้อมค่าแก้/U/Dₛ (resolved) · ชุด F1 ค่าสะท้อนจุดทดสอบเดิม (ทวนสอบกับ Excel ได้) Dₛ=U
+const STD_REGISTRY = [
+  { id_code:'CLCLSB08-WI01-12', name:'STANDARD WEIGHT SET', model:'CLASS F1 ( 1 - 500 g )', cls:'1-500g/F1', serial:'158880', cert:'26M004-0', due:'2027-01-06',
+    weights:[ ['CLW-101',1,0.000004,0.03],['CLW-102',2,0.000010,0.04],['CLW-105',5,0.000012,0.05],['CLW-107',10,0.000047,0.06],['CLW-108',20,0.000079,0.08],['CLW-109',50,-0.00001,0.10],['CLW-110',100,-0.00007,0.16],['CLW-111',200,0.00017,0.30],['CLW-112',500,0.0001,0.80] ] },
+  { id_code:'CLCLSB07-WI01', name:'STANDARD WEIGHT', model:'CLASS F1 ( 1 kg )', cls:'1kg/F1', serial:'11119464', cert:'26M005-0', due:'2027-01-06',
+    weights:[ ['CLW-113',1000,-0.0022,1.60],['CLW-113X',1000,-0.0024,1.70,'2024-02-01'] ] },
+  { id_code:'CLCLSB07-WI02', name:'STANDARD WEIGHT', model:'CLASS F1 ( 2 kg )', cls:'2kg/F1', serial:'11119465', cert:'26M005-0', due:'2027-01-06',
+    weights:[ ['CLW-120',2000,-0.0026,3.00] ] },
+  { id_code:'CLCLSB07-WI03', name:'STANDARD WEIGHT', model:'CLASS F1 ( 5 kg )', cls:'5kg/F1', serial:'11119470', cert:'26M006-0', due:'2027-03-12',
+    weights:[ ['CLW-150',5000,0.0046,2.50] ] },
+  { id_code:'CLCLSB07-WI04', name:'STANDARD WEIGHT', model:'CLASS F1 ( 10 kg )', cls:'10kg/F1', serial:'11119471', cert:'26M006-0', due:'2027-03-12',
+    weights:[ ['CLW-151',10000,0.0046,5.00] ] },
+  { id_code:'CLCLSB07-WI05', name:'STANDARD WEIGHT', model:'CLASS F1 ( 20 kg )', cls:'20kg/F1', serial:'11119472', cert:'26M006-0', due:'2026-12-02',
+    weights:[ ['CLW-152',20000,0.010,10.0] ] },
+  { id_code:'E2-CLCLRS01', name:'WEIGHT SET (E2)', model:'CLASS E2 ( 1 mg - 1 kg )', cls:'1mg-1kg/E2', serial:'15885', cert:'MM-0148-25', due:'2027-10-15',
+    weights:[ ['E2-1g',1,0.000006,0.01],['E2-10g',10,0.000005,0.02],['E2-20g',20,0.000002,0.025],['E2-50g',50,-0.000048,0.03],['E2-100g',100,-0.00007,0.05],['E2-200g',200,-0.00006,0.10],['E2-500g',500,0.00003,0.25],['E2-1kg',1000,-0.00049,0.50] ] },
+];
+STD_REGISTRY.forEach(s => { s.weights = s.weights.map(a => ({ id_code:a[0], nominal_g:a[1], marking:'none', corr_g:a[2], U_mg:a[3], Ds_mg:a[3], due:a[4]||s.due })); });
+const regGet = id => STD_REGISTRY.find(s => s.id_code === id);
+let SELECTED_SETS = ['CLCLSB08-WI01-12','CLCLSB07-WI01','CLCLSB07-WI02'];  // ชุดที่หยิบมาใช้ในงานนี้
+let STDS = [];   // derived จาก SELECTED_SETS (ชื่อ/รุ่น/serial/cert/due สำหรับตาราง + buildCAL)
+// รายชื่อลูกค้าที่บันทึกไว้ (dropdown) — ระบบจริงดึงจากฐานข้อมูลลูกค้า · เพิ่ม/แก้ได้ที่นี่
+const CLIENTS = [
+  { name: 'INTERNATIONAL  LABORATORIES  CORP.,LTD',
+    addr: ['62 MU 8, BANGNA-TRAT ROAD, BANG CHALONG SUB-DISTRICT, BANG PHLI DISTRICT,', 'SAMUTPRAKAN PROVINCE, 10540, THAILAND'],
+    location: 'B.3/3' },
+  { name: 'CAKE & BAKERY CO.,LTD.',
+    addr: ['553/21 SOI SATHUPRADIT 41, SATHUPRADIST ROAD, CHONGNONSI, YANNAWA,', 'BANGKOK, 10120 (THAILAND)'],
+    location: 'MEETING ROOM' },
+  { name: 'OSOTH INTER LABORATORIES CO.,LTD',
+    addr: ['600 / 9 MOO11 SRIRACHA INDUSTRIAL PARK , CHONBURI THAILAND 20230'],
+    location: 'FILLING ROOM 7' },
+];
+// ข้อมูลห้องปฏิบัติการ (คงที่) — ไม่ต้องกรอกทุกงาน
+const LAB = {
+  name: 'INTERNATIONAL LABBORATORIES CROP., LTD .', dept: 'CALIBRATION LABORATORY',
+  addr: ['62 MU 8, BANGNA-TRAT ROAD,', 'BANG CHALONG SUB-DISTRICT, BANG PHLI DISTRICT,', 'SAMUTPRAKAN PROVINCE, 10540, THAILAND'],
+  phone: 'PHONE : (02)  3468222-4  FAX : (02) 3468233-4',
+};
 
 const byId = id => document.getElementById(id);
 const fmt = (v, d = 6) => Number.isFinite(v) ? parseFloat(v.toFixed(d)).toString() : '–';
+const val = (id, def = '') => { const el = byId(id); return el ? el.value.trim() : def; };
+const calRound = (v, d) => Number.isFinite(v) ? +v.toFixed(d) : v;
+
+// ปัด "ขึ้น" เป็น 2 เลขนัยสำคัญ (ตาม UKAS M3003 — ค่า U ต้องไม่ถูกประเมินต่ำกว่าจริง)
+// 0.290972 → 0.30 · 8.1649 → 8.2 · 9.6434 → 9.7 · 11.3152 → 12
+function roundUp2sf(v) {
+  if (!Number.isFinite(v) || v <= 0) return v;
+  const mag = Math.floor(Math.log10(v));      // อันดับของหลักนำ
+  const factor = Math.pow(10, mag - 1);       // ตำแหน่งเลขนัยสำคัญตัวที่ 2
+  return Math.ceil(v / factor - 1e-9) * factor;
+}
+
+// ปัดเศษ U สำหรับรายงาน: นน. ≥ 1000 g → ปัดขึ้นเต็มหน่วย mg · < 1000 g → ปัดขึ้น 2 เลขนัยสำคัญ
+function roundRepU(U_mg, nominal_g) {
+  return nominal_g >= 1000 ? Math.ceil(U_mg - 1e-9) : roundUp2sf(U_mg);
+}
+// แสดง U รายงาน: > 100 mg → หน่วย g · มิฉะนั้น mg
+function fmtRepU(mg) {
+  if (!Number.isFinite(mg)) return '–';
+  if (mg > 100) { const g = mg / 1000; return (Number.isInteger(g) ? g : +g.toFixed(4)) + ' g'; }
+  return (Number.isInteger(mg) ? mg : +mg.toFixed(2)) + ' mg';
+}
+// ตาราง coverage factor k ตาม Veff (UKAS M3003 ระดับความเชื่อมั่น 95.45%)
+// Veff > 100 → k = 2 · ต่ำกว่านั้นเปิดตาราง (ปัด Veff ลงเพื่อความ conservative)
+const KTAB = [[1,13.97],[2,4.53],[3,3.31],[4,2.87],[5,2.65],[6,2.52],[7,2.43],[8,2.37],[9,2.32],[10,2.28],[11,2.25],[12,2.23],[13,2.21],[14,2.20],[15,2.18],[16,2.17],[17,2.16],[18,2.15],[19,2.14],[20,2.13],[25,2.11],[30,2.09],[35,2.07],[40,2.06],[45,2.06],[50,2.05],[100,2.025]];
+function kFromVeff(veff) {
+  if (!Number.isFinite(veff) || veff > 100) return 2;
+  if (veff < 1) return KTAB[0][1];
+  let k = 2.025;
+  for (const [v, kv] of KTAB) { if (veff >= v) k = kv; else break; }
+  return k;
+}
+
+// แปลงองค์ประกอบตุ้ม (เช่น "F1 1 kg + 2 kg") → รายละเอียดเป็นกรัม
+// ตุ้มเดี่ยว = "1000" · รวมหลายลูก = "3000(1000+2000)"
+// แยกส่วนประกอบตุ้มของจุดทดสอบ → อาเรย์น้ำหนักเป็นกรัม (เช่น 'F1 1 kg + 2 kg' → [1000, 2000])
+function compParts(comp) {
+  return String(comp).replace(/^F\d+\s*/i, '').split('+').map(t => {
+    const m = t.trim().match(/([\d.]+)\s*(kg|g)?/i);
+    if (!m) return null;
+    let v = parseFloat(m[1]);
+    if (m[2] && m[2].toLowerCase() === 'kg') v *= 1000;
+    return v;
+  }).filter(v => Number.isFinite(v));
+}
+function weightDesc(comp) {
+  const parts = compParts(comp);
+  if (!parts.length) return String(comp);
+  if (parts.length === 1) return String(parts[0]);
+  return parts.reduce((a, b) => a + b, 0) + '(' + parts.join('+') + ')';
+}
+
+// รูปจานเครื่องชั่ง (0=สี่เหลี่ยม, 1=กลม, 2=สามเหลี่ยม) — ตรงกับ panSVG ในใบ Cert
+function panSVG(shape) {
+  const c = (x,y,n) => `<circle cx="${x}" cy="${y}" r="4.8" fill="#fff" stroke="#111" stroke-width="1"/><text x="${x}" y="${y+2.2}" font-size="6.6" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" fill="#111">${n}</text>`;
+  const tc = (x,y,n) => `<circle cx="${x}" cy="${y}" r="3.8" fill="#fff" stroke="#111" stroke-width=".9"/><text x="${x}" y="${y+1.9}" font-size="5.4" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" fill="#111">${n}</text>`;
+  if (shape === 0) return `<svg width="46" height="46" viewBox="0 0 44 44"><rect x="3" y="3" width="38" height="38" fill="none" stroke="#111" stroke-width="1.3"/><line x1="22" y1="3" x2="22" y2="41" stroke="#111" stroke-width=".7"/><line x1="3" y1="22" x2="41" y2="22" stroke="#111" stroke-width=".7"/><line x1="3" y1="3" x2="41" y2="41" stroke="#111" stroke-width=".7"/><line x1="41" y1="3" x2="3" y2="41" stroke="#111" stroke-width=".7"/>${c(13,13,3)}${c(31,13,4)}${c(13,31,2)}${c(31,31,5)}${c(22,22,1)}</svg>`;
+  if (shape === 1) return `<svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#111" stroke-width="1.3"/><line x1="22" y1="3" x2="22" y2="41" stroke="#111" stroke-width=".7"/><line x1="3" y1="22" x2="41" y2="22" stroke="#111" stroke-width=".7"/><line x1="8.6" y1="8.6" x2="35.4" y2="35.4" stroke="#111" stroke-width=".7"/><line x1="35.4" y1="8.6" x2="8.6" y2="35.4" stroke="#111" stroke-width=".7"/>${c(14,14,3)}${c(30,14,4)}${c(14,30,2)}${c(30,30,5)}${c(22,22,1)}</svg>`;
+  const tri = 'M13 47 C7 47 4 43 6 37 C7 34 8.5 31 10.5 28 L25 8 C28 3.8 34 3.8 37 8 L51.5 28 C53.5 31 55 34 56 37 C58 43 53 47 47 47 Z';
+  return `<svg width="54" height="48" viewBox="0 0 60 54"><defs><clipPath id="triPrevClip"><path d="${tri}"/></clipPath></defs><path d="${tri}" fill="#fff"/><g clip-path="url(#triPrevClip)" stroke="#111" stroke-width=".8"><line x1="30" y1="0" x2="30" y2="54"/><line x1="0" y1="29" x2="60" y2="29"/><line x1="30" y1="29" x2="17" y2="16"/><line x1="30" y1="29" x2="43" y2="16"/><line x1="30" y1="29" x2="1" y2="58"/><line x1="30" y1="29" x2="59" y2="58"/></g><path d="${tri}" fill="none" stroke="#111" stroke-width="1.35" stroke-linejoin="round"/>${tc(22,20,3)}${tc(38,20,4)}${tc(21,38,2)}${tc(39,38,5)}${tc(30,29,1)}</svg>`;
+}
+function drawPanPrev() {
+  const el = byId('eccPanPrev'); if (!el) return;
+  el.innerHTML = panSVG(parseInt(byId('eccPan').value, 10) || 0);
+}
 
 function stdev(arr) {
   if (arr.length < 2) return 0;
@@ -279,6 +548,9 @@ function stdev(arr) {
 
 // ===== build inputs =====
 function buildStatic() {
+  byId('cPick').innerHTML = CLIENTS.map((c,i) => `<option value="${i}">${c.name}</option>`).join('') +
+    '<option value="-1">— กรอกเอง / อื่น ๆ —</option>';
+
   byId('tolRows').innerHTML = TOLS.map((t,i) => `<tr>
     <td>ช่วงที่ ${i+1}</td>
     <td class="num"><input type="number" step="any" value="${t.from}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
@@ -286,17 +558,16 @@ function buildStatic() {
     <td class="num"><input type="number" step="any" value="${t.tol}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
   </tr>`).join('');
 
+  renderStdTable();
+
   byId('repRow').innerHTML = '<td>อ่านได้ (g)</td>' + REP_READS.map((v,i) =>
     `<td><input type="number" step="any" class="repIn" value="${v}" oninput="recalc()" style="width:72px"></td>`).join('');
 
-  byId('errRows').innerHTML = POINTS.map((p,i) => `<tr>
-    <td><strong>${p.nominal}</strong> <span class="chip" style="margin-left:4px">${p.comp}</span></td>
-    <td class="num calc" id="cm${i}">–</td>
-    ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${READS[p.nominal][j]}" oninput="recalc()"></td>`).join('')}
-    <td class="num calc" id="avg${i}">–</td>
-    <td class="num calc" id="cor${i}">–</td>
-    <td class="num calc" id="sd${i}">–</td>
-  </tr>`).join('');
+  byId('plRow').innerHTML = PL_READS.map((v,i) =>
+    `<td><input type="number" step="any" class="plIn" value="${v}" oninput="recalc()"></td>`).join('') +
+    '<td class="num calc" id="plAvg">–</td>';
+
+  renderErrRows(true);
 
   byId('eccRows').innerHTML = ECC.map((e,i) => `<tr>
     <td>${e[0]}</td>
@@ -310,18 +581,75 @@ function buildStatic() {
     <td class="num calc" id="tareD${i}">–</td>
   </tr>`).join('');
 
-  byId('pointRows').innerHTML = POINTS.map((p,i) => `<tr>
-    <td><strong>${p.nominal}</strong></td>
-    <td><span class="chip">${p.comp}</span></td>
-    <td class="num">${fmt(p.corr,6)}</td>
-    <td class="num calc">${fmt(p.nominal + p.corr, 6)}</td>
-    <td class="num">${fmt(p.U,3)}</td>
-  </tr>`).join('');
+  renderPointRows();
+}
+// ตารางผลดิบ (st3) — สร้างจาก POINTS · fresh=true → รีเซ็ตค่าอ่านเป็นดีฟอลต์ · ไม่งั้นคงค่าที่กรอก
+function renderErrRows(fresh) {
+  byId('errRows').innerHTML = POINTS.map((p,i) => {
+    const def = READS[p.nominal] || [p.nominal, p.nominal, p.nominal];
+    const r = [0,1,2].map(j => {
+      if (fresh) return def[j];
+      const el = document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`);
+      return (el && el.value !== '') ? el.value : def[j];
+    });
+    return `<tr>
+    <td><strong>${p.nominal}</strong> <span class="chip" style="margin-left:4px">${pointDesc(p)}</span></td>
+    <td class="num calc" id="cm${i}">–</td>
+    ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${r[j]}" oninput="recalc()"></td>`).join('')}
+    <td class="num calc" id="avg${i}">–</td>
+    <td class="num calc" id="cor${i}">–</td>
+    <td class="num calc" id="sd${i}">–</td>
+  </tr>`;
+  }).join('');
+}
+function renderPointRows() {
+  byId('pointRows').innerHTML = POINTS.map((p,i) => {
+    const used = (p.avail !== false && p.usedIds && p.usedIds.length) ? p.usedIds.join(' + ') : pointDesc(p);
+    const warn = p.avail === false ? `<span class="pt-warn">ตุ้มไม่พร้อม</span>` : '';
+    return `<tr>
+    <td><input type="number" step="any" class="nomIn" data-i="${i}" value="${p.nominal}" onchange="setPointNominal(${i},this.value)" style="width:84px"></td>
+    <td><span class="chip">${used}</span>${warn}</td>
+    <td class="num"><input type="number" step="any" class="corrIn" data-i="${i}" value="${calRound(p.corr,7)}" oninput="POINTS[${i}].corr=parseFloat(this.value)||0;recalc()"></td>
+    <td class="num calc" id="conv${i}">${fmt(p.nominal + p.corr, 6)}</td>
+    <td class="num"><input type="number" step="any" class="uIn" data-i="${i}" value="${p.U}" oninput="POINTS[${i}].U=parseFloat(this.value)||0;recalc()"></td>
+    <td class="num"><button type="button" class="rmset" onclick="removePoint(${i})" title="ลบจุด">✕</button></td>
+  </tr>`;
+  }).join('');
+}
+// ===== จุดทดสอบแบบปรับได้ (พิกัด÷10 · เพิ่ม/ลบ/แก้ค่าพิกัด) =====
+function rebuildPoints(fresh) { renderErrRows(fresh); assignWeights(); renderPointRows(); recalc(); }
+function setPointNominal(i, v) { const n = parseFloat(v); if (Number.isFinite(n) && n > 0) POINTS[i].nominal = n; rebuildPoints(); }
+function addPoint() { POINTS.push({ nominal: 0, corr: 0, U: 0 }); rebuildPoints(); }
+function removePoint(i) { POINTS.splice(i, 1); rebuildPoints(); }
+function genPoints(cap) {
+  const c = parseFloat(cap != null ? cap : val('iCap'));
+  if (!Number.isFinite(c) || c <= 0) { alert('กรุณาระบุพิกัด Max ของเครื่องชั่งก่อน'); return; }
+  const step = c / 10;
+  POINTS = [];
+  for (let k = 1; k <= 10; k++) POINTS.push({ nominal: +(step * k).toFixed(3), corr: 0, U: 0 });
+  rebuildPoints(true);
+}
+
+// เลือกบริษัทจาก dropdown → เติมชื่อ + ที่อยู่ (แก้ต่อได้)
+function pickClient(idx) {
+  const i = parseInt(idx, 10);
+  if (i < 0 || !CLIENTS[i]) return;
+  const c = CLIENTS[i];
+  byId('cClientName').value = c.name;
+  byId('cAddr').value = c.addr.join('\n');
+  if (c.location) byId('cLocation').value = c.location;
+}
+
+// อัปเดตวันครบกำหนด (+1 ปี) จากวันที่สอบเทียบ
+function nextYearOf(dateStr) {
+  const d = new Date(dateStr); if (isNaN(d)) return '';
+  d.setFullYear(d.getFullYear() + 1); return d.toISOString().slice(0,10);
 }
 
 // ===== คำนวณทั้งหน้า =====
 function recalc() {
   const d = parseFloat(byId('iRes').value) || 0.01;
+  byId('iDateNext').value = nextYearOf(byId('iDate').value);
 
   // 3.1 repeatability
   const reps = [...document.querySelectorAll('.repIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
@@ -329,19 +657,24 @@ function recalc() {
   const repStd = stdev(reps);
   let maxDiff = 0;
   for (let i = 1; i < reps.length; i++) maxDiff = Math.max(maxDiff, Math.abs(reps[i]-reps[i-1]));
-  const uR_mg = (repStd / 1.732) * 1000;          // ตามชีต uncert: N6=(S/1.732)*1000
+  const uR_mg = (repStd / 1.732) * 1000;
   byId('repAvg').textContent = fmt(repAvg, 4) + ' g';
   byId('repStd').textContent = fmt(repStd, 6) + ' g';
   byId('repMaxDiff').textContent = fmt(maxDiff, 4) + ' g';
   byId('repUr').textContent = fmt(uR_mg, 4);
+
+  // 3.3 preload average
+  const plReads = [...document.querySelectorAll('.plIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
+  if (byId('plAvg')) byId('plAvg').textContent = plReads.length ? fmt(plReads.reduce((a,b)=>a+b,0)/plReads.length, 4) : '–';
 
   // 3.2 error per point
   const rows = POINTS.map((p, i) => {
     const reads = [0,1,2].map(j => parseFloat(document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`).value)).filter(Number.isFinite);
     const avg = reads.length ? reads.reduce((a,b)=>a+b,0)/reads.length : NaN;
     const conv = p.nominal + p.corr;
-    const corr = conv - avg;                       // Correction = conv mass − ค่าเฉลี่ยที่อ่าน
+    const corr = conv - avg;
     const sd = stdev(reads);
+    if (byId('conv'+i)) byId('conv'+i).textContent = fmt(conv, 6);
     byId('cm'+i).textContent = fmt(conv, 6);
     byId('avg'+i).textContent = fmt(avg, 4);
     byId('cor'+i).textContent = fmt(corr, 6);
@@ -349,7 +682,7 @@ function recalc() {
     return { ...p, avg, conv, corrBal: corr, sd };
   });
 
-  // 3.3 ecc / 3.4 tare
+  // 3.4 ecc / 3.5 tare
   const eccVals = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
   let eccMax = 0;
   eccVals.forEach((v, i) => {
@@ -364,36 +697,56 @@ function recalc() {
 
   // 4 uncertainty budget per point — สูตร FRM-CAL92
   const SQ3 = 1.7321;
-  const d_mg = (d * 1000) / 2;                     // 5 mg เมื่อ d=0.01 g
+  const d_mg = (d * 1000) / 2;
   const roundUp = byId('roundUpU').checked;
+  const abPpm = parseFloat(byId('abMaterial').value) || 1;   // ppm ตามชนิดวัสดุตุ้ม
+  const nRep = reps.length;                                  // จำนวนครั้ง repeatability (n)
   byId('uncRows').innerHTML = rows.map((p, i) => {
     const uWS = p.U / 2;
-    const uDS = p.U / SQ3;
+    // D_s มาจากคลังใบรับรองมาตรฐาน (คิด drift เทียบใบก่อนหน้าที่นั่น) — ที่นี่ใช้ค่าที่ส่งมา ถ้าไม่มีใช้ U
+    const dsMag = Number.isFinite(p.dsIn) && p.dsIn > p.U ? p.dsIn : p.U;
+    const uDS = dsMag / SQ3;
+    p.ds = dsMag;
     const udo = d_mg / SQ3, ud = d_mg / SQ3;
-    const uAb = (p.nominal * 1000 * 1 / 1e6) / SQ3; // 1 ppm ของจุด (mg)
+    const uAb = (p.nominal * 1000 * abPpm / 1e6) / SQ3;
     const uRr = uR_mg;
     const uc = Math.sqrt(uWS**2 + uDS**2 + udo**2 + ud**2 + uAb**2 + uRr**2);
-    const U2 = uc * 2;
-    const Urep = roundUp && U2 >= 8.5 ? Math.ceil(U2) : U2;
-    p.Ufinal_mg = Urep;
+    // Welch–Satterthwaite: เฉพาะ repeatability (Type A) มี DOF = n−1, ที่เหลือเป็น ∞
+    const veff = (uRr > 0 && nRep > 1) ? (uc ** 4) * (nRep - 1) / (uRr ** 4) : Infinity;
+    const k = kFromVeff(veff);
+    const Uk = uc * k;
+    // CMC floor: ถ้า U คำนวณ ≤ CMC ที่เครมไว้ → รายงานเป็น CMC แทน
+    const cmc = cmcFor(p.nominal);
+    const usedCMC = cmc > 0 && Uk <= cmc;
+    const Urep = usedCMC ? cmc : (roundUp ? roundRepU(Uk, p.nominal) : Uk);
+    p.Ufinal_mg = Urep; p.k = k; p.veff = veff;
     return `<tr onclick="showUncDetail(${i})" style="cursor:pointer">
       <td><strong>${p.nominal}</strong></td>
       <td class="num">${fmt(uWS,4)}</td><td class="num">${fmt(uDS,4)}</td>
       <td class="num">${fmt(udo,4)}</td><td class="num">${fmt(ud,4)}</td>
       <td class="num">${fmt(uAb,4)}</td><td class="num">${fmt(uRr,4)}</td>
       <td class="num calc">${fmt(uc,4)}</td>
-      <td class="num calc">${fmt(U2,4)}</td>
-      <td class="num"><strong class="calc">${fmt(Urep, 4)}</strong></td>
+      <td class="num">${Number.isFinite(veff) ? Math.round(veff) : '∞'}</td>
+      <td class="num">${k}</td>
+      <td class="num calc">${fmt(Uk,4)}</td>
+      <td class="num">${cmc > 0 ? fmt(cmc,4) : '–'}</td>
+      <td class="num"><strong class="calc">${fmtRepU(Urep)}${usedCMC ? ' (CMC)' : ''}</strong></td>
     </tr>`;
   }).join('');
   window._rows = rows;
 
-  // 5 evaluation — Error = −Correction (ปัดเป็น mg), PASS เมื่อ |Error|+U ≤ Tol
+  // 5 evaluation
+  // ช่วง Tolerance: ใช้ "ขอบบน (to)" เป็นเกณฑ์ + ข้ามแถวที่ยังไม่ได้ตั้งค่า (to ≤ from)
+  const tolBands = TOLS.filter(t => Number.isFinite(t.to) && t.to > t.from).sort((a,b) => a.to - b.to);
+  const tolFor = nom => {
+    if (!tolBands.length) return Infinity;                       // ไม่มีช่วง → ไม่ตัด (ผ่าน)
+    return (tolBands.find(t => nom <= t.to) || tolBands[tolBands.length - 1]).tol;
+  };
   let allPass = true;
   byId('evalRows').innerHTML = rows.map(p => {
-    const errG = Math.round(-p.corrBal * 1000) / 1000;     // ปัดเป็น mg ตามใบประเมิน
+    const errG = Math.round(-p.corrBal * 1000) / 1000;
     const Ug = p.Ufinal_mg / 1000;
-    const tol = TOLS.find(t => p.nominal > t.from && p.nominal <= t.to)?.tol ?? TOLS[TOLS.length-1].tol;
+    const tol = tolFor(p.nominal);
     const pass = (errG + Ug) <= tol && (errG - Ug) >= -tol;
     if (!pass) allPass = false;
     return `<tr>
@@ -410,25 +763,399 @@ function recalc() {
   ob.className = 'status ' + (allPass ? 'ok' : 'bad');
   ob.textContent = allPass ? 'ผลรวม: PASS ทุกจุด' : 'ผลรวม: มีจุด FAIL';
 
-  // cert preview
-  byId('certRows').innerHTML = rows.map(p => `<tr>
-    <td class="num">${p.nominal}</td>
-    <td class="num">${fmt(p.conv,6)}</td>
-    <td class="num">${fmt(p.avg,4)}</td>
-    <td class="num">${fmt(p.corrBal,6)}</td>
-    <td class="num">${fmt(p.Ufinal_mg,4)}</td>
-  </tr>`).join('');
 }
 
 function showUncDetail(i) {
   const p = window._rows[i];
   byId('uncDetail').innerHTML =
-    `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (5/√3)² + (5/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=2 → U = ${fmt(p.Ufinal_mg,4)} mg`;
+    `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (5/√3)² + (5/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=${p.k ?? 2} (Veff ${Number.isFinite(p.veff) ? Math.round(p.veff) : '∞'}) → U = ${fmt(p.Ufinal_mg,4)} mg`;
 }
 
-buildStatic();
+// ===== รวบข้อมูลที่กรอก + ผลคำนวณ → CAL object ที่ cert-print-design.html ใช้ =====
+function buildCAL() {
+  recalc();
+  const rows = window._rows || [];
+  const num = (id, def) => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : def; };
+
+  const temps = [...document.querySelectorAll('.tIn')].map(el => parseFloat(el.value));
+  const rhs   = [...document.querySelectorAll('.rhIn')].map(el => parseFloat(el.value));
+  const warm  = [...document.querySelectorAll('.wuIn')].map(el => el.value.trim());
+  const ctime = [...document.querySelectorAll('.ctIn')].map(el => el.value.trim());
+  const reps  = [...document.querySelectorAll('.repIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
+  const plReads = [...document.querySelectorAll('.plIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
+  const eccReads = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
+  const tareEls  = [...document.querySelectorAll('.tareIn')];
+  const dateCal = val('iDate') || val('iDateRecv');
+
+  const points = rows.map((p, i) => {
+    const reads = [0,1,2].map(j => parseFloat(document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`).value));
+    return { nominal: p.nominal, desc: pointDesc(p), conv: calRound(p.conv, 7), U: p.U, ds: calRound(p.ds, 6), reads };
+  });
+
+  const tolText = TOLS.map((t, i) => `±  ${t.tol} g (${i === 0 ? '0' : '>' + t.from}-${t.to})`);
+
+  return {
+    cert_no: val('fCertNo'), job_no: val('fJobNo'), request_no: val('fReqNo'),
+    client: { name: val('cClientName'), addr: byId('cAddr').value.split('\n').map(s => s.trim()).filter(Boolean) },
+    lab: { name: LAB.name, dept: LAB.dept, addr: LAB.addr, phone: LAB.phone },
+    equipment: val('eEquip'), equipment_th: val('eEquipTh'), unit: 'g',
+    capacity: num('iCap', 0), resolution: num('iRes', 0.01),
+    manufacturer: val('eMfr'), model: val('eModel'), serial: val('eSerial'),
+    id_no: val('eId'), asset: val('eAsset'), accuracy_class: val('eClass'),
+    condition: val('eCondition'), adjusted: val('eAdjusted'), user_range: val('eUserRange'),
+    temp: temps, rh: rhs, warmup: warm, cal_time: ctime,
+    location: val('cLocation'), section: val('cSection'), unit_dept: val('cUnitDept'),
+    date_receive: val('iDateRecv'), date_cal: dateCal,
+    date_next: val('iDateNext') || nextYearOf(dateCal), date_issue: val('fDateIssue'),
+    calibrated_by: val('fCalBy'), procedure: val('fProcedure'),
+    tolerances: tolText,
+    ab_ppm: parseFloat(byId('abMaterial').value) || 1,
+    cmc: CMC.map(c => ({ from: c.from, to: c.to, cmc: c.cmc })),
+    standards: STDS.map(s => ({ name: s.name, model: s.model, cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
+    preload: { point: num('plPoint', 0), reads: plReads },
+    repeat: { point: num('repPoint', 0), reads: reps },
+    points,
+    ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
+    tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
+    signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover') },
+  };
+}
+
+// เก็บ CAL ลง localStorage แล้วเปิด template ใบรับรอง
+function openCert() {
+  try {
+    const json = JSON.stringify(buildCAL());
+    try { localStorage.setItem('calData', json); } catch (e) {}
+    window.open('cert-print-design.html#data=' + encodeURIComponent(json), '_blank');
+  } catch (e) { alert('สร้างใบรับรองไม่สำเร็จ: ' + e.message); }
+}
+
+// ===== รับชุดตุ้มจากคลังใบรับรองมาตรฐาน (standard-cert-design) =====
+// อ่าน #std= (หรือ localStorage 'stdData') → map ค่าแก้/U/Dₛ เข้าจุดทดสอบ
+// จุดที่รวมตุ้มหลายลูก: บวกค่าแก้ (Σ) · บวก U (ΣUᵢ) · Dₛ = max(ΣU, |Σค่าแก้ปัจจุบัน−ครั้งก่อน|) ← ส่ง Ds_mg ต่อลูกมาแล้ว จึง Σ
+// ใช้เฉพาะ #std= (การกด "ใช้ชุดนี้สอบเทียบ" ส่งผ่าน hash เสมอ) — เปิดหน้าเปล่าจะคงค่า demo ไว้สำหรับทวนสอบ
+function readIncomingStd() {
+  const m = location.hash.match(/std=([^&]+)/);
+  if (!m) return null;
+  try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return null; }
+}
+// ใบรับรองที่ส่งมา (#std=) → เพิ่มชุดเข้าทะเบียน + เลือกชุดนั้น (ค่า cert-resolved มี drift→Dₛ)
+function applyIncomingStd(std) {
+  if (!std || !Array.isArray(std.weights) || !std.weights.length) return;
+  const id = std.set_code || std.cert_no || 'INCOMING';
+  const entry = {
+    id_code: id, name: std.item || 'WEIGHT SET (จากใบรับรอง)',
+    model: std.class_grade ? ('CLASS ' + std.class_grade) : '', cls: std.class_grade || '',
+    serial: std.serial_no || '', cert: std.cert_no || '', due: std.due_date || '',
+    weights: std.weights.map(w => ({
+      id_code: w.id_code || (id + '·' + (w.nominal_g>=1000 ? (w.nominal_g/1000)+'kg' : w.nominal_g+'g') + (w.marking && w.marking!=='none' ? '·'+w.marking : '')),
+      nominal_g: w.nominal_g, marking: w.marking || 'none', corr_g: w.corr_g, U_mg: w.U_mg, Ds_mg: w.Ds_mg, due: std.due_date || '',
+    })),
+  };
+  const ix = STD_REGISTRY.findIndex(s => s.id_code === id);
+  if (ix >= 0) STD_REGISTRY[ix] = entry; else STD_REGISTRY.push(entry);
+  SELECTED_SETS = [id];   // เริ่มจากชุดที่ส่งมา (เพิ่มชุดอื่นได้จากดรอปดาวน์)
+  const b = byId('stdBanner');
+  if (b) {
+    b.style.cssText = 'display:block;margin-bottom:10px;background:#eef0fb;border:1px solid #534ab740;border-radius:8px;padding:8px 10px;font-size:12px;color:#3b3680';
+    b.innerHTML = `<i class="ti ti-link"></i> ดึงตุ้มจากใบรับรอง <b>${std.cert_no || '–'}</b>`
+      + (std.prev_cert_no ? ` · คิด Dₛ เทียบใบก่อนหน้า <b>${std.prev_cert_no}</b> (max(U, drift))` : ` · ไม่มีใบก่อนหน้า → Dₛ = U`)
+      + ` — เพิ่มชุดอื่นได้จากดรอปดาวน์`;
+  }
+}
+
+// ===== ชุดที่เลือก → ตาราง STDS + คลังลูกตุ้ม (AVAIL_WEIGHTS) =====
+let AVAIL_WEIGHTS = [];
+function deriveStds() {
+  STDS = SELECTED_SETS.map(regGet).filter(Boolean)
+    .map(s => ({ name:s.name, model:s.model, cls:s.cls, serial:s.serial, id_code:s.id_code, cert:s.cert, due:s.due }));
+}
+function rebuildAvail() {
+  const prev = {}; AVAIL_WEIGHTS.forEach(w => { prev[w.id_code] = w.checked; });
+  AVAIL_WEIGHTS = [];
+  SELECTED_SETS.forEach(sid => {
+    const s = regGet(sid); if (!s) return;
+    s.weights.forEach(w => AVAIL_WEIGHTS.push({ id_code:w.id_code, set_id:sid, nominal_g:w.nominal_g, marking:w.marking, corr_g:w.corr_g, U_mg:w.U_mg, Ds_mg:w.Ds_mg, due:w.due }));
+  });
+  const today = new Date(); today.setHours(0,0,0,0);
+  AVAIL_WEIGHTS.forEach(w => { w.in_date = !w.due || new Date(w.due+'T00:00:00') >= today; w.checked = (w.id_code in prev) ? (prev[w.id_code] && w.in_date) : w.in_date; });
+}
+function renderStdTable() {
+  byId('stdRows').innerHTML = STDS.length ? STDS.map(s => `<tr>
+    <td>${s.name}</td><td>${s.model}</td><td>${s.serial}</td>
+    <td style="font-family:monospace;font-weight:700">${s.id_code}</td><td>${s.cert}</td><td>${s.due}</td>
+    <td class="num"><button type="button" class="rmset" onclick="removeStdSet('${s.id_code}')" title="เอาออก">✕</button></td>
+  </tr>`).join('') : `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:10px">ยังไม่ได้เลือกชุดตุ้ม — เลือกจากดรอปดาวน์ด้านบน</td></tr>`;
+  const opts = STD_REGISTRY.filter(s => !SELECTED_SETS.includes(s.id_code));
+  byId('stdAdd').innerHTML = '<option value="">— เลือกชุดเพิ่ม —</option>' +
+    opts.map(s => `<option value="${s.id_code}">${s.id_code} · ${s.cls} (${s.serial})</option>`).join('');
+}
+function addStdSet(id) { if (!id || SELECTED_SETS.includes(id)) return; SELECTED_SETS.push(id); refreshStds(); }
+function removeStdSet(id) { SELECTED_SETS = SELECTED_SETS.filter(x => x !== id); refreshStds(); }
+function refreshStds() { deriveStds(); rebuildAvail(); renderStdTable(); renderWeightPicker(); assignWeights(); renderPointRows(); recalc(); }
+// หาชุดตุ้ม (ติ๊ก+in-date) ที่รวมได้พอดีกับค่าพิกัด — greedy ลูกใหญ่ก่อน (ใช้ได้กับชุดตุ้มมาตรฐาน 1·2·5)
+function comboFor(nominal) {
+  const target = Math.round(nominal * 1e6) / 1e6;
+  if (!(target > 0)) return null;
+  const avail = AVAIL_WEIGHTS.filter(w => w.checked && w.in_date).sort((a,b) => b.nominal_g - a.nominal_g);
+  let remain = target; const used = [];
+  for (const w of avail) {
+    if (w.nominal_g <= remain + 1e-9) { used.push(w); remain = Math.round((remain - w.nominal_g) * 1e6) / 1e6; }
+    if (remain <= 1e-9) break;
+  }
+  if (remain > 1e-9 || !used.length) return null;   // รวมไม่ได้พอดี
+  return { ids: used.map(w => w.id_code), parts: used.map(w => w.nominal_g),
+    corr: used.reduce((s,w) => s + w.corr_g, 0),
+    U: +used.reduce((s,w) => s + w.U_mg, 0).toFixed(6),
+    Ds: +used.reduce((s,w) => s + w.Ds_mg, 0).toFixed(6) };
+}
+// คำอธิบายตุ้มของจุด (กรัม): ลูกเดียว = เลข · รวมหลายลูก = total(parts)
+function pointDesc(p) {
+  const parts = (p.descParts && p.descParts.length) ? p.descParts : null;
+  if (!parts) return String(p.nominal);
+  if (parts.length === 1) return String(parts[0]);
+  return parts.reduce((a,b) => a + b, 0) + '(' + parts.join('+') + ')';
+}
+// จับคู่ตุ้มเข้าจุดทดสอบ — Σ ค่าแก้/U/Dₛ ของลูกที่ใช้ · ทำไม่ได้พอดี → avail=false
+function assignWeights() {
+  POINTS.forEach(p => {
+    const c = comboFor(p.nominal);
+    if (c) { p.corr = c.corr; p.U = c.U; p.dsIn = c.Ds; p.usedIds = c.ids; p.descParts = c.parts; p.avail = true; }
+    else { p.usedIds = []; p.descParts = null; p.avail = false; }   // คงค่าแก้/U ที่กรอกไว้
+  });
+}
+// ชื่อชุดจากตาราง "รายการตุ้มน้ำหนักมาตรฐานที่ใช้" (STDS) ตาม id_code
+function setLabel(setId) {
+  const s = STDS.find(x => x.id_code === setId);
+  return s ? (s.name + ' · ' + (s.cls || s.model || '')) : '—';
+}
+function renderWeightPicker() {
+  const el = byId('weightPicker'); if (!el) return;
+  const groups = {};
+  AVAIL_WEIGHTS.forEach((w, i) => { (groups[w.set_id || '—'] = groups[w.set_id || '—'] || []).push(i); });
+  el.innerHTML = Object.keys(groups).map(sid => {
+    const idxs = groups[sid];
+    const nChk = idxs.filter(i => AVAIL_WEIGHTS[i].checked).length;
+    const items = idxs.map(i => {
+      const w = AVAIL_WEIGHTS[i];
+      const label = w.nominal_g >= 1000 ? (w.nominal_g/1000)+' kg' : w.nominal_g+' g';
+      return `<label class="wpick ${w.in_date?'':'dis'}">
+        <input type="checkbox" ${w.checked?'checked':''} ${w.in_date?'':'disabled'} onchange="toggleWeight(${i})">
+        <b>${label}</b><span class="wid">${w.id_code}</span>${w.in_date?'':'<span class="exp">หมดอายุ</span>'}
+      </label>`;
+    }).join('');
+    return `<div class="wset">
+      <div class="wset-head" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
+        <i class="ti ti-package"></i> <b>${sid}</b> <span class="wset-sub">${setLabel(sid)}</span>
+        <span class="wset-cnt">เลือก ${nChk}/${idxs.length} ลูก</span>
+      </div>
+      <div class="wset-body"><div class="wpick-grid">${items}</div></div>
+    </div>`;
+  }).join('');
+}
+function toggleWeight(i) {
+  AVAIL_WEIGHTS[i].checked = !AVAIL_WEIGHTS[i].checked;
+  assignWeights(); renderPointRows(); renderWeightPicker(); recalc();
+}
+
+// ===== รับเครื่องมือที่เลือกจากรายการ/แผน (#inst=) → เติมหัวใบรับรอง =====
+function readIncomingInst() {
+  const m = location.hash.match(/inst=([^&]+)/);
+  if (!m) return null;
+  try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return null; }
+}
+function applyIncomingInst(inst) {
+  if (!inst) return;
+  const setv = (id,v) => { const el = byId(id); if (el && v != null && v !== '') el.value = v; };
+  setv('eEquip', inst.name); setv('eEquipTh', inst.name_th); setv('eId', inst.id_code);
+  setv('eAsset', inst.asset); setv('eMfr', inst.manufacturer); setv('eModel', inst.model);
+  setv('eSerial', inst.serial); setv('iCap', inst.capacity); setv('iRes', inst.resolution);
+  setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
+  setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
+  const b = byId('instBanner');
+  if (b) {
+    b.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:8px 11px;font-size:12px;color:#185fa5;font-weight:700';
+    b.innerHTML = `<i class="ti ti-arrow-down-circle"></i> เข้าสอบเทียบจาก${inst.from || 'รายการเครื่องมือ'}: <b>${inst.name || inst.id_code || ''}</b>${inst.id_code ? ' ('+inst.id_code+')' : ''}`;
+  }
+}
+
+// ===== โหมดตรวจทาน (ขั้น 8): ล็อกข้อ 2–5 ไว้ตรวจ · ข้อ 1 แก้ได้ · ปุ่ม "แก้ไขข้อนี้" ปลดล็อกทีละข้อ =====
+let REVIEW_MODE = false;
+function ensureEditButtons() {
+  [2,3,4,5].forEach(n => {
+    const card = byId('st'+n); if (!card) return;
+    const head = card.querySelector('.card-head');
+    if (head && !head.querySelector('.editStepBtn')) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'editStepBtn'; b.setAttribute('onclick', 'editStep('+n+')');
+      b.innerHTML = '<i class="ti ti-pencil"></i> แก้ไขข้อนี้';
+      head.appendChild(b);
+    }
+  });
+}
+function setStepEditable(n, editable) {
+  const card = byId('st'+n); if (!card) return;
+  card.classList.toggle('locked', !editable);
+  card.querySelectorAll('input,select,textarea').forEach(el => { el.disabled = !editable; });
+  card.querySelectorAll('button').forEach(b => {
+    if (!b.classList.contains('editStepBtn') && !b.classList.contains('btn-cert')) b.disabled = !editable;
+  });
+  const eb = card.querySelector('.editStepBtn');
+  if (eb) eb.innerHTML = card.classList.contains('locked')
+    ? '<i class="ti ti-pencil"></i> แก้ไขข้อนี้'
+    : '<i class="ti ti-check"></i> เสร็จ (กลับไปตรวจ)';
+}
+function editStep(n) {                       // สลับล็อก↔ปลดล็อกข้อนั้น
+  const card = byId('st'+n); if (!card) return;
+  setStepEditable(n, card.classList.contains('locked'));
+}
+function switchMode(mode) {
+  REVIEW_MODE = (mode === 'review');
+  document.body.classList.toggle('review', REVIEW_MODE);
+  byId('mEntry').classList.toggle('active', !REVIEW_MODE);
+  byId('mReview').classList.toggle('active', REVIEW_MODE);
+  setStepEditable(1, true);                  // ข้อ 1 แก้ได้เสมอ (ช่อง "ออกโดยระบบ" ยัง readonly)
+  [2,3,4,5].forEach(n => setStepEditable(n, !REVIEW_MODE));
+  const b = byId('reviewBanner');
+  if (b) {
+    b.style.display = REVIEW_MODE ? 'flex' : 'none';
+    if (REVIEW_MODE) {
+      b.style.cssText = 'display:flex;align-items:center;gap:8px;margin:10px 0 0;background:#fff8e1;border:1px solid #f2dcb0;border-radius:8px;padding:9px 12px;font-size:12px;color:#854f0b;font-weight:700';
+      b.innerHTML = '<i class="ti ti-list-check"></i> โหมดตรวจทาน — ข้อ 2–5 ถูกล็อกไว้ให้ตรวจว่าถูกไหม · ข้อ 1 แก้ได้ · ถ้าผิดกด “แก้ไขข้อนี้” → แก้ → “เสร็จ” → แล้วกด “ออกใบรับรอง”';
+    }
+  }
+  if (REVIEW_MODE) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== สถานะใบ Cert (แนวทาง 1: ออกเลขตอน "สอบเสร็จ" → ปริ้น/เซ็นที่ออฟฟิศ) =====
+// draft → issued(ออกเลข) → signed(เซ็น) → approved(สมบูรณ์) · voided(ยกเลิก-เก็บเลข) · revision
+let CAL_STATE = 'draft', CERT_NO = '', CERT_REV = 0;
+const CERT_SEQ_BASE = 232;   // จำลอง cert_sequences (ระบบจริงรันต่อเนื่องจากตาราง)
+const STATE_META = {
+  draft:    { label: 'กำลังสอบเทียบ (ยังไม่ออกเลข)', cls: 'st-draft' },
+  issued:   { label: 'ออกเลขแล้ว — รอปริ้น/เซ็น',     cls: 'st-issued' },
+  signed:   { label: 'เซ็นแล้ว — รออนุมัติ',          cls: 'st-signed' },
+  approved: { label: 'สมบูรณ์ (อนุมัติแล้ว)',         cls: 'st-approved' },
+  voided:   { label: 'ยกเลิก (เก็บเลขไว้เป็นประวัติ)', cls: 'st-voided' },
+};
+const nextCertNo = () => '26B' + CERT_SEQ_BASE + '-' + CERT_REV;   // 26B232-0, -1, ...
+function renderCertBar() {
+  const m = STATE_META[CAL_STATE];
+  let a = '';
+  if (CAL_STATE === 'draft')        a = `<button class="cbtn primary" onclick="issueCert()"><i class="ti ti-checks"></i> สอบเสร็จ → บันทึก + ออกเลข Cert</button>`;
+  else if (CAL_STATE === 'issued')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นเอกสาร</button><button class="cbtn" onclick="markSigned()"><i class="ti ti-signature"></i> บันทึกว่าเซ็นแล้ว</button>`;
+  else if (CAL_STATE === 'signed')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้น</button><button class="cbtn primary" onclick="approveCert()"><i class="ti ti-rosette-discount-check"></i> อนุมัติ (สมบูรณ์)</button>`;
+  else if (CAL_STATE === 'approved')a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นซ้ำ</button><button class="cbtn" onclick="reviseCert()"><i class="ti ti-versions"></i> ออก revision</button>`;
+  if (CAL_STATE === 'issued' || CAL_STATE === 'signed' || CAL_STATE === 'approved')
+    a += `<button class="cbtn danger" onclick="voidCert()"><i class="ti ti-ban"></i> ยกเลิกใบ</button>`;
+  const html = `<div class="cbar-info"><span class="cbar-no">เลขที่ Cert: <b>${CERT_NO || '— ยังไม่ออกเลข —'}</b></span><span class="cbadge ${m.cls}">${m.label}</span></div>`
+    + `<div class="cbar-actions">${a}</div>`;
+  ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
+}
+function issueCert() {
+  if (CAL_STATE !== 'draft') return;
+  CERT_NO = nextCertNo(); CAL_STATE = 'issued';
+  if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+  if (byId('fJobNo')) byId('fJobNo').value = '26B' + CERT_SEQ_BASE;
+  if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0,10);
+  renderCertBar();
+  alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nสถานะ: รอปริ้น/เซ็น (กลับไปปริ้น+เซ็นที่ออฟฟิศได้)');
+  switchMode('review');   // ออกเลขเสร็จ → เข้าหน้าสรุปทันที (ดูใบรายงานเต็ม + เลขที่ออก)
+}
+function markSigned()  { if (CAL_STATE === 'issued') { CAL_STATE = 'signed';  renderCertBar(); } }
+function approveCert() { if (CAL_STATE === 'signed') { CAL_STATE = 'approved'; renderCertBar(); } }
+function voidCert() {
+  if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) เพื่อให้เลขเรียงไม่ขาด')) return;
+  CAL_STATE = 'voided'; renderCertBar();
+}
+function reviseCert() {
+  CERT_REV++; CERT_NO = nextCertNo(); CAL_STATE = 'issued';
+  if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+  renderCertBar();
+  alert('ออก revision ใหม่: ' + CERT_NO + ' (ไม่กินเลขใหม่ — แค่เพิ่มเลขแก้ไข)');
+}
+function printCert() {
+  if (CAL_STATE === 'draft') { alert('ต้องกด "สอบเสร็จ → ออกเลข Cert" ก่อนจึงจะปริ้นได้'); return; }
+  switchMode('review'); openCert();
+}
+
+const INCOMING_STD = readIncomingStd();
+const INCOMING_INST = readIncomingInst();
+applyIncomingStd(INCOMING_STD);   // อาจตั้ง SELECTED_SETS + เพิ่มชุดเข้าทะเบียน + banner
+deriveStds();
+rebuildAvail();
+assignWeights();
+buildStatic();                    // renders STDS (renderStdTable) + points (renderPointRows)
+applyIncomingInst(INCOMING_INST);
+if (INCOMING_INST && INCOMING_INST.capacity) genPoints(INCOMING_INST.capacity);   // มาจากรายการ → จุด = พิกัด÷10
+renderWeightPicker();
+drawPanPrev();
+ensureEditButtons();
+renderCertBar();
 recalc();
-byId('iRes').addEventListener('input', recalc);
+// ฟิลด์ที่กระทบการคำนวณ/วันที่ — อัปเดตสดเมื่อพิมพ์
+['iRes','iDate'].forEach(id => {
+  const el = byId(id); if (el) el.addEventListener('input', recalc);
+});
+
+// ===== ต่อระบบจริง: โหลดชุดตุ้ม (standard_certs) + CMC (cmc_scope) จาก Supabase =====
+const SB_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
+let SBCAL = null;
+const _mgF = u => ({ mg:1, g:1000, kg:1e6 }[u] || 1);     // หน่วย → mg
+const _gF  = u => ({ mg:0.001, g:1, kg:1000 }[u] || 1);   // หน่วย → g
+async function loadFromDB() {
+  if (typeof supabase === 'undefined') return;
+  try { SBCAL = supabase.createClient(SB_URL, SB_KEY); } catch (e) { return; }
+  try {
+    const [cRes, vRes, cmcRes] = await Promise.all([
+      SBCAL.from('standard_certs').select('*').order('measurement_date', { ascending: false }),
+      SBCAL.from('standard_cert_values').select('*').order('sort_order'),
+      SBCAL.from('cmc_scope').select('*').order('range_from'),
+    ]);
+    const certs = cRes.data || [];
+    const vByCert = {};
+    (vRes.data || []).forEach(v => { (vByCert[v.cert_id] = vByCert[v.cert_id] || []).push(v); });
+    certs.forEach(c => c.values = vByCert[c.id] || []);
+    const mass = certs.filter(c => ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category));
+
+    // STD_REGISTRY จากใบล่าสุดของแต่ละชุด+ซีเรียล (พร้อม drift→Dₛ) — ข้ามถ้ามาทาง #std=
+    if (!INCOMING_STD && mass.length) {
+      const prevOf = c => mass.filter(o => o.id !== c.id && o.set_code === c.set_code && o.serial_no === c.serial_no
+        && o.measurement_date && c.measurement_date && new Date(o.measurement_date) < new Date(c.measurement_date))
+        .reduce((a, b) => (!a || new Date(b.measurement_date) > new Date(a.measurement_date)) ? b : a, null);
+      const seen = {}, reg = [];
+      mass.forEach(c => {
+        const key = (c.set_code || '') + '|' + (c.serial_no || '');
+        if (seen[key]) return; seen[key] = 1;        // certs เรียง desc → ตัวแรก = ล่าสุด
+        const prev = prevOf(c);
+        const weights = (c.values || []).map(r => {
+          const f = _mgF(r.corr_unit);
+          let Ds = Number(r.uncertainty);
+          if (prev) { const pr = (prev.values || []).find(p => Number(p.nominal_value) === Number(r.nominal_value) && p.unit === r.unit && (p.marking || '') === (r.marking || '')); if (pr) Ds = Math.max(Number(r.uncertainty), Math.abs(Number(r.correction) - Number(pr.correction))); }
+          return { id_code: (c.set_code || '') + '·' + r.nominal_value + r.unit + (r.marking && r.marking !== 'none' ? '·' + r.marking : ''),
+            nominal_g: Number(r.nominal_value) * _gF(r.unit), marking: r.marking || 'none',
+            corr_g: Number(r.correction) * _gF(r.corr_unit), U_mg: Number(r.uncertainty) * f, Ds_mg: Ds * f };
+        });
+        reg.push({ id_code: c.set_code, name: c.item || 'WEIGHT SET', model: c.class_grade ? 'CLASS ' + c.class_grade : '',
+          cls: c.class_grade || '', serial: c.serial_no || '', cert: c.cert_no || '', due: c.due_date || '', weights });
+      });
+      if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; }
+    }
+
+    // CMC จากฐาน (เฉพาะมวล) — แทนค่า mock ถ้ามี
+    const cmcRows = (cmcRes.data || []).filter(c => !c.quantity || /mass|มวล/i.test(c.quantity));
+    if (cmcRows.length) CMC = cmcRows.map(c => ({ from: Number(c.range_from), to: Number(c.range_to), cmc: Number(c.cmc) }));
+
+    deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
+    const b = byId('stdBanner');
+    if (b && !INCOMING_STD && mass.length) {
+      b.style.cssText = 'display:block;margin-bottom:10px;background:#e1f5ee;border:1px solid #b6e6d6;border-radius:8px;padding:8px 10px;font-size:12px;color:#0f6e56';
+      b.innerHTML = '<i class="ti ti-database"></i> โหลดจากระบบจริง: ชุดตุ้ม ' + STD_REGISTRY.length + ' ชุด · CMC ' + CMC.length + ' ช่วง';
+    }
+  } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
+}
+loadFromDB();
 </script>
 </body>
 </html>
