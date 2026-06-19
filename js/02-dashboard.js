@@ -436,10 +436,11 @@ async function fetchFromSupabase() {
     const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,issued_by,responsible_by,request_no,job_no,approved_by,approved_at';
     const chunkSize = 500;
     const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
+    const allowedTypes = isFiltered ? expandInstrumentTypeFilter(currentUser.instrument_types) : [];
 
     // ดึง count
     let countQ = sb.from('instruments').select('id', { count: 'exact', head: true });
-    if (isFiltered) countQ = countQ.in('instrument_type', currentUser.instrument_types);
+    if (isFiltered) countQ = countQ.in('instrument_type', allowedTypes);
     const { count, error: cErr } = await countQ;
     if (cErr) throw cErr;
 
@@ -452,7 +453,7 @@ async function fetchFromSupabase() {
     // parallel fetch
     const fetches = chunks.map(([from, to]) => {
       let q = sb.from('instruments').select(COLS).order('id').range(from, to);
-      if (isFiltered) q = q.in('instrument_type', currentUser.instrument_types);
+      if (isFiltered) q = q.in('instrument_type', allowedTypes);
       return q;
     });
     const results = await Promise.all(fetches);
@@ -483,6 +484,8 @@ function populateFilters() {
 // ===== Instrument registry redesign helpers =====
 const REG_TYPE_META = {
   'เครื่องชั่ง (Balance)':                    ['B', 'ti-scale', '#00897b'],
+  'Balance':                                  ['B', 'ti-scale', '#00897b'],
+  'Electronic Balance':                       ['B', 'ti-scale', '#00897b'],
   'ตุ้มน้ำหนักมาตรฐาน (Mass)':                 ['M', 'ti-weight', '#639922'],
   'มวล/น้ำหนัก (Mass/Weight)':                ['B', 'ti-scale', '#00897b'],
   'อุณหภูมิ/ความชื้น (Temperature/Humidity)':  ['T', 'ti-temperature', '#d85a30'],
@@ -499,9 +502,57 @@ const REG_TYPE_META = {
   'แรงบิด/แรงกด (Torque/Force)':               ['N', 'ti-tool', '#7c3aed'],
 };
 
+const BALANCE_DISPLAY_TYPE = 'เครื่องชั่ง (Balance)';
+const BALANCE_TYPE_ALIASES = [
+  BALANCE_DISPLAY_TYPE,
+  'เครื่องชั่ง',
+  'Balance',
+  'balance',
+  'Electronic Balance',
+  'electronic balance',
+  'Analytical Balance',
+  'analytical balance',
+  'Precision Balance',
+  'precision balance',
+  'Electronic Scale',
+  'electronic scale',
+  'Weighing Scale',
+  'weighing scale',
+  'Weighing Machine',
+  'weighing machine',
+  'Scale',
+  'scale',
+];
+
+function normalizeInstrumentTypeKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[()]/g, '')
+    .trim();
+}
+
+function isBalanceInstrumentType(value) {
+  const key = normalizeInstrumentTypeKey(value);
+  if (!key) return false;
+  if (['เครื่องชั่ง balance', 'เครื่องชั่ง', 'balance', 'electronic balance', 'analytical balance', 'precision balance', 'electronic scale', 'weighing scale', 'weighing machine', 'scale'].includes(key)) return true;
+  return /\bbalance\b|electronic\s*scale|weighing\s*scale|weighing\s*machine|เครื่องชั่ง/i.test(key);
+}
+
+function expandInstrumentTypeFilter(types) {
+  const source = Array.isArray(types) ? types.filter(Boolean) : [];
+  const expanded = new Set(source);
+  if (source.some(isBalanceInstrumentType)) {
+    BALANCE_TYPE_ALIASES.forEach(type => expanded.add(type));
+  }
+  return [...expanded];
+}
+
 function getDisplayInstrumentType(row) {
   const rawType = String(row?.instrument_type || '').trim();
   const rawKey = rawType.toLowerCase().replace(/\s+/g, ' ');
+  if (isBalanceInstrumentType(rawType)) return BALANCE_DISPLAY_TYPE;
   if (rawKey === 'มวล/น้ำหนัก' || rawKey === 'มวล/น้ำหนัก (mass/weight)' || rawKey === 'mass/weight') {
     const code = typeof getCertTypeCode === 'function' ? getCertTypeCode(rawType, row?.instrument_name || '') : '';
     return code === 'M' ? 'ตุ้มน้ำหนักมาตรฐาน (Mass)' : 'เครื่องชั่ง (Balance)';
@@ -694,8 +745,9 @@ function filterData() {
   const month = document.getElementById('monthFilter').value;
 
   filteredData = allData.filter(d => {
-    if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k]||'').toLowerCase().includes(search))) return false;
-    if (type && getDisplayInstrumentType(d) !== type) return false;
+    const displayType = getDisplayInstrumentType(d);
+    if (search && !['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location'].some(k => String(d[k]||'').toLowerCase().includes(search)) && !String(displayType || '').toLowerCase().includes(search)) return false;
+    if (type && displayType !== type) return false;
     if (unit && d.department !== unit) return false;
     // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
     if (activeCategory && activeCategory !== 'all') {

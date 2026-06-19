@@ -169,8 +169,10 @@ function filterByStatus(status) {
 
   function matchesText(row, search) {
     if (!search) return true;
+    const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : '';
     return ['instrument_type','instrument_name','brand','id_code','cert_no','serial_no','department','machine_name','location']
-      .some(key => String(row[key] || '').toLowerCase().includes(search));
+      .some(key => String(row[key] || '').toLowerCase().includes(search))
+      || String(displayType || '').toLowerCase().includes(search);
   }
 
   function matchesStatus(row, status) {
@@ -193,7 +195,8 @@ function filterByStatus(status) {
 
     filteredData = (allData || []).filter(row => {
       if (!matchesText(row, search)) return false;
-      if (type && row.instrument_type !== type) return false;
+      const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : row.instrument_type;
+      if (type && displayType !== type) return false;
       if (unit && row.department !== unit) return false;
       if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all') {
         const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(row) : row.instrument_type;

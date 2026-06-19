@@ -158,7 +158,7 @@ const CATEGORY_ICONS = {
 const CATEGORY_DEFS = [
   {
     name: 'เครื่องชั่ง (Balance)',
-    aliases: ['balance', 'electronic balance', 'analytical balance', 'precision balance', 'scale', 'weighing scale', 'weighing machine', 'เครื่องชั่ง']
+    aliases: ['balance', 'electronic balance', 'analytical balance', 'precision balance', 'electronic scale', 'scale', 'weighing scale', 'weighing machine', 'เครื่องชั่ง']
   },
   {
     name: 'ตุ้มน้ำหนักมาตรฐาน (Mass)',
