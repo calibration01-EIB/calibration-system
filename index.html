@@ -3197,80 +3197,55 @@ body.app-mode textarea:focus {
         <!-- ===== SECTION: STANDARD WEIGHTS (เดิม) ===== -->
         <div id="swSection" style="display:none">
 
+        <style>
+          .sw-card{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+          .sw-sethead{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#e8f5f3;border-bottom:1px solid var(--border);flex-wrap:wrap}
+          .sw-setcode{font-family:monospace;font-weight:700;color:#0b5e6d;font-size:14px}
+          .sw-setmeta{color:var(--text3);font-size:12px} .sw-setcnt{margin-left:auto;color:var(--text3);font-size:12px}
+          .sw-tw{overflow-x:auto}
+          table.sw-tbl{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+          .sw-grp th{padding:4px 8px;text-align:center;font-size:10.5px;font-weight:700;border-bottom:1px solid var(--border)}
+          .sw-grp .sw-h-cur{background:#e3f4f1;color:#0b5e6d} .sw-grp .sw-h-prev{background:#efe9f8;color:#5a3c86} .sw-grp .sw-h-drift{background:#fbf3e6;color:#9a6112} .sw-grp .sw-blank{background:#fff}
+          .sw-cols th{background:#eef4f3;padding:5px 8px;text-align:center;font-size:10.5px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)}
+          .sw-tbl tbody td{padding:5px 8px;text-align:center;border-bottom:1px solid #eef2f1}
+          .sw-tbl tbody tr:hover{background:#f6f9f8}
+          .sw-tbl tbody tr.sw-pending{background:#fffbf0}
+          .sw-nom{text-align:left!important;font-weight:700} .sw-idc{font-family:monospace;font-size:11px}
+          td.sw-cur{background:#f3faf9} td.sw-prev{background:#f8f5fd;color:#555}
+          .sw-pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700}
+          .sw-pill.u,.sw-pill.ap{background:#e2f5ec;color:#0f7a52} .sw-pill.d,.sw-pill.wait{background:#fdf0db;color:#9a6112} .sw-pill.n{background:#eef0f0;color:#90a39e}
+          .sw-btn{border:none;border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
+          .sw-btn.approve{background:#0f7a52;color:#fff} .sw-btn.sm{padding:2px 8px;font-size:11px}
+          .sw-link{color:var(--accent);cursor:pointer;font-size:11px;text-decoration:underline}
+          .sw-i{cursor:pointer;margin:0 3px;font-size:14px}
+        </style>
+
         <!-- KPI Cards -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-          <div style="background:#00695C;border-radius:14px;padding:16px 18px;cursor:default">
-            <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ทั้งหมด</div>
-            <div style="font-size:28px;font-weight:700;color:white;line-height:1" id="swTotal">–</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px">ลูกตุ้ม</div>
-          </div>
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใช้งานได้</div>
-            <div style="font-size:28px;font-weight:700;color:var(--green);line-height:1" id="swOk">–</div>
-            <div style="font-size:11px;margin-top:6px"><span style="background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px">✅ ปกติ</span></div>
-          </div>
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใกล้หมดอายุ</div>
-            <div style="font-size:28px;font-weight:700;color:var(--amber);line-height:1" id="swWarn">–</div>
-            <div style="font-size:11px;margin-top:6px"><span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:11px">⚠️ ≤30 วัน</span></div>
-          </div>
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:default;box-shadow:var(--shadow)">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">หมดอายุ</div>
-            <div style="font-size:28px;font-weight:700;color:var(--red);line-height:1" id="swExpired">–</div>
-            <div style="font-size:11px;margin-top:6px"><span style="background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:20px;font-size:11px">❌ เกินกำหนด</span></div>
-          </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div style="background:#00695C;border-radius:14px;padding:16px 18px"><div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ตุ้มทั้งหมด</div><div style="font-size:28px;font-weight:700;color:white;line-height:1" id="swTotal">–</div></div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">✅ อนุมัติแล้ว</div><div style="font-size:28px;font-weight:700;color:var(--green);line-height:1" id="swOk">–</div></div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">🟡 รออนุมัติ</div><div style="font-size:28px;font-weight:700;color:var(--amber);line-height:1" id="swWarn">–</div></div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">❌ หมดอายุ</div><div style="font-size:28px;font-weight:700;color:var(--red);line-height:1" id="swExpired">–</div></div>
         </div>
 
-        <!-- Filter bar + ปุ่ม -->
+        <div style="background:#eef4f3;border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--text3)">
+          💡 เก็บตุ้มทีละลูก พร้อม <b>ค่าปัจจุบัน + ครั้งก่อน</b> → คิด Drift / Dₛ ให้ · ตุ้มต้อง <b style="color:var(--green)">อนุมัติ</b> ก่อนถึงจะดึงไปใช้สอบเทียบได้ (admin อนุมัติ)
+        </div>
+
+        <!-- Filter bar -->
         <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID Code, Serial, ค่าพิกัด..."
-            style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none"
-            oninput="filterSW()">
-          <select id="swClassFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:120px">
-            <option value="">ทุก Class</option>
-            <option value="E1">E1</option>
-            <option value="E2">E2</option>
-            <option value="F1">F1</option>
-            <option value="F2">F2</option>
-            <option value="M1">M1</option>
-            <option value="M2">M2</option>
-            <option value="M3">M3</option>
-          </select>
-          <select id="swStatusFilter" onchange="filterSW()"
-            style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:140px">
+          <input id="swSearch" type="search" placeholder="🔍 ค้นหา ID.No, S/N, ค่าพิกัด, Cert No." style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none" oninput="filterSW()">
+          <select id="swSetFilter" onchange="filterSW()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:140px"><option value="">ทุกชุด</option></select>
+          <select id="swStatusFilter" onchange="filterSW()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;min-width:150px">
             <option value="">ทุกสถานะ</option>
-            <option value="ok">✅ ใช้งานได้</option>
-            <option value="warn">⚠️ ใกล้หมดอายุ</option>
+            <option value="approved">✅ อนุมัติแล้ว</option>
+            <option value="draft">🟡 รออนุมัติ</option>
             <option value="expired">❌ หมดอายุ</option>
           </select>
-          <button onclick="openSWModal()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มลูกตุ้ม</button>
+          <button onclick="openSWModal()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มตุ้ม</button>
         </div>
 
-        <!-- Table -->
-        <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
-          <div class="table-wrap" style="max-height:calc(100vh - 380px)">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID Code</th>
-                  <th>ค่าพิกัด</th>
-                  <th>ค่าจริง</th>
-                  <th>CLASS</th>
-                  <th>SERIAL NO.</th>
-                  <th>เลขที่ใบรับรอง</th>
-                  <th>วันสอบเทียบ</th>
-                  <th>วันสิ้นอายุ</th>
-                  <th>สถานะ</th>
-                  <th>จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="swTableBody">
-                <tr><td colspan="10" class="no-data">กำลังโหลด...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div id="swSets"><div class="no-data" style="padding:20px">กำลังโหลด...</div></div>
         </div><!-- /swSection -->
 
         <!-- ===== SECTION: CMC SCOPE ===== -->
@@ -3376,92 +3351,34 @@ body.app-mode textarea:focus {
 
       <!-- MODAL: Standard Weight -->
       <div id="swModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
-        <div style="background:var(--surface);border-radius:var(--radius);padding:24px;width:min(560px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-            <h3 id="swModalTitle" style="margin:0;font-size:16px">⚖️ เพิ่มลูกตุ้มมาตรฐาน</h3>
+        <div style="background:var(--surface);border-radius:var(--radius);padding:22px 24px;width:min(720px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <h3 id="swModalTitle" style="margin:0;font-size:16px">⚖️ เพิ่มตุ้มมาตรฐาน</h3>
             <button onclick="closeSWModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">×</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ID Code</label>
-              <input id="swIdCode" type="text" placeholder="เช่น SW-001"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">Class / Grade *</label>
-              <select id="swClass" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);margin-top:4px">
-                <option value="">-- เลือก Class --</option>
-                <option value="E1">E1</option>
-                <option value="E2">E2</option>
-                <option value="F1">F1</option>
-                <option value="F2">F2</option>
-                <option value="M1">M1</option>
-                <option value="M2">M2</option>
-                <option value="M3">M3</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ค่าพิกัด (Nominal Value) *</label>
-              <input id="swNominal" type="number" step="any" placeholder="เช่น 100"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">หน่วย *</label>
-              <select id="swUnit" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);margin-top:4px">
-                <option value="mg">mg</option>
-                <option value="g" selected>g</option>
-                <option value="kg">kg</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ค่าจริง (Conventional Value)</label>
-              <input id="swActual" type="number" step="any" placeholder="เช่น 100.0012"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ค่าความไม่แน่นอน (U)</label>
-              <input id="swUncertainty" type="number" step="any" placeholder="mg หรือ g"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">Serial No.</label>
-              <input id="swSerial" type="text" placeholder="หมายเลขลูกตุ้ม"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">เลขที่ใบรับรอง</label>
-              <input id="swCertNo" type="text" placeholder="เลขที่ Cert."
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div style="grid-column:span 2">
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ผู้ผลิต / ห้องปฏิบัติการ</label>
-              <input id="swManufacturer" type="text" placeholder="ชื่อผู้ผลิตหรือห้องแล็บ"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">วันที่สอบเทียบ</label>
-              <input id="swCalDate" type="date" oninput="autoCalcSWDue()"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">ความถี่สอบเทียบ</label>
-              <select id="swCalFrequency" onchange="autoCalcSWDue()"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);margin-top:4px">
-                <option value="1">1 ปี</option>
-                <option value="2" selected>2 ปี</option>
-              </select>
-            </div>
+          <div id="swEditNote" style="display:none;background:#fdf0db;border:1px solid #f2dcb0;border-radius:8px;padding:8px 11px;font-size:12px;color:#9a6112;margin-bottom:12px">⚠️ ตุ้มนี้อนุมัติแล้ว — แก้ไขจะเปลี่ยนสถานะกลับเป็น "รออนุมัติ" ต้องให้ admin อนุมัติใหม่</div>
+          <style>#swModal .swl{font-size:12px;font-weight:600;color:var(--text2)} #swModal .swin{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px} #swModal .swseclbl{grid-column:1/-1;font-weight:700;font-size:12.5px;margin:8px 0 -2px;padding-top:8px;border-top:1px dashed var(--border)}</style>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px">
+            <div><label class="swl">ค่าพิกัด (Nominal) *</label><input id="swNominal" class="swin" type="number" step="any" placeholder="1"></div>
+            <div><label class="swl">หน่วย *</label><select id="swUnit" class="swin"><option value="mg">mg</option><option value="g" selected>g</option><option value="kg">kg</option></select></div>
+            <div><label class="swl">Class</label><select id="swClass" class="swin"><option value="E1">E1</option><option value="E2" selected>E2</option><option value="F1">F1</option><option value="F2">F2</option><option value="M1">M1</option><option value="M2">M2</option></select></div>
+            <div><label class="swl">ชุด (Set code)</label><input id="swSetCode" class="swin" type="text" placeholder="CLCLCS01"></div>
+            <div><label class="swl">ID.No.</label><input id="swIdCode" class="swin" type="text" placeholder="CLCLCS01-WI07"></div>
+            <div><label class="swl">S/N</label><input id="swSerial" class="swin" type="text" placeholder="15839"></div>
+            <div><label class="swl">Model / ยี่ห้อ</label><input id="swModel" class="swin" type="text" placeholder="Mettler Toledo"></div>
+            <div style="grid-column:span 2"><label class="swl">หมายเหตุ</label><input id="swRemark" class="swin" type="text" placeholder="เช่น New / ผู้รับผิดชอบ"></div>
 
-            <div style="grid-column:span 2">
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">วันสิ้นอายุ (คำนวณอัตโนมัติ)</label>
-              <input id="swDueDate" type="date"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px">
-            </div>
-            <div style="grid-column:span 2">
-              <label style="font-size:12px;font-weight:600;color:var(--text2)">หมายเหตุ</label>
-              <textarea id="swRemark" rows="2" placeholder="หมายเหตุเพิ่มเติม"
-                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px;resize:vertical"></textarea>
-            </div>
+            <div class="swseclbl" style="color:#0b5e6d">🕒 ค่าปัจจุบัน (ใบล่าสุด)</div>
+            <div><label class="swl">ค่าแก้ (g)</label><input id="swCorrection" class="swin" type="number" step="any" placeholder="0.000006"></div>
+            <div><label class="swl">U, k=2 (mg)</label><input id="swUncertainty" class="swin" type="number" step="any" placeholder="0.010"></div>
+            <div><label class="swl">Cert. No.</label><input id="swCertNo" class="swin" type="text" placeholder="MM-0111-25"></div>
+            <div><label class="swl">วันสอบเทียบ</label><input id="swCalDate" class="swin" type="date" oninput="autoCalcSWDue()"></div>
+            <div><label class="swl">รอบ (ปี)</label><select id="swCalFrequency" class="swin" onchange="autoCalcSWDue()"><option value="1">1 ปี</option><option value="2" selected>2 ปี</option></select></div>
+            <div><label class="swl">ครบกำหนด (Due)</label><input id="swDueDate" class="swin" type="date"></div>
+
+            <div class="swseclbl" style="color:#5a3c86">↺ ค่าครั้งก่อน (ไว้คิด Drift)</div>
+            <div><label class="swl">ค่าแก้ครั้งก่อน (g)</label><input id="swPrevCorr" class="swin" type="number" step="any" placeholder="0.000021"></div>
+            <div style="grid-column:span 2"><label class="swl">Cert. No. ครั้งก่อน</label><input id="swPrevCert" class="swin" type="text" placeholder="MM-0093-21"></div>
           </div>
           <div class="modal-footer" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
             <button class="btn-secondary" onclick="closeSWModal()">ยกเลิก</button>
