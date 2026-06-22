@@ -102,7 +102,7 @@ function renderSW() {
   swFiltered.forEach(w => { (groups[w.set_code || '— ไม่ระบุชุด —'] = groups[w.set_code || '— ไม่ระบุชุด —'] || []).push(w); });
   host.innerHTML = Object.keys(groups).map(set => {
     const ws = groups[set];
-    const cls = ws[0].class_grade || '–', model = ws[0].model || ws[0].manufacturer || '';
+    const cls = ws[0].class_grade || '–', model = ws[0].model || '';
     const nDraft = ws.filter(w => w.status !== 'approved').length;
     const head = `<div class="sw-sethead">
         <span class="sw-setcode">📦 ${escapeHtmlText(set)}</span>
@@ -164,7 +164,7 @@ function openSWModal(id) {
   const set = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null ? '' : v); };
   set('swNominal', w?.nominal_value); set('swUnit', w?.unit || 'g'); set('swClass', w?.class_grade || 'E2');
   set('swSetCode', w?.set_code); set('swIdCode', w?.id_code); set('swSerial', w?.serial_no);
-  set('swModel', w?.model || w?.manufacturer); set('swRemark', w?.remark);
+  set('swModel', w?.model); set('swRemark', w?.note);
   set('swCorrection', w?.correction); set('swUncertainty', w?.uncertainty); set('swCertNo', w?.cert_no);
   set('swCalDate', w?.cal_date ? String(w.cal_date).split('T')[0] : ''); set('swDueDate', w?.due_date ? String(w.due_date).split('T')[0] : '');
   set('swPrevCorr', w?.prev_correction); set('swPrevCert', w?.prev_cert_no);
@@ -193,7 +193,7 @@ async function saveSW() {
   const payload = {
     nominal_value: nominal, unit, class_grade: get('swClass') || null,
     set_code: get('swSetCode') || null, id_code: get('swIdCode') || null, serial_no: get('swSerial') || null,
-    model: get('swModel') || null, manufacturer: get('swModel') || null, remark: get('swRemark') || null,
+    model: get('swModel') || null, note: get('swRemark') || null,
     correction, actual_value: actual, uncertainty: getF('swUncertainty'),
     cert_no: get('swCertNo') || null, cal_date: get('swCalDate') || null, due_date: get('swDueDate') || null,
     prev_correction: getF('swPrevCorr'), prev_cert_no: get('swPrevCert') || null,
