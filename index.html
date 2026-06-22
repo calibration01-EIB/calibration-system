@@ -135,25 +135,36 @@ table td, table th { white-space: nowrap; }
 table td { font-size: 12px !important; padding: 5px 10px !important; color: #1a2e2c !important; font-weight: 500; }
 table th { font-size: 11px !important; padding: 6px 10px !important; color: #ffffff !important; font-weight: 700; }
 thead { background: #00897B; position: sticky; top: 0; z-index: 3; }
-#certHistTable { min-width: 1180px; border: 1px solid #bfd9d5; border-collapse: collapse !important; border-radius: 8px; overflow: hidden; }
+#certHistTable { width: 100% !important; min-width: 0 !important; table-layout: fixed; border: 1px solid #bfd9d5; border-collapse: collapse !important; border-radius: 8px; overflow: hidden; }
 #certHistTable thead tr { background: #00695C !important; }
 #certHistTable thead th { background: #00695C !important; color: #fff !important; font-size: 12px !important; font-weight: 800; line-height: 1.35; letter-spacing: 0; text-transform: none; padding: 9px 10px !important; border-right: 1px solid rgba(255,255,255,.28) !important; border-bottom: 1px solid #00564b !important; }
 #certHistTable thead th:last-child { border-right: none !important; }
-#certHistTable tbody td { color: var(--text) !important; font-size: 12px !important; font-weight: 600; line-height: 1.35; padding: 8px 10px !important; border-right: 1px solid var(--border) !important; border-bottom: 1px solid var(--border) !important; vertical-align: middle; }
+#certHistTable tbody td { color: var(--text) !important; font-size: 11.5px !important; font-weight: 600; line-height: 1.35; padding: 8px 9px !important; border-right: 1px solid var(--border) !important; border-bottom: 1px solid var(--border) !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
 #certHistTable tbody td:last-child { border-right: none !important; }
 #certHistTable tbody tr:last-child td { border-bottom: none !important; }
-#certHistTable .cert-index { width: 42px; text-align: center; color: var(--text2) !important; }
+#certHistoryTableWrap { overflow-x: hidden !important; }
+#certHistTable th:nth-child(1), #certHistTable td:nth-child(1) { width: 4%; }
+#certHistTable th:nth-child(2), #certHistTable td:nth-child(2) { width: 10%; }
+#certHistTable th:nth-child(3), #certHistTable td:nth-child(3) { width: 8%; }
+#certHistTable th:nth-child(4), #certHistTable td:nth-child(4) { width: 23%; }
+#certHistTable th:nth-child(5), #certHistTable td:nth-child(5) { width: 13%; }
+#certHistTable th:nth-child(6), #certHistTable td:nth-child(6) { width: 7%; }
+#certHistTable th:nth-child(7), #certHistTable td:nth-child(7) { width: 8%; }
+#certHistTable th:nth-child(8), #certHistTable td:nth-child(8) { width: 8%; }
+#certHistTable th:nth-child(9), #certHistTable td:nth-child(9) { width: 10%; }
+#certHistTable th:nth-child(10), #certHistTable td:nth-child(10) { width: 9%; }
+#certHistTable .cert-index { text-align: center; color: var(--text2) !important; }
 #certHistTable .cert-number { font-family: var(--mono); font-weight: 800; color: var(--accent) !important; }
-#certHistTable .cert-date, #certHistTable .cert-short { font-size: 11.5px !important; }
-#certHistTable .cert-instrument { min-width: 260px; max-width: 360px; white-space: normal !important; }
+#certHistTable .cert-date, #certHistTable .cert-short { font-size: 11px !important; }
+#certHistTable .cert-instrument { white-space: normal !important; }
 #certHistTable .cert-sub { display: block; margin-top: 2px; color: var(--text3); font-size: 11px; font-weight: 600; }
 #certHistTable .cert-code { font-family: var(--mono); color: var(--text2); font-weight: 700; }
 #certHistTable .cert-status { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
 #certHistTable .cert-status.approved { background: var(--green-light); color: var(--green); }
 #certHistTable .cert-status.pending { background: var(--amber-light); color: var(--amber); }
 #certHistTable .cert-approved-at { display: block; margin-top: 2px; color: var(--text3); font-size: 10px; font-weight: 600; }
-#certHistTable .cert-actions { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
-#certHistTable .cert-action-btn { min-width: 30px; min-height: 28px; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 13px; line-height: 1; }
+#certHistTable .cert-actions { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+#certHistTable .cert-action-btn { width: 27px; min-width: 27px; min-height: 26px; border-radius: 6px; padding: 2px 4px; cursor: pointer; font-size: 12px; line-height: 1; }
 #certHistTable .cert-action-approve { background: var(--green-light); border: 1px solid #43a047; color: var(--green); }
 #certHistTable .cert-action-edit { background: var(--accent-light); border: 1px solid var(--accent); color: var(--accent); }
 #certHistTable .cert-action-delete { background: var(--red-light); border: 1px solid var(--red); color: var(--red); }
@@ -1129,15 +1140,17 @@ tbody tr:hover td { background: #eff8f6 !important; }
   background: #003f37 !important;
 }
 #certHistTable thead.cert-table-head th.cert-th {
-  height: 42px !important;
-  padding: 10px 12px !important;
+  height: 40px !important;
+  padding: 9px 8px !important;
   background: #003f37 !important;
   color: #ffffff !important;
-  font-size: 12.5px !important;
+  font-size: 11.5px !important;
   font-weight: 900 !important;
   line-height: 1.25 !important;
   text-align: left !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   text-shadow: 0 1px 1px rgba(0,0,0,.34);
   border-right: 1px solid rgba(255,255,255,.3) !important;
   border-bottom: 2px solid #00a88f !important;
@@ -3148,19 +3161,19 @@ body.app-mode textarea:focus {
               </select>
             </div>
           </div>
-          <div style="overflow-x:auto">
+          <div id="certHistoryTableWrap" style="overflow-x:hidden">
             <table id="certHistTable" style="width:100%;border-collapse:collapse;font-size:12px">
               <thead class="cert-table-head" style="position:sticky;top:0;z-index:1;">
                 <tr>
                   <th class="cert-th">#</th>
-                  <th class="cert-th">หมายเลขใบรับรอง</th>
+                  <th class="cert-th">เลขใบรับรอง</th>
                   <th class="cert-th">วันที่ออก</th>
-                  <th class="cert-th">ชื่ออุปกรณ์ / ID Code</th>
-                  <th class="cert-th">หมายเลขใบขอรับบริการ</th>
-                  <th class="cert-th">เลขที่งาน</th>
-                  <th class="cert-th">ผู้ออกเอกสาร</th>
+                  <th class="cert-th">ชื่ออุปกรณ์ / ID</th>
+                  <th class="cert-th">ใบขอรับบริการ</th>
+                  <th class="cert-th">เลขงาน</th>
+                  <th class="cert-th">ผู้ออก</th>
                   <th class="cert-th">ผู้รับผิดชอบ</th>
-                  <th class="cert-th">ผู้อนุมัติ</th>
+                  <th class="cert-th">อนุมัติ</th>
                   <th class="cert-th">จัดการ</th>
                 </tr>
               </thead>
