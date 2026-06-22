@@ -51,6 +51,8 @@ function getDiff(original, updated) {
 
 async function loadAuditLogs() {
   const tbody = document.getElementById('auditTable');
+  const countEl = document.getElementById('auditResultCount');
+  if (countEl) countEl.textContent = '';
   tbody.innerHTML = '<tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr>';
   try {
     const { data, error } = await sb.from('audit_logs')
@@ -79,11 +81,20 @@ function filterAuditLogs() {
 
 function renderAuditTable() {
   const tbody = document.getElementById('auditTable');
+  const limitSel = document.getElementById('auditPageSize');
+  const countEl = document.getElementById('auditResultCount');
+  const displayLimit = limitSel ? Number(limitSel.value || 50) : 50;
+  const visibleRows = auditFiltered.slice(0, displayLimit);
+  if (countEl) {
+    countEl.textContent = auditFiltered.length
+      ? `แสดง ${visibleRows.length} จาก ${auditFiltered.length} รายการ`
+      : '';
+  }
   if (!auditFiltered.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';
     return;
   }
-  tbody.innerHTML = auditFiltered.map(d => {
+  tbody.innerHTML = visibleRows.map(d => {
     const actionBadge = d.action === 'เพิ่ม'
       ? '<span class="badge badge-green">➕ เพิ่ม</span>'
       : d.action === 'แก้ไข'
@@ -98,7 +109,7 @@ function renderAuditTable() {
       ? '<span class="badge" style="background:#e8f5e9;color:#1b5e20">📅 วางแผน</span>'
       : d.action === 'ยกเลิกแผน'
       ? '<span class="badge" style="background:#f5f5f5;color:#555">❌ ยกเลิกแผน</span>'
-      : `<span class="badge" style="background:#f0f0f0;color:#333">${d.action}</span>`;
+      : `<span class="badge" style="background:#f0f0f0;color:#333">${escapeHtmlText(d.action || '–')}</span>`;
     
     const dt = d.created_at ? new Date(d.created_at).toLocaleString('th-TH', {
       year:'numeric', month:'2-digit', day:'2-digit',
@@ -108,20 +119,21 @@ function renderAuditTable() {
     let details = '–';
     if (d.changes && typeof d.changes === 'object') {
       details = Object.entries(d.changes).map(([field, val]) => {
+        const label = escapeHtmlText(field);
         if (val && typeof val === 'object' && ('from' in val || 'to' in val)) {
-          return `<div><strong>${field}:</strong> <span style="color:var(--red)">${val.from ?? '–'}</span> → <span style="color:var(--green)">${val.to ?? '–'}</span></div>`;
+          return `<div class="audit-detail-line"><strong>${label}:</strong> <span class="audit-old">${escapeHtmlText(val.from ?? '–')}</span> → <span class="audit-new">${escapeHtmlText(val.to ?? '–')}</span></div>`;
         }
-        return `<div><strong>${field}:</strong> <span style="color:var(--green)">${val}</span></div>`;
+        return `<div class="audit-detail-line"><strong>${label}:</strong> <span class="audit-new">${escapeHtmlText(val ?? '–')}</span></div>`;
       }).join('');
     }
 
     return `<tr>
-      <td style="white-space:nowrap">${dt}</td>
-      <td><strong>${d.username||'–'}</strong></td>
-      <td>${actionBadge}</td>
-      <td style="font-family:var(--mono)">${d.id_code||'–'}</td>
-      <td>${d.instrument_name||'–'}</td>
-      <td>${details}</td>
+      <td class="audit-time">${escapeHtmlText(dt)}</td>
+      <td class="audit-user"><strong>${escapeHtmlText(d.username || '–')}</strong></td>
+      <td class="audit-action">${actionBadge}</td>
+      <td class="audit-id">${escapeHtmlText(d.id_code || '–')}</td>
+      <td class="audit-instrument">${escapeHtmlText(d.instrument_name || '–')}</td>
+      <td class="audit-details">${details}</td>
     </tr>`;
   }).join('');
 }
