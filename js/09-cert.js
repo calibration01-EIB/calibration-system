@@ -69,8 +69,10 @@ async function loadCertPage() {
   const fmtDt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
   const yearSel = document.getElementById('certHistoryYear');
   const typeSel = document.getElementById('certHistoryType');
+  const limitSel = document.getElementById('certHistoryLimit');
   const yearCode = yearSel ? yearSel.value : '26';
   const typeCode = typeSel ? typeSel.value : '';
+  const displayLimit = limitSel ? Number(limitSel.value || 50) : 50;
   const isAdmin = (currentUser && currentUser.role === 'admin');
 
   const certRowsByType = CERT_TYPE_CODES.reduce((acc, code) => {
@@ -103,13 +105,20 @@ async function loadCertPage() {
   const prefix = typeCode ? `${yearCode}${typeCode}` : String(yearCode);
   const history = (allData || []).filter(d => normalizeCertNo(d.cert_no).startsWith(prefix));
   history.sort(sortByCertNo);
+  const visibleHistory = history.slice(0, displayLimit);
   const pendingCount = history.filter(d => !d.approved_by).length;
+  const countEl = document.getElementById('certHistoryCount');
+  if (countEl) {
+    countEl.textContent = history.length
+      ? `แสดง ${visibleHistory.length} จาก ${history.length} รายการ`
+      : '';
+  }
 
   const histBody = document.getElementById('certHistoryBody');
   if (histBody) {
     histBody.innerHTML = history.length === 0
       ? '<tr><td colspan="10" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>'
-      : history.map((d, i) => {
+      : visibleHistory.map((d, i) => {
         const approved = !!d.approved_by;
         const rowBg = approved
           ? (i%2===0?'background:#f0faf5':'background:#e8f5f0')
