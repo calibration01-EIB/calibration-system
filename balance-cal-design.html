@@ -1030,7 +1030,7 @@ function switchMode(mode) {
 // ===== สถานะใบ Cert (แนวทาง 1: ออกเลขตอน "สอบเสร็จ" → ปริ้น/เซ็นที่ออฟฟิศ) =====
 // draft → issued(ออกเลข) → signed(เซ็น) → approved(สมบูรณ์) · voided(ยกเลิก-เก็บเลข) · revision
 let CAL_STATE = 'draft', CERT_NO = '', CERT_REV = 0;
-let CAL_REC_ID = null, CERT_YY = null, CERT_BASE = null;   // เลขที่รันจริง (cert_sequences) + id ของ record
+let CAL_REC_ID = null, CERT_YY = null, CERT_BASE = null, INST_PREV = null;   // record id + เลขรัน + ค่าทะเบียนเครื่องเดิม (เผื่อยกเลิก)
 const CERT_TC = 'B';                                        // type code เครื่องชั่ง
 const STATE_META = {
   draft:    { label: 'กำลังสอบเทียบ (ยังไม่ออกเลข)', cls: 'st-draft' },
@@ -1095,11 +1095,24 @@ async function issueCert() {
     const { data: recIns, error: recErr } = await db.from('calibration_records').insert(rec).select('id').single();
     if (recErr) { if (seqId) await db.from('cert_sequences').update({ last_number: newNumber - 1 }).eq('id', seqId); throw recErr; }
     CAL_REC_ID = recIns.id; CAL_STATE = 'issued';
+    // 3) อัปเดตทะเบียนเครื่องมือ (instruments) ให้สะท้อนการสอบเทียบล่าสุด — เก็บค่าเดิมไว้เผื่อยกเลิก
+    let instNote = '';
+    if (INCOMING_INST && INCOMING_INST.instrument_id) {
+      try {
+        const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no').eq('id', INCOMING_INST.instrument_id).single();
+        INST_PREV = cur || null;
+        const { error: iErr } = await db.from('instruments').update({
+          cert_no: CERT_NO, cal_date: calDate, due_date: val('iDateNext') || null,
+          job_no: jobNoStr(), request_no: val('fReqNo') || null,
+        }).eq('id', INCOMING_INST.instrument_id);
+        if (iErr) instNote = '\n⚠ ทะเบียนเครื่องไม่อัปเดต: ' + iErr.message;
+      } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
+    }
     if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
     if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
     if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0, 10);
     renderCertBar();
-    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผลลงระบบแล้ว (รอปริ้น/เซ็นที่ออฟฟิศ)');
+    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผล + อัปเดตทะเบียนเครื่องแล้ว' + instNote);
     switchMode('review');
   } catch (e) {
     alert('ออกเลข/บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : e));
@@ -1113,13 +1126,17 @@ async function setRecStatus(status) {
 async function markSigned()  { if (CAL_STATE === 'issued') { CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); } }
 async function approveCert() { if (CAL_STATE === 'signed') { CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); } }
 async function voidCert() {
-  if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) เพื่อให้เลขเรียงไม่ขาด')) return;
+  if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) · ทะเบียนเครื่องจะคืนเป็นใบก่อนหน้า')) return;
   CAL_STATE = 'voided'; renderCertBar(); await setRecStatus('voided');
+  if (INCOMING_INST && INCOMING_INST.instrument_id && INST_PREV) {
+    const db = sbx(); if (db) { try { await db.from('instruments').update(INST_PREV).eq('id', INCOMING_INST.instrument_id); } catch (e) {} }
+  }
 }
 async function reviseCert() {
   CERT_REV++; CERT_NO = certNoStr(); CAL_STATE = 'issued';
   if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
   renderCertBar(); await setRecStatus('issued');
+  if (INCOMING_INST && INCOMING_INST.instrument_id) { const db = sbx(); if (db) { try { await db.from('instruments').update({ cert_no: CERT_NO }).eq('id', INCOMING_INST.instrument_id); } catch (e) {} } }
   alert('ออก revision: ' + CERT_NO + ' (ไม่กินเลขใหม่ — แค่เพิ่มเลขแก้ไข)');
 }
 function printCert() {
