@@ -1159,6 +1159,111 @@ tbody tr:hover td { background: #eff8f6 !important; }
 #certHistTable thead.cert-table-head th.cert-th:last-child {
   border-right: 0 !important;
 }
+#auditLogTableWrap {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+#auditLogTable {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: auto !important;
+  border: 1px solid #bfd9d5;
+  border-collapse: collapse !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#auditLogTable thead.audit-table-head,
+#auditLogTable thead.audit-table-head tr {
+  background: #003f37 !important;
+}
+#auditLogTable thead.audit-table-head th.audit-th {
+  height: 40px !important;
+  padding: 9px 8px !important;
+  background: #003f37 !important;
+  color: #ffffff !important;
+  font-size: 11.5px !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.34);
+  border-right: 1px solid rgba(255,255,255,.3) !important;
+  border-bottom: 2px solid #00a88f !important;
+}
+#auditLogTable thead.audit-table-head th.audit-th:last-child {
+  border-right: 0 !important;
+}
+#auditLogTable tbody td {
+  color: var(--text) !important;
+  font-size: 11.5px !important;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 8px 9px !important;
+  border-right: 1px solid var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
+  vertical-align: top;
+  overflow: visible;
+  text-overflow: clip;
+}
+#auditLogTable tbody td:last-child {
+  border-right: 0 !important;
+}
+#auditLogTable th:nth-child(1),
+#auditLogTable td:nth-child(1),
+#auditLogTable th:nth-child(2),
+#auditLogTable td:nth-child(2),
+#auditLogTable th:nth-child(3),
+#auditLogTable td:nth-child(3),
+#auditLogTable th:nth-child(4),
+#auditLogTable td:nth-child(4) {
+  width: 1%;
+  white-space: nowrap !important;
+}
+#auditLogTable th:nth-child(5),
+#auditLogTable td:nth-child(5) {
+  width: 15%;
+  min-width: 118px;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+#auditLogTable th:nth-child(6),
+#auditLogTable td:nth-child(6) {
+  width: auto;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#auditLogTable .audit-time,
+#auditLogTable .audit-id {
+  font-family: var(--mono);
+  color: var(--text2) !important;
+}
+#auditLogTable .audit-user strong {
+  color: var(--text) !important;
+}
+#auditLogTable .audit-detail-line {
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+#auditLogTable .audit-detail-line strong {
+  color: var(--text);
+}
+#auditLogTable .audit-old {
+  color: var(--red);
+  overflow-wrap: anywhere;
+}
+#auditLogTable .audit-new {
+  color: var(--green);
+  overflow-wrap: anywhere;
+}
+#auditResultCount {
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 700;
+  white-space: nowrap;
+}
 .badge, .days-chip, .btn-cert, #pageNum, #navPlanBadge, #certPendingBadge {
   border-radius: 999px !important;
 }
@@ -2871,6 +2976,11 @@ body.app-mode textarea:focus {
         </div>
         <div class="controls-bar" style="margin-bottom:16px">
           <input type="text" id="auditSearch" placeholder="🔍 ค้นหา ผู้ใช้, ID Code, การกระทำ..." style="flex:1;min-width:200px" oninput="filterAuditLogs()">
+          <span id="auditResultCount"></span>
+          <select id="auditPageSize" onchange="renderAuditTable()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
+            <option value="50">แสดง 50 รายการ</option>
+            <option value="100">แสดง 100 รายการ</option>
+          </select>
           <select id="auditActionFilter" onchange="filterAuditLogs()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
             <option value="">ทุกการกระทำ</option>
             <option value="เพิ่ม">➕ เพิ่ม</option>
@@ -2882,16 +2992,16 @@ body.app-mode textarea:focus {
             <option value="ยกเลิกแผน">❌ ยกเลิกแผน</option>
           </select>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
+        <div id="auditLogTableWrap" class="table-wrap">
+          <table id="auditLogTable">
+            <thead class="audit-table-head">
               <tr>
-                <th>เวลา</th>
-                <th>ผู้ใช้</th>
-                <th>การกระทำ</th>
-                <th>ID Code</th>
-                <th>เครื่องมือ</th>
-                <th>รายละเอียด</th>
+                <th class="audit-th">เวลา</th>
+                <th class="audit-th">ผู้ใช้</th>
+                <th class="audit-th">การกระทำ</th>
+                <th class="audit-th">ID Code</th>
+                <th class="audit-th">เครื่องมือ</th>
+                <th class="audit-th">รายละเอียด</th>
               </tr>
             </thead>
             <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
@@ -3869,7 +3979,7 @@ body.app-mode textarea:focus {
 <script src="js/02-dashboard.js?v=20260612-mobile-compact"></script>
 <script src="js/03-instruments.js?v=20260612-mobile-compact"></script>
 <script src="js/04-reports.js?v=20260611-balance-mass-split"></script>
-<script src="js/05-audit.js?v=20260611-balance-mass-split"></script>
+<script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
