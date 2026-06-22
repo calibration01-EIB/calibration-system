@@ -114,31 +114,42 @@ async function loadCertPage() {
         const rowBg = approved
           ? (i%2===0?'background:#f0faf5':'background:#e8f5f0')
           : (i%2===0?'':'background:var(--surface2)');
+        const certNo = escapeHtmlText(d.cert_no || '–');
+        const issueDate = escapeHtmlText(fmt(d.cal_date));
+        const instrumentName = escapeHtmlText(d.instrument_name || '–');
+        const idCode = escapeHtmlText(d.id_code || '–');
+        const requestNo = escapeHtmlText(d.request_no || '–');
+        const jobNo = escapeHtmlText(d.job_no || '–');
+        const issuedBy = escapeHtmlText(d.issued_by || '–');
+        const responsibleBy = escapeHtmlText(d.responsible_by || '–');
+        const approvedBy = escapeHtmlText(d.approved_by || '');
+        const approvedAt = escapeHtmlText(fmtDt(d.approved_at));
         const approveBtn = isAdmin && !approved
-          ? `<button onclick="approveCertEntry(${d.id})" title="อนุมัติ" style="background:#e8f5e9;border:1px solid #43a047;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:#2e7d32;margin-right:4px">✅</button>`
+          ? `<button class="cert-action-btn cert-action-approve" onclick="approveCertEntry(${d.id})" title="อนุมัติ">✅</button>`
           : '';
         const editBtn = !approved
-          ? `<button onclick="openEditCertModal(${d.id})" style="background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--accent);margin-right:4px">✏️</button>`
-          : `<span title="อนุมัติแล้ว ไม่สามารถแก้ไขได้" style="font-size:11px;color:var(--text3)">🔒</span>`;
+          ? `<button class="cert-action-btn cert-action-edit" onclick="openEditCertModal(${d.id})" title="แก้ไข">✏️</button>`
+          : `<span class="cert-lock" title="อนุมัติแล้ว ไม่สามารถแก้ไขได้">🔒</span>`;
         const delBtn = isAdmin
-          ? `<button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',${approved})" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>`
-          : (!approved ? `<button onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" style="background:var(--red-light);border:1px solid var(--red);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;color:var(--red)">🗑️</button>` : '');
+          ? `<button class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',${approved})" title="ลบ">🗑️</button>`
+          : (!approved ? `<button class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" title="ลบ">🗑️</button>` : '');
         return `
-        <tr style="border-bottom:1px solid var(--border);${rowBg}">
-          <td style="padding:7px 10px;color:var(--text3)">${i+1}</td>
-          <td style="padding:7px 10px;font-family:var(--mono);font-weight:600;color:var(--accent)">${d.cert_no||'–'}</td>
-          <td style="padding:7px 10px;font-size:11px">${fmt(d.cal_date)}</td>
-          <td style="padding:7px 10px;font-size:11px">${d.instrument_name||'–'} / <span style="font-family:var(--mono)">${d.id_code||'–'}</span></td>
-          <td style="padding:7px 10px;font-size:11px">${d.request_no||'–'}</td>
-          <td style="padding:7px 10px;font-size:11px">${d.job_no||'–'}</td>
-          <td style="padding:7px 10px;font-size:11px">${d.issued_by||'–'}</td>
-          <td style="padding:7px 10px;font-size:11px">
+        <tr style="${rowBg}">
+          <td class="cert-index">${i+1}</td>
+          <td class="cert-number">${certNo}</td>
+          <td class="cert-date">${issueDate}</td>
+          <td class="cert-instrument"><strong>${instrumentName}</strong><span class="cert-sub">ID Code: <span class="cert-code">${idCode}</span></span></td>
+          <td class="cert-short">${requestNo}</td>
+          <td class="cert-short">${jobNo}</td>
+          <td class="cert-short">${issuedBy}</td>
+          <td class="cert-short">${responsibleBy}</td>
+          <td>
             ${approved
-              ? `<span style="color:#2e7d32;font-weight:600">${d.approved_by}</span><br><span style="font-size:10px;color:var(--text3)">${fmtDt(d.approved_at)}</span>`
-              : `<span style="color:var(--text3);font-size:11px">รออนุมัติ</span>`}
+              ? `<span class="cert-status approved">อนุมัติแล้ว</span><span class="cert-approved-at">${approvedBy}${approvedAt ? ` · ${approvedAt}` : ''}</span>`
+              : `<span class="cert-status pending">รออนุมัติ</span>`}
           </td>
-          <td style="padding:7px 10px;white-space:nowrap">
-            ${approveBtn}${editBtn}${delBtn}
+          <td>
+            <span class="cert-actions">${approveBtn}${editBtn}${delBtn}</span>
           </td>
         </tr>`;
       }).join('');
