@@ -3129,13 +3129,12 @@ body.app-mode textarea:focus {
 
         <!-- TABS: ใบ Cert Reference / ลูกตุ้มรายลูก -->
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบ Cert Reference</button>
-          <button class="sw-tab" id="swTabWeights" onclick="switchSWTab('weights')">⚖️ ลูกตุ้มรายลูก</button>
+          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบ Cert Reference (ตุ้มมาตรฐาน)</button>
           <button class="sw-tab" id="swTabCmc" onclick="switchSWTab('cmc')">📐 CMC</button>
         </div>
 
-        <!-- ===== SECTION: STANDARD CERTS ===== -->
-        <div id="scSection">
+        <!-- ===== SECTION: STANDARD CERTS (ระบบเก่า — ปิดไว้ รวมเข้ากับ set-view แล้ว) ===== -->
+        <div id="scSection" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
             <div style="background:#00695C;border-radius:14px;padding:14px 16px">
               <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">ใบ Cert ทั้งหมด</div>
@@ -3194,8 +3193,8 @@ body.app-mode textarea:focus {
           <div style="margin-top:10px;font-size:12px;color:var(--text3)">💡 คลิกใบ Cert เพื่อดูตารางผลวัดรายจุด — โมดูลสอบเทียบจะใช้<strong>ใบล่าสุดที่ยังไม่หมดอายุ</strong>ของแต่ละชุดมาตรฐานเสมอ</div>
         </div>
 
-        <!-- ===== SECTION: STANDARD WEIGHTS (เดิม) ===== -->
-        <div id="swSection" style="display:none">
+        <!-- ===== SECTION: STANDARD WEIGHTS / ใบ Cert Reference (set-view) ===== -->
+        <div id="swSection">
 
         <style>
           .sw-card{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
@@ -3229,7 +3228,7 @@ body.app-mode textarea:focus {
         </div>
 
         <div style="background:#eef4f3;border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--text3)">
-          💡 เก็บตุ้มทีละลูก พร้อม <b>ค่าปัจจุบัน + ครั้งก่อน</b> → คิด Drift / Dₛ ให้ · ตุ้มต้อง <b style="color:var(--green)">อนุมัติ</b> ก่อนถึงจะดึงไปใช้สอบเทียบได้ (admin อนุมัติ)
+          💡 <b>1 ใบ Cert = 1 ชุด</b> — กรอกข้อมูลใบ Cert (เลขที่/วันสอบ/ครบกำหนด/Class) <b>ครั้งเดียว</b> แล้วใส่ลูกตุ้มเป็นแถวข้างใน · มีค่า <b>ปัจจุบัน + ครั้งก่อน</b> → คิด Drift / Dₛ ให้ · ต้อง <b style="color:var(--green)">อนุมัติ</b> ก่อนจึงดึงไปใช้สอบเทียบได้ (admin)
         </div>
 
         <!-- Filter bar -->
@@ -3242,7 +3241,7 @@ body.app-mode textarea:focus {
             <option value="draft">🟡 รออนุมัติ</option>
             <option value="expired">❌ หมดอายุ</option>
           </select>
-          <button onclick="openSWModal()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มตุ้ม</button>
+          <button onclick="openSWSetModal(null)" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มใบ Cert / ชุด</button>
         </div>
 
         <div id="swSets"><div class="no-data" style="padding:20px">กำลังโหลด...</div></div>
@@ -3351,38 +3350,57 @@ body.app-mode textarea:focus {
 
       <!-- MODAL: Standard Weight -->
       <div id="swModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
-        <div style="background:var(--surface);border-radius:var(--radius);padding:22px 24px;width:min(720px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="background:var(--surface);border-radius:var(--radius);padding:22px 24px;width:min(1040px,97vw);max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <h3 id="swModalTitle" style="margin:0;font-size:16px">⚖️ เพิ่มตุ้มมาตรฐาน</h3>
+            <h3 id="swModalTitle" style="margin:0;font-size:16px">⚖️ เพิ่มใบ Cert / ชุดตุ้มมาตรฐาน</h3>
             <button onclick="closeSWModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">×</button>
           </div>
-          <div id="swEditNote" style="display:none;background:#fdf0db;border:1px solid #f2dcb0;border-radius:8px;padding:8px 11px;font-size:12px;color:#9a6112;margin-bottom:12px">⚠️ ตุ้มนี้อนุมัติแล้ว — แก้ไขจะเปลี่ยนสถานะกลับเป็น "รออนุมัติ" ต้องให้ admin อนุมัติใหม่</div>
-          <style>#swModal .swl{font-size:12px;font-weight:600;color:var(--text2)} #swModal .swin{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px} #swModal .swseclbl{grid-column:1/-1;font-weight:700;font-size:12.5px;margin:8px 0 -2px;padding-top:8px;border-top:1px dashed var(--border)}</style>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px">
-            <div><label class="swl">ค่าพิกัด (Nominal) *</label><input id="swNominal" class="swin" type="number" step="any" placeholder="1"></div>
-            <div><label class="swl">หน่วย *</label><select id="swUnit" class="swin"><option value="mg">mg</option><option value="g" selected>g</option><option value="kg">kg</option></select></div>
-            <div><label class="swl">Class</label><select id="swClass" class="swin"><option value="E1">E1</option><option value="E2" selected>E2</option><option value="F1">F1</option><option value="F2">F2</option><option value="M1">M1</option><option value="M2">M2</option></select></div>
-            <div><label class="swl">ชุด (Set code)</label><input id="swSetCode" class="swin" type="text" placeholder="CLCLCS01"></div>
-            <div><label class="swl">ID.No.</label><input id="swIdCode" class="swin" type="text" placeholder="CLCLCS01-WI07"></div>
-            <div><label class="swl">S/N</label><input id="swSerial" class="swin" type="text" placeholder="15839"></div>
-            <div><label class="swl">Model / ยี่ห้อ</label><input id="swModel" class="swin" type="text" placeholder="Mettler Toledo"></div>
-            <div style="grid-column:span 2"><label class="swl">หมายเหตุ</label><input id="swRemark" class="swin" type="text" placeholder="เช่น New / ผู้รับผิดชอบ"></div>
+          <div id="swEditNote" style="display:none;background:#fdf0db;border:1px solid #f2dcb0;border-radius:8px;padding:8px 11px;font-size:12px;color:#9a6112;margin-bottom:12px">⚠️ ชุดนี้มีตุ้มที่อนุมัติแล้ว — การแก้ไขจะเปลี่ยนสถานะกลับเป็น "รออนุมัติ" ทั้งชุด ต้องให้ admin อนุมัติใหม่</div>
+          <style>
+            #swModal .swl{font-size:12px;font-weight:600;color:var(--text2)}
+            #swModal .swin{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--bg);box-sizing:border-box;margin-top:4px}
+            #swModal .swseclbl{font-weight:700;font-size:12.5px;margin:14px 0 8px;padding-top:10px;border-top:1px dashed var(--border)}
+            #swModal table.swrt{border-collapse:collapse;width:100%;font-size:12px}
+            #swModal table.swrt th{background:#eef4f3;padding:6px 7px;font-size:10.5px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-align:center}
+            #swModal table.swrt td{padding:3px 5px;border-bottom:1px solid #eef2f1}
+            #swModal .swrin{width:100%;padding:6px 7px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:var(--font);background:var(--bg);box-sizing:border-box;text-align:center}
+            #swModal .swrin.l{text-align:left}
+            #swModal .sw-rowdel{border:none;background:#fbe9e7;color:#c0392b;border-radius:7px;padding:5px 9px;cursor:pointer;font-size:12px}
+          </style>
 
-            <div class="swseclbl" style="color:#0b5e6d">🕒 ค่าปัจจุบัน (ใบล่าสุด)</div>
-            <div><label class="swl">ค่าแก้ (g)</label><input id="swCorrection" class="swin" type="number" step="any" placeholder="0.000006"></div>
-            <div><label class="swl">U, k=2 (mg)</label><input id="swUncertainty" class="swin" type="number" step="any" placeholder="0.010"></div>
-            <div><label class="swl">Cert. No.</label><input id="swCertNo" class="swin" type="text" placeholder="MM-0111-25"></div>
+          <div class="swseclbl" style="color:#0b5e6d;margin-top:0;padding-top:0;border-top:none">📋 ข้อมูลใบ Cert / ชุด (กรอกครั้งเดียวใช้ทั้งชุด)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px">
+            <div><label class="swl">ชุด (Set code) *</label><input id="swSetCode" class="swin" type="text" placeholder="CLCLCS01"></div>
+            <div><label class="swl">Class</label><select id="swClass" class="swin"><option value="E1">E1</option><option value="E2" selected>E2</option><option value="F1">F1</option><option value="F2">F2</option><option value="M1">M1</option><option value="M2">M2</option></select></div>
+            <div><label class="swl">S/N (ชุด)</label><input id="swSerial" class="swin" type="text" placeholder="15839"></div>
+            <div><label class="swl">Model / ยี่ห้อ</label><input id="swModel" class="swin" type="text" placeholder="Mettler Toledo"></div>
+            <div><label class="swl">Cert. No. (ใบล่าสุด)</label><input id="swCertNo" class="swin" type="text" placeholder="MM-0111-25"></div>
+            <div><label class="swl">Cert. No. ครั้งก่อน</label><input id="swPrevCert" class="swin" type="text" placeholder="MM-0093-21"></div>
             <div><label class="swl">วันสอบเทียบ</label><input id="swCalDate" class="swin" type="date" oninput="autoCalcSWDue()"></div>
             <div><label class="swl">รอบ (ปี)</label><select id="swCalFrequency" class="swin" onchange="autoCalcSWDue()"><option value="1">1 ปี</option><option value="2" selected>2 ปี</option></select></div>
             <div><label class="swl">ครบกำหนด (Due)</label><input id="swDueDate" class="swin" type="date"></div>
-
-            <div class="swseclbl" style="color:#5a3c86">↺ ค่าครั้งก่อน (ไว้คิด Drift)</div>
-            <div><label class="swl">ค่าแก้ครั้งก่อน (g)</label><input id="swPrevCorr" class="swin" type="number" step="any" placeholder="0.000021"></div>
-            <div style="grid-column:span 2"><label class="swl">Cert. No. ครั้งก่อน</label><input id="swPrevCert" class="swin" type="text" placeholder="MM-0093-21"></div>
           </div>
+
+          <div class="swseclbl" style="color:#0b5e6d">⚖️ ลูกตุ้มในชุด <span style="font-weight:400;color:var(--text3)">— ค่าแก้/U/ครั้งก่อน รายลูก</span></div>
+          <div style="overflow-x:auto">
+            <table class="swrt">
+              <thead><tr>
+                <th style="text-align:left;min-width:90px">ค่าพิกัด *</th>
+                <th style="min-width:60px">หน่วย</th>
+                <th style="min-width:140px;text-align:left">ID.No.</th>
+                <th style="min-width:110px">ค่าแก้ (g)</th>
+                <th style="min-width:100px">U, k=2 (mg)</th>
+                <th style="min-width:130px;background:#efe9f8;color:#5a3c86">ค่าแก้ครั้งก่อน (g)</th>
+                <th style="width:42px"></th>
+              </tr></thead>
+              <tbody id="swRows"></tbody>
+            </table>
+          </div>
+          <button type="button" onclick="addSWRow()" style="margin-top:8px;padding:7px 14px;background:#e8f5f3;color:#0b5e6d;border:1px dashed #0b5e6d;border-radius:8px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer">+ เพิ่มลูกตุ้ม</button>
+
           <div class="modal-footer" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
             <button class="btn-secondary" onclick="closeSWModal()">ยกเลิก</button>
-            <button class="btn-add" onclick="saveSW()">💾 บันทึก</button>
+            <button class="btn-add" onclick="saveSWSet()">💾 บันทึกทั้งชุด</button>
           </div>
         </div>
       </div>

@@ -103,12 +103,17 @@ function renderSW() {
   host.innerHTML = Object.keys(groups).map(set => {
     const ws = groups[set];
     const cls = ws[0].class_grade || '–', model = ws[0].model || '';
+    const sn = ws[0].serial_no || '', certNo = ws[0].cert_no || '', due = ws[0].due_date || '';
     const nDraft = ws.filter(w => w.status !== 'approved').length;
     const head = `<div class="sw-sethead">
-        <span class="sw-setcode">📦 ${escapeHtmlText(set)}</span>
-        <span class="sw-setmeta">Class ${escapeHtmlText(cls)}${model ? ' · ' + escapeHtmlText(model) : ''}</span>
+        <span class="sw-setcode">📜 ${escapeHtmlText(set)}</span>
+        <span class="sw-setmeta">Class ${escapeHtmlText(cls)}${model ? ' · ' + escapeHtmlText(model) : ''}${sn ? ' · S/N ' + escapeHtmlText(sn) : ''}</span>
+        ${certNo ? `<span class="sw-setmeta">Cert <b>${escapeHtmlText(certNo)}</b></span>` : ''}
+        ${due ? `<span class="sw-setmeta">ครบ ${fmtDateTH(due)}</span>` : ''}
         <span class="sw-setcnt">${ws.length} ลูก${nDraft ? ' · <b style="color:var(--amber)">รออนุมัติ ' + nDraft + '</b>' : ' · <b style="color:var(--green)">อนุมัติครบ</b>'}</span>
         ${canApprove && nDraft ? `<button class="sw-btn approve" onclick="approveSWSet('${escapeJsSingle(set)}')">✅ อนุมัติทั้งชุด</button>` : ''}
+        ${canEdit ? `<button class="sw-btn sm" style="background:#e8f5f3;color:#0b5e6d" onclick="openSWSetModal('${escapeJsSingle(set)}')">✏️ แก้ไขชุด</button>` : ''}
+        ${canEdit ? `<button class="sw-btn sm" style="background:#fbe9e7;color:#c0392b" onclick="deleteSWSet('${escapeJsSingle(set)}')">🗑️</button>` : ''}
       </div>`;
     const rows = ws.map(w => {
       const dr = swDrift(w), av = swActual(w), apr = w.status === 'approved';
@@ -130,7 +135,7 @@ function renderSW() {
         <td>${apr
             ? `<span class="sw-pill ap" title="${escapeHtmlAttr((w.approved_by || '') + ' ' + (w.approved_at ? w.approved_at.split('T')[0] : ''))}">✅ อนุมัติ</span>${canApprove ? ` <a class="sw-link" onclick="unapproveSW(${w.id})">ยกเลิก</a>` : ''}`
             : `<span class="sw-pill wait">🟡 รออนุมัติ</span>${canApprove ? ` <button class="sw-btn approve sm" onclick="approveSW(${w.id})">อนุมัติ</button>` : ''}`}</td>
-        <td class="sw-act" style="white-space:nowrap">${canEdit ? `<i class="sw-i" title="แก้ไข" onclick="openSWModal(${w.id})">✏️</i><i class="sw-i" title="ลบ" onclick="deleteSW(${w.id},'${escapeJsSingle(w.id_code || '')}')">🗑️</i>` : ''}</td>
+        <td class="sw-act" style="white-space:nowrap">${canEdit ? `<i class="sw-i" title="ลบลูกนี้" onclick="deleteSW(${w.id},'${escapeJsSingle(w.id_code || '')}')">🗑️</i>` : ''}</td>
       </tr>`;
     }).join('');
     return `<div class="sw-card">${head}
@@ -153,26 +158,49 @@ function renderSW() {
   }).join('');
 }
 
-// ===== Modal เพิ่ม/แก้ไข =====
-function openSWModal(id) {
-  editingSWId = id || null;
-  const w = id ? swData.find(x => x.id === id) : null;
-  const modal = document.getElementById('swModal');
-  if (!modal) return;
-  const t = document.getElementById('swModalTitle');
-  if (t) t.textContent = w ? '✏️ แก้ไขตุ้ม — ' + (w.nominal_value + ' ' + w.unit) + ' (' + (w.id_code || '') + ')' : '⚖️ เพิ่มตุ้มมาตรฐาน';
+// ===== Modal เพิ่ม/แก้ไข — แบบชุด (1 ใบ Cert = 1 ชุด) =====
+let swSetEditing = null;   // set_code ที่กำลังแก้ (null = ชุดใหม่)
+let swSetOrigIds = [];     // id ตุ้มเดิมในชุด (ไว้ตรวจว่าถูกลบแถวไหน)
+
+function openSWSetModal(setCode) {
+  swSetEditing = setCode || null;
+  const ws = setCode ? swData.filter(w => (w.set_code || '— ไม่ระบุชุด —') === setCode)
+                         .sort((a, b) => (a.nominal_value * (SW_MASS_MG[a.unit] || 1)) - (b.nominal_value * (SW_MASS_MG[b.unit] || 1)))
+                     : [];
+  swSetOrigIds = ws.map(w => w.id);
+  const h = ws[0] || {};
   const set = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null ? '' : v); };
-  set('swNominal', w?.nominal_value); set('swUnit', w?.unit || 'g'); set('swClass', w?.class_grade || 'E2');
-  set('swSetCode', w?.set_code); set('swIdCode', w?.id_code); set('swSerial', w?.serial_no);
-  set('swModel', w?.model); set('swRemark', w?.note);
-  set('swCorrection', w?.correction); set('swUncertainty', w?.uncertainty); set('swCertNo', w?.cert_no);
-  set('swCalDate', w?.cal_date ? String(w.cal_date).split('T')[0] : ''); set('swDueDate', w?.due_date ? String(w.due_date).split('T')[0] : '');
-  set('swPrevCorr', w?.prev_correction); set('swPrevCert', w?.prev_cert_no);
+  set('swSetCode', h.set_code === '— ไม่ระบุชุด —' ? '' : h.set_code);
+  set('swClass', h.class_grade || 'E2'); set('swModel', h.model); set('swSerial', h.serial_no);
+  set('swCertNo', h.cert_no); set('swPrevCert', h.prev_cert_no);
+  set('swCalDate', h.cal_date ? String(h.cal_date).split('T')[0] : '');
+  set('swDueDate', h.due_date ? String(h.due_date).split('T')[0] : '');
+  const body = document.getElementById('swRows'); if (body) body.innerHTML = '';
+  if (ws.length) ws.forEach(addSWRow); else addSWRow();
+  const t = document.getElementById('swModalTitle');
+  if (t) t.textContent = setCode ? ('✏️ แก้ไขชุด — ' + setCode) : '⚖️ เพิ่มใบ Cert / ชุดตุ้มมาตรฐาน';
   const note = document.getElementById('swEditNote');
-  if (note) note.style.display = (w && w.status === 'approved') ? 'block' : 'none';
-  modal.style.display = 'flex';
+  if (note) note.style.display = ws.some(w => w.status === 'approved') ? 'block' : 'none';
+  const modal = document.getElementById('swModal'); if (modal) modal.style.display = 'flex';
 }
-function closeSWModal() { const m = document.getElementById('swModal'); if (m) m.style.display = 'none'; editingSWId = null; }
+function closeSWModal() { const m = document.getElementById('swModal'); if (m) m.style.display = 'none'; swSetEditing = null; swSetOrigIds = []; }
+
+function addSWRow(w) {
+  w = (w && w.id != null) ? w : {};
+  const body = document.getElementById('swRows'); if (!body) return;
+  const tr = document.createElement('tr');
+  tr.dataset.id = w.id != null ? w.id : '';
+  const u = w.unit || 'g';
+  tr.innerHTML =
+    `<td><input class="swrin l sw-r-nom" type="number" step="any" value="${w.nominal_value != null ? w.nominal_value : ''}" placeholder="1"></td>` +
+    `<td><select class="swrin sw-r-unit">${['mg', 'g', 'kg'].map(x => `<option ${x === u ? 'selected' : ''}>${x}</option>`).join('')}</select></td>` +
+    `<td><input class="swrin l sw-r-idc" type="text" value="${escapeHtmlAttr(w.id_code || '')}" placeholder="CLCLCS01-WI07"></td>` +
+    `<td><input class="swrin sw-r-corr" type="number" step="any" value="${w.correction != null ? w.correction : ''}" placeholder="0.000006"></td>` +
+    `<td><input class="swrin sw-r-unc" type="number" step="any" value="${w.uncertainty != null ? w.uncertainty : ''}" placeholder="0.010"></td>` +
+    `<td><input class="swrin sw-r-prev" type="number" step="any" value="${w.prev_correction != null ? w.prev_correction : ''}" placeholder="0.000021" style="background:#f8f5fd"></td>` +
+    `<td style="text-align:center"><button type="button" class="sw-rowdel" onclick="this.closest('tr').remove()" title="ลบแถว">✕</button></td>`;
+  body.appendChild(tr);
+}
 
 function autoCalcSWDue() {
   const cal = document.getElementById('swCalDate')?.value;
@@ -182,38 +210,68 @@ function autoCalcSWDue() {
   const el = document.getElementById('swDueDate'); if (el) el.value = d.toISOString().slice(0, 10);
 }
 
-async function saveSW() {
-  const nominal = parseFloat(document.getElementById('swNominal')?.value);
-  const unit = document.getElementById('swUnit')?.value;
-  if (!nominal || !unit) { showToast('กรุณากรอกค่าพิกัดและหน่วย', 'error'); return; }
+async function saveSWSet() {
   const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  const getF = id => { const el = document.getElementById(id); const v = el ? parseFloat(el.value) : NaN; return Number.isFinite(v) ? v : null; };
-  const correction = getF('swCorrection');
-  const actual = correction == null ? null : nominal + correction * SW_MASS_MG.g / (SW_MASS_MG[unit] || 1);
-  const payload = {
-    nominal_value: nominal, unit, class_grade: get('swClass') || null,
-    set_code: get('swSetCode') || null, id_code: get('swIdCode') || null, serial_no: get('swSerial') || null,
-    model: get('swModel') || null, note: get('swRemark') || null,
-    correction, actual_value: actual, uncertainty: getF('swUncertainty'),
-    cert_no: get('swCertNo') || null, cal_date: get('swCalDate') || null, due_date: get('swDueDate') || null,
-    prev_correction: getF('swPrevCorr'), prev_cert_no: get('swPrevCert') || null,
-    status: 'draft', approved_by: null, approved_at: null,   // แก้ไข/เพิ่ม → ต้องอนุมัติใหม่
-    updated_at: new Date().toISOString(),
+  const setCode = get('swSetCode');
+  if (!setCode) { showToast('กรุณากรอกชื่อชุด (Set code)', 'error'); return; }
+  const header = {
+    set_code: setCode, class_grade: get('swClass') || null,
+    model: get('swModel') || null, serial_no: get('swSerial') || null,
+    cert_no: get('swCertNo') || null, prev_cert_no: get('swPrevCert') || null,
+    cal_date: get('swCalDate') || null, due_date: get('swDueDate') || null,
+  };
+  const rows = [...document.querySelectorAll('#swRows tr')].map(tr => {
+    const q = sel => tr.querySelector(sel);
+    const f = sel => { const v = parseFloat(q(sel)?.value); return Number.isFinite(v) ? v : null; };
+    return {
+      _id: tr.dataset.id ? Number(tr.dataset.id) : null,
+      nominal_value: f('.sw-r-nom'), unit: q('.sw-r-unit')?.value || 'g',
+      id_code: (q('.sw-r-idc')?.value || '').trim() || null,
+      correction: f('.sw-r-corr'), uncertainty: f('.sw-r-unc'), prev_correction: f('.sw-r-prev'),
+    };
+  }).filter(r => r.nominal_value != null);
+  if (!rows.length) { showToast('กรุณาเพิ่มอย่างน้อย 1 ลูก (ใส่ค่าพิกัด)', 'error'); return; }
+  const now = new Date().toISOString();
+  const mk = r => {
+    const actual = r.correction == null ? null : r.nominal_value + r.correction * SW_MASS_MG.g / (SW_MASS_MG[r.unit] || 1);
+    return {
+      ...header, nominal_value: r.nominal_value, unit: r.unit, id_code: r.id_code,
+      correction: r.correction, actual_value: actual, uncertainty: r.uncertainty, prev_correction: r.prev_correction,
+      status: 'draft', approved_by: null, approved_at: null, updated_at: now,   // แก้ไข/เพิ่ม → อนุมัติใหม่ทั้งชุด
+    };
   };
   try {
     showLoading('กำลังบันทึก...');
-    const isNew = !editingSWId;
-    const result = editingSWId
-      ? await sb.from('standard_weights').update(payload).eq('id', editingSWId)
-      : await sb.from('standard_weights').insert({ ...payload, created_at: new Date().toISOString() });
-    if (result.error) throw result.error;
-    await logAudit(isNew ? 'เพิ่ม' : 'แก้ไข', { id: editingSWId || 0, id_code: payload.id_code || '', instrument_name: 'Standard Weight' },
-      { 'ตุ้ม': { from: isNew ? '–' : (payload.id_code || ''), to: payload.nominal_value + ' ' + payload.unit + ' (รออนุมัติ)' } });
+    const keepIds = rows.filter(r => r._id).map(r => r._id);
+    const toDelete = swSetOrigIds.filter(id => !keepIds.includes(id));
+    if (toDelete.length) { const { error } = await sb.from('standard_weights').delete().in('id', toDelete); if (error) throw error; }
+    const inserts = [];
+    for (const r of rows) {
+      if (r._id) { const { error } = await sb.from('standard_weights').update(mk(r)).eq('id', r._id); if (error) throw error; }
+      else inserts.push({ ...mk(r), created_at: now });
+    }
+    if (inserts.length) { const { error } = await sb.from('standard_weights').insert(inserts); if (error) throw error; }
+    await logAudit(swSetEditing ? 'แก้ไข' : 'เพิ่ม', { id: 0, id_code: setCode, instrument_name: 'Standard Weight Set' },
+      { 'ชุด': { from: swSetEditing || '–', to: rows.length + ' ลูก (รออนุมัติ)' } });
     closeSWModal();
-    showToast(isNew ? 'เพิ่มตุ้มแล้ว (รออนุมัติ)' : 'แก้ไขแล้ว — ต้องอนุมัติใหม่', 'success');
+    showToast('บันทึกชุด ' + setCode + ' แล้ว (' + rows.length + ' ลูก) — รออนุมัติ', 'success');
     await loadStandardWeights();
   } catch (e) { showToast('บันทึกไม่ได้: ' + e.message, 'error'); }
   finally { hideLoading(); }
+}
+
+async function deleteSWSet(setCode) {
+  const ids = swData.filter(w => (w.set_code || '— ไม่ระบุชุด —') === setCode).map(w => w.id);
+  if (!ids.length) return;
+  if (!confirm('ลบทั้งชุด ' + setCode + ' (' + ids.length + ' ลูก) ?')) return;
+  try {
+    showLoading('กำลังลบ...');
+    const { error } = await sb.from('standard_weights').delete().in('id', ids);
+    if (error) throw error;
+    await logAudit('ลบ', { id: 0, id_code: setCode, instrument_name: 'Standard Weight Set' }, { 'ชุด': { from: setCode, to: '(ลบแล้ว)' } });
+    showToast('ลบทั้งชุดแล้ว (' + ids.length + ' ลูก)', 'success');
+    await loadStandardWeights();
+  } catch (e) { showToast('ลบไม่ได้: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
 // ===== อนุมัติ (admin) =====
