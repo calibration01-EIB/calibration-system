@@ -3138,6 +3138,11 @@ body.app-mode textarea:focus {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="font-size:14px;font-weight:800;color:var(--text)">ประวัติการออกหมายเลขใบรับรอง</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span id="certHistoryCount" style="font-size:12px;color:var(--text3);font-weight:700;white-space:nowrap"></span>
+              <select id="certHistoryLimit" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+                <option value="50">แสดง 50 รายการ</option>
+                <option value="100">แสดง 100 รายการ</option>
+              </select>
               <select id="certHistoryYear" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
                 <option value="26">ปี 26 (2026)</option>
                 <option value="27">ปี 27 (2027)</option>
@@ -3867,7 +3872,7 @@ body.app-mode textarea:focus {
 <script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260609-category-fix2"></script>
-<script src="js/09-cert.js?v=20260622-cert-table"></script>
+<script src="js/09-cert.js?v=20260622-cert-limit"></script>
 <script src="js/10-router.js?v=20260610-std-certs"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260611-balance-mass-split"></script>
