@@ -1030,7 +1030,8 @@ function switchMode(mode) {
 // ===== สถานะใบ Cert (แนวทาง 1: ออกเลขตอน "สอบเสร็จ" → ปริ้น/เซ็นที่ออฟฟิศ) =====
 // draft → issued(ออกเลข) → signed(เซ็น) → approved(สมบูรณ์) · voided(ยกเลิก-เก็บเลข) · revision
 let CAL_STATE = 'draft', CERT_NO = '', CERT_REV = 0;
-const CERT_SEQ_BASE = 232;   // จำลอง cert_sequences (ระบบจริงรันต่อเนื่องจากตาราง)
+let CAL_REC_ID = null, CERT_YY = null, CERT_BASE = null;   // เลขที่รันจริง (cert_sequences) + id ของ record
+const CERT_TC = 'B';                                        // type code เครื่องชั่ง
 const STATE_META = {
   draft:    { label: 'กำลังสอบเทียบ (ยังไม่ออกเลข)', cls: 'st-draft' },
   issued:   { label: 'ออกเลขแล้ว — รอปริ้น/เซ็น',     cls: 'st-issued' },
@@ -1038,7 +1039,9 @@ const STATE_META = {
   approved: { label: 'สมบูรณ์ (อนุมัติแล้ว)',         cls: 'st-approved' },
   voided:   { label: 'ยกเลิก (เก็บเลขไว้เป็นประวัติ)', cls: 'st-voided' },
 };
-const nextCertNo = () => '26B' + CERT_SEQ_BASE + '-' + CERT_REV;   // 26B232-0, -1, ...
+const certNoStr = () => '' + CERT_YY + CERT_TC + String(CERT_BASE).padStart(3, '0') + '-' + CERT_REV;
+const jobNoStr  = () => '' + CERT_YY + CERT_TC + String(CERT_BASE).padStart(3, '0');
+const sbx = () => SBCAL || (typeof supabase !== 'undefined' ? supabase.createClient(SB_URL, SB_KEY) : null);
 function renderCertBar() {
   const m = STATE_META[CAL_STATE];
   let a = '';
@@ -1052,27 +1055,72 @@ function renderCertBar() {
     + `<div class="cbar-actions">${a}</div>`;
   ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
 }
-function issueCert() {
+// สอบเสร็จ → ออกเลขจริงจาก cert_sequences (type B) + บันทึก calibration_records
+async function issueCert() {
   if (CAL_STATE !== 'draft') return;
-  CERT_NO = nextCertNo(); CAL_STATE = 'issued';
-  if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
-  if (byId('fJobNo')) byId('fJobNo').value = '26B' + CERT_SEQ_BASE;
-  if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0,10);
-  renderCertBar();
-  alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nสถานะ: รอปริ้น/เซ็น (กลับไปปริ้น+เซ็นที่ออฟฟิศได้)');
-  switchMode('review');   // ออกเลขเสร็จ → เข้าหน้าสรุปทันที (ดูใบรายงานเต็ม + เลขที่ออก)
+  const db = sbx();
+  if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
+  const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
+  CERT_YY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
+  const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };
+  let seqId = null, newNumber = null;
+  try {
+    // 1) รันเลข cert_sequences (year_code + type_code=B)
+    const { data: seq, error: selErr } = await db.from('cert_sequences')
+      .select('id,last_number').eq('year_code', CERT_YY).eq('type_code', CERT_TC).maybeSingle();
+    if (selErr) throw selErr;
+    if (!seq) {
+      const { data: ins, error } = await db.from('cert_sequences')
+        .insert({ year_code: CERT_YY, type_code: CERT_TC, last_number: 1 }).select('id').single();
+      if (error) throw error;
+      newNumber = 1; seqId = ins.id;
+    } else {
+      newNumber = seq.last_number + 1; seqId = seq.id;
+      const { error } = await db.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
+      if (error) throw error;
+    }
+    CERT_BASE = newNumber; CERT_REV = 0; CERT_NO = certNoStr();
+    // 2) บันทึกผลดิบ + CAL object ลง calibration_records
+    const rec = {
+      instrument_id: (INCOMING_INST && INCOMING_INST.instrument_id) || null,
+      cert_no: CERT_NO, job_no: jobNoStr(), request_no: val('fReqNo') || null,
+      status: 'issued', revision: CERT_REV,
+      cal_date: calDate, date_recv: val('iDateRecv') || null, due_date: val('iDateNext') || null,
+      calibrated_by: val('fCalBy') || null, location: val('cLocation') || null, procedure: val('fProcedure') || null,
+      capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
+      adjusted: val('eAdjusted') || null, condition: val('eCondition') || null,
+      ab_ppm: numf('abMaterial') || 1, pan: parseInt(val('eccPan'), 10) || 0,
+      data: buildCAL(),
+    };
+    const { data: recIns, error: recErr } = await db.from('calibration_records').insert(rec).select('id').single();
+    if (recErr) { if (seqId) await db.from('cert_sequences').update({ last_number: newNumber - 1 }).eq('id', seqId); throw recErr; }
+    CAL_REC_ID = recIns.id; CAL_STATE = 'issued';
+    if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+    if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
+    if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0, 10);
+    renderCertBar();
+    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผลลงระบบแล้ว (รอปริ้น/เซ็นที่ออฟฟิศ)');
+    switchMode('review');
+  } catch (e) {
+    alert('ออกเลข/บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+  }
 }
-function markSigned()  { if (CAL_STATE === 'issued') { CAL_STATE = 'signed';  renderCertBar(); } }
-function approveCert() { if (CAL_STATE === 'signed') { CAL_STATE = 'approved'; renderCertBar(); } }
-function voidCert() {
+async function setRecStatus(status) {
+  if (!CAL_REC_ID) return;
+  const db = sbx(); if (!db) return;
+  try { await db.from('calibration_records').update({ status, revision: CERT_REV, cert_no: CERT_NO, updated_at: new Date().toISOString() }).eq('id', CAL_REC_ID); } catch (e) {}
+}
+async function markSigned()  { if (CAL_STATE === 'issued') { CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); } }
+async function approveCert() { if (CAL_STATE === 'signed') { CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); } }
+async function voidCert() {
   if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) เพื่อให้เลขเรียงไม่ขาด')) return;
-  CAL_STATE = 'voided'; renderCertBar();
+  CAL_STATE = 'voided'; renderCertBar(); await setRecStatus('voided');
 }
-function reviseCert() {
-  CERT_REV++; CERT_NO = nextCertNo(); CAL_STATE = 'issued';
+async function reviseCert() {
+  CERT_REV++; CERT_NO = certNoStr(); CAL_STATE = 'issued';
   if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
-  renderCertBar();
-  alert('ออก revision ใหม่: ' + CERT_NO + ' (ไม่กินเลขใหม่ — แค่เพิ่มเลขแก้ไข)');
+  renderCertBar(); await setRecStatus('issued');
+  alert('ออก revision: ' + CERT_NO + ' (ไม่กินเลขใหม่ — แค่เพิ่มเลขแก้ไข)');
 }
 function printCert() {
   if (CAL_STATE === 'draft') { alert('ต้องกด "สอบเสร็จ → ออกเลข Cert" ก่อนจึงจะปริ้นได้'); return; }
