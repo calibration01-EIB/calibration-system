@@ -1173,37 +1173,28 @@ async function loadFromDB() {
   if (typeof supabase === 'undefined') return;
   try { SBCAL = supabase.createClient(SB_URL, SB_KEY); } catch (e) { return; }
   try {
-    const [cRes, vRes, cmcRes] = await Promise.all([
-      SBCAL.from('standard_certs').select('*').order('measurement_date', { ascending: false }),
-      SBCAL.from('standard_cert_values').select('*').order('sort_order'),
+    const [wRes, cmcRes] = await Promise.all([
+      SBCAL.from('standard_weights').select('*').eq('status', 'approved').order('set_code').order('nominal_value'),
       SBCAL.from('cmc_scope').select('*').order('range_from'),
     ]);
-    const certs = cRes.data || [];
-    const vByCert = {};
-    (vRes.data || []).forEach(v => { (vByCert[v.cert_id] = vByCert[v.cert_id] || []).push(v); });
-    certs.forEach(c => c.values = vByCert[c.id] || []);
-    const mass = certs.filter(c => ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category));
+    const aw = wRes.data || [];   // ตุ้มที่อนุมัติแล้ว
 
-    // STD_REGISTRY จากใบล่าสุดของแต่ละชุด+ซีเรียล (พร้อม drift→Dₛ) — ข้ามถ้ามาทาง #std=
-    if (!INCOMING_STD && mass.length) {
-      const prevOf = c => mass.filter(o => o.id !== c.id && o.set_code === c.set_code && o.serial_no === c.serial_no
-        && o.measurement_date && c.measurement_date && new Date(o.measurement_date) < new Date(c.measurement_date))
-        .reduce((a, b) => (!a || new Date(b.measurement_date) > new Date(a.measurement_date)) ? b : a, null);
-      const seen = {}, reg = [];
-      mass.forEach(c => {
-        const key = (c.set_code || '') + '|' + (c.serial_no || '');
-        if (seen[key]) return; seen[key] = 1;        // certs เรียง desc → ตัวแรก = ล่าสุด
-        const prev = prevOf(c);
-        const weights = (c.values || []).map(r => {
-          const f = _mgF(r.corr_unit);
-          let Ds = Number(r.uncertainty);
-          if (prev) { const pr = (prev.values || []).find(p => Number(p.nominal_value) === Number(r.nominal_value) && p.unit === r.unit && (p.marking || '') === (r.marking || '')); if (pr) Ds = Math.max(Number(r.uncertainty), Math.abs(Number(r.correction) - Number(pr.correction))); }
-          return { id_code: (c.set_code || '') + '·' + r.nominal_value + r.unit + (r.marking && r.marking !== 'none' ? '·' + r.marking : ''),
-            nominal_g: Number(r.nominal_value) * _gF(r.unit), marking: r.marking || 'none',
-            corr_g: Number(r.correction) * _gF(r.corr_unit), U_mg: Number(r.uncertainty) * f, Ds_mg: Ds * f };
+    // STD_REGISTRY จากตุ้มที่อนุมัติแล้ว จัดกลุ่มตามชุด (drift = ค่าแก้ปัจจุบัน vs ครั้งก่อน inline) — ข้ามถ้ามาทาง #std=
+    if (!INCOMING_STD && aw.length) {
+      const groups = {};
+      aw.forEach(w => { const k = w.set_code || ('ID:' + (w.id_code || '')); (groups[k] = groups[k] || []).push(w); });
+      const reg = Object.keys(groups).map(set => {
+        const ws = groups[set];
+        const weights = ws.map(w => {
+          const U = Number(w.uncertainty) || 0;
+          let Ds = U;
+          if (w.correction != null && w.prev_correction != null) Ds = Math.max(U, Math.abs(Number(w.correction) - Number(w.prev_correction)) * 1000);
+          return { id_code: w.id_code || (set + '·' + w.nominal_value + w.unit), marking: 'none',
+            nominal_g: Number(w.nominal_value) * _gF(w.unit),
+            corr_g: Number(w.correction) || 0, U_mg: U, Ds_mg: Ds };
         });
-        reg.push({ id_code: c.set_code, name: c.item || 'WEIGHT SET', model: c.class_grade ? 'CLASS ' + c.class_grade : '',
-          cls: c.class_grade || '', serial: c.serial_no || '', cert: c.cert_no || '', due: c.due_date || '', weights });
+        return { id_code: set, name: 'WEIGHT SET', model: ws[0].model || (ws[0].class_grade ? 'CLASS ' + ws[0].class_grade : ''),
+          cls: ws[0].class_grade || '', serial: ws[0].serial_no || '', cert: ws[0].cert_no || '', due: ws[0].due_date || '', weights };
       });
       if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; }
     }
@@ -1214,9 +1205,9 @@ async function loadFromDB() {
 
     deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
     const b = byId('stdBanner');
-    if (b && !INCOMING_STD && mass.length) {
+    if (b && !INCOMING_STD && aw.length) {
       b.style.cssText = 'display:block;margin-bottom:10px;background:#e1f5ee;border:1px solid #b6e6d6;border-radius:8px;padding:8px 10px;font-size:12px;color:#0f6e56';
-      b.innerHTML = '<i class="ti ti-database"></i> โหลดจากระบบจริง: ชุดตุ้ม ' + STD_REGISTRY.length + ' ชุด · CMC ' + CMC.length + ' ช่วง';
+      b.innerHTML = '<i class="ti ti-database"></i> โหลดตุ้มที่อนุมัติแล้ว ' + aw.length + ' ลูก (' + STD_REGISTRY.length + ' ชุด) · CMC ' + CMC.length + ' ช่วง';
     }
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }
