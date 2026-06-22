@@ -154,7 +154,7 @@ async function loadCertPage() {
           <td class="cert-short">${responsibleBy}</td>
           <td>
             ${approved
-              ? `<span class="cert-status approved">อนุมัติแล้ว</span><span class="cert-approved-at">${approvedBy}${approvedAt ? ` · ${approvedAt}` : ''}</span>`
+              ? `<span class="cert-status approved">อนุมัติแล้ว</span><span class="cert-approved-name">${approvedBy}</span>${approvedAt ? `<span class="cert-approved-at">${approvedAt}</span>` : ''}`
               : `<span class="cert-status pending">รออนุมัติ</span>`}
           </td>
           <td>
