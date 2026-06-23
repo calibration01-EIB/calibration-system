@@ -2836,6 +2836,17 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
+        <!-- DASHBOARD TABS (กดเปิด/ปิด — โชว์ทีละพาเนล ลดงาน render) -->
+        <style>
+          .dash-tab{padding:8px 16px;border:1px solid var(--border);background:#fff;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
+          .dash-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+        </style>
+        <div id="dashTabBar" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="dash-tab active" data-tab="cat" onclick="switchDashTab('cat')">🧰 ประเภทเครื่องมือ</button>
+          <button class="dash-tab" data-tab="month" onclick="switchDashTab('month')">📊 ครบกำหนดรายเดือน</button>
+          <button class="dash-tab" data-tab="audit" onclick="switchDashTab('audit')">📋 กิจกรรมล่าสุด</button>
+        </div>
+
         <!-- ROW 2: Instrument Types -->
         <div id="dashDonutAlertsRow" style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px">
 
@@ -2854,7 +2865,7 @@ body.app-mode textarea:focus {
         </div>
 
         <!-- ROW 3: Monthly Cards + Audit Log -->
-        <div id="dashMonthlyAuditRow" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);gap:16px;margin-bottom:16px">
+        <div id="dashMonthlyAuditRow" style="display:none;grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);gap:16px;margin-bottom:16px">
           <div id="dashMonthlyRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:0">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
               <div>
