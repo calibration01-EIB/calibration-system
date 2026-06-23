@@ -121,7 +121,7 @@ function openBalanceCal(id) {
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };
-  window.open('balance-cal-design.html#inst=' + encodeURIComponent(JSON.stringify(inst)), '_blank');
+  window.open('balance-cal.html#inst=' + encodeURIComponent(JSON.stringify(inst)), '_blank');
 }
 
 function openInstrumentDetail(id) {

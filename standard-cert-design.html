@@ -824,7 +824,7 @@ function useForCalibration(id) {
   };
   const json = JSON.stringify(payload);
   try { localStorage.setItem('stdData', json); } catch (e) {}
-  window.open('balance-cal-design.html#std=' + encodeURIComponent(json), '_blank');
+  window.open('balance-cal.html#std=' + encodeURIComponent(json), '_blank');
 }
 
 // ===== EDIT =====

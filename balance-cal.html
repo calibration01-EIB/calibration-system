@@ -153,7 +153,7 @@ body.review #entryHint, body.review #certStatusBarBottom { display: none; }
   <header class="top">
     <div>
       <h1>สอบเทียบเครื่องชั่ง — ป้อนข้อมูล → ออกใบรับรอง</h1>
-      <p>กรอกครบทุกช่องในหน้านี้แล้วกด “ออกใบรับรอง” ระบบจะคำนวณ Correction + งบความไม่แน่นอน + ประเมิน PASS/FAIL และส่งข้อมูล <b>ทั้งหมด</b> เข้าแม่แบบใบรับรอง (cert-print-design) ทันที · ลำดับขั้นตอนเรียงตามหน้าในใบ Cert · ตัวเลขชุดนี้มาจากงานจริง 26B232-0 เพื่อเทียบกับ Excel ได้ตรง ๆ</p>
+      <p>กรอกครบทุกช่องในหน้านี้แล้วกด “ออกใบรับรอง” ระบบจะคำนวณ Correction + งบความไม่แน่นอน + ประเมิน PASS/FAIL และส่งข้อมูล <b>ทั้งหมด</b> เข้าแม่แบบใบรับรอง (cert-print) ทันที · ลำดับขั้นตอนเรียงตามหน้าในใบ Cert · ตัวเลขชุดนี้มาจากงานจริง 26B232-0 เพื่อเทียบกับ Excel ได้ตรง ๆ</p>
     </div>
     <span class="badge-pill"><i class="ti ti-circle-check"></i> ป้อนครบ → ใบ Cert ใช้ข้อมูลจริงทั้งใบ</span>
   </header>
@@ -772,7 +772,7 @@ function showUncDetail(i) {
     `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (5/√3)² + (5/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=${p.k ?? 2} (Veff ${Number.isFinite(p.veff) ? Math.round(p.veff) : '∞'}) → U = ${fmt(p.Ufinal_mg,4)} mg`;
 }
 
-// ===== รวบข้อมูลที่กรอก + ผลคำนวณ → CAL object ที่ cert-print-design.html ใช้ =====
+// ===== รวบข้อมูลที่กรอก + ผลคำนวณ → CAL object ที่ cert-print.html ใช้ =====
 function buildCAL() {
   recalc();
   const rows = window._rows || [];
@@ -827,7 +827,7 @@ function openCert() {
   try {
     const json = JSON.stringify(buildCAL());
     try { localStorage.setItem('calData', json); } catch (e) {}
-    window.open('cert-print-design.html#data=' + encodeURIComponent(json), '_blank');
+    window.open('cert-print.html#data=' + encodeURIComponent(json), '_blank');
   } catch (e) { alert('สร้างใบรับรองไม่สำเร็จ: ' + e.message); }
 }
 

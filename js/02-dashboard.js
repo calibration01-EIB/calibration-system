@@ -317,7 +317,7 @@ async function openSavedCert(recordId) {
   try {
     const { data, error } = await sb.from('calibration_records').select('data').eq('id', recordId).single();
     if (error || !data || !data.data) throw (error || new Error('no data'));
-    window.open('cert-print-design.html#data=' + encodeURIComponent(JSON.stringify(data.data)), '_blank');
+    window.open('cert-print.html#data=' + encodeURIComponent(JSON.stringify(data.data)), '_blank');
   } catch (e) {
     if (typeof showToast === 'function') showToast('เปิดใบ Cert ไม่ได้: ' + (e.message || ''), 'error'); else alert('เปิดใบ Cert ไม่ได้');
   }
