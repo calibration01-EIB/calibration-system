@@ -3557,6 +3557,8 @@ body.app-mode textarea:focus {
             <div><label class="swl">Model / ยี่ห้อ</label><input id="swModel" class="swin" type="text" placeholder="Mettler Toledo"></div>
             <div><label class="swl">Cert. No. (ใบล่าสุด)</label><input id="swCertNo" class="swin" type="text" placeholder="MM-0111-25"></div>
             <div><label class="swl">Cert. No. ครั้งก่อน</label><input id="swPrevCert" class="swin" type="text" placeholder="MM-0093-21"></div>
+            <div><label class="swl">ไฟล์ Cert ปัจจุบัน (PDF)</label><input id="swCertFile" class="swin" type="file" accept="application/pdf" onchange="swPickCertFile('current', this)"><div id="swCertFileStatus" style="font-size:11.5px;margin-top:4px">— ยังไม่มีไฟล์ —</div></div>
+            <div><label class="swl">ไฟล์ Cert ครั้งก่อน (PDF)</label><input id="swPrevCertFile" class="swin" type="file" accept="application/pdf" onchange="swPickCertFile('prev', this)"><div id="swPrevCertFileStatus" style="font-size:11.5px;margin-top:4px">— ยังไม่มีไฟล์ —</div></div>
             <div><label class="swl">วันสอบเทียบ</label><input id="swCalDate" class="swin" type="date" oninput="autoCalcSWDue()"></div>
             <div><label class="swl">รอบ (ปี)</label><select id="swCalFrequency" class="swin" onchange="autoCalcSWDue()"><option value="1">1 ปี</option><option value="2" selected>2 ปี</option></select></div>
             <div><label class="swl">ครบกำหนด (Due)</label><input id="swDueDate" class="swin" type="date"></div>
