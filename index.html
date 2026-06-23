@@ -3377,8 +3377,11 @@ body.app-mode textarea:focus {
           /* หัวตารางถูก global override เป็นพื้นเขียวเข้ม → เส้นคั่นต้องเป็นขาวโปร่งถึงจะเห็น
              ช่องหัวกลุ่มที่ "ว่าง" ถูกแยกเป็นช่องๆ (ดู renderSW) → เส้น border-right ลากยาวเต็ม 2 แถว
              ส่วนกลุ่มที่ "มีข้อความ" ใช้ colspan เดียว → เส้นคั่นย่อยมีแค่ในแถวล่าง = ขีดสั้น */
-          .sw-grp th{padding:4px 8px;text-align:center;font-size:10.5px;font-weight:700;border-right:1px solid rgba(255,255,255,.30)!important;border-bottom:0!important}
-          .sw-cols th{padding:5px 8px;text-align:center;font-size:10.5px;font-weight:600;border-right:1px solid rgba(255,255,255,.30)!important}
+          .sw-grp th{padding:4px 8px;text-align:center;font-size:10.5px;font-weight:700;border-right:1px solid rgba(255,255,255,.5)!important;border-bottom:0!important}
+          .sw-cols th{padding:5px 8px;text-align:center;font-size:10.5px;font-weight:600;border-right:1px solid rgba(255,255,255,.5)!important}
+          /* เส้นขีดสั้นใต้หัวข้อกลุ่ม (แถวล่าง) ให้ชัดขึ้น + เส้นคั่นระหว่างกลุ่มเข้มกว่า */
+          .sw-cols th:nth-child(5),.sw-cols th:nth-child(10),.sw-cols th:nth-child(12),
+          .sw-grp .sw-h-cur,.sw-grp .sw-h-prev,.sw-grp .sw-h-drift{border-left:1px solid rgba(255,255,255,.6)!important}
           .sw-tbl tbody td{padding:5px 8px;text-align:center;border-bottom:1px solid #e1eae8;border-right:1px solid #dce6e3}
           .sw-tbl thead th:last-child,.sw-tbl tbody td:last-child{border-right:none!important}
           .sw-tbl tbody tr:last-child td{border-bottom:none}
@@ -3387,9 +3390,8 @@ body.app-mode textarea:focus {
           .sw-tbl tbody tr.sw-pending{background:#fffbf0}
           .sw-nom{text-align:left!important;font-weight:700} .sw-idc{font-family:monospace;font-size:11px}
           td.sw-cur{background:#f3faf9} td.sw-prev{background:#f8f5fd;color:#555}
-          /* เส้นคั่นกลุ่ม: ค่าแก้(ปัจจุบัน)=คอลัมน์5, ค่าแก้(ครั้งก่อน)=10, Drift=12 */
-          .sw-tbl tbody td:nth-child(5),.sw-tbl tbody td:nth-child(10),.sw-tbl tbody td:nth-child(12),
-          .sw-cols th:nth-child(5),.sw-cols th:nth-child(10),.sw-cols th:nth-child(12){border-left:1px solid #cdddd8}
+          /* เส้นคั่นกลุ่มในตัวตาราง (body): ค่าแก้(ปัจจุบัน)=5, ค่าแก้(ครั้งก่อน)=10, Drift=12 */
+          .sw-tbl tbody td:nth-child(5),.sw-tbl tbody td:nth-child(10),.sw-tbl tbody td:nth-child(12){border-left:1px solid #c6d4d0}
           .sw-pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700}
           .sw-pill.u,.sw-pill.ap{background:#e2f5ec;color:#0f7a52} .sw-pill.d,.sw-pill.wait{background:#fdf0db;color:#9a6112} .sw-pill.n{background:#eef0f0;color:#90a39e}
           .sw-btn{border:none;border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
