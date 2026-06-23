@@ -198,6 +198,35 @@ function renderSW() {
 // ===== Modal เพิ่ม/แก้ไข — แบบชุด (1 ใบ Cert = 1 ชุด) =====
 let swSetEditing = null;   // set_code ที่กำลังแก้ (null = ชุดใหม่)
 let swSetOrigIds = [];     // id ตุ้มเดิมในชุด (ไว้ตรวจว่าถูกลบแถวไหน)
+let swSetCertPaths = { current: null, prev: null };  // path ไฟล์ cert ของชุดที่กำลังแก้
+
+function swRenderCertFileStatus() {
+  ['current', 'prev'].forEach(kind => {
+    const st = document.getElementById(kind === 'prev' ? 'swPrevCertFileStatus' : 'swCertFileStatus');
+    if (!st) return;
+    const p = swSetCertPaths[kind];
+    st.innerHTML = p
+      ? `<span style="color:#0f7a52;font-weight:600">✓ มีไฟล์</span> · <a class="sw-link" onclick="openCertFile('${escapeJsSingle(p)}')">ดู</a> · <a class="sw-link" style="color:#c0392b" onclick="swClearCertFile('${kind}')">ลบ</a>`
+      : '<span style="color:var(--text3)">— ยังไม่มีไฟล์ —</span>';
+  });
+}
+async function swPickCertFile(kind, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const setCode = (document.getElementById('swSetCode')?.value || '').trim();
+  if (!setCode) { showToast('กรอกชื่อชุด (Set code) ก่อนอัปไฟล์', 'error'); input.value = ''; return; }
+  showLoading('กำลังอัปโหลด...');
+  const path = await swUploadCert(setCode, kind, file);
+  hideLoading();
+  input.value = '';
+  if (path) { swSetCertPaths[kind] = path; swRenderCertFileStatus(); showToast('อัปโหลดไฟล์แล้ว', 'success'); }
+}
+async function swClearCertFile(kind) {
+  const path = swSetCertPaths[kind];
+  swSetCertPaths[kind] = null;
+  swRenderCertFileStatus();
+  if (path) { try { await sb.storage.from(SW_CERT_BUCKET).remove([path]); } catch (e) {} }
+}
 
 function openSWSetModal(setCode) {
   swSetEditing = setCode || null;
@@ -206,6 +235,7 @@ function openSWSetModal(setCode) {
                      : [];
   swSetOrigIds = ws.map(w => w.id);
   const h = ws[0] || {};
+  swSetCertPaths = { current: h.cert_file_path || null, prev: h.prev_cert_file_path || null };
   const set = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null ? '' : v); };
   set('swSetCode', h.set_code === '— ไม่ระบุชุด —' ? '' : h.set_code);
   set('swClass', h.class_grade || 'E2'); set('swModel', h.model); set('swSerial', h.serial_no);
@@ -218,6 +248,9 @@ function openSWSetModal(setCode) {
   if (t) t.textContent = setCode ? ('✏️ แก้ไขชุด — ' + setCode) : '⚖️ เพิ่มใบ Cert / ชุดตุ้มมาตรฐาน';
   const note = document.getElementById('swEditNote');
   if (note) note.style.display = ws.some(w => w.status === 'approved') ? 'block' : 'none';
+  const cf = document.getElementById('swCertFile'); if (cf) cf.value = '';
+  const pf = document.getElementById('swPrevCertFile'); if (pf) pf.value = '';
+  swRenderCertFileStatus();
   const modal = document.getElementById('swModal'); if (modal) modal.style.display = 'flex';
 }
 function closeSWModal() { const m = document.getElementById('swModal'); if (m) m.style.display = 'none'; swSetEditing = null; swSetOrigIds = []; }
@@ -256,6 +289,8 @@ async function saveSWSet() {
     model: get('swModel') || null, serial_no: get('swSerial') || null,
     cert_no: get('swCertNo') || null, prev_cert_no: get('swPrevCert') || null,
     cal_date: get('swCalDate') || null, due_date: get('swDueDate') || null,
+    cert_file_path: swSetCertPaths.current || null,
+    prev_cert_file_path: swSetCertPaths.prev || null,
   };
   const rows = [...document.querySelectorAll('#swRows tr')].map(tr => {
     const q = sel => tr.querySelector(sel);
