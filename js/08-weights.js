@@ -7,6 +7,33 @@ let editingSWId = null;
 
 const SW_MASS_MG = { mg: 1, g: 1000, kg: 1e6 };
 
+const SW_CERT_BUCKET = 'standard-weight-certs';
+
+function swSafeSetCode(s) {
+  return String(s || '').trim().replace(/[^A-Za-z0-9._-]+/g, '_') || 'unknown';
+}
+function swCertPath(setCode, kind) {
+  return swSafeSetCode(setCode) + '/' + (kind === 'prev' ? 'prev' : 'current') + '.pdf';
+}
+// อัปไฟล์ cert (PDF, <=10MB) ลง Storage → คืน object path (null ถ้าล้มเหลว)
+async function swUploadCert(setCode, kind, file) {
+  const okType = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  if (!okType) { showToast('ต้องเป็นไฟล์ PDF เท่านั้น', 'error'); return null; }
+  if (file.size > 10 * 1024 * 1024) { showToast('ไฟล์ใหญ่เกิน 10MB', 'error'); return null; }
+  const path = swCertPath(setCode, kind);
+  const { error } = await sb.storage.from(SW_CERT_BUCKET).upload(path, file, { upsert: true, contentType: 'application/pdf' });
+  if (error) { showToast('อัปโหลดไม่สำเร็จ: ' + error.message, 'error'); return null; }
+  return path;
+}
+// เปิดไฟล์ cert ผ่าน signed URL อายุสั้น
+async function openCertFile(path) {
+  try {
+    const { data, error } = await sb.storage.from(SW_CERT_BUCKET).createSignedUrl(path, 60);
+    if (error || !(data && data.signedUrl)) throw (error || new Error('no url'));
+    window.open(data.signedUrl, '_blank');
+  } catch (e) { showToast('ไม่พบไฟล์ Cert', 'error'); }
+}
+
 async function loadStandardWeights() {
   const host = document.getElementById('swSets');
   if (host && !swData.length) host.innerHTML = '<div class="no-data" style="padding:20px">กำลังโหลด...</div>';
