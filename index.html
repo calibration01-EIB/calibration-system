@@ -1023,6 +1023,10 @@ body {
   gap: 12px !important;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
 }
+/* perf: จำกัดขอบเขต repaint ของการ์ด → hover การ์ดหนึ่งไม่ลาม repaint ทั้งหน้า */
+#categoryGrid > div, #monthGrid > div, #statCardsGrid > div, #alertList > div {
+  contain: layout paint style;
+}
 #alertList {
   gap: 8px !important;
   padding-right: 4px !important;
