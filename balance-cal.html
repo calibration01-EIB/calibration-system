@@ -244,6 +244,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
 
     <div id="stdBanner" style="display:none"></div>
     <div id="prefillBanner" style="display:none"></div>
+    <div id="presetPickWrap" style="display:none;margin-bottom:10px;font-size:12px">📋 พรีเซ็ทจุดสอบ: <select id="presetPick" onchange="applyPresetPick(this.value)" style="min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input)"></select></div>
     <div class="subhead"><i class="ti ti-weight"></i> รายการตุ้มน้ำหนักมาตรฐานที่ใช้</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
       <label style="font-size:12px;color:var(--muted);font-weight:700"><i class="ti ti-plus"></i> เพิ่มชุดตุ้มจากทะเบียน</label>
@@ -1208,6 +1209,33 @@ function resetPrefill() {
   renderPrefillBanner();
 }
 
+// ===== พรีเซ็ทจุดสอบกลาง (cal_point_presets) =====
+let CAL_PRESETS = [];
+function renderPresetPick() {
+  const sel = byId('presetPick'), wrap = byId('presetPickWrap');
+  if (!sel || !wrap) return;
+  if (!CAL_PRESETS.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  sel.innerHTML = '<option value="">— เลือกพรีเซ็ทจุด —</option>'
+    + CAL_PRESETS.map((p, i) => `<option value="${i}">${String(p.name || '').replace(/</g, '&lt;')} (${Array.isArray(p.points) ? p.points.length : 0} จุด)</option>`).join('');
+}
+function applyPresetPick(idx) {
+  const p = CAL_PRESETS[Number(idx)];
+  if (!p || !Array.isArray(p.points) || !p.points.length) return;
+  POINTS = p.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
+  PREFILL_REC = null; renderPrefillBanner();
+  rebuildPoints(true);
+}
+function presetForCapacity(cap) {
+  const c = Number(cap);
+  if (!Number.isFinite(c)) return null;
+  return CAL_PRESETS.find(p => {
+    const lo = p.capacity_from == null ? -Infinity : Number(p.capacity_from);
+    const hi = p.capacity_to == null ? Infinity : Number(p.capacity_to);
+    return c > lo && c <= hi && Array.isArray(p.points) && p.points.length;
+  }) || null;
+}
+
 const INCOMING_STD = readIncomingStd();
 const INCOMING_INST = readIncomingInst();
 applyIncomingStd(INCOMING_STD);   // อาจตั้ง SELECTED_SETS + เพิ่มชุดเข้าทะเบียน + banner
@@ -1271,7 +1299,20 @@ async function loadFromDB() {
 
     deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
     renderStdBanner();
+    try {
+      const { data: presetRes } = await SBCAL.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });
+      CAL_PRESETS = presetRes || []; renderPresetPick();
+    } catch (e) {}
     await loadLastCalForPrefill();
+    if (!INCOMING_STD && !PREFILL_REC) {
+      const cap = (INCOMING_INST && INCOMING_INST.capacity) || parseFloat(val('iCap'));
+      const pm = presetForCapacity(cap);
+      if (pm) {
+        POINTS = pm.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
+        rebuildPoints(true);
+        const sel = byId('presetPick'); if (sel) sel.value = String(CAL_PRESETS.indexOf(pm));
+      }
+    }
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }
 loadFromDB();

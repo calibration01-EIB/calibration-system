@@ -3302,6 +3302,7 @@ body.app-mode textarea:focus {
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบ Cert Reference (ตุ้มมาตรฐาน)</button>
           <button class="sw-tab" id="swTabCmc" onclick="switchSWTab('cmc')">📐 CMC</button>
+          <button class="sw-tab" id="swTabPresets" onclick="switchSWTab('presets')">📋 พรีเซ็ทจุด</button>
         </div>
 
         <!-- ===== SECTION: STANDARD CERTS (ระบบเก่า — ปิดไว้ รวมเข้ากับ set-view แล้ว) ===== -->
@@ -3449,6 +3450,27 @@ body.app-mode textarea:focus {
           </div>
           <div style="margin-top:10px;font-size:12px;color:var(--text3)">💡 ช่วงพิกัดใช้เกณฑ์ "จาก &lt; ค่าพิกัด ≤ ถึง" · ค่าและหน่วยจะถูกดึงไปใช้อัตโนมัติตอนคำนวณ Uncertainty</div>
         </div><!-- /cmcSection -->
+
+        <div id="presetSection" style="display:none">
+          <div style="background:#eef0fb;border:1px solid #534ab740;border-radius:14px;padding:14px 16px;margin-bottom:14px;color:#3b3680;font-size:13px;line-height:1.6">
+            📋 <b>พรีเซ็ทจุดสอบเทียบ</b> — ชุดจุดทดสอบมาตรฐานตามช่วงพิกัด (หน่วยกรัม)<br>
+            หน้าสอบเทียบจะ <b>เสนอพรีเซ็ทที่ตรงพิกัดเครื่องอัตโนมัติ</b> และเลือกพรีเซ็ทอื่นจาก dropdown ได้ · ตุ้มมาตรฐานจะถูกเลือกให้แต่ละจุดเอง
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="presetSearch" type="search" placeholder="🔍 ค้นหาชื่อพรีเซ็ท" oninput="renderCalPresets()"
+              style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none">
+            <button id="presetAddBtn" onclick="openPresetEdit(null)" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มพรีเซ็ท</button>
+          </div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
+            <div class="table-wrap" style="max-height:calc(100vh - 380px)">
+              <table>
+                <thead><tr><th>ชื่อพรีเซ็ท</th><th>ช่วงพิกัด</th><th style="text-align:right">จำนวนจุด</th><th>จุดสอบ (g)</th><th></th></tr></thead>
+                <tbody id="presetTableBody"><tr><td colspan="5" class="no-data">กำลังโหลด...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text3)">💡 พิกัดในช่วง "จาก &lt; พิกัดเครื่อง ≤ ถึง" จะถูก auto-match · จุดคั่นด้วยจุลภาค เช่น 1, 2, 5, 10, 20</div>
+        </div><!-- /presetSection -->
       </div>
 
       <!-- MODAL: Standard Cert Detail -->
@@ -3525,6 +3547,27 @@ body.app-mode textarea:focus {
           <div class="modal-footer">
             <button class="btn-reset" type="button" onclick="closeCmcModal()">ยกเลิก</button>
             <button class="btn-view" type="button" onclick="saveCmc()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Cal Point Preset Edit -->
+      <div class="modal-overlay" id="presetModal" onclick="if(event.target===this)closePresetModal()">
+        <div class="modal-box" style="max-width:520px">
+          <div class="modal-header"><h3 id="presetModalTitle">เพิ่มพรีเซ็ทจุด</h3><button class="btn-close" onclick="closePresetModal()">×</button></div>
+          <div class="modal-body" style="padding:16px 20px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">ชื่อพรีเซ็ท *</label><input id="presetName" type="text" placeholder="เครื่องชั่ง 30 kg (10 จุด)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">พิกัด: จาก (g)</label><input id="presetFrom" type="number" step="any" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ถึง (g)</label><input id="presetTo" type="number" step="any" placeholder="30000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">หน่วย</label><input id="presetUnit" type="text" placeholder="g" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div></div>
+              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">จุดสอบ (g) — คั่นด้วยจุลภาค *</label><textarea id="presetPoints" rows="2" placeholder="3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px;resize:vertical"></textarea></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-reset" type="button" onclick="closePresetModal()">ยกเลิก</button>
+            <button class="btn-view" type="button" onclick="saveCalPreset()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
           </div>
         </div>
       </div>
@@ -3997,6 +4040,7 @@ body.app-mode textarea:focus {
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260611-balance-mass-split"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
+<script src="js/14-cal-presets.js?v=20260623-presets"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">

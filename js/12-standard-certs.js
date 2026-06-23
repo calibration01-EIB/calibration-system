@@ -19,13 +19,14 @@ function scCatMeta(cat) { return SC_CATEGORIES[cat] || ['🧰', '#52667d']; }
 
 function switchSWTab(tab) {
   // "certs" = ใบ Cert Reference (set-view ของ standard_weights) · "cmc" = ขอบข่าย CMC
-  const sections = { certs: 'swSection', cmc: 'cmcSection' };
-  const buttons = { certs: 'swTabCerts', cmc: 'swTabCmc' };
+  const sections = { certs: 'swSection', cmc: 'cmcSection', presets: 'presetSection' };
+  const buttons = { certs: 'swTabCerts', cmc: 'swTabCmc', presets: 'swTabPresets' };
   const scSec = document.getElementById('scSection'); if (scSec) scSec.style.display = 'none';
   Object.entries(sections).forEach(([t, sec]) => { const el = document.getElementById(sec); if (el) el.style.display = (t === tab) ? '' : 'none'; });
   Object.entries(buttons).forEach(([t, id]) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', t === tab); });
   if (tab === 'certs' && typeof loadStandardWeights === 'function') loadStandardWeights();
   if (tab === 'cmc' && typeof loadCmcScope === 'function') loadCmcScope();
+  if (tab === 'presets' && typeof loadCalPresets === 'function') loadCalPresets();
 }
 
 async function loadStandardCerts() {
