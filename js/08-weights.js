@@ -102,6 +102,8 @@ function renderSW() {
   swFiltered.forEach(w => { (groups[w.set_code || '— ไม่ระบุชุด —'] = groups[w.set_code || '— ไม่ระบุชุด —'] || []).push(w); });
   host.innerHTML = Object.keys(groups).map(set => {
     const ws = groups[set];
+    // เรียงตามมวลจริง (เอาหน่วยมาคูณ): mg < g < kg → 1mg,2mg,…,1g,2g,…,1kg
+    ws.sort((a, b) => (Number(a.nominal_value) * (SW_MASS_MG[a.unit] || 1)) - (Number(b.nominal_value) * (SW_MASS_MG[b.unit] || 1)));
     const cls = ws[0].class_grade || '–', model = ws[0].model || '';
     const sn = ws[0].serial_no || '', certNo = ws[0].cert_no || '', due = ws[0].due_date || '';
     const nDraft = ws.filter(w => w.status !== 'approved').length;
