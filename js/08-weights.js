@@ -151,11 +151,11 @@ function renderSW() {
     return `<div class="sw-card">${head}
       <div class="sw-tw"><table class="sw-tbl">
         <thead class="sw-grp"><tr>
-          <th colspan="4" class="sw-blank"></th>
+          <th class="sw-blank"></th><th class="sw-blank"></th><th class="sw-blank"></th><th class="sw-blank"></th>
           <th colspan="5" class="sw-h-cur">◀ ค่าปัจจุบัน (ใบล่าสุด)</th>
           <th colspan="2" class="sw-h-prev">ค่าครั้งก่อน</th>
           <th colspan="2" class="sw-h-drift">Drift / Dₛ</th>
-          <th colspan="2" class="sw-blank"></th>
+          <th class="sw-blank"></th><th class="sw-blank"></th>
         </tr></thead>
         <thead class="sw-cols"><tr>
           <th style="text-align:left">ค่าพิกัด</th><th>Class</th><th>S/N</th><th>ID.No.</th>

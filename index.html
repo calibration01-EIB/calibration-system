@@ -3374,11 +3374,13 @@ body.app-mode textarea:focus {
           .sw-setmeta{color:var(--text3);font-size:12px} .sw-setcnt{margin-left:auto;color:var(--text3);font-size:12px}
           .sw-tw{overflow-x:auto}
           table.sw-tbl{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
-          .sw-grp th{padding:4px 8px;text-align:center;font-size:10.5px;font-weight:700;border-bottom:1px solid var(--border);border-right:1px solid #d4e2de}
-          .sw-grp .sw-h-cur{background:#e3f4f1;color:#0b5e6d} .sw-grp .sw-h-prev{background:#efe9f8;color:#5a3c86} .sw-grp .sw-h-drift{background:#fbf3e6;color:#9a6112} .sw-grp .sw-blank{background:#fff}
-          .sw-cols th{background:#eef4f3;padding:5px 8px;text-align:center;font-size:10.5px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);border-right:1px solid #d9e4e1}
-          .sw-tbl tbody td{padding:5px 8px;text-align:center;border-bottom:1px solid #e1eae8;border-right:1px solid #ebf1ef}
-          .sw-tbl th:last-child,.sw-tbl tbody td:last-child{border-right:none}
+          /* หัวตารางถูก global override เป็นพื้นเขียวเข้ม → เส้นคั่นต้องเป็นขาวโปร่งถึงจะเห็น
+             ช่องหัวกลุ่มที่ "ว่าง" ถูกแยกเป็นช่องๆ (ดู renderSW) → เส้น border-right ลากยาวเต็ม 2 แถว
+             ส่วนกลุ่มที่ "มีข้อความ" ใช้ colspan เดียว → เส้นคั่นย่อยมีแค่ในแถวล่าง = ขีดสั้น */
+          .sw-grp th{padding:4px 8px;text-align:center;font-size:10.5px;font-weight:700;border-right:1px solid rgba(255,255,255,.30)!important;border-bottom:0!important}
+          .sw-cols th{padding:5px 8px;text-align:center;font-size:10.5px;font-weight:600;border-right:1px solid rgba(255,255,255,.30)!important}
+          .sw-tbl tbody td{padding:5px 8px;text-align:center;border-bottom:1px solid #e1eae8;border-right:1px solid #dce6e3}
+          .sw-tbl thead th:last-child,.sw-tbl tbody td:last-child{border-right:none!important}
           .sw-tbl tbody tr:last-child td{border-bottom:none}
           .sw-tbl tbody tr:nth-child(even):not(.sw-pending){background:#fafcfb}
           .sw-tbl tbody tr:hover{background:#eef6f4}
@@ -3985,7 +3987,7 @@ body.app-mode textarea:focus {
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
-<script src="js/08-weights.js?v=20260623-fullnum-grid"></script>
+<script src="js/08-weights.js?v=20260623-header-lines"></script>
 <script src="js/09-cert.js?v=20260622-cert-approval-wrap"></script>
 <script src="js/10-router.js?v=20260610-std-certs"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
