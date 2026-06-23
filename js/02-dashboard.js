@@ -33,9 +33,11 @@ function renderMonthlyBarChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,                 // ปิด animation → ไม่ redraw รัวตอน hover/resize
+      hover: { mode: 'index', intersect: false, animationDuration: 0 },
       plugins: {
         legend: { position: 'top', align: 'end', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 8, padding: 16 } },
-        tooltip: { mode: 'index', intersect: false }
+        tooltip: { mode: 'index', intersect: false, animation: false }
       },
       scales: {
         x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
