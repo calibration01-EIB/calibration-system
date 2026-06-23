@@ -243,6 +243,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
     </div>
 
     <div id="stdBanner" style="display:none"></div>
+    <div id="prefillBanner" style="display:none"></div>
     <div class="subhead"><i class="ti ti-weight"></i> รายการตุ้มน้ำหนักมาตรฐานที่ใช้</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
       <label style="font-size:12px;color:var(--muted);font-weight:700"><i class="ti ti-plus"></i> เพิ่มชุดตุ้มจากทะเบียน</label>
@@ -1169,6 +1170,44 @@ function renderStdBanner() {
   }
 }
 
+// ===== prefill จุด+ตุ้มจากการสอบครั้งก่อนของเครื่องนี้ =====
+let PREFILL_REC = null;
+async function loadLastCalForPrefill() {
+  if (INCOMING_STD) return;                       // มาทาง #std= → ไม่ prefill
+  const id = INCOMING_INST && INCOMING_INST.instrument_id;
+  if (!id || !SBCAL) return;
+  try {
+    const { data, error } = await SBCAL.from('calibration_records')
+      .select('cert_no,cal_date,data').eq('instrument_id', id)
+      .order('cal_date', { ascending: false }).order('created_at', { ascending: false }).limit(1);
+    if (error || !data || !data.length) return;
+    const rec = data[0], cal = rec.data || {};
+    const pts = Array.isArray(cal.points) ? cal.points.filter(p => Number.isFinite(Number(p.nominal))) : [];
+    if (!pts.length) return;
+    POINTS = pts.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
+    const ids = (Array.isArray(cal.standards) ? cal.standards.map(s => s.id_code).filter(Boolean) : []).filter(c => regGet(c));
+    if (ids.length) SELECTED_SETS = ids;
+    PREFILL_REC = { cert_no: rec.cert_no, cal_date: rec.cal_date };
+    deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
+    renderPrefillBanner();
+  } catch (e) { console.warn('prefill:', e && e.message); }
+}
+function renderPrefillBanner() {
+  const b = byId('prefillBanner'); if (!b) return;
+  if (!PREFILL_REC) { b.style.display = 'none'; return; }
+  b.style.cssText = 'display:block;margin-bottom:10px;background:#eef4fb;border:1px solid #b9d4ee;border-radius:8px;padding:8px 10px;font-size:12px;color:#1565c0';
+  b.innerHTML = '↻ ใช้จุดสอบ + ตุ้มจากการสอบครั้งก่อน (Cert ' + (PREFILL_REC.cert_no || '–') + ' · ' + (PREFILL_REC.cal_date || '') + ') '
+    + '<a onclick="resetPrefill()" style="cursor:pointer;text-decoration:underline;color:#b3261e;margin-left:6px">เริ่มใหม่</a>';
+}
+function resetPrefill() {
+  PREFILL_REC = null;
+  const cap = (INCOMING_INST && INCOMING_INST.capacity) || parseFloat(val('iCap'));
+  if (Number.isFinite(cap) && cap > 0) { const step = cap / 10; POINTS = []; for (let k = 1; k <= 10; k++) POINTS.push({ nominal: +(step * k).toFixed(3), corr: 0, U: 0 }); }
+  if (STD_REGISTRY.length) SELECTED_SETS = [STD_REGISTRY[0].id_code];
+  deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
+  renderPrefillBanner();
+}
+
 const INCOMING_STD = readIncomingStd();
 const INCOMING_INST = readIncomingInst();
 applyIncomingStd(INCOMING_STD);   // อาจตั้ง SELECTED_SETS + เพิ่มชุดเข้าทะเบียน + banner
@@ -1232,6 +1271,7 @@ async function loadFromDB() {
 
     deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
     renderStdBanner();
+    await loadLastCalForPrefill();
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }
 loadFromDB();
