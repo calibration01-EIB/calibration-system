@@ -162,11 +162,15 @@ function renderSW() {
         <td class="sw-idc"><strong>${escapeHtmlText(w.id_code || '–')}</strong></td>
         <td class="sw-cur">${swFmtG(w.correction)}</td>
         <td class="sw-cur"><strong>${av == null ? '–' : swTrim(av, 7)}</strong></td>
-        <td class="sw-cur sw-idc">${escapeHtmlText(w.cert_no || '–')}</td>
+        <td class="sw-cur sw-idc">${w.cert_file_path
+            ? `<a class="sw-link" title="เปิดไฟล์ Cert" onclick="openCertFile('${escapeJsSingle(w.cert_file_path)}')">📎 ${escapeHtmlText(w.cert_no || 'ดูไฟล์')}</a>`
+            : escapeHtmlText(w.cert_no || '–')}</td>
         <td class="sw-cur">${fmtDateTH(w.due_date)}</td>
         <td class="sw-cur">${w.uncertainty != null ? w.uncertainty : '–'}</td>
         <td class="sw-prev">${swFmtG(w.prev_correction)}</td>
-        <td class="sw-prev sw-idc">${escapeHtmlText(w.prev_cert_no || '–')}</td>
+        <td class="sw-prev sw-idc">${w.prev_cert_file_path
+            ? `<a class="sw-link" title="เปิดไฟล์ Cert ครั้งก่อน" onclick="openCertFile('${escapeJsSingle(w.prev_cert_file_path)}')">📎 ${escapeHtmlText(w.prev_cert_no || 'ดูไฟล์')}</a>`
+            : escapeHtmlText(w.prev_cert_no || '–')}</td>
         <td>${dr.has ? (+dr.drift.toFixed(4)) : '–'}</td>
         <td><strong>${(+dr.Ds.toFixed(4))}</strong> ${dr.has ? (dr.drift > Number(w.uncertainty) ? '<span class="sw-pill d">Drift</span>' : '<span class="sw-pill u">≤U</span>') : '<span class="sw-pill n">ใบเดียว</span>'}</td>
         <td>${apr
@@ -340,6 +344,9 @@ async function deleteSWSet(setCode) {
     showLoading('กำลังลบ...');
     const { error } = await sb.from('standard_weights').delete().in('id', ids);
     if (error) throw error;
+    const w0 = swData.find(w => (w.set_code || '— ไม่ระบุชุด —') === setCode) || {};
+    const paths = [w0.cert_file_path, w0.prev_cert_file_path].filter(Boolean);
+    if (paths.length) { try { await sb.storage.from(SW_CERT_BUCKET).remove(paths); } catch (e) {} }
     await logAudit('ลบ', { id: 0, id_code: setCode, instrument_name: 'Standard Weight Set' }, { 'ชุด': { from: setCode, to: '(ลบแล้ว)' } });
     showToast('ลบทั้งชุดแล้ว (' + ids.length + ' ลูก)', 'success');
     await loadStandardWeights();
