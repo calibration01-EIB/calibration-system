@@ -241,6 +241,13 @@ async function openCalHistory(instrumentId) {
 
   const rows = history || [];
 
+  // ดึงผลสอบเทียบจริง (calibration_records) ของเครื่องนี้
+  const { data: records } = await sb.from('calibration_records')
+    .select('id,cert_no,cal_date,due_date,status,calibrated_by')
+    .eq('instrument_id', instrumentId)
+    .order('cal_date', { ascending: false }).limit(20);
+  const recs = records || [];
+
   document.getElementById('calHistoryBody').innerHTML = `
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🟢 รอบปัจจุบัน</div>
@@ -254,6 +261,19 @@ async function openCalHistory(instrumentId) {
         <div><div style="font-size:11px;color:var(--text3)">ความถี่</div>
           <div style="font-size:12px;color:var(--text)">${d.cal_frequency||'–'}</div></div>
       </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📄 ผลสอบเทียบ (ปริ้นใบ Cert ได้)</div>
+      ${recs.length ? `<div style="display:flex;flex-direction:column;gap:6px">${recs.map(r => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px">
+            <div style="font-size:12px;font-weight:600;font-family:var(--mono);color:var(--accent)">${r.cert_no || '(ไม่มีเลข)'}</div>
+            <div style="font-size:11px;color:var(--text3)">${fmt(r.cal_date)} · ${r.calibrated_by || '–'}</div>
+          </div>
+          ${calRecStatusBadge(r.status)}
+          <button class="btn-view" style="background:#00695C;color:#fff;border-color:#00695C;font-size:12px" onclick="openSavedCert('${r.id}')">📄 เปิด/ปริ้นใบ Cert</button>
+        </div>`).join('')}</div>`
+        : `<div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;color:var(--text3);font-size:12px">ยังไม่มีผลสอบเทียบในระบบ</div>`}
     </div>
     ${rows.length ? `
     <div>
@@ -279,6 +299,28 @@ async function openCalHistory(instrumentId) {
     <div style="margin-top:12px;padding:8px 12px;background:#f0f7f6;border-radius:8px;font-size:11px;color:var(--text2)">
       <strong>${d.instrument_name||'–'}</strong> · ${d.department||'–'} · ${d.cal_type||'–'}
     </div>`;
+}
+
+function calRecStatusBadge(status) {
+  const m = {
+    draft: ['ร่าง', '#eee', '#888'],
+    issued: ['ออกเลขแล้ว', '#e3f0fb', '#1565c0'],
+    signed: ['เซ็นแล้ว', '#fff8e1', '#9a6112'],
+    approved: ['อนุมัติ', '#e8f5e9', '#1b5e20'],
+    voided: ['ยกเลิก', '#fce8e8', '#c0392b'],
+  };
+  const x = m[status] || [status || '–', '#eee', '#666'];
+  return `<span style="font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;background:${x[1]};color:${x[2]}">${x[0]}</span>`;
+}
+// เปิดใบ Cert ย้อนหลังจาก calibration_records → ยิง data jsonb เข้า cert-print (เหมือน balance-cal)
+async function openSavedCert(recordId) {
+  try {
+    const { data, error } = await sb.from('calibration_records').select('data').eq('id', recordId).single();
+    if (error || !data || !data.data) throw (error || new Error('no data'));
+    window.open('cert-print-design.html#data=' + encodeURIComponent(JSON.stringify(data.data)), '_blank');
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('เปิดใบ Cert ไม่ได้: ' + (e.message || ''), 'error'); else alert('เปิดใบ Cert ไม่ได้');
+  }
 }
 
 function closeCalHistoryModal() {
