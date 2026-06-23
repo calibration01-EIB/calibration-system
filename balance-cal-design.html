@@ -1058,6 +1058,13 @@ function renderCertBar() {
 // สอบเสร็จ → ออกเลขจริงจาก cert_sequences (type B) + บันทึก calibration_records
 async function issueCert() {
   if (CAL_STATE !== 'draft') return;
+  if (!calDataReady()) {
+    alert('⛔ ยังออกใบ Cert จริงไม่ได้ — ระบบกำลังใช้ข้อมูลตัวอย่าง (MOCK)\n'
+      + (STD_IS_MOCK ? '• ตุ้มมาตรฐานยังไม่ถูกอนุมัติ — ไปอนุมัติที่หน้า “ใบ Cert Reference (ตุ้มมาตรฐาน)” ก่อน\n' : '')
+      + (CMC_IS_MOCK ? '• ยังไม่มี CMC ที่รับรอง — กรอกที่แท็บ CMC ก่อน\n' : '')
+      + '\nเมื่อข้อมูลครบแล้ว แถบเตือนสีแดงจะหายไปและกดสอบเสร็จได้');
+    return;
+  }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
   const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
@@ -1144,9 +1151,28 @@ function printCert() {
   switchMode('review'); openCert();
 }
 
+// ===== สถานะข้อมูลจริง vs MOCK — กันออกใบจริงด้วยข้อมูลตัวอย่าง =====
+let STD_IS_MOCK = true, CMC_IS_MOCK = true;
+function calDataReady() { return !STD_IS_MOCK && !CMC_IS_MOCK; }
+function renderStdBanner() {
+  const b = byId('stdBanner'); if (!b) return;
+  if (calDataReady()) {
+    b.style.cssText = 'display:block;margin-bottom:10px;background:#e1f5ee;border:1px solid #b6e6d6;border-radius:8px;padding:8px 10px;font-size:12px;color:#0f6e56';
+    b.innerHTML = '<i class="ti ti-database"></i> ข้อมูลจริงพร้อมใช้ — ตุ้มที่อนุมัติ ' + STD_REGISTRY.length + ' ชุด · CMC ' + (CMC ? CMC.length : 0) + ' ช่วง';
+  } else {
+    const miss = [];
+    if (STD_IS_MOCK) miss.push('ตุ้มมาตรฐานยังไม่ถูกอนุมัติ (อนุมัติที่หน้า “ใบ Cert Reference (ตุ้มมาตรฐาน)” ก่อน)');
+    if (CMC_IS_MOCK) miss.push('ยังไม่มี CMC ที่รับรอง (กรอกที่แท็บ CMC)');
+    b.style.cssText = 'display:block;margin-bottom:10px;background:#fdecec;border:1.5px solid #e7a3a3;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#b3261e;font-weight:700';
+    b.innerHTML = '⛔ ยังใช้งานจริงไม่ได้ — กำลังใช้ข้อมูลตัวอย่าง (MOCK): ค่าที่คำนวณไม่ใช่ของจริง และออกใบ Cert จริงไม่ได้'
+      + '<div style="font-weight:400;margin-top:4px">ต้องแก้ก่อน: ' + miss.join(' · ') + '</div>';
+  }
+}
+
 const INCOMING_STD = readIncomingStd();
 const INCOMING_INST = readIncomingInst();
 applyIncomingStd(INCOMING_STD);   // อาจตั้ง SELECTED_SETS + เพิ่มชุดเข้าทะเบียน + banner
+if (INCOMING_STD) STD_IS_MOCK = false;   // ส่งชุดจริงมาจากทะเบียนใบ Cert
 deriveStds();
 rebuildAvail();
 assignWeights();
@@ -1158,6 +1184,7 @@ drawPanPrev();
 ensureEditButtons();
 renderCertBar();
 recalc();
+renderStdBanner();   // เริ่มต้นเป็นแดง (mock) จนกว่า loadFromDB จะยืนยันข้อมูลจริง
 // ฟิลด์ที่กระทบการคำนวณ/วันที่ — อัปเดตสดเมื่อพิมพ์
 ['iRes','iDate'].forEach(id => {
   const el = byId(id); if (el) el.addEventListener('input', recalc);
@@ -1196,19 +1223,15 @@ async function loadFromDB() {
         return { id_code: set, name: 'WEIGHT SET', model: ws[0].model || (ws[0].class_grade ? 'CLASS ' + ws[0].class_grade : ''),
           cls: ws[0].class_grade || '', serial: ws[0].serial_no || '', cert: ws[0].cert_no || '', due: ws[0].due_date || '', weights };
       });
-      if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; }
+      if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; STD_IS_MOCK = false; }
     }
 
     // CMC จากฐาน (เฉพาะมวล) — แทนค่า mock ถ้ามี
     const cmcRows = (cmcRes.data || []).filter(c => !c.quantity || /mass|มวล/i.test(c.quantity));
-    if (cmcRows.length) CMC = cmcRows.map(c => ({ from: Number(c.range_from), to: Number(c.range_to), cmc: Number(c.cmc) }));
+    if (cmcRows.length) { CMC = cmcRows.map(c => ({ from: Number(c.range_from), to: Number(c.range_to), cmc: Number(c.cmc) })); CMC_IS_MOCK = false; }
 
     deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
-    const b = byId('stdBanner');
-    if (b && !INCOMING_STD && aw.length) {
-      b.style.cssText = 'display:block;margin-bottom:10px;background:#e1f5ee;border:1px solid #b6e6d6;border-radius:8px;padding:8px 10px;font-size:12px;color:#0f6e56';
-      b.innerHTML = '<i class="ti ti-database"></i> โหลดตุ้มที่อนุมัติแล้ว ' + aw.length + ' ลูก (' + STD_REGISTRY.length + ' ชุด) · CMC ' + CMC.length + ' ช่วง';
-    }
+    renderStdBanner();
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }
 loadFromDB();
