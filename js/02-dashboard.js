@@ -52,23 +52,6 @@ function renderMonthlyBarChart() {
     }
   });
 }
-
-// ====================================================
-// DASHBOARD TABS — สลับพาเนลด้วย display (ไม่ animate ความสูง → ไม่กระตุก)
-// ====================================================
-function switchDashTab(tab) {
-  const hide = id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; };
-  const show = (id, mode) => { const e = document.getElementById(id); if (e) e.style.display = mode || ''; };
-  // ซ่อนทุกพาเนล
-  hide('dashDonutAlertsRow'); hide('dashMonthlyAuditRow'); hide('dashMonthlyRow'); hide('dashAuditRow');
-  // โชว์เฉพาะแท็บที่เลือก
-  if (tab === 'cat') { show('dashDonutAlertsRow'); }
-  else if (tab === 'month') { show('dashMonthlyAuditRow', 'block'); show('dashMonthlyRow'); }
-  else if (tab === 'audit') { show('dashMonthlyAuditRow', 'block'); show('dashAuditRow'); }
-  // อัปเดตปุ่ม active
-  document.querySelectorAll('#dashTabBar .dash-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-}
-
 // MOBILE CARDS
 // ====================================================
 function renderMobileCards() {
