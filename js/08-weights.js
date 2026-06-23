@@ -48,10 +48,18 @@ function swDrift(w) {
   const d = Math.abs(Number(w.correction) - Number(w.prev_correction)) * 1000;
   return { has: true, drift: d, Ds: Math.max(U, d) };
 }
+// แปลงเลขเป็นสตริงเต็ม (กัน toFixed→Number กลายเป็น 3e-7) แล้วตัดศูนย์ท้าย
+function swTrim(v, dp) {
+  if (v == null || v === '' || !Number.isFinite(Number(v))) return '–';
+  let s = Number(v).toFixed(dp);
+  if (s.indexOf('.') >= 0) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  return s;
+}
 function swFmtG(v) {
   if (v == null || v === '') return '–';
   v = Number(v);
-  const s = Math.abs(v) < 1e-4 ? (+v.toFixed(7)) : (+v.toFixed(5));
+  if (!Number.isFinite(v)) return '–';
+  const s = swTrim(v, Math.abs(v) < 1e-4 ? 7 : 5);
   return (v > 0 ? '+' : '') + s;
 }
 
@@ -126,7 +134,7 @@ function renderSW() {
         <td class="sw-idc">${escapeHtmlText(w.serial_no || '–')}</td>
         <td class="sw-idc"><strong>${escapeHtmlText(w.id_code || '–')}</strong></td>
         <td class="sw-cur">${swFmtG(w.correction)}</td>
-        <td class="sw-cur"><strong>${av == null ? '–' : (+av.toFixed(7))}</strong></td>
+        <td class="sw-cur"><strong>${av == null ? '–' : swTrim(av, 7)}</strong></td>
         <td class="sw-cur sw-idc">${escapeHtmlText(w.cert_no || '–')}</td>
         <td class="sw-cur">${fmtDateTH(w.due_date)}</td>
         <td class="sw-cur">${w.uncertainty != null ? w.uncertainty : '–'}</td>
