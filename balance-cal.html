@@ -369,6 +369,8 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
         <label style="font-size:12px;color:var(--muted);font-weight:700"><input type="checkbox" id="roundUpU" checked onchange="recalc()"> ปัดเศษ U รายงาน (≥1000g เต็มหน่วย mg · &lt;1000g 2 เลขนัยสำคัญ)</label>
       </div>
     </div>
+    <div style="margin:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="font-weight:700;font-size:13px">ชุด CMC:</label>
+      <select id="cmcSet" onchange="onCmcSetChange(this.value)" style="padding:6px 10px;border:1px solid var(--border,#ccc);border-radius:6px;font-family:inherit;font-size:13px"></select></div>
     <div class="note" style="margin-bottom:8px"><i class="ti ti-shield-check"></i><div>U รายงานถูกยกขั้นต่ำตาม <b>CMC</b> ที่ดึงจากฐานขอบข่ายที่รับรองอัตโนมัติ (ถ้า U คำนวณ ≤ CMC จะรายงานเป็น CMC) — คอลัมน์ CMC ด้านล่างคือค่าที่ระบบใช้</div></div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุด (g)</th><th class="num">u WS</th><th class="num">u Drift</th><th class="num">u do</th><th class="num">u d</th><th class="num">u Ab</th><th class="num">u R</th><th class="num">u รวม</th><th class="num">Veff</th><th class="num">k</th><th class="num">U = k·uc</th><th class="num">CMC</th><th class="num">U รายงาน</th></tr></thead>
@@ -421,18 +423,35 @@ let TOLS = [
   { from: 300, to: 1000, tol: 0.10 },
   { from: 1000, to: 3100, tol: 0.15 },
 ];
-// ฐาน CMC (mock ขอบข่ายที่รับรอง) — ระบบจริงดึงจากตาราง cmc_scope · ค่าตัวอย่าง แทนด้วยค่าจริงจากไฟล์ขอบข่าย
-const CMC_SCOPE = {
-  accred_no: 'ACC-MASS-001', quantity: 'มวล (Mass)', instrument: 'เครื่องชั่งไฟฟ้า',
-  valid_from: '2025-03-01', valid_to: '2028-02-29',
-  ranges: [
-    { from: 0,    to: 300,  cmc: 3 },
-    { from: 300,  to: 1000, cmc: 5 },
-    { from: 1000, to: 3100, cmc: 8 },
-  ],
-};
-let CMC = CMC_SCOPE.ranges;   // ดึงช่วง CMC จากฐาน
-const cmcFor = nominal => (CMC.find(c => nominal > c.from && nominal <= c.to) || CMC[CMC.length-1] || {}).cmc || 0;
+// ฐาน CMC — โหลดจาก cmc_set/cmc_row (เลือกชุด Permanent/Site ตอนสอบ) · หน่วยมาตรฐาน from_g/to_g=กรัม, cmc_mg=mg
+let CMC_SETS = [];                 // ชุด balance ที่ active
+let CMC_ROWS = [];                 // แถวของชุดที่เลือก (from_g/to_g กรัม, cmc_mg, low_inc)
+let CMC_KIND = 'range';
+let CMC_SET_SEL = null;            // set id ที่เลือก
+// mock fallback (จนกว่าจะโหลด set ได้) — แถบ MOCK แดงจะเตือน
+const MOCK_CMC_ROWS = [ { from_g: 0, to_g: 300, cmc_mg: 3, low_inc: true }, { from_g: 300, to_g: 1000, cmc_mg: 5, low_inc: false }, { from_g: 1000, to_g: 3100, cmc_mg: 8, low_inc: false } ];
+function cmcRowsActive() { return (CMC_ROWS && CMC_ROWS.length) ? CMC_ROWS : MOCK_CMC_ROWS; }
+function cmcFor(nominalG) {
+  const rows = cmcRowsActive();
+  if (CMC_KIND === 'point') { const r = rows.find(r => Math.abs(nominalG - r.from_g) <= 1e-9 * Math.max(1, r.from_g)); return r ? r.cmc_mg : 0; }
+  const r = rows.find(r => (r.low_inc ? nominalG >= r.from_g : nominalG > r.from_g) && (r.to_g == null || nominalG <= r.to_g));
+  return r ? r.cmc_mg : 0;
+}
+function renderCmcSetDropdown() {
+  const sel = document.getElementById('cmcSet'); if (!sel) return;
+  sel.innerHTML = CMC_SETS.length
+    ? CMC_SETS.map(s => `<option value="${s.id}"${s.id === CMC_SET_SEL ? ' selected' : ''}>${s.lab_status || '?'} (Rev.${s.revision || '-'})</option>`).join('')
+    : '<option value="">— MOCK (ยังไม่มีชุด CMC) —</option>';
+}
+async function onCmcSetChange(id) {
+  const sel = CMC_SETS.find(s => s.id === id); if (!sel) return;
+  CMC_SET_SEL = id; CMC_KIND = sel.value_kind || 'range';
+  const db = sbx(); if (!db) return;
+  const { data: rws } = await db.from('cmc_row').select('*').eq('set_id', id).order('seq');
+  CMC_ROWS = (rws || []).map(r => ({ from_g: Number(r.from_g), to_g: r.to_g === null ? null : Number(r.to_g), low_inc: !!r.low_inc, cmc_mg: Number(r.cmc_mg) }));
+  CMC_IS_MOCK = CMC_ROWS.length === 0;
+  recalc(); renderStdBanner();
+}
 // ===== ทะเบียนชุดตุ้มมาตรฐาน (หลายชุดหลาย ID) — ระบบจริงดึงจาก standard_weights + ใบ cert ล่าสุด =====
 // แต่ละชุดมีลูกตุ้มพร้อมค่าแก้/U/Dₛ (resolved) · ชุด F1 ค่าสะท้อนจุดทดสอบเดิม (ทวนสอบกับ Excel ได้) Dₛ=U
 const STD_REGISTRY = [
@@ -812,7 +831,11 @@ function buildCAL() {
     calibrated_by: val('fCalBy'), procedure: val('fProcedure'),
     tolerances: tolText,
     ab_ppm: parseFloat(byId('abMaterial').value) || 1,
-    cmc: CMC.map(c => ({ from: c.from, to: c.to, cmc: c.cmc })),
+    cmc: cmcRowsActive().map(c => ({ from: c.from_g, to: c.to_g, cmc: c.cmc_mg })),
+    cmc_set_id: CMC_SET_SEL || null,
+    cmc_lab_status: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).lab_status || null,
+    cmc_revision: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).revision || null,
+    cmc_based_on: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).based_on || null,
     standards: STDS.map(s => ({ name: s.name, model: s.model, cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
     preload: { point: num('plPoint', 0), reads: plReads },
     repeat: { point: num('repPoint', 0), reads: reps },
@@ -1161,7 +1184,7 @@ function renderStdBanner() {
   const b = byId('stdBanner'); if (!b) return;
   if (calDataReady()) {
     b.style.cssText = 'display:block;margin-bottom:10px;background:#e1f5ee;border:1px solid #b6e6d6;border-radius:8px;padding:8px 10px;font-size:12px;color:#0f6e56';
-    b.innerHTML = '<i class="ti ti-database"></i> ข้อมูลจริงพร้อมใช้ — ตุ้มที่อนุมัติ ' + STD_REGISTRY.length + ' ชุด · CMC ' + (CMC ? CMC.length : 0) + ' ช่วง';
+    b.innerHTML = '<i class="ti ti-database"></i> ข้อมูลจริงพร้อมใช้ — ตุ้มที่อนุมัติ ' + STD_REGISTRY.length + ' ชุด · CMC ' + cmcRowsActive().length + ' แถว';
   } else {
     const miss = [];
     if (STD_IS_MOCK) miss.push('ตุ้มมาตรฐานยังไม่ถูกอนุมัติ (อนุมัติที่หน้า “ใบ Cert Reference (ตุ้มมาตรฐาน)” ก่อน)');
@@ -1258,7 +1281,7 @@ renderStdBanner();   // เริ่มต้นเป็นแดง (mock) จ
   const el = byId(id); if (el) el.addEventListener('input', recalc);
 });
 
-// ===== ต่อระบบจริง: โหลดชุดตุ้ม (standard_certs) + CMC (cmc_scope) จาก Supabase =====
+// ===== ต่อระบบจริง: โหลดชุดตุ้ม (standard_weights) + CMC (cmc_set/cmc_row) จาก Supabase =====
 const SB_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
 let SBCAL = null;
@@ -1268,9 +1291,9 @@ async function loadFromDB() {
   if (typeof supabase === 'undefined') return;
   try { SBCAL = supabase.createClient(SB_URL, SB_KEY); } catch (e) { return; }
   try {
-    const [wRes, cmcRes] = await Promise.all([
+    const [wRes, setRes] = await Promise.all([
       SBCAL.from('standard_weights').select('*').eq('status', 'approved').order('set_code').order('nominal_value'),
-      SBCAL.from('cmc_scope').select('*').order('range_from'),
+      SBCAL.from('cmc_set').select('*').eq('parameter', 'Electronic balance').eq('is_active', true).order('lab_status'),
     ]);
     const aw = wRes.data || [];   // ตุ้มที่อนุมัติแล้ว
 
@@ -1294,9 +1317,17 @@ async function loadFromDB() {
       if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; STD_IS_MOCK = false; }
     }
 
-    // CMC จากฐาน (เฉพาะมวล) — แทนค่า mock ถ้ามี
-    const cmcRows = (cmcRes.data || []).filter(c => !c.quantity || /mass|มวล/i.test(c.quantity));
-    if (cmcRows.length) { CMC = cmcRows.map(c => ({ from: Number(c.range_from), to: Number(c.range_to), cmc: Number(c.cmc) })); CMC_IS_MOCK = false; }
+    // CMC จากฐาน: เลือกชุด balance ที่ active (default Permanent) แล้วโหลดแถว
+    CMC_SETS = setRes.data || [];
+    if (CMC_SETS.length) {
+      if (!CMC_SET_SEL || !CMC_SETS.some(s => s.id === CMC_SET_SEL)) { const perm = CMC_SETS.find(s => s.lab_status === 'Permanent'); CMC_SET_SEL = (perm || CMC_SETS[0]).id; }
+      const sel = CMC_SETS.find(s => s.id === CMC_SET_SEL) || CMC_SETS[0];
+      CMC_SET_SEL = sel.id; CMC_KIND = sel.value_kind || 'range';
+      const { data: rws } = await SBCAL.from('cmc_row').select('*').eq('set_id', sel.id).order('seq');
+      CMC_ROWS = (rws || []).map(r => ({ from_g: Number(r.from_g), to_g: r.to_g === null ? null : Number(r.to_g), low_inc: !!r.low_inc, cmc_mg: Number(r.cmc_mg) }));
+      CMC_IS_MOCK = CMC_ROWS.length === 0;
+    } else { CMC_IS_MOCK = true; }
+    renderCmcSetDropdown();
 
     deriveStds(); rebuildAvail(); assignWeights(); renderStdTable(); renderWeightPicker(); recalc();
     renderStdBanner();
