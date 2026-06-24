@@ -124,27 +124,21 @@ async function loadDetailPhotos(d) {
       const { data: u } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${f.name}`, 600);
       if (u?.signedUrl) items.push({ name: f.name, url: u.signedUrl });
     }
-    const addBtn = (canEdit && items.length < INST_PHOTO_MAX)
-      ? `<button class="btn-view reg-photo-add" onclick="uploadInstrumentPhoto(${Number(d.id) || 0})">+ เพิ่มรูป</button>` : '';
-    if (!items.length) {
-      el.innerHTML = `<div class="reg-photo-wrap"><div class="reg-photo-empty">ยังไม่มีรูปเครื่องมือ${canEdit ? ' — กด “+ เพิ่มรูป”' : ''}</div>${addBtn}</div>`;
+    const id = Number(d.id) || 0;
+    const cells = items.map(it => `<div class="reg-photo-cell">
+      <img src="${it.url}" onclick="openPhotoFull('${it.url}')" alt="รูปเครื่องมือ">
+      ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✕</button>` : ''}
+    </div>`).join('');
+    const addCell = (canEdit && items.length < INST_PHOTO_MAX)
+      ? `<div class="reg-photo-addcell" onclick="uploadInstrumentPhoto(${id})"><span class="ic">＋</span>เพิ่มรูป</div>` : '';
+    if (!items.length && !canEdit) {
+      el.innerHTML = `<div class="reg-photo-empty">ยังไม่มีรูปเครื่องมือ</div>`;
       return;
     }
-    el.innerHTML = `<div class="reg-photo-wrap">
-      <div class="reg-photo-top"><img id="regPhotoHero" class="reg-photo-hero" src="${items[0].url}" onclick="openPhotoFull(this.src)" alt="รูปเครื่องมือ">${addBtn}</div>
-      <div class="reg-photo-thumbs">${items.map((it, i) => `<div class="reg-photo-thumb${i === 0 ? ' active' : ''}">
-        <img src="${it.url}" onclick="setHeroPhoto('${it.url}', this)" alt="">
-        ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${Number(d.id) || 0})">✕</button>` : ''}
-      </div>`).join('')}</div>
-    </div>`;
+    el.innerHTML = `<div class="reg-photo-grid">${cells}${addCell}</div>`;
   } catch (e) {
     el.innerHTML = `<div class="reg-photo-empty" style="color:var(--red)">โหลดรูปไม่สำเร็จ</div>`;
   }
-}
-function setHeroPhoto(url, thumbEl) {
-  const hero = document.getElementById('regPhotoHero'); if (hero) hero.src = url;
-  document.querySelectorAll('#regDetailPhotos .reg-photo-thumb').forEach(t => t.classList.remove('active'));
-  if (thumbEl && thumbEl.closest) { const w = thumbEl.closest('.reg-photo-thumb'); if (w) w.classList.add('active'); }
 }
 function openPhotoFull(url) { if (url) window.open(url, '_blank'); }
 
