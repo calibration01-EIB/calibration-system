@@ -845,7 +845,7 @@ function buildCAL() {
     cmc_lab_status: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).lab_status || null,
     cmc_revision: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).revision || null,
     cmc_based_on: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).based_on || null,
-    standards: CERT_STDS.map(s => ({ cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
+    standards: CERT_STDS.map(s => ({ name: s.name, model: s.model, cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
     preload: { point: num('plPoint', 0), reads: plReads },
     repeat: { point: num('repPoint', 0), reads: reps },
     points,
@@ -925,7 +925,8 @@ function deriveCertStds() {
   SELECTED_SETS.map(regGet).filter(Boolean).forEach(reg => {
     const key = (reg.serial && reg.serial.trim()) || reg.id_code;
     let g = groups[key];
-    if (!g) g = groups[key] = { key, serial: reg.serial || '', clsSet: [], ids: [], certSet: [], dues: [], noms: [] };
+    if (!g) g = groups[key] = { key, serial: reg.serial || '', modelSet: [], clsSet: [], ids: [], certSet: [], dues: [], noms: [] };
+    if (reg.model && g.modelSet.indexOf(reg.model) < 0) g.modelSet.push(reg.model);
     if (reg.cls && g.clsSet.indexOf(reg.cls) < 0) g.clsSet.push(reg.cls);
     if (reg.id_code && g.ids.indexOf(reg.id_code) < 0) g.ids.push(reg.id_code);
     if (reg.cert && g.certSet.indexOf(reg.cert) < 0) g.certSet.push(reg.cert);
@@ -934,8 +935,20 @@ function deriveCertStds() {
   });
   CERT_STDS = Object.keys(groups).map(k => {
     const g = groups[k];
+    const classG = g.clsSet.join(',');
+    const noms = g.noms.filter(n => n > 0);
+    // MODEL: ใช้จาก DB ถ้ามี · ไม่งั้นประกอบ "CLASS <grade> ( <ช่วงหน่วยธรรมชาติ> )" เช่น CLASS E2 ( 1 mg - 1 kg )
+    let model = g.modelSet.join(', ');
+    if (!model && noms.length) {
+      const lo = fmtWeightUnit(Math.min.apply(null, noms)), hi = fmtWeightUnit(Math.max.apply(null, noms));
+      const same = lo.val === hi.val && lo.unit === hi.unit;
+      const rangeTxt = same ? `${lo.val} ${lo.unit}` : `${lo.val} ${lo.unit} - ${hi.val} ${hi.unit}`;
+      model = classG ? `CLASS ${classG} ( ${rangeTxt} )` : '';
+    }
     const auto = {
-      cls: composeStdCls(g.noms, g.clsSet.join(',')),
+      name: 'STANDARD WEIGHT',
+      model,
+      cls: composeStdCls(g.noms, classG),
       serial: g.serial,
       id_code: g.ids.join(','),
       cert: g.certSet.join(','),
@@ -943,7 +956,7 @@ function deriveCertStds() {
     };
     const ov = STD_ROW_OV[g.key] || {};
     const pick = f => (ov[f] !== undefined ? ov[f] : auto[f]);
-    return { key: g.key, _auto: auto, sets: g.ids.slice(),
+    return { key: g.key, _auto: auto, sets: g.ids.slice(), name: pick('name'), model: pick('model'),
       cls: pick('cls'), serial: pick('serial'), id_code: pick('id_code'), cert: pick('cert'), due: pick('due') };
   });
   const live = {}; CERT_STDS.forEach(r => { live[r.key] = 1; });
