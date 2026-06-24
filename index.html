@@ -3435,16 +3435,22 @@ body.app-mode textarea:focus {
             📐 <b>CMC (Calibration and Measurement Capability)</b> — ความสามารถการวัดที่ดีที่สุดที่ห้องปฏิบัติการได้รับการรับรอง (ISO/IEC 17025)<br>
             ตอนออกผลสอบเทียบ ถ้า <b>U ที่คำนวณได้ ≤ CMC</b> ของช่วงพิกัดนั้น จะ<b>รายงานเป็นค่า CMC แทน</b> (รายงานดีกว่าความสามารถที่รับรองไม่ได้)
           </div>
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <input id="cmcSearch" type="search" placeholder="🔍 ค้นหา ปริมาณ / ชนิดเครื่องมือ / เลขที่ขอบข่าย" oninput="renderCmc()"
-              style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none">
-            <button id="cmcAddBtn" onclick="openCmcEdit(null)" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ เพิ่มช่วง CMC</button>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label style="font-size:13px;font-weight:600">ชุด CMC:</label>
+              <select id="cmcSetList" onchange="selectCmcSet(this.value)" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;min-width:300px;outline:none"></select>
+              <button id="cmcSetAddBtn" onclick="openSetEdit(null)" style="padding:8px 14px;background:#00695C;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">+ ชุดใหม่</button>
+              <button id="cmcSetEditBtn" onclick="openSetEdit(cmcCurrentSetId)" style="padding:8px 14px;background:#455A64;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer">✏️ แก้ชุด</button>
+              <button id="cmcSetDelBtn" onclick="deleteCmcSet()" style="padding:8px 14px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer">🗑️ ลบชุด</button>
+              <button id="cmcRowAddBtn" onclick="openRowEdit(null)" style="margin-left:auto;padding:8px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">+ เพิ่มแถว</button>
+            </div>
+            <div id="cmcSetMeta" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
           </div>
           <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
             <div class="table-wrap" style="max-height:calc(100vh - 380px)">
               <table>
-                <thead><tr><th>ปริมาณ</th><th>ชนิดเครื่องมือ</th><th style="text-align:right">ช่วงพิกัด (จาก)</th><th style="text-align:right">ถึง</th><th style="text-align:right">CMC</th><th>หน่วย</th><th>เลขที่ขอบข่าย</th><th>ใช้ได้ถึง</th><th></th></tr></thead>
-                <tbody id="cmcTableBody"><tr><td colspan="9" class="no-data">กำลังโหลด...</td></tr></tbody>
+                <thead><tr><th>ช่วง / จุด</th><th style="text-align:right">CMC</th><th style="text-align:right">= mg</th><th>จัดการ</th></tr></thead>
+                <tbody id="cmcTableBody"><tr><td colspan="4" class="no-data">กำลังโหลด...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -3526,27 +3532,51 @@ body.app-mode textarea:focus {
       </div>
 
       <!-- MODAL: CMC Scope Edit -->
-      <div class="modal-overlay" id="cmcModal" onclick="if(event.target===this)closeCmcModal()">
-        <div class="modal-box" style="max-width:560px">
-          <div class="modal-header"><h3 id="cmcModalTitle">เพิ่มช่วง CMC</h3><button class="btn-close" onclick="closeCmcModal()">×</button></div>
+      <!-- MODAL: CMC Set Edit -->
+      <div class="modal-overlay" id="cmcSetModal" onclick="if(event.target===this)closeCmcSetModal()">
+        <div class="modal-box" style="max-width:640px">
+          <div class="modal-header"><h3 id="cmcSetModalTitle">เพิ่มชุด CMC</h3><button class="btn-close" onclick="closeCmcSetModal()">×</button></div>
           <div class="modal-body" style="padding:16px 20px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ปริมาณ (Quantity)</label><input id="cmcQuantity" type="text" placeholder="มวล (Mass)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ชนิดเครื่องมือ</label><input id="cmcInstrType" type="text" placeholder="เครื่องชั่งไฟฟ้า" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ช่วงพิกัด: จาก *</label><input id="cmcFrom" type="number" step="any" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ถึง *</label><input id="cmcTo" type="number" step="any" placeholder="300" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ค่า CMC *</label><input id="cmcVal" type="number" step="any" placeholder="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">หน่วย</label><input id="cmcUnit" type="text" placeholder="mg" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">เลขที่ใบรับรองขอบข่าย</label><input id="cmcAccred" type="text" placeholder="ACC-MASS-001" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ใช้ได้ตั้งแต่</label><input id="cmcValidFrom" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ใช้ได้ถึง</label><input id="cmcValidTo" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
-              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">หมายเหตุ</label><textarea id="cmcRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px;resize:vertical"></textarea></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ปริมาณ (Quantity)</label><input id="csQuantity" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Parameter/Item</label><input id="csParameter" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">สถานะแล็บ</label><select id="csStatus" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"><option>Permanent</option><option>Site</option><option>Temporary</option><option>Mobile</option></select></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Based on</label><input id="csBasedOn" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ชนิดค่า</label><select id="csKind" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"><option value="range">ช่วง (range)</option><option value="point">จุด (point)</option></select></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">เลขขอบข่าย</label><input id="csAccred" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Revision</label><input id="csRev" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">เลขฟอร์ม</label><input id="csFormNo" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ใช้ได้ตั้งแต่</label><input id="csValidFrom" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ใช้ได้ถึง</label><input id="csValidTo" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div style="grid-column:1/-1"><label style="font-size:13px"><input id="csActive" type="checkbox" checked> เปิดใช้ชุดนี้</label></div>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn-reset" type="button" onclick="closeCmcModal()">ยกเลิก</button>
-            <button class="btn-view" type="button" onclick="saveCmc()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
+            <button class="btn-reset" type="button" onclick="closeCmcSetModal()">ยกเลิก</button>
+            <button class="btn-view" type="button" onclick="saveCmcSet()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CMC Row Edit -->
+      <div class="modal-overlay" id="cmcRowModal" onclick="if(event.target===this)closeCmcRowModal()">
+        <div class="modal-box" style="max-width:560px">
+          <div class="modal-header"><h3 id="cmcRowModalTitle">เพิ่มช่วง CMC</h3><button class="btn-close" onclick="closeCmcRowModal()">×</button></div>
+          <div class="modal-body" style="padding:16px 20px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ลำดับ</label><input id="crSeq" type="number" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div id="crRangeMode" style="display:contents">
+                <div><label style="font-size:12px;font-weight:600;color:var(--text2)">จาก</label><div style="display:flex;gap:6px;margin-top:4px"><input id="crFrom" type="number" step="any" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box"><select id="crFromUnit" style="width:72px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"><option>mg</option><option selected>g</option><option>kg</option></select></div></div>
+                <div><label style="font-size:12px;font-weight:600;color:var(--text2)">ถึง (เว้นว่าง=เปิดปลาย)</label><div style="display:flex;gap:6px;margin-top:4px"><input id="crTo" type="number" step="any" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box"><select id="crToUnit" style="width:72px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"><option>mg</option><option selected>g</option><option>kg</option></select></div></div>
+                <div style="grid-column:1/-1"><label style="font-size:13px"><input id="crLowInc" type="checkbox"> รวมขอบล่าง (ช่วงแรกสุด เช่น 1 mg to 20 g)</label></div>
+              </div>
+              <div id="crPointMode" style="display:none;grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">ค่า nominal</label><div style="display:flex;gap:6px;margin-top:4px"><input id="crPoint" type="number" step="any" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box"><select id="crPointUnit" style="width:72px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"><option>mg</option><option selected>g</option><option>kg</option></select></div></div>
+              <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">ค่า CMC</label><div style="display:flex;gap:6px;margin-top:4px"><input id="crCmc" type="number" step="any" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box"><select id="crCmcUnit" style="width:72px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"><option>µg</option><option selected>mg</option><option>g</option></select></div></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-reset" type="button" onclick="closeCmcRowModal()">ยกเลิก</button>
+            <button class="btn-view" type="button" onclick="saveCmcRow()" style="padding:8px 18px;background:#00695C;color:white;border:none">💾 บันทึก</button>
           </div>
         </div>
       </div>
