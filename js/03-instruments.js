@@ -167,6 +167,9 @@ function openInstrumentDetail(id) {
       </div>
     </div>
 
+    <div class="reg-section">รูปเครื่องมือ</div>
+    <div id="regDetailPhotos"><div class="reg-photo-empty">กำลังโหลดรูป...</div></div>
+
     <div class="reg-metric-grid">
       <div class="reg-metric"><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div>
       <div class="reg-metric"><span>ID.No.</span><strong>${escapeHtmlText(d.id_code || '–')}</strong></div>
@@ -179,6 +182,10 @@ function openInstrumentDetail(id) {
       ${regDetailItem('ประเภทเครื่องมือ', displayType)}
       ${regDetailItem('ชื่อเครื่องจักร', d.machine_name)}
       ${regDetailItem('ยี่ห้อ / รุ่น', d.brand)}
+      ${regDetailItem('รุ่น (Model)', d.model)}
+      ${regDetailItem('พิกัด Max (g)', d.capacity)}
+      ${regDetailItem('ความละเอียด d (g)', d.resolution)}
+      ${regDetailItem('Accuracy Class', d.accuracy_class)}
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
       ${regDetailItem('Range', d.range_val)}
       ${regDetailItem('Tolerance (±)', d.tolerance)}
@@ -199,6 +206,7 @@ function openInstrumentDetail(id) {
   document.getElementById('instrumentDetailModal').classList.add('open');
   loadDetailFiles(d);
   loadDetailAudit(d);
+  loadDetailPhotos(d);
 }
 
 function closeInstrumentDetail() {
