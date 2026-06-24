@@ -1089,6 +1089,10 @@ async function issueCert() {
       if (error) throw error;
     }
     CERT_BASE = newNumber; CERT_REV = 0; CERT_NO = certNoStr();
+    // เติมเลข Cert/Job/วันที่ออก ลงฟอร์ม "ก่อน" buildCAL → data.cert_no/job_no/date_issue ไม่ว่าง (ใช้ตอนปริ้น/ปริ้นย้อนหลัง)
+    if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+    if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
+    if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0, 10);
     // 2) บันทึกผลดิบ + CAL object ลง calibration_records
     const rec = {
       instrument_id: (INCOMING_INST && INCOMING_INST.instrument_id) || null,
@@ -1117,11 +1121,8 @@ async function issueCert() {
         if (iErr) instNote = '\n⚠ ทะเบียนเครื่องไม่อัปเดต: ' + iErr.message;
       } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
     }
-    if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
-    if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
-    if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0, 10);
     renderCertBar();
-    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผล + อัปเดตทะเบียนเครื่องแล้ว' + instNote);
+    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผล + อัปเดตทะเบียนเครื่องแล้ว (โปรดรีเฟรชหน้าหลักเพื่อดูข้อมูลเครื่องที่อัปเดต)' + instNote);
     switchMode('review');
   } catch (e) {
     alert('ออกเลข/บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : e));
