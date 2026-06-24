@@ -1042,7 +1042,7 @@ const STATE_META = {
   voided:   { label: 'ยกเลิก (เก็บเลขไว้เป็นประวัติ)', cls: 'st-voided' },
 };
 const certNoStr = () => '' + CERT_YY + CERT_TC + String(CERT_BASE).padStart(3, '0') + '-' + CERT_REV;
-const jobNoStr  = () => '' + CERT_YY + CERT_TC + String(CERT_BASE).padStart(3, '0');
+const jobNoStr  = () => '' + CERT_YY + '/' + CERT_TC + String(CERT_BASE).padStart(3, '0');  // หมายเลขของงาน รูปแบบ "26/B318" (มี / คั่นปี) ตามฟอร์มต้นฉบับ Book1 — ต่างจาก cert_no "26B318-0"
 const sbx = () => SBCAL || (typeof supabase !== 'undefined' ? supabase.createClient(SB_URL, SB_KEY) : null);
 function renderCertBar() {
   const m = STATE_META[CAL_STATE];
