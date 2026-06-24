@@ -1029,6 +1029,14 @@ function setLabel(setId) {
   const s = STDS.find(x => x.id_code === setId);
   return s ? (s.name + ' · ' + (s.cls || s.model || '')) : '—';
 }
+// หน่วยแสดงผลของลูกตุ้มจากค่ากรัม: <1g→mg · <1kg→g · ≥1kg→kg (+ rank สำหรับเรียง)
+function fmtWeightUnit(g) {
+  let unit, rank, val;
+  if (g >= 1000) { unit = 'kg'; rank = 3; val = g / 1000; }
+  else if (g >= 1) { unit = 'g'; rank = 2; val = g; }
+  else { unit = 'mg'; rank = 1; val = g * 1000; }
+  return { unit, rank, val: Math.round(val * 1e6) / 1e6 };
+}
 function renderWeightPicker() {
   const el = byId('weightPicker'); if (!el) return;
   const groups = {};
@@ -1036,9 +1044,10 @@ function renderWeightPicker() {
   el.innerHTML = Object.keys(groups).map(sid => {
     const idxs = groups[sid];
     const nChk = idxs.filter(i => AVAIL_WEIGHTS[i].checked).length;
-    const items = idxs.map(i => {
-      const w = AVAIL_WEIGHTS[i];
-      const label = w.nominal_g >= 1000 ? (w.nominal_g/1000)+' kg' : w.nominal_g+' g';
+    const items = idxs.map(i => ({ i, w: AVAIL_WEIGHTS[i], f: fmtWeightUnit(AVAIL_WEIGHTS[i].nominal_g) }))
+      .sort((a, b) => a.f.rank - b.f.rank || a.f.val - b.f.val)   // เรียงตามหน่วย (mg→g→kg) แล้วค่อยตัวเลข
+      .map(({ i, w, f }) => {
+      const label = `${f.val} ${f.unit}`;
       return `<label class="wpick ${w.in_date?'':'dis'}">
         <input type="checkbox" ${w.checked?'checked':''} ${w.in_date?'':'disabled'} onchange="toggleWeight(${i})">
         <b>${label}</b><span class="wid">${w.id_code}</span>${w.in_date?'':'<span class="exp">หมดอายุ</span>'}
