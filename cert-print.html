@@ -120,6 +120,7 @@ table { border-collapse: collapse; }
 .ws .sec { font-weight: 700; text-decoration: underline; margin-top: 8px; }
 .ws table { font-size: var(--fd); } .ws table.bx td, .ws table.bx th { padding: 1px 5px; } .ws table.rep td, .ws table.rep th { padding: 3.9px 5px; } .ws table.pre td, .ws table.pre th { padding: 3.9px 7px; }
 .xbar { font-weight: 400; font-style: normal; }
+.ws .jc { font-size: 1.32em; } /* เลขงาน/เลขใบรับรองบน worksheet: ขยายชดเชยตัวเลข AngsanaUPC ที่เล็กกว่าตัวอักษรไทย ให้สูงเท่าหน้าปก */
 .sheet.land { font-family: 'Cordia New','CordiaUPC','Angsana New',sans-serif; --ffd: 'Cordia New','CordiaUPC',sans-serif; --ffl: 'Cordia New','CordiaUPC',sans-serif; --fd: 13pt; --fl: 13pt; } .sheet.land table.bx td, .sheet.land table.bx th { padding: 1px 4px; } .sheet.land table.bx.errtbl td, .sheet.land table.bx.errtbl th { padding: 2px 4px; } .sheet.land .panrow svg { height: 64px; width: auto; }
 /* ===== uncert ===== */
 
@@ -484,7 +485,7 @@ function pageWs1() {
     <div class="sec" style="margin-top:0">สภาวะแวดล้อมขณะสอบเทียบ</div>
     <div class="env-grid"><span class="lbl">เวลาในการปรับอุณหภูมิ</span><span class="ev fill">${CAL.warmup[0]}</span><span class="eu">น.</span><span class="et">ถึง</span><span class="ev fill">${CAL.warmup[1]}</span><span class="eu">น.</span><span class="lbl er">เวลาในการสอบเทียบ เริ่ม</span><span class="ev fill">${CAL.cal_time[0]}</span><span class="eu">น.</span><span class="et">ถึง</span><span class="ev fill">${CAL.cal_time[1]}</span><span class="eu">น.</span><span class="lbl">อุณหภูมิในการสอบเทียบ เริ่ม</span><span class="ev fill">${CAL.temp[0]}</span><span class="eu">°C</span><span class="et">ถึง</span><span class="ev fill">${CAL.temp[1]}</span><span class="eu">°C</span><span class="lbl er">ความชื้นสัมพัทธ์ เริ่ม</span><span class="ev fill">${CAL.rh[0]}</span><span class="eu">%</span><span class="et">ถึง</span><span class="ev fill">${CAL.rh[1]}</span><span class="eu">%</span></div>
     <div class="sec" style="margin-top:0">รายละเอียดการสอบเทียบ</div>
-    <div class="det-grid"><span class="dcell"><span class="lbl">วันที่ทำการสอบเทียบ</span><span class="fv fill">${dTH(CAL.date_cal)}</span></span><span class="dcell"><span class="lbl">หมายเลขใบขอรับบริการ</span><span class="fv fill">${esc(CAL.request_no)}</span></span><span class="dcell"><span class="lbl">หมายเลขของงาน</span><span class="fv fill">${esc(CAL.job_no)}</span></span><span class="dcell"><span class="lbl">วันที่สอบเทียบครั้งต่อไป</span><span class="fv fill">${dTH(CAL.date_next)}</span></span><span class="dcell"><span class="lbl">ผู้สอบเทียบ</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">ผู้ทบทวน</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">หมายเลขใบรับรองผล</span><span class="fv fill">${esc(CAL.cert_no)}</span></span><span class="dcell"><span class="lbl">Location</span><span class="fv fill">${esc(CAL.location)}</span></span><span></span></div>
+    <div class="det-grid"><span class="dcell"><span class="lbl">วันที่ทำการสอบเทียบ</span><span class="fv fill">${dTH(CAL.date_cal)}</span></span><span class="dcell"><span class="lbl">หมายเลขใบขอรับบริการ</span><span class="fv fill">${esc(CAL.request_no)}</span></span><span class="dcell"><span class="lbl">หมายเลขของงาน</span><span class="fv fill jc">${esc(CAL.job_no)}</span></span><span class="dcell"><span class="lbl">วันที่สอบเทียบครั้งต่อไป</span><span class="fv fill">${dTH(CAL.date_next)}</span></span><span class="dcell"><span class="lbl">ผู้สอบเทียบ</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">ผู้ทบทวน</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">หมายเลขใบรับรองผล</span><span class="fv fill jc">${esc(CAL.cert_no)}</span></span><span class="dcell"><span class="lbl">Location</span><span class="fv fill">${esc(CAL.location)}</span></span><span></span></div>
     <div class="row" style="margin-top:10px"><span class="sec">Preload Test</span><span style="margin-left:16px">${chk(true)} ก่อนปรับเทียบ</span><span style="margin-left:14px">${chk(false)} หลังปรับเทียบ</span><span style="margin-left:auto;width:332px"><span class="sec">สภาพของเครื่องชั่ง</span></span></div>
     <div class="row" style="margin-top:9px"><span class="b">Maximum Capacity</span>${fv(CAL.capacity,70)}<span>( g )</span><span style="margin-left:auto;width:332px"><span>${chk(false)} New item</span><span style="margin-left:14px">${chk(true)} Used item</span></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px">
@@ -518,8 +519,8 @@ function pageWs2() {
   return `<section class="sheet land ws">
     <div class="row" style="justify-content:space-between">
       <span><span class="sec" style="margin:0">2.การตรวจสอบค่า Error of indication from conventional mass value</span>
-        &nbsp; หมายเลขของงาน <span class="fv fill">${esc(CAL.job_no)}</span>
-        &nbsp; หมายเลขใบรับรองผล <span class="fv fill">${esc(CAL.cert_no)}</span></span>
+        &nbsp; หมายเลขของงาน <span class="fv fill jc">${esc(CAL.job_no)}</span>
+        &nbsp; หมายเลขใบรับรองผล <span class="fv fill jc">${esc(CAL.cert_no)}</span></span>
       <span class="b">หน้าที่ <span class="fv fill" style="min-width:26px">2</span> จาก <span class="fv fill" style="min-width:26px">6</span></span>
     </div>
     <table class="bx errtbl" style="width:100%;margin-top:4px">
