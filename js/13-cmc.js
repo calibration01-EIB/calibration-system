@@ -1,114 +1,187 @@
 /* ===== 13-cmc.js ===== */
-// ทะเบียน CMC (Calibration and Measurement Capability) — ขอบข่ายที่ห้องปฏิบัติการได้รับการรับรอง
-// ค่าความสามารถการวัดที่ดีที่สุด ตามช่วงพิกัด · ตอนออกผลถ้า U ที่คำนวณ ≤ CMC จะรายงานเป็น CMC แทน (ISO/IEC 17025)
+// ทะเบียน CMC แบบ 2 ตาราง: cmc_set (1 ใบขอบข่าย) → cmc_row (ช่วง/จุด)
+// หน่วยมาตรฐาน: from_g/to_g = กรัม, cmc_mg = mg
 // ====================================================
-let cmcData = [];
-let cmcEditingId = null;
+let cmcSets = [];
+let cmcRows = [];           // แถวของชุดที่กำลังดู
+let cmcCurrentSetId = null;
+let cmcSetEditingId = null;
+let cmcRowEditingId = null;
 
-async function loadCmcScope() {
-  const tbody = document.getElementById('cmcTableBody');
-  if (tbody && !cmcData.length) tbody.innerHTML = '<tr><td colspan="9" class="no-data">กำลังโหลด...</td></tr>';
+// ---- หน่วย ----
+function cmcMassToG(v, unit) { const n = Number(v); if (!Number.isFinite(n)) return null; return unit === 'mg' ? n / 1000 : unit === 'kg' ? n * 1000 : n; }
+function cmcCmcToMg(v, unit) { const n = Number(v); if (!Number.isFinite(n)) return null; return (unit === 'µg' || unit === 'ug') ? n / 1000 : unit === 'g' ? n * 1000 : n; }
+function cmcFmtMass(g) { g = Number(g); if (g < 1) return +(g * 1000).toPrecision(4) + ' mg'; if (g >= 1000) return +(g / 1000) + ' kg'; return +g + ' g'; }
+function cmcFmtCmc(mg) { mg = Number(mg); if (mg < 1) return +(mg * 1000).toPrecision(2) + ' µg'; if (mg >= 1000) return +(mg / 1000) + ' g'; return +mg + ' mg'; }
+function cmcFmtRange(from_g, to_g, low_inc) { const lo = cmcFmtMass(from_g); const hi = (to_g === null || to_g === undefined) ? '∞' : cmcFmtMass(to_g); return (low_inc ? '' : '>') + lo + ' to ' + hi; }
+
+async function loadCmcSets() {
   try {
-    const { data, error } = await sb.from('cmc_scope').select('*').order('range_from');
+    const { data, error } = await sb.from('cmc_set').select('*').order('created_at');
     if (error) throw error;
-    cmcData = data || [];
-    renderCmc();
+    cmcSets = data || [];
+    if ((!cmcCurrentSetId || !cmcSets.some(s => s.id === cmcCurrentSetId)) && cmcSets.length) cmcCurrentSetId = cmcSets[0].id;
+    renderCmcSets();
+    await loadCmcRows();
   } catch (e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="color:var(--red)">โหลดข้อมูลไม่ได้: ' + escapeHtmlText(e.message) + '</td></tr>';
+    const sel = document.getElementById('cmcSetList');
+    if (sel) sel.innerHTML = '<option>โหลดไม่ได้: ' + escapeHtmlText(e.message) + '</option>';
   }
 }
 
-// ดึงค่า CMC ตามค่าพิกัด (หน่วยเดียวกับ range) — ช่วง from < nominal ≤ to · ใช้ในโมดูลสอบเทียบ
-function cmcFor(nominal, quantity) {
-  const n = Number(nominal);
-  const hit = cmcData.find(c => (!quantity || c.quantity === quantity) && n > Number(c.range_from) && n <= Number(c.range_to));
-  return hit ? { cmc: Number(hit.cmc), unit: hit.unit, row: hit } : null;
+async function loadCmcRows() {
+  cmcRows = [];
+  if (cmcCurrentSetId) {
+    const { data } = await sb.from('cmc_row').select('*').eq('set_id', cmcCurrentSetId).order('seq');
+    cmcRows = (data || []).map(r => ({ ...r, from_g: Number(r.from_g), to_g: r.to_g === null ? null : Number(r.to_g), cmc_mg: Number(r.cmc_mg) }));
+  }
+  renderCmcRows();
 }
 
-function renderCmc() {
-  const tbody = document.getElementById('cmcTableBody');
-  if (!tbody) return;
+function curSet() { return cmcSets.find(s => s.id === cmcCurrentSetId) || null; }
+
+function renderCmcSets() {
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
-  const addBtn = document.getElementById('cmcAddBtn');
-  if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
-  const q = (document.getElementById('cmcSearch')?.value || '').trim().toLowerCase();
-  const rows = cmcData.filter(c => !q || [c.quantity, c.instrument_type, c.accred_cert_no].some(v => String(v || '').toLowerCase().includes(q)));
-  tbody.innerHTML = rows.length ? rows.map(c => `<tr>
-    <td>${escapeHtmlText(c.quantity || '–')}</td>
-    <td>${escapeHtmlText(c.instrument_type || '–')}</td>
-    <td style="text-align:right">${c.range_from}</td>
-    <td style="text-align:right">${c.range_to}</td>
-    <td style="text-align:right"><strong>${c.cmc}</strong></td>
-    <td>${escapeHtmlText(c.unit || 'mg')}</td>
-    <td>${escapeHtmlText(c.accred_cert_no || '–')}</td>
-    <td>${c.valid_to ? fmtDateTH(c.valid_to) : '–'}</td>
-    <td style="white-space:nowrap">${canEdit ? `<button class="btn-view" onclick="openCmcEdit('${c.id}')">✏️</button> <button class="btn-del" onclick="deleteCmc('${c.id}')">🗑️</button>` : ''}</td>
-  </tr>`).join('') : '<tr><td colspan="9" class="no-data">ยังไม่มีช่วง CMC — กด "เพิ่มช่วง CMC"</td></tr>';
+  const sel = document.getElementById('cmcSetList');
+  if (sel) sel.innerHTML = cmcSets.length
+    ? cmcSets.map(s => `<option value="${s.id}"${s.id === cmcCurrentSetId ? ' selected' : ''}>${escapeHtmlText(s.parameter || '')} · ${escapeHtmlText(s.lab_status || '')} (Rev.${escapeHtmlText(s.revision || '-')})${s.is_active ? '' : ' [ปิดใช้]'}</option>`).join('')
+    : '<option value="">— ยังไม่มีชุด CMC —</option>';
+  const s = curSet();
+  const meta = document.getElementById('cmcSetMeta');
+  if (meta) meta.innerHTML = s ? `อิง <b>${escapeHtmlText(s.based_on || '-')}</b> · ${escapeHtmlText(s.accred_no || '-')} · ${escapeHtmlText(s.value_kind)}${s.valid_to ? ' · ใช้ได้ถึง ' + fmtDateTH(s.valid_to) : ''}` : '';
+  ['cmcSetAddBtn', 'cmcSetEditBtn', 'cmcSetDelBtn', 'cmcRowAddBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = canEdit ? '' : 'none'; });
 }
 
-function openCmcEdit(id) {
-  cmcEditingId = id || null;
-  const c = id ? cmcData.find(x => x.id === id) : null;
+function renderCmcRows() {
+  const tb = document.getElementById('cmcTableBody');
+  if (!tb) return;
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  const s = curSet();
+  tb.innerHTML = cmcRows.length ? cmcRows.map(r => `<tr>
+    <td>${s && s.value_kind === 'point' ? cmcFmtMass(r.from_g) : cmcFmtRange(r.from_g, r.to_g, r.low_inc)}</td>
+    <td style="text-align:right"><strong>${cmcFmtCmc(r.cmc_mg)}</strong></td>
+    <td style="text-align:right;color:var(--text2)">${r.cmc_mg} mg</td>
+    <td style="white-space:nowrap">${canEdit ? `<button class="btn-view" onclick="openRowEdit('${r.id}')">✏️</button> <button class="btn-del" onclick="deleteCmcRow('${r.id}')">🗑️</button>` : ''}</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="no-data">ยังไม่มีแถวในชุดนี้</td></tr>';
+}
+
+function selectCmcSet(id) { cmcCurrentSetId = id || null; renderCmcSets(); loadCmcRows(); }
+
+// ---- ชุด (set) ----
+function openSetEdit(id) {
+  cmcSetEditingId = id || null;
+  const s = id ? cmcSets.find(x => x.id === id) : null;
   const set = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = (v ?? ''); };
-  document.getElementById('cmcModalTitle').textContent = c ? 'แก้ไขช่วง CMC' : 'เพิ่มช่วง CMC';
-  set('cmcQuantity', c?.quantity ?? 'มวล (Mass)');
-  set('cmcInstrType', c?.instrument_type ?? 'เครื่องชั่งไฟฟ้า');
-  set('cmcFrom', c?.range_from);
-  set('cmcTo', c?.range_to);
-  set('cmcVal', c?.cmc);
-  set('cmcUnit', c?.unit ?? 'mg');
-  set('cmcAccred', c?.accred_cert_no);
-  set('cmcValidFrom', c?.valid_from);
-  set('cmcValidTo', c?.valid_to);
-  set('cmcRemark', c?.remark);
-  document.getElementById('cmcModal').classList.add('open');
+  document.getElementById('cmcSetModalTitle').textContent = s ? 'แก้ไขชุด CMC' : 'เพิ่มชุด CMC';
+  set('csQuantity', s?.quantity ?? 'มวล (Mass)');
+  set('csParameter', s?.parameter ?? 'Electronic balance');
+  set('csStatus', s?.lab_status ?? 'Permanent');
+  set('csBasedOn', s?.based_on ?? 'UKAS LAB 14 : 2019');
+  set('csKind', s?.value_kind ?? 'range');
+  set('csAccred', s?.accred_no ?? 'CALIBRATION No.0384');
+  set('csRev', s?.revision);
+  set('csValidFrom', s?.valid_from);
+  set('csValidTo', s?.valid_to);
+  set('csFormNo', s?.form_no);
+  const act = document.getElementById('csActive'); if (act) act.checked = s ? !!s.is_active : true;
+  document.getElementById('cmcSetModal').classList.add('open');
 }
-function closeCmcModal() { document.getElementById('cmcModal').classList.remove('open'); cmcEditingId = null; }
+function closeCmcSetModal() { document.getElementById('cmcSetModal').classList.remove('open'); cmcSetEditingId = null; }
 
-async function saveCmc() {
-  const num = id => { const v = parseFloat(document.getElementById(id)?.value); return Number.isFinite(v) ? v : null; };
+async function saveCmcSet() {
   const val = id => (document.getElementById(id)?.value || '').trim();
-  const from = num('cmcFrom'), to = num('cmcTo'), cmc = num('cmcVal');
-  if (from === null || to === null || cmc === null) { showToast('กรอกช่วงพิกัด (จาก-ถึง) และค่า CMC', 'error'); return; }
-  if (to <= from) { showToast('ช่วง "ถึง" ต้องมากกว่า "จาก"', 'error'); return; }
   const payload = {
-    quantity: val('cmcQuantity') || 'มวล (Mass)',
-    instrument_type: val('cmcInstrType') || null,
-    range_from: from, range_to: to, cmc, unit: val('cmcUnit') || 'mg',
-    accred_cert_no: val('cmcAccred') || null,
-    valid_from: val('cmcValidFrom') || null,
-    valid_to: val('cmcValidTo') || null,
-    remark: val('cmcRemark') || null,
-    updated_at: new Date().toISOString(),
+    quantity: val('csQuantity') || null, parameter: val('csParameter') || null,
+    lab_status: val('csStatus') || null, based_on: val('csBasedOn') || null,
+    value_kind: val('csKind') || 'range', accred_no: val('csAccred') || null,
+    revision: val('csRev') || null, valid_from: val('csValidFrom') || null,
+    valid_to: val('csValidTo') || null, form_no: val('csFormNo') || null,
+    is_active: !!document.getElementById('csActive')?.checked, updated_at: new Date().toISOString(),
   };
   try {
     showLoading('กำลังบันทึก...');
-    const isNew = !cmcEditingId;
-    const result = cmcEditingId
-      ? await sb.from('cmc_scope').update(payload).eq('id', cmcEditingId)
-      : await sb.from('cmc_scope').insert(payload);
-    if (result.error) throw result.error;
-    closeCmcModal();
-    showToast(isNew ? 'เพิ่มช่วง CMC แล้ว' : 'แก้ไขแล้ว', 'success');
-    await loadCmcScope();
-  } catch (e) {
-    showToast('บันทึกไม่ได้: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+    const isNew = !cmcSetEditingId;
+    const res = cmcSetEditingId ? await sb.from('cmc_set').update(payload).eq('id', cmcSetEditingId).select('id')
+      : await sb.from('cmc_set').insert(payload).select('id');
+    if (res.error) throw res.error;
+    if (isNew && res.data && res.data[0]) cmcCurrentSetId = res.data[0].id;
+    closeCmcSetModal(); showToast(isNew ? 'เพิ่มชุดแล้ว' : 'แก้ไขแล้ว', 'success');
+    await loadCmcSets();
+  } catch (e) { showToast('บันทึกไม่ได้: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
-async function deleteCmc(id) {
-  if (!confirm('ลบช่วง CMC นี้?')) return;
+async function deleteCmcSet(id) {
+  id = id || cmcCurrentSetId; if (!id) return;
+  if (!confirm('ลบชุด CMC นี้ พร้อมทุกแถวในชุด?')) return;
   try {
     showLoading('กำลังลบ...');
-    const { error } = await sb.from('cmc_scope').delete().eq('id', id);
+    const { error } = await sb.from('cmc_set').delete().eq('id', id);
     if (error) throw error;
-    showToast('ลบแล้ว', 'success');
-    await loadCmcScope();
-  } catch (e) {
-    showToast('ลบไม่ได้: ' + e.message, 'error');
-  } finally {
-    hideLoading();
+    if (cmcCurrentSetId === id) cmcCurrentSetId = null;
+    showToast('ลบแล้ว', 'success'); await loadCmcSets();
+  } catch (e) { showToast('ลบไม่ได้: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ---- แถว (row) ----
+function openRowEdit(id) {
+  cmcRowEditingId = id || null;
+  const r = id ? cmcRows.find(x => x.id === id) : null;
+  const s = curSet();
+  const isPoint = s && s.value_kind === 'point';
+  const set = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = (v ?? ''); };
+  document.getElementById('cmcRowModalTitle').textContent = (r ? 'แก้ไข' : 'เพิ่ม') + (isPoint ? 'จุด' : 'ช่วง') + ' CMC';
+  document.getElementById('crPointMode').style.display = isPoint ? '' : 'none';
+  document.getElementById('crRangeMode').style.display = isPoint ? 'none' : 'contents';
+  // ค่าเดิมแสดงเป็น g/mg (ผู้ใช้เลือกหน่วยเองได้)
+  set('crSeq', r?.seq ?? (cmcRows.length + 1));
+  set('crFrom', r ? r.from_g : ''); set('crFromUnit', 'g');
+  set('crTo', r && r.to_g !== null ? r.to_g : ''); set('crToUnit', 'g');
+  const li = document.getElementById('crLowInc'); if (li) li.checked = r ? !!r.low_inc : false;
+  set('crPoint', r ? r.from_g : ''); set('crPointUnit', 'g');
+  set('crCmc', r ? r.cmc_mg : ''); set('crCmcUnit', 'mg');
+  document.getElementById('cmcRowModal').classList.add('open');
+}
+function closeCmcRowModal() { document.getElementById('cmcRowModal').classList.remove('open'); cmcRowEditingId = null; }
+
+async function saveCmcRow() {
+  const s = curSet(); if (!s) { showToast('เลือกชุดก่อน', 'error'); return; }
+  const val = id => document.getElementById(id)?.value;
+  const isPoint = s.value_kind === 'point';
+  let from_g, to_g, low_inc;
+  if (isPoint) {
+    from_g = cmcMassToG(val('crPoint'), val('crPointUnit')); to_g = from_g; low_inc = false;
+    if (from_g === null) { showToast('กรอกค่า nominal', 'error'); return; }
+  } else {
+    from_g = cmcMassToG(val('crFrom'), val('crFromUnit'));
+    to_g = (val('crTo') === '' ? null : cmcMassToG(val('crTo'), val('crToUnit')));
+    low_inc = !!document.getElementById('crLowInc')?.checked;
+    if (from_g === null) { showToast('กรอกขอบล่าง', 'error'); return; }
+    if (to_g !== null && to_g <= from_g) { showToast('ขอบบนต้องมากกว่าขอบล่าง', 'error'); return; }
+    // ตรวจช่วงทับซ้อนในชุดเดียวกัน (ยกเว้นแถวที่กำลังแก้)
+    const hi = to_g === null ? Infinity : to_g;
+    const overlap = cmcRows.some(r => r.id !== cmcRowEditingId && (Math.max(from_g, r.from_g) < Math.min(hi, r.to_g === null ? Infinity : r.to_g)));
+    if (overlap) { showToast('ช่วงนี้ทับกับช่วงที่มีอยู่', 'error'); return; }
   }
+  const cmc_mg = cmcCmcToMg(val('crCmc'), val('crCmcUnit'));
+  if (cmc_mg === null) { showToast('กรอกค่า CMC', 'error'); return; }
+  const payload = { set_id: s.id, seq: parseInt(val('crSeq')) || 0, from_g, to_g, low_inc, cmc_mg };
+  try {
+    showLoading('กำลังบันทึก...');
+    const isNew = !cmcRowEditingId;
+    const res = cmcRowEditingId ? await sb.from('cmc_row').update(payload).eq('id', cmcRowEditingId)
+      : await sb.from('cmc_row').insert(payload);
+    if (res.error) throw res.error;
+    closeCmcRowModal(); showToast(isNew ? 'เพิ่มแถวแล้ว' : 'แก้ไขแล้ว', 'success');
+    await loadCmcRows();
+  } catch (e) { showToast('บันทึกไม่ได้: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function deleteCmcRow(id) {
+  if (!confirm('ลบแถวนี้?')) return;
+  try {
+    showLoading('กำลังลบ...');
+    const { error } = await sb.from('cmc_row').delete().eq('id', id);
+    if (error) throw error;
+    showToast('ลบแล้ว', 'success'); await loadCmcRows();
+  } catch (e) { showToast('ลบไม่ได้: ' + e.message, 'error'); } finally { hideLoading(); }
 }

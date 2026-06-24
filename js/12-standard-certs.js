@@ -25,7 +25,7 @@ function switchSWTab(tab) {
   Object.entries(sections).forEach(([t, sec]) => { const el = document.getElementById(sec); if (el) el.style.display = (t === tab) ? '' : 'none'; });
   Object.entries(buttons).forEach(([t, id]) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', t === tab); });
   if (tab === 'certs' && typeof loadStandardWeights === 'function') loadStandardWeights();
-  if (tab === 'cmc' && typeof loadCmcScope === 'function') loadCmcScope();
+  if (tab === 'cmc' && typeof loadCmcSets === 'function') loadCmcSets();
   if (tab === 'presets' && typeof loadCalPresets === 'function') loadCalPresets();
 }
 
