@@ -223,29 +223,38 @@ async function renderAlerts() {
   }).filter(Boolean).join("");
 }
 
-// ===== เซ็น/อนุมัติใบ Cert จากหน้าประวัติ (segregation: ผู้อนุมัติ ≠ ผู้เซ็น) =====
+// ===== ทำใบ Cert ให้สมบูรณ์: ปริ้นไปเซ็นกระดาษ → แนบไฟล์สแกน → status=approved (เสร็จสมบูรณ์) =====
 let calHistInstId = null;
-async function calRecSign(recordId) {
-  if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor'))) { showToast('เฉพาะ admin/editor เท่านั้นที่เซ็นได้', 'error'); return; }
-  if (!confirm('ยืนยันว่าเซ็นใบรับรองนี้แล้ว?\nผู้เซ็น: ' + currentUser.name)) return;
-  const { error } = await sb.from('calibration_records')
-    .update({ status: 'signed', signed_by: currentUser.name, signed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', recordId).eq('status', 'issued');
-  if (error) { showToast('บันทึกไม่ได้: ' + error.message, 'error'); return; }
-  showToast('บันทึกการเซ็นแล้ว', 'success');
-  if (calHistInstId) openCalHistory(calHistInstId);
+const SIGNED_BUCKET = 'certificates';   // reuse bucket เดิม · โฟลเดอร์ signed-certs/<recordId>/
+async function calRecComplete(recordId) {
+  if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor'))) { showToast('เฉพาะ admin/editor เท่านั้น', 'error'); return; }
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/pdf,image/*';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    try {
+      if (typeof showLoading === 'function') showLoading('กำลังอัปโหลดไฟล์สแกน...');
+      const safe = f.name.replace(/[^\w.\-]/g, '_');
+      const path = 'signed-certs/' + recordId + '/' + Date.now() + '_' + safe;
+      const { error: upErr } = await sb.storage.from(SIGNED_BUCKET).upload(path, f, { upsert: true });
+      if (upErr) throw upErr;
+      const { error } = await sb.from('calibration_records')
+        .update({ status: 'approved', signed_file_path: path, approved_by: currentUser.name, approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', recordId);
+      if (error) throw error;
+      showToast('แนบไฟล์สแกน + ทำให้สมบูรณ์แล้ว', 'success');
+      if (calHistInstId) openCalHistory(calHistInstId);
+    } catch (e) { showToast('ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+    finally { if (typeof hideLoading === 'function') hideLoading(); }
+  };
+  inp.click();
 }
-async function calRecApprove(recordId) {
-  if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor'))) { showToast('เฉพาะ admin/editor เท่านั้นที่อนุมัติได้', 'error'); return; }
-  const { data: rec } = await sb.from('calibration_records').select('signed_by,status').eq('id', recordId).single();
-  if (rec && rec.signed_by && rec.signed_by === currentUser.name) { showToast('ผู้อนุมัติต้องไม่ใช่ผู้เซ็น (แยกหน้าที่)', 'error'); return; }
-  if (!confirm('อนุมัติใบรับรองนี้ให้สมบูรณ์?\nผู้อนุมัติ: ' + currentUser.name)) return;
-  const { error } = await sb.from('calibration_records')
-    .update({ status: 'approved', approved_by: currentUser.name, approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', recordId).eq('status', 'signed');
-  if (error) { showToast('อนุมัติไม่ได้: ' + error.message, 'error'); return; }
-  showToast('อนุมัติแล้ว — ใบรับรองสมบูรณ์', 'success');
-  if (calHistInstId) openCalHistory(calHistInstId);
+async function viewSignedScan(path) {
+  try {
+    const { data, error } = await sb.storage.from(SIGNED_BUCKET).createSignedUrl(path, 300);
+    if (error || !data) throw (error || new Error('no url'));
+    window.open(data.signedUrl, '_blank');
+  } catch (e) { showToast('เปิดไฟล์สแกนไม่ได้: ' + (e.message || ''), 'error'); }
 }
 
 async function openCalHistory(instrumentId) {
@@ -269,7 +278,7 @@ async function openCalHistory(instrumentId) {
   calHistInstId = instrumentId;   // เก็บไว้ refresh modal หลังเซ็น/อนุมัติ
   // ดึงผลสอบเทียบจริง (calibration_records) ของเครื่องนี้
   const { data: records } = await sb.from('calibration_records')
-    .select('id,cert_no,cal_date,due_date,status,calibrated_by,signed_by,signed_at,approved_by,approved_at')
+    .select('id,cert_no,cal_date,due_date,status,calibrated_by,approved_by,approved_at,signed_file_path')
     .eq('instrument_id', instrumentId)
     .order('cal_date', { ascending: false }).limit(20);
   const recs = records || [];
@@ -293,11 +302,10 @@ async function openCalHistory(instrumentId) {
       ${recs.length ? `<div style="display:flex;flex-direction:column;gap:6px">${recs.map(r => {
         const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
         const sub = [];
-        if (r.signed_by) sub.push(`✍️ ${r.signed_by}${r.signed_at ? ' · ' + fmt(r.signed_at) : ''}`);
-        if (r.approved_by) sub.push(`✅ ${r.approved_by}${r.approved_at ? ' · ' + fmt(r.approved_at) : ''}`);
+        if (r.approved_by) sub.push(`✅ สมบูรณ์โดย ${r.approved_by}${r.approved_at ? ' · ' + fmt(r.approved_at) : ''}`);
         let act = '';
-        if (canEdit && r.status === 'issued') act = `<button class="btn-view" style="background:#9a6112;color:#fff;border-color:#9a6112;font-size:12px" onclick="calRecSign('${r.id}')">✍️ ยืนยันเซ็นแล้ว</button>`;
-        else if (canEdit && r.status === 'signed') act = `<button class="btn-view" style="background:#1b5e20;color:#fff;border-color:#1b5e20;font-size:12px" onclick="calRecApprove('${r.id}')">✅ อนุมัติ</button>`;
+        if (canEdit && r.status === 'issued') act = `<button class="btn-view" style="background:#1b5e20;color:#fff;border-color:#1b5e20;font-size:12px" onclick="calRecComplete('${r.id}')">📎 แนบสแกน → สมบูรณ์</button>`;
+        const scanLink = r.signed_file_path ? `<button class="btn-view" style="background:#fff;color:#00695C;border-color:#00695C;font-size:12px" onclick="viewSignedScan('${r.signed_file_path}')">📎 ดูไฟล์สแกน</button>` : '';
         return `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:120px">
@@ -307,6 +315,7 @@ async function openCalHistory(instrumentId) {
           </div>
           ${calRecStatusBadge(r.status)}
           ${act}
+          ${scanLink}
           <button class="btn-view" style="background:#00695C;color:#fff;border-color:#00695C;font-size:12px" onclick="openSavedCert('${r.id}')">📄 เปิด/ปริ้นใบ Cert</button>
         </div>`; }).join('')}</div>`
         : `<div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;color:var(--text3);font-size:12px">ยังไม่มีผลสอบเทียบในระบบ</div>`}
@@ -340,9 +349,9 @@ async function openCalHistory(instrumentId) {
 function calRecStatusBadge(status) {
   const m = {
     draft: ['ร่าง', '#eee', '#888'],
-    issued: ['ออกเลขแล้ว', '#e3f0fb', '#1565c0'],
+    issued: ['ออกเลขแล้ว — รอเซ็น/แนบสแกน', '#e3f0fb', '#1565c0'],
     signed: ['เซ็นแล้ว', '#fff8e1', '#9a6112'],
-    approved: ['อนุมัติ', '#e8f5e9', '#1b5e20'],
+    approved: ['เสร็จสมบูรณ์', '#e8f5e9', '#1b5e20'],
     voided: ['ยกเลิก', '#fce8e8', '#c0392b'],
   };
   const x = m[status] || [status || '–', '#eee', '#666'];
