@@ -106,6 +106,86 @@ function regDetailItem(label, value, full = false) {
   return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
 }
 
+// ===== รูปภาพประกอบเครื่องมือ (hero gallery) =====
+const INST_PHOTO_MAX = 5;
+function instPhotoFolder(d) { return `photos_${d.id}_${d.id_code}`; }
+
+async function loadDetailPhotos(d) {
+  const el = document.getElementById('regDetailPhotos');
+  if (!el) return;
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'editor';
+  const folder = instPhotoFolder(d);
+  try {
+    const { data, error } = await sb.storage.from('certificates').list(folder);
+    if (error) throw error;
+    const imgs = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder' && /\.(jpe?g|png|webp|gif)$/i.test(f.name)).slice(0, INST_PHOTO_MAX);
+    const items = [];
+    for (const f of imgs) {
+      const { data: u } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${f.name}`, 600);
+      if (u?.signedUrl) items.push({ name: f.name, url: u.signedUrl });
+    }
+    const addBtn = (canEdit && items.length < INST_PHOTO_MAX)
+      ? `<button class="btn-view reg-photo-add" onclick="uploadInstrumentPhoto(${Number(d.id) || 0})">+ เพิ่มรูป</button>` : '';
+    if (!items.length) {
+      el.innerHTML = `<div class="reg-photo-wrap"><div class="reg-photo-empty">ยังไม่มีรูปเครื่องมือ${canEdit ? ' — กด “+ เพิ่มรูป”' : ''}</div>${addBtn}</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="reg-photo-wrap">
+      <div class="reg-photo-top"><img id="regPhotoHero" class="reg-photo-hero" src="${items[0].url}" onclick="openPhotoFull(this.src)" alt="รูปเครื่องมือ">${addBtn}</div>
+      <div class="reg-photo-thumbs">${items.map((it, i) => `<div class="reg-photo-thumb${i === 0 ? ' active' : ''}">
+        <img src="${it.url}" onclick="setHeroPhoto('${it.url}', this)" alt="">
+        ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${Number(d.id) || 0})">✕</button>` : ''}
+      </div>`).join('')}</div>
+    </div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="reg-photo-empty" style="color:var(--red)">โหลดรูปไม่สำเร็จ</div>`;
+  }
+}
+function setHeroPhoto(url, thumbEl) {
+  const hero = document.getElementById('regPhotoHero'); if (hero) hero.src = url;
+  document.querySelectorAll('#regDetailPhotos .reg-photo-thumb').forEach(t => t.classList.remove('active'));
+  if (thumbEl && thumbEl.closest) { const w = thumbEl.closest('.reg-photo-thumb'); if (w) w.classList.add('active'); }
+}
+function openPhotoFull(url) { if (url) window.open(url, '_blank'); }
+
+function uploadInstrumentPhoto(id) {
+  const d = (allData || []).find(x => x.id === id); if (!d) return;
+  if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (!/^image\//.test(f.type || '')) { showToast('รับเฉพาะไฟล์รูปภาพ', 'error'); return; }
+    const folder = instPhotoFolder(d);
+    try {
+      showLoading('กำลังอัพโหลดรูป...');
+      const { data: cur } = await sb.storage.from('certificates').list(folder);
+      const n = (cur || []).filter(x => x.name !== '.emptyFolderPlaceholder' && /\.(jpe?g|png|webp|gif)$/i.test(x.name)).length;
+      if (n >= INST_PHOTO_MAX) { showToast(`รูปครบ ${INST_PHOTO_MAX} แล้ว — ลบก่อนถ้าจะเพิ่ม`, 'error'); return; }
+      if (f.size > 5 * 1024 * 1024) showToast('ไฟล์ใหญ่กว่า 5MB — แนะนำย่อก่อน', 'info');
+      const safe = f.name.replace(/[^\w.\-]/g, '_');
+      const { error } = await sb.storage.from('certificates').upload(`${folder}/${Date.now()}_${safe}`, f, { upsert: true, contentType: f.type });
+      if (error) throw error;
+      showToast('อัพโหลดรูปแล้ว', 'success');
+      await loadDetailPhotos(d);
+    } catch (e) { showToast('อัพโหลดไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+    finally { hideLoading(); }
+  };
+  inp.click();
+}
+async function deleteInstrumentPhoto(folder, name, id) {
+  if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) return;
+  if (!confirm('ลบรูปนี้?')) return;
+  try {
+    showLoading('กำลังลบ...');
+    const { error } = await sb.storage.from('certificates').remove([`${folder}/${name}`]);
+    if (error) throw error;
+    showToast('ลบรูปแล้ว', 'success');
+    const d = (allData || []).find(x => x.id === id);
+    if (d) await loadDetailPhotos(d);
+  } catch (e) { showToast('ลบไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+  finally { hideLoading(); }
+}
+
 // เปิดหน้าสอบเทียบเครื่องชั่ง (balance-cal) พร้อมข้อมูลเครื่องที่เลือก
 function openBalanceCal(id) {
   const d = (allData || []).find(x => x.id === id);
