@@ -121,6 +121,7 @@ table { border-collapse: collapse; }
 .ws table { font-size: var(--fd); } .ws table.bx td, .ws table.bx th { padding: 1px 5px; } .ws table.rep td, .ws table.rep th { padding: 3.9px 5px; } .ws table.pre td, .ws table.pre th { padding: 3.9px 7px; }
 .xbar { font-weight: 400; font-style: normal; }
 .ws .jc { font-size: 14pt; } /* เลขงาน/เลขใบรับรองบน worksheet = 14pt (body 13pt) ตามฟอร์มต้นฉบับ Book1 ที่ตั้งเลขชุดนี้ใหญ่กว่าเนื้อความ 1pt */
+.un .jc { font-size: 1.22em; } /* เลข cert/หน้าที่ บนใบความไม่แน่นอน (.un = Sarabun) ขยายให้เด่นเท่ากันทั้งใบ */
 .sheet.land { font-family: 'Cordia New','CordiaUPC','Angsana New',sans-serif; --ffd: 'Cordia New','CordiaUPC',sans-serif; --ffl: 'Cordia New','CordiaUPC',sans-serif; --fd: 13pt; --fl: 13pt; } .sheet.land table.bx td, .sheet.land table.bx th { padding: 1px 4px; } .sheet.land table.bx.errtbl td, .sheet.land table.bx.errtbl th { padding: 2px 4px; } .sheet.land .panrow svg { height: 64px; width: auto; }
 /* ===== uncert ===== */
 
@@ -476,7 +477,7 @@ function pageWs1() {
     <h2>ใบบันทึกผลการสอบเทียบเครื่องชั่งน้ำหนัก (UKAS LAB 14)</h2>
     <div class="row hdrck" style="justify-content:space-between">
       <span>${chk(true)} <span class="b u">เครื่องชั่งไฟฟ้า</span> &nbsp;&nbsp; ${chk(false)} <span class="b u">SPRING BALANCE</span></span>
-      <span class="b">หน้าที่ ${fv('1',26)} จาก ${fv('6',26)}</span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">1</span> จาก <span class="fv fill jc" style="min-width:26px">6</span></span>
     </div>
     <div class="dtl-grid"><span class="lbl">ยี่ห้อ/รุ่น</span><span class="fv fill">${esc(CAL.manufacturer)} ${esc(CAL.model)}</span><span class="unit"></span><span class="lbl">Serial. No.</span><span class="fv fill">${esc(CAL.serial)}</span><span class="unit"></span><span class="lbl">ID.No.</span><span class="fv fill">${esc(CAL.id_no)}</span><span class="lbl">พิกัด</span><span class="fv fill">${CAL.capacity}</span><span class="unit">g</span><span class="lbl">ความละเอียด (d)</span><span class="fv fill">${CAL.resolution}</span><span class="unit">g</span><span class="lbl">Accuracy Class</span><span class="fv fill">${esc(CAL.accuracy_class)}</span><span class="lbl">Tolerance</span><span class="fv fill">${esc(CAL.tolerances[0])}</span><span class="unit"></span><span class="lbl">User Range</span><span class="fv fill">${esc(CAL.user_range)}</span><span class="unit">g</span><span class="lbl">รหัสทรัพย์สิน</span><span class="fv fill">${esc(CAL.asset)}</span></div>
     <div class="row" style="margin-top:-8px"><span class="sec">ตุ้มน้ำหนักมาตรฐาน</span></div>
@@ -521,7 +522,7 @@ function pageWs2() {
       <span><span class="sec" style="margin:0">2.การตรวจสอบค่า Error of indication from conventional mass value</span>
         &nbsp; หมายเลขของงาน <span class="fv fill jc">${esc(CAL.job_no)}</span>
         &nbsp; หมายเลขใบรับรองผล <span class="fv fill jc">${esc(CAL.cert_no)}</span></span>
-      <span class="b">หน้าที่ <span class="fv fill" style="min-width:26px">2</span> จาก <span class="fv fill" style="min-width:26px">6</span></span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">2</span> จาก <span class="fv fill jc" style="min-width:26px">6</span></span>
     </div>
     <table class="bx errtbl" style="width:100%;margin-top:4px">
       <thead>
@@ -631,9 +632,9 @@ function pageUnc(blockRows, pageNo) {
     <div class="thfont un-head1">
       <span>${chk(false)} เครื่องชั่งทางกล</span>
       <span>${chk(true)} เครื่องชั่งไฟฟ้า</span>
-      <span class="rt">หน้าที่ ……${pageNo}…….. จาก……6……...</span>
+      <span class="rt">หน้าที่ ……<span class="jc">${pageNo}</span>…….. จาก……<span class="jc">6</span>……...</span>
     </div>
-    <div class="thfont un-certline"><span>หมายเลขใบรับรองผล</span><span class="fill cert-val">${esc(CAL.cert_no)}</span></div>
+    <div class="thfont un-certline"><span>หมายเลขใบรับรองผล</span><span class="fill cert-val jc">${esc(CAL.cert_no)}</span></div>
     <div class="thfont un-signline">
       <span>ผู้จัดทำ ____________________ วันที่ ______/______/________</span>
       <span>ผู้ทบทวน ____________________ วันที่ ______/______/________</span>
