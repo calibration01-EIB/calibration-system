@@ -250,8 +250,15 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <label style="font-size:12px;color:var(--muted);font-weight:700"><i class="ti ti-plus"></i> เพิ่มชุดตุ้มจากทะเบียน</label>
       <select id="stdAdd" onchange="addStdSet(this.value)" style="min-height:32px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--input);min-width:260px"></select>
     </div>
+    <div class="note" style="margin-bottom:8px"><i class="ti ti-edit"></i><div>แถวด้านล่างจะพิมพ์ลงใบรับรอง (ช่อง “ตุ้มน้ำหนักมาตรฐาน”) — ระบบเติมให้อัตโนมัติจากทะเบียน (จัดกลุ่มตาม Serial No.) <b>แก้ไขได้</b>ก่อนออกเลข · กด ↺ เพื่อคืนค่าอัตโนมัติ · ใบรับรองรองรับสูงสุด 5 แถว</div></div>
+    <style>
+      .tbl input.stdin{width:100%;min-width:78px;box-sizing:border-box;border:1px solid transparent;background:transparent;border-radius:4px;padding:3px 5px;font:inherit;color:inherit}
+      .tbl input.stdin:hover{border-color:var(--line)}
+      .tbl input.stdin:focus{outline:none;border-color:var(--accent,#534ab7);background:var(--input)}
+      .tbl input.stdin.mono{font-family:monospace;font-weight:700}
+    </style>
     <div class="table-wrap"><table class="tbl">
-      <thead><tr><th>ชื่อ</th><th>คลาส / รุ่น</th><th>Serial</th><th>ID Code</th><th>Cert No.</th><th>ครบกำหนด</th><th></th></tr></thead>
+      <thead><tr><th>พิกัด / Class</th><th>Serial No.</th><th>ID Code</th><th>Cert No.</th><th>ครบกำหนด</th><th></th></tr></thead>
       <tbody id="stdRows"></tbody>
     </table></div>
 
@@ -473,7 +480,9 @@ const STD_REGISTRY = [
 STD_REGISTRY.forEach(s => { s.weights = s.weights.map(a => ({ id_code:a[0], nominal_g:a[1], marking:'none', corr_g:a[2], U_mg:a[3], Ds_mg:a[3], due:a[4]||s.due })); });
 const regGet = id => STD_REGISTRY.find(s => s.id_code === id);
 let SELECTED_SETS = ['CLCLSB08-WI01-12','CLCLSB07-WI01','CLCLSB07-WI02'];  // ชุดที่หยิบมาใช้ในงานนี้
-let STDS = [];   // derived จาก SELECTED_SETS (ชื่อ/รุ่น/serial/cert/due สำหรับตาราง + buildCAL)
+let STDS = [];   // derived จาก SELECTED_SETS (ชื่อ/รุ่น/serial/cert/due — ใช้ภายในสำหรับ setLabel/คลังตุ้ม)
+let CERT_STDS = [];   // แถวที่จะพิมพ์ลง cert: group ตาม Serial No. (auto-compose 5 ช่อง) — แก้ได้ก่อนออกเลข
+let STD_ROW_OV = {};  // override ต่อแถว (คีย์ = serial group) เก็บค่าที่ผู้ใช้พิมพ์ทับ — '' ถือว่าตั้งใจล้าง
 // รายชื่อลูกค้าที่บันทึกไว้ (dropdown) — ระบบจริงดึงจากฐานข้อมูลลูกค้า · เพิ่ม/แก้ได้ที่นี่
 const CLIENTS = [
   { name: 'INTERNATIONAL  LABORATORIES  CORP.,LTD',
@@ -836,7 +845,7 @@ function buildCAL() {
     cmc_lab_status: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).lab_status || null,
     cmc_revision: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).revision || null,
     cmc_based_on: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).based_on || null,
-    standards: STDS.map(s => ({ name: s.name, model: s.model, cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
+    standards: CERT_STDS.map(s => ({ cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
     preload: { point: num('plPoint', 0), reads: plReads },
     repeat: { point: num('repPoint', 0), reads: reps },
     points,
@@ -894,6 +903,63 @@ let AVAIL_WEIGHTS = [];
 function deriveStds() {
   STDS = SELECTED_SETS.map(regGet).filter(Boolean)
     .map(s => ({ name:s.name, model:s.model, cls:s.cls, serial:s.serial, id_code:s.id_code, cert:s.cert, due:s.due }));
+  deriveCertStds();
+}
+// escape helpers สำหรับ value/attr และ string ในเครื่องหมาย ' ของ inline handler
+function _attr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function _jsq(v){ return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+// "พิกัด / Class": nominal + หน่วย + /class · ≥3 ค่าต่อเนื่อง→ช่วง min-max · ไม่งั้น→คอมมา
+function composeStdCls(nomsG, cls) {
+  const noms = (nomsG || []).map(Number).filter(n => n > 0);
+  if (!noms.length) return cls || '';
+  const useKg = Math.max.apply(null, noms) >= 1000;
+  const unit = useKg ? 'kg' : 'g';
+  const fmt = v => { const r = Math.round(v * 1e6) / 1e6; return String(r); };
+  const uniq = Array.from(new Set(noms.map(v => useKg ? v / 1000 : v))).sort((a, b) => a - b);
+  const valStr = uniq.length >= 3 ? (fmt(uniq[0]) + '-' + fmt(uniq[uniq.length - 1])) : uniq.map(fmt).join(',');
+  return valStr + unit + (cls ? '/' + cls : '');
+}
+// แถว cert: group ชุดที่เลือกตาม Serial No. → auto-compose 5 ช่อง แล้วทับด้วย STD_ROW_OV
+function deriveCertStds() {
+  const groups = {};
+  SELECTED_SETS.map(regGet).filter(Boolean).forEach(reg => {
+    const key = (reg.serial && reg.serial.trim()) || reg.id_code;
+    let g = groups[key];
+    if (!g) g = groups[key] = { key, serial: reg.serial || '', clsSet: [], ids: [], certSet: [], dues: [], noms: [] };
+    if (reg.cls && g.clsSet.indexOf(reg.cls) < 0) g.clsSet.push(reg.cls);
+    if (reg.id_code && g.ids.indexOf(reg.id_code) < 0) g.ids.push(reg.id_code);
+    if (reg.cert && g.certSet.indexOf(reg.cert) < 0) g.certSet.push(reg.cert);
+    if (reg.due) g.dues.push(reg.due);
+    (reg.weights || []).forEach(w => g.noms.push(w.nominal_g));
+  });
+  CERT_STDS = Object.keys(groups).map(k => {
+    const g = groups[k];
+    const auto = {
+      cls: composeStdCls(g.noms, g.clsSet.join(',')),
+      serial: g.serial,
+      id_code: g.ids.join(','),
+      cert: g.certSet.join(','),
+      due: g.dues.slice().sort()[0] || '',
+    };
+    const ov = STD_ROW_OV[g.key] || {};
+    const pick = f => (ov[f] !== undefined ? ov[f] : auto[f]);
+    return { key: g.key, _auto: auto, sets: g.ids.slice(),
+      cls: pick('cls'), serial: pick('serial'), id_code: pick('id_code'), cert: pick('cert'), due: pick('due') };
+  });
+  const live = {}; CERT_STDS.forEach(r => { live[r.key] = 1; });
+  Object.keys(STD_ROW_OV).forEach(k => { if (!live[k]) delete STD_ROW_OV[k]; });
+}
+function editStdCell(key, field, value) {
+  (STD_ROW_OV[key] = STD_ROW_OV[key] || {})[field] = value;
+  const row = CERT_STDS.find(r => r.key === key); if (row) row[field] = value;
+}
+function resetStdRow(key) { delete STD_ROW_OV[key]; deriveCertStds(); renderStdTable(); }
+function removeStdGroup(key) {
+  const row = CERT_STDS.find(r => r.key === key);
+  const ids = row ? row.sets : [key];
+  SELECTED_SETS = SELECTED_SETS.filter(x => ids.indexOf(x) < 0);
+  delete STD_ROW_OV[key];
+  refreshStds();
 }
 function rebuildAvail() {
   const prev = {}; AVAIL_WEIGHTS.forEach(w => { prev[w.id_code] = w.checked; });
@@ -906,11 +972,20 @@ function rebuildAvail() {
   AVAIL_WEIGHTS.forEach(w => { w.in_date = !w.due || new Date(w.due+'T00:00:00') >= today; w.checked = (w.id_code in prev) ? (prev[w.id_code] && w.in_date) : w.in_date; });
 }
 function renderStdTable() {
-  byId('stdRows').innerHTML = STDS.length ? STDS.map(s => `<tr>
-    <td>${s.name}</td><td>${s.model}</td><td>${s.serial}</td>
-    <td style="font-family:monospace;font-weight:700">${s.id_code}</td><td>${s.cert}</td><td>${s.due}</td>
-    <td class="num"><button type="button" class="rmset" onclick="removeStdSet('${s.id_code}')" title="เอาออก">✕</button></td>
-  </tr>`).join('') : `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:10px">ยังไม่ได้เลือกชุดตุ้ม — เลือกจากดรอปดาวน์ด้านบน</td></tr>`;
+  byId('stdRows').innerHTML = CERT_STDS.length ? CERT_STDS.map(s => {
+    const ov = STD_ROW_OV[s.key] && Object.keys(STD_ROW_OV[s.key]).length;
+    const k = _jsq(s.key);
+    return `<tr>
+    <td><input class="stdin" value="${_attr(s.cls)}" oninput="editStdCell('${k}','cls',this.value)"></td>
+    <td><input class="stdin" value="${_attr(s.serial)}" oninput="editStdCell('${k}','serial',this.value)"></td>
+    <td><input class="stdin mono" value="${_attr(s.id_code)}" oninput="editStdCell('${k}','id_code',this.value)"></td>
+    <td><input class="stdin" value="${_attr(s.cert)}" oninput="editStdCell('${k}','cert',this.value)"></td>
+    <td><input class="stdin" type="date" value="${s.due || ''}" oninput="editStdCell('${k}','due',this.value)"></td>
+    <td class="num" style="white-space:nowrap">
+      <button type="button" class="rmset" title="คืนค่าอัตโนมัติ" onclick="resetStdRow('${k}')" ${ov ? '' : 'style="opacity:.3"'}>↺</button>
+      <button type="button" class="rmset" title="เอาแถวนี้ออก" onclick="removeStdGroup('${k}')">✕</button>
+    </td>
+  </tr>`; }).join('') : `<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:10px">ยังไม่ได้เลือกชุดตุ้ม — เลือกจากดรอปดาวน์ด้านบน</td></tr>`;
   const opts = STD_REGISTRY.filter(s => !SELECTED_SETS.includes(s.id_code));
   byId('stdAdd').innerHTML = '<option value="">— เลือกชุดเพิ่ม —</option>' +
     opts.map(s => `<option value="${s.id_code}">${s.id_code} · ${s.cls} (${s.serial})</option>`).join('');
@@ -1088,6 +1163,10 @@ async function issueCert() {
       + (STD_IS_MOCK ? '• ตุ้มมาตรฐานยังไม่ถูกอนุมัติ — ไปอนุมัติที่หน้า “ใบ Cert Reference (ตุ้มมาตรฐาน)” ก่อน\n' : '')
       + (CMC_IS_MOCK ? '• ยังไม่มี CMC ที่รับรอง — กรอกที่แท็บ CMC ก่อน\n' : '')
       + '\nเมื่อข้อมูลครบแล้ว แถบเตือนสีแดงจะหายไปและกดสอบเสร็จได้');
+    return;
+  }
+  if (CERT_STDS.length > 5) {
+    alert('⛔ ตุ้มมาตรฐานมี ' + CERT_STDS.length + ' แถว แต่ใบรับรองรองรับสูงสุด 5 แถว\nกรุณารวม/ลบแถวในตาราง “รายการตุ้มน้ำหนักมาตรฐานที่ใช้” ให้เหลือไม่เกิน 5 ก่อนออกเลข');
     return;
   }
   const db = sbx();
