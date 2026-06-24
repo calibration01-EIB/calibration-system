@@ -522,7 +522,7 @@ async function loadData(forceRefresh = false) {
 
 async function fetchFromSupabase() {
   try {
-    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,range_val,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,issued_by,responsible_by,request_no,job_no,approved_by,approved_at';
+    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,model,range_val,capacity,resolution,accuracy_class,tolerance,serial_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,issued_by,responsible_by,request_no,job_no,approved_by,approved_at';
     const chunkSize = 500;
     const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
     const allowedTypes = isFiltered ? expandInstrumentTypeFilter(currentUser.instrument_types) : [];

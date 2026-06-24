@@ -1135,11 +1135,15 @@ async function issueCert() {
     let instNote = '';
     if (INCOMING_INST && INCOMING_INST.instrument_id) {
       try {
-        const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no').eq('id', INCOMING_INST.instrument_id).single();
+        const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no,brand,model,serial_no,id_code,range_val,capacity,resolution,accuracy_class').eq('id', INCOMING_INST.instrument_id).single();
         INST_PREV = cur || null;
         const { error: iErr } = await db.from('instruments').update({
           cert_no: CERT_NO, cal_date: calDate, due_date: val('iDateNext') || null,
           job_no: jobNoStr(), request_no: val('fReqNo') || null,
+          // sync ข้อมูลเครื่องที่อาจแก้หน้างาน → ทะเบียนเครื่องหลักตรงกับใบ cert ล่าสุด
+          brand: val('eMfr') || null, model: val('eModel') || null, serial_no: val('eSerial') || null,
+          id_code: val('eId') || null, range_val: val('eUserRange') || null,
+          capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
         }).eq('id', INCOMING_INST.instrument_id);
         if (iErr) instNote = '\n⚠ ทะเบียนเครื่องไม่อัปเดต: ' + iErr.message;
       } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
