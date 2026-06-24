@@ -223,6 +223,31 @@ async function renderAlerts() {
   }).filter(Boolean).join("");
 }
 
+// ===== เซ็น/อนุมัติใบ Cert จากหน้าประวัติ (segregation: ผู้อนุมัติ ≠ ผู้เซ็น) =====
+let calHistInstId = null;
+async function calRecSign(recordId) {
+  if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor'))) { showToast('เฉพาะ admin/editor เท่านั้นที่เซ็นได้', 'error'); return; }
+  if (!confirm('ยืนยันว่าเซ็นใบรับรองนี้แล้ว?\nผู้เซ็น: ' + currentUser.name)) return;
+  const { error } = await sb.from('calibration_records')
+    .update({ status: 'signed', signed_by: currentUser.name, signed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', recordId).eq('status', 'issued');
+  if (error) { showToast('บันทึกไม่ได้: ' + error.message, 'error'); return; }
+  showToast('บันทึกการเซ็นแล้ว', 'success');
+  if (calHistInstId) openCalHistory(calHistInstId);
+}
+async function calRecApprove(recordId) {
+  if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor'))) { showToast('เฉพาะ admin/editor เท่านั้นที่อนุมัติได้', 'error'); return; }
+  const { data: rec } = await sb.from('calibration_records').select('signed_by,status').eq('id', recordId).single();
+  if (rec && rec.signed_by && rec.signed_by === currentUser.name) { showToast('ผู้อนุมัติต้องไม่ใช่ผู้เซ็น (แยกหน้าที่)', 'error'); return; }
+  if (!confirm('อนุมัติใบรับรองนี้ให้สมบูรณ์?\nผู้อนุมัติ: ' + currentUser.name)) return;
+  const { error } = await sb.from('calibration_records')
+    .update({ status: 'approved', approved_by: currentUser.name, approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', recordId).eq('status', 'signed');
+  if (error) { showToast('อนุมัติไม่ได้: ' + error.message, 'error'); return; }
+  showToast('อนุมัติแล้ว — ใบรับรองสมบูรณ์', 'success');
+  if (calHistInstId) openCalHistory(calHistInstId);
+}
+
 async function openCalHistory(instrumentId) {
   const d = allData.find(x => x.id === instrumentId);
   if (!d) return;
@@ -241,9 +266,10 @@ async function openCalHistory(instrumentId) {
 
   const rows = history || [];
 
+  calHistInstId = instrumentId;   // เก็บไว้ refresh modal หลังเซ็น/อนุมัติ
   // ดึงผลสอบเทียบจริง (calibration_records) ของเครื่องนี้
   const { data: records } = await sb.from('calibration_records')
-    .select('id,cert_no,cal_date,due_date,status,calibrated_by')
+    .select('id,cert_no,cal_date,due_date,status,calibrated_by,signed_by,signed_at,approved_by,approved_at')
     .eq('instrument_id', instrumentId)
     .order('cal_date', { ascending: false }).limit(20);
   const recs = records || [];
@@ -264,15 +290,25 @@ async function openCalHistory(instrumentId) {
     </div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📄 ผลสอบเทียบ (ปริ้นใบ Cert ได้)</div>
-      ${recs.length ? `<div style="display:flex;flex-direction:column;gap:6px">${recs.map(r => `
+      ${recs.length ? `<div style="display:flex;flex-direction:column;gap:6px">${recs.map(r => {
+        const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+        const sub = [];
+        if (r.signed_by) sub.push(`✍️ ${r.signed_by}${r.signed_at ? ' · ' + fmt(r.signed_at) : ''}`);
+        if (r.approved_by) sub.push(`✅ ${r.approved_by}${r.approved_at ? ' · ' + fmt(r.approved_at) : ''}`);
+        let act = '';
+        if (canEdit && r.status === 'issued') act = `<button class="btn-view" style="background:#9a6112;color:#fff;border-color:#9a6112;font-size:12px" onclick="calRecSign('${r.id}')">✍️ ยืนยันเซ็นแล้ว</button>`;
+        else if (canEdit && r.status === 'signed') act = `<button class="btn-view" style="background:#1b5e20;color:#fff;border-color:#1b5e20;font-size:12px" onclick="calRecApprove('${r.id}')">✅ อนุมัติ</button>`;
+        return `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:120px">
             <div style="font-size:12px;font-weight:600;font-family:var(--mono);color:var(--accent)">${r.cert_no || '(ไม่มีเลข)'}</div>
             <div style="font-size:11px;color:var(--text3)">${fmt(r.cal_date)} · ${r.calibrated_by || '–'}</div>
+            ${sub.length ? `<div style="font-size:10.5px;color:var(--text2);margin-top:2px">${sub.join(' &nbsp; ')}</div>` : ''}
           </div>
           ${calRecStatusBadge(r.status)}
+          ${act}
           <button class="btn-view" style="background:#00695C;color:#fff;border-color:#00695C;font-size:12px" onclick="openSavedCert('${r.id}')">📄 เปิด/ปริ้นใบ Cert</button>
-        </div>`).join('')}</div>`
+        </div>`; }).join('')}</div>`
         : `<div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;color:var(--text3);font-size:12px">ยังไม่มีผลสอบเทียบในระบบ</div>`}
     </div>
     ${rows.length ? `
