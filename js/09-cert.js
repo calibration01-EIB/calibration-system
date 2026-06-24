@@ -63,6 +63,12 @@ function sortByCertNo(a, b) {
   return normalizeCertNo(a.cert_no).localeCompare(normalizeCertNo(b.cert_no), undefined, { numeric: true, sensitivity: 'base' });
 }
 
+let certHistPage = 1;   // หน้าปัจจุบันของตารางประวัติ Cert (เริ่มที่ 1)
+// เปลี่ยนตัวกรอง (ปี/ประเภท/จำนวนต่อหน้า) → กลับไปหน้า 1
+function certHistFilterChange() { certHistPage = 1; loadCertPage(); }
+// ไปหน้าถัดไป/ก่อนหน้า (clamp ใน loadCertPage)
+function certHistGoPage(delta) { certHistPage += delta; loadCertPage(); }
+
 async function loadCertPage() {
   renderCertTypeSelectOptions();
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
@@ -105,13 +111,29 @@ async function loadCertPage() {
   const prefix = typeCode ? `${yearCode}${typeCode}` : String(yearCode);
   const history = (allData || []).filter(d => normalizeCertNo(d.cert_no).startsWith(prefix));
   history.sort(sortByCertNo);
-  const visibleHistory = history.slice(0, displayLimit);
+  const pageSize = displayLimit > 0 ? displayLimit : history.length || 1;
+  const totalPages = Math.max(1, Math.ceil(history.length / pageSize));
+  if (certHistPage > totalPages) certHistPage = totalPages;
+  if (certHistPage < 1) certHistPage = 1;
+  const start = (certHistPage - 1) * pageSize;
+  const visibleHistory = history.slice(start, start + pageSize);
   const pendingCount = history.filter(d => !d.approved_by).length;
   const countEl = document.getElementById('certHistoryCount');
   if (countEl) {
     countEl.textContent = history.length
-      ? `แสดง ${visibleHistory.length} จาก ${history.length} รายการ`
+      ? `แสดง ${start + 1}–${start + visibleHistory.length} จาก ${history.length} รายการ`
       : '';
+  }
+  // ปุ่มหน้าถัดไป/ก่อนหน้า
+  const pager = document.getElementById('certHistPager');
+  if (pager) {
+    pager.style.display = history.length > pageSize ? 'flex' : 'none';
+    const prev = document.getElementById('certHistPrev');
+    const next = document.getElementById('certHistNext');
+    const lbl = document.getElementById('certHistPageLabel');
+    if (prev) prev.disabled = certHistPage <= 1;
+    if (next) next.disabled = certHistPage >= totalPages;
+    if (lbl) lbl.textContent = `หน้า ${certHistPage} / ${totalPages}`;
   }
 
   const histBody = document.getElementById('certHistoryBody');
@@ -144,7 +166,7 @@ async function loadCertPage() {
           : (!approved ? `<button class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" title="ลบ">🗑️</button>` : '');
         return `
         <tr style="${rowBg}">
-          <td class="cert-index">${i+1}</td>
+          <td class="cert-index">${start + i + 1}</td>
           <td class="cert-number">${certNo}</td>
           <td class="cert-date">${issueDate}</td>
           <td class="cert-instrument"><strong>${instrumentName}</strong><span class="cert-sub">ID Code: <span class="cert-code">${idCode}</span></span></td>

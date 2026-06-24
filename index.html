@@ -3283,16 +3283,17 @@ body.app-mode textarea:focus {
             <div style="font-size:14px;font-weight:800;color:var(--text)">ประวัติการออกหมายเลขใบรับรอง</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <span id="certHistoryCount" style="font-size:12px;color:var(--text3);font-weight:700;white-space:nowrap"></span>
-              <select id="certHistoryLimit" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
-                <option value="50">แสดง 50 รายการ</option>
-                <option value="100">แสดง 100 รายการ</option>
+              <select id="certHistoryLimit" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+                <option value="50">แสดง 50 รายการ/หน้า</option>
+                <option value="100">แสดง 100 รายการ/หน้า</option>
+                <option value="200">แสดง 200 รายการ/หน้า</option>
               </select>
-              <select id="certHistoryYear" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+              <select id="certHistoryYear" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
                 <option value="26">ปี 26 (2026)</option>
                 <option value="27">ปี 27 (2027)</option>
                 <option value="25">ปี 25 (2025)</option>
               </select>
-              <select id="certHistoryType" onchange="loadCertPage()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+              <select id="certHistoryType" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
                 <option value="">ทุกประเภท</option>
                 <option value="C">C — pH / Visco / DO</option>
                 <option value="D">D — Calipers</option>
@@ -3328,6 +3329,12 @@ body.app-mode textarea:focus {
               </thead>
               <tbody id="certHistoryBody"></tbody>
             </table>
+          </div>
+          <style>#certHistPrev:disabled,#certHistNext:disabled{opacity:.4;cursor:not-allowed}#certHistPrev:not(:disabled):hover,#certHistNext:not(:disabled):hover{border-color:var(--accent,#00897B)}</style>
+          <div id="certHistPager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-top:12px">
+            <button id="certHistPrev" type="button" onclick="certHistGoPage(-1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">‹ ก่อนหน้า</button>
+            <span id="certHistPageLabel" style="font-size:13px;font-weight:700;color:var(--text);min-width:90px;text-align:center"></span>
+            <button id="certHistNext" type="button" onclick="certHistGoPage(1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">ถัดไป ›</button>
           </div>
         </div>
       </div>
