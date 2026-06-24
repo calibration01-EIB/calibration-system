@@ -174,6 +174,29 @@ th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 600; col
 td { padding: 5px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
+/* ===== CMC table (แท็บ CMC) ===== */
+.cmc-tbl { width: 100%; min-width: 0; border-collapse: collapse; }
+.cmc-tbl thead { background: #00695C; }
+.cmc-tbl thead tr { background: #00695C; }
+.cmc-tbl thead th { background: #00695C !important; color: #fff !important; font-size: 12px !important; font-weight: 800; padding: 11px 16px !important; border-right: 1px solid rgba(255,255,255,.20); text-align: left; text-transform: none; letter-spacing: .02em; white-space: nowrap; }
+.cmc-tbl thead th:last-child { border-right: none; }
+.cmc-tbl thead th:nth-child(2), .cmc-tbl thead th:nth-child(3) { text-align: right; }
+.cmc-tbl thead th:nth-child(2) { width: 150px; }
+.cmc-tbl thead th:nth-child(3) { width: 92px; }
+.cmc-tbl thead th:nth-child(4) { text-align: center; width: 96px; }
+.cmc-tbl tbody td { padding: 10px 16px !important; border-bottom: 1px solid var(--border); border-right: 1px solid #edf4f2; font-size: 12.5px !important; color: var(--text) !important; vertical-align: middle; }
+.cmc-tbl tbody td:last-child { border-right: none; }
+.cmc-tbl tbody tr:last-child td { border-bottom: none; }
+.cmc-tbl tbody tr:nth-child(even) td { background: #fafdfc; }
+.cmc-tbl tbody tr:hover td { background: #eff8f6; }
+.cmc-tbl .cmc-range { font-family: var(--mono); font-weight: 700; letter-spacing: .3px; }
+.cmc-tbl .cmc-val { text-align: right; }
+.cmc-tbl .cmc-pill { display: inline-block; min-width: 66px; text-align: center; padding: 3px 12px; border-radius: 999px; background: var(--green-light); color: var(--green); font-weight: 800; font-size: 12.5px; font-family: var(--mono); }
+.cmc-tbl .cmc-mg { text-align: right; color: var(--text3); font-size: 11px; font-family: var(--mono); }
+.cmc-tbl .cmc-act { text-align: center; white-space: nowrap; }
+.cmc-tbl .b-edit, .cmc-tbl .b-del { width: 28px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1; border: 1px solid; }
+.cmc-tbl .b-edit { background: var(--accent-light); border-color: #bfe0da; color: var(--accent); }
+.cmc-tbl .b-del { background: #fdecea; border-color: #f3c4bf; color: #c0392b; }
 .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
 .badge-red { background: var(--red-light); color: var(--red); }
 .badge-amber { background: var(--amber-light); color: var(--amber); }
@@ -3448,8 +3471,8 @@ body.app-mode textarea:focus {
           </div>
           <div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
             <div class="table-wrap" style="max-height:calc(100vh - 380px)">
-              <table>
-                <thead><tr><th>ช่วง / จุด</th><th style="text-align:right">CMC</th><th style="text-align:right">= mg</th><th>จัดการ</th></tr></thead>
+              <table class="cmc-tbl">
+                <thead><tr><th>ช่วง / จุด</th><th>CMC</th><th>= mg</th><th>จัดการ</th></tr></thead>
                 <tbody id="cmcTableBody"><tr><td colspan="4" class="no-data">กำลังโหลด...</td></tr></tbody>
               </table>
             </div>

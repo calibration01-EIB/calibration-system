@@ -48,7 +48,7 @@ function renderCmcSets() {
     : '<option value="">— ยังไม่มีชุด CMC —</option>';
   const s = curSet();
   const meta = document.getElementById('cmcSetMeta');
-  if (meta) meta.innerHTML = s ? `อิง <b>${escapeHtmlText(s.based_on || '-')}</b> · ${escapeHtmlText(s.accred_no || '-')} · ${escapeHtmlText(s.value_kind)}${s.valid_to ? ' · ใช้ได้ถึง ' + fmtDateTH(s.valid_to) : ''}` : '';
+  if (meta) meta.innerHTML = s ? `📋 อิง <b>${escapeHtmlText(s.based_on || '-')}</b> · ${escapeHtmlText(s.accred_no || '-')} · ${escapeHtmlText(s.value_kind)}${s.valid_to ? ' · ใช้ได้ถึง ' + fmtDateTH(s.valid_to) : ''}` : '';
   ['cmcSetAddBtn', 'cmcSetEditBtn', 'cmcSetDelBtn', 'cmcRowAddBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = canEdit ? '' : 'none'; });
 }
 
@@ -58,11 +58,11 @@ function renderCmcRows() {
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   const s = curSet();
   tb.innerHTML = cmcRows.length ? cmcRows.map(r => `<tr>
-    <td>${s && s.value_kind === 'point' ? cmcFmtMass(r.from_g) : cmcFmtRange(r.from_g, r.to_g, r.low_inc)}</td>
-    <td style="text-align:right"><strong>${cmcFmtCmc(r.cmc_mg)}</strong></td>
-    <td style="text-align:right;color:var(--text2)">${r.cmc_mg} mg</td>
-    <td style="white-space:nowrap">${canEdit ? `<button class="btn-view" onclick="openRowEdit('${r.id}')">✏️</button> <button class="btn-del" onclick="deleteCmcRow('${r.id}')">🗑️</button>` : ''}</td>
-  </tr>`).join('') : '<tr><td colspan="4" class="no-data">ยังไม่มีแถวในชุดนี้</td></tr>';
+    <td class="cmc-range">${s && s.value_kind === 'point' ? cmcFmtMass(r.from_g) : cmcFmtRange(r.from_g, r.to_g, r.low_inc)}</td>
+    <td class="cmc-val"><span class="cmc-pill">${cmcFmtCmc(r.cmc_mg)}</span></td>
+    <td class="cmc-mg">${r.cmc_mg}</td>
+    <td class="cmc-act">${canEdit ? `<button class="b-edit" onclick="openRowEdit('${r.id}')">✏️</button> <button class="b-del" onclick="deleteCmcRow('${r.id}')">🗑️</button>` : ''}</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="no-data">ยังไม่มีแถวในชุดนี้ — กด "+ เพิ่มแถว"</td></tr>';
 }
 
 function selectCmcSet(id) { cmcCurrentSetId = id || null; renderCmcSets(); loadCmcRows(); }
