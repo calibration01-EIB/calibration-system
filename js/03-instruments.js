@@ -130,7 +130,13 @@ async function loadDetailPhotos(d) {
       ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✕</button>` : ''}
     </div>`).join('');
     const addCell = (canEdit && items.length < INST_PHOTO_MAX)
-      ? `<div class="reg-photo-addcell" onclick="uploadInstrumentPhoto(${id})"><span class="ic">＋</span>เพิ่มรูป</div>` : '';
+      ? `<div class="reg-photo-addcell">
+        <div class="add-title"><span class="ic">＋</span>เพิ่มรูป</div>
+        <div class="add-acts">
+          <button type="button" onclick="uploadInstrumentPhoto(${id}, true)">📷 ถ่ายภาพ</button>
+          <button type="button" onclick="uploadInstrumentPhoto(${id}, false)">🖼 เลือกรูป</button>
+        </div>
+      </div>` : '';
     if (!items.length && !canEdit) {
       el.innerHTML = `<div class="reg-photo-empty">ยังไม่มีรูปเครื่องมือ</div>`;
       return;
@@ -142,10 +148,11 @@ async function loadDetailPhotos(d) {
 }
 function openPhotoFull(url) { if (url) window.open(url, '_blank'); }
 
-function uploadInstrumentPhoto(id) {
+function uploadInstrumentPhoto(id, useCamera) {
   const d = (allData || []).find(x => x.id === id); if (!d) return;
   if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  if (useCamera) inp.setAttribute('capture', 'environment');
   inp.onchange = async () => {
     const f = inp.files && inp.files[0]; if (!f) return;
     if (!/^image\//.test(f.type || '')) { showToast('รับเฉพาะไฟล์รูปภาพ', 'error'); return; }
