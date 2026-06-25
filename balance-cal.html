@@ -1062,7 +1062,8 @@ function renderWeightPicker() {
     const items = idxs.map(i => ({ i, w: AVAIL_WEIGHTS[i], f: fmtWeightUnit(AVAIL_WEIGHTS[i].nominal_g) }))
       .sort((a, b) => a.f.rank - b.f.rank || a.f.val - b.f.val)   // เรียงตามหน่วย (mg→g→kg) แล้วค่อยตัวเลข
       .map(({ i, w, f }) => {
-      const label = `${f.val} ${f.unit}`;
+      const mk = (w.marking && w.marking !== 'none') ? `<sup style="color:#c0392b">${w.marking}</sup>` : '';
+      const label = `${f.val}${mk} ${f.unit}`;
       return `<label class="wpick ${w.in_date?'':'dis'}">
         <input type="checkbox" ${w.checked?'checked':''} ${w.in_date?'':'disabled'} onchange="toggleWeight(${i})">
         <b>${label}</b><span class="wid">${w.id_code}</span>${w.in_date?'':'<span class="exp">หมดอายุ</span>'}
@@ -1414,7 +1415,7 @@ async function loadFromDB() {
           const U = Number(w.uncertainty) || 0;
           let Ds = U;
           if (w.correction != null && w.prev_correction != null) Ds = Math.max(U, Math.abs(Number(w.correction) - Number(w.prev_correction)) * 1000);
-          return { id_code: w.id_code || (set + '·' + w.nominal_value + w.unit), marking: 'none',
+          return { id_code: w.id_code || (set + '·' + w.nominal_value + w.unit), marking: w.marking || 'none',
             nominal_g: Number(w.nominal_value) * _gF(w.unit),
             corr_g: Number(w.correction) || 0, U_mg: U, Ds_mg: Ds };
         });
