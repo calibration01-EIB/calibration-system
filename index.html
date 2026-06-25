@@ -2805,6 +2805,7 @@ body.app-mode textarea:focus {
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
+        <div class="nav-item" onclick="showPage('calrecs')" id="nav-calrecs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📋</span> ติดตามผลสอบเทียบ</span><span id="navCalrecsBadge" style="display:none;background:#f0a500;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">📜</span> ใบ Cert Reference</div>
       </nav>
       <div class="sidebar-user">
@@ -3342,6 +3343,29 @@ body.app-mode textarea:focus {
         </div>
       </div>
 
+      <div id="pageCalrecs" class="page-content" style="display:none">
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="calrecSearch" type="search" placeholder="🔍 ค้นหา Cert No, ชื่อเครื่อง, ID Code" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none" oninput="filterCalrecs()">
+          <select id="calrecStatus" onchange="filterCalrecs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);min-width:180px">
+            <option value="">ทุกสถานะ</option>
+            <option value="issued">⏳ รอแนบสแกน/อนุมัติ</option>
+            <option value="approved">✅ เสร็จสมบูรณ์</option>
+          </select>
+          <span id="calrecCount" style="font-size:12px;color:var(--text3);font-weight:700;white-space:nowrap"></span>
+          <button onclick="loadCalrecsPage()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--font);font-size:13px;cursor:pointer">↻ รีเฟรช</button>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow);overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr style="text-align:left;color:var(--text3);border-bottom:2px solid var(--border)">
+              <th style="padding:8px;font-weight:600">Cert No.</th><th style="padding:8px;font-weight:600">เครื่องมือ / ID</th>
+              <th style="padding:8px;font-weight:600">วันสอบ</th><th style="padding:8px;font-weight:600">ครบกำหนด</th>
+              <th style="padding:8px;font-weight:600">ผู้สอบ</th><th style="padding:8px;font-weight:600">สถานะ</th><th style="padding:8px;font-weight:600">จัดการ</th>
+            </tr></thead>
+            <tbody id="calrecBody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div id="pageWeights" class="page-content" style="display:none">
 
         <!-- TABS: ใบ Cert Reference / ลูกตุ้มรายลูก -->
@@ -3733,6 +3757,10 @@ body.app-mode textarea:focus {
   <div class="mobile-nav-item" data-page="cert" onclick="showPage('cert')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">🏷️</div>
     <div style="font-size:10px;color:#888">Cert</div>
+  </div>
+  <div class="mobile-nav-item" data-page="calrecs" onclick="showPage('calrecs')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
+    <div style="font-size:22px">📋</div>
+    <div style="font-size:10px;color:#888">ติดตามผล</div>
   </div>
   <div class="mobile-nav-item" data-page="weights" onclick="showPage('weights')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">📜</div>

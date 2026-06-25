@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -22,6 +22,7 @@ function showPage(page) {
     plan: ['📅 วางแผนสอบเทียบ','กำหนดตารางและ Export FRM-EIB04'],
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
+    calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -33,6 +34,13 @@ function showPage(page) {
   if (page === 'weights') { loadStandardWeights(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
+  if (page === 'calrecs') {
+    const waitAndLoad = (attempt) => {
+      if ((allData && allData.length > 0) || attempt > 20) { loadCalrecsPage(); return; }
+      setTimeout(() => waitAndLoad(attempt + 1), 200);
+    };
+    waitAndLoad(0);
+  }
   if (page === 'cert') {
     const waitAndLoad = (attempt) => {
       if (allData && allData.length > 0) { loadCertPage(); return; }

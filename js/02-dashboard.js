@@ -244,6 +244,8 @@ async function calRecComplete(recordId) {
       if (error) throw error;
       showToast('แนบไฟล์สแกน + ทำให้สมบูรณ์แล้ว', 'success');
       if (typeof renderPendingCertWidget === 'function') renderPendingCertWidget();
+      const cp = document.getElementById('pageCalrecs');
+      if (cp && cp.style.display !== 'none' && typeof loadCalrecsPage === 'function') loadCalrecsPage();
       const hm = document.getElementById('calHistoryModal');
       if (calHistInstId && hm && hm.classList.contains('open')) openCalHistory(calHistInstId);
     } catch (e) { showToast('ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
@@ -271,6 +273,8 @@ async function renderPendingCertWidget() {
     recs = data || [];
   } catch (e) { el.style.display = 'none'; return; }
   el.style.display = 'block';
+  const navBadge = document.getElementById('navCalrecsBadge');
+  if (navBadge) { navBadge.textContent = recs.length; navBadge.style.display = recs.length ? 'inline-block' : 'none'; }
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
   if (!recs.length) {
@@ -309,6 +313,62 @@ async function renderPendingCertWidget() {
       <tbody>${rows}</tbody>
     </table></div>
   </div>`;
+}
+
+// ===== หน้าติดตามผลสอบเทียบ: ตารางรวม calibration_records ทั้งหมด + กรองสถานะ/ค้นหา =====
+let CALRECS = [];
+async function loadCalrecsPage() {
+  const body = document.getElementById('calrecBody');
+  if (body) body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">กำลังโหลด...</td></tr>';
+  try {
+    const { data, error } = await sb.from('calibration_records')
+      .select('id,cert_no,job_no,cal_date,due_date,status,calibrated_by,approved_by,approved_at,signed_file_path,instrument_id')
+      .order('cal_date', { ascending: false }).order('created_at', { ascending: false });
+    if (error) throw error;
+    CALRECS = data || [];
+  } catch (e) {
+    CALRECS = [];
+    if (body) body.innerHTML = `<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(e.message || '')}</td></tr>`;
+    return;
+  }
+  renderCalrecsTable();
+}
+function filterCalrecs() { renderCalrecsTable(); }
+function renderCalrecsTable() {
+  const body = document.getElementById('calrecBody'); if (!body) return;
+  const q = (document.getElementById('calrecSearch')?.value || '').trim().toLowerCase();
+  const st = document.getElementById('calrecStatus')?.value || '';
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
+  const instOf = id => (allData || []).find(x => x.id === id) || {};
+  const rows = CALRECS.filter(r => {
+    if (st && r.status !== st) return false;
+    if (!q) return true;
+    const inst = instOf(r.instrument_id);
+    return [r.cert_no, inst.instrument_name, inst.id_code, r.job_no].some(v => String(v || '').toLowerCase().includes(q));
+  });
+  const cnt = document.getElementById('calrecCount');
+  if (cnt) cnt.textContent = CALRECS.length ? `แสดง ${rows.length} จาก ${CALRECS.length} ใบ` : '';
+  if (!rows.length) { body.innerHTML = `<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>`; return; }
+  body.innerHTML = rows.map(r => {
+    const inst = instOf(r.instrument_id);
+    const name = escapeHtmlText(inst.instrument_name || '–');
+    const idc = escapeHtmlText(inst.id_code || '–');
+    const nameCell = inst.id != null ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>` : `<strong>${name}</strong>`;
+    const acts = [];
+    if (r.status === 'issued' && canEdit) acts.push(`<button onclick="calRecComplete('${r.id}')" style="padding:4px 9px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:11.5px;cursor:pointer">📎 แนบสแกน</button>`);
+    acts.push(`<button onclick="openSavedCert('${r.id}')" style="padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11.5px;cursor:pointer">ดูใบ</button>`);
+    if (r.signed_file_path) acts.push(`<button onclick="viewSignedScan('${String(r.signed_file_path).replace(/'/g, '')}')" style="padding:4px 9px;border:1px solid #00695C;border-radius:6px;background:#fff;color:#00695C;font-size:11.5px;cursor:pointer">📎 สแกน</button>`);
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px;font-family:var(--mono),monospace;font-weight:700">${escapeHtmlText(r.cert_no || '–')}</td>
+      <td style="padding:8px">${nameCell} <span style="color:var(--text3);font-size:11px">${idc}</span></td>
+      <td style="padding:8px;white-space:nowrap">${fmt(r.cal_date)}</td>
+      <td style="padding:8px;white-space:nowrap">${fmt(r.due_date)}</td>
+      <td style="padding:8px">${escapeHtmlText(r.calibrated_by || '–')}</td>
+      <td style="padding:8px">${calRecStatusBadge(r.status)}</td>
+      <td style="padding:8px"><span style="display:inline-flex;gap:5px;flex-wrap:wrap">${acts.join('')}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 async function openCalHistory(instrumentId) {
