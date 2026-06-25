@@ -858,6 +858,7 @@ function buildCAL() {
     ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
     tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
     signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover') },
+    tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol })),   // raw → ใช้คืนค่าตอนเปิดดูรายละเอียด (#rec=)
   };
 }
 
@@ -1344,6 +1345,76 @@ async function loadLastCalForPrefill() {
     renderPrefillBanner();
   } catch (e) { console.warn('prefill:', e && e.message); }
 }
+// ===== เปิดดูรายละเอียดใบที่ออกแล้ว (#rec=<id>) → เติมฟอร์มเต็ม + โหมดตรวจทาน =====
+function readIncomingRec() {
+  const m = location.hash.match(/rec=([^&]+)/);
+  if (!m) return null;
+  const id = decodeURIComponent(m[1]).trim();
+  return id || null;
+}
+// เติมทุกฟิลด์จาก CAL object (inverse ของ buildCAL) — ค่าแก้/U คำนวณใหม่จากค่าอ่าน+ตุ้มที่คืนค่า
+function fillFromCAL(cal) {
+  const setv = (id, v) => { const el = byId(id); if (el && v != null && v !== '') el.value = v; };
+  const setList = (cls, arr) => { const els = [...document.querySelectorAll(cls)]; (arr || []).forEach((v, i) => { if (els[i] && v != null) els[i].value = v; }); };
+  setv('cClientName', cal.client && cal.client.name);
+  if (cal.client && Array.isArray(cal.client.addr)) { const a = byId('cAddr'); if (a) a.value = cal.client.addr.join('\n'); }
+  setv('eEquip', cal.equipment); setv('eEquipTh', cal.equipment_th);
+  setv('iCap', cal.capacity); setv('iRes', cal.resolution);
+  setv('eMfr', cal.manufacturer); setv('eModel', cal.model); setv('eSerial', cal.serial);
+  setv('eId', cal.id_no); setv('eAsset', cal.asset); setv('eClass', cal.accuracy_class);
+  setv('eCondition', cal.condition); setv('eAdjusted', cal.adjusted); setv('eUserRange', cal.user_range);
+  setv('cLocation', cal.location); setv('cSection', cal.section); setv('cUnitDept', cal.unit_dept);
+  setv('iDateRecv', cal.date_receive); setv('iDate', cal.date_cal); setv('iDateNext', cal.date_next);
+  setv('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);
+  setv('fCertNo', cal.cert_no); setv('fJobNo', cal.job_no); setv('fReqNo', cal.request_no);
+  if (cal.ab_ppm != null) setv('abMaterial', cal.ab_ppm);
+  if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sDirector', cal.signers.director); setv('sApprover', cal.signers.approver); }
+  setList('.tIn', cal.temp); setList('.rhIn', cal.rh); setList('.wuIn', cal.warmup); setList('.ctIn', cal.cal_time);
+  if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: Number(t.tol) }));
+  if (Array.isArray(cal.points) && cal.points.length) POINTS = cal.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
+  if (cal.repeat) { setv('repPoint', cal.repeat.point); if (Array.isArray(cal.repeat.reads)) REP_READS = cal.repeat.reads.slice(); }
+  if (cal.preload) { setv('plPoint', cal.preload.point); if (Array.isArray(cal.preload.reads)) PL_READS = cal.preload.reads.slice(); }
+  if (cal.ecc) { setv('eccWt', cal.ecc.wt); if (Array.isArray(cal.ecc.positions)) ECC = cal.ecc.positions.map((pos, i) => [pos, (cal.ecc.reads || [])[i]]); }
+  if (cal.tare && Array.isArray(cal.tare.checks)) { setv('tareWt', cal.tare.wt); TARE = cal.tare.checks.map(c => [c[0], c[1]]); }
+  buildStatic();
+  if (cal.ecc && cal.ecc.pan != null) setv('eccPan', cal.ecc.pan);
+  (cal.points || []).forEach((p, i) => (p.reads || []).forEach((rv, j) => {
+    const el = document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`); if (el && rv != null) el.value = rv;
+  }));
+  assignWeights(); renderPointRows(); drawPanPrev(); recalc();
+}
+async function loadRecForReview(recId) {
+  if (!recId || !SBCAL) return;
+  let rec;
+  try {
+    const { data, error } = await SBCAL.from('calibration_records')
+      .select('id,cert_no,job_no,status,revision,instrument_id,data').eq('id', recId).single();
+    if (error || !data) throw (error || new Error('not found'));
+    rec = data;
+  } catch (e) { console.warn('loadRec:', e && e.message); return; }
+  const cal = rec.data || {};
+  // คืนค่าชุดตุ้ม/ลูกที่ติ๊ก/override ก่อน (ให้ recalc คำนวณค่าแก้/U ตามเดิม)
+  const snap = cal.sel_snapshot || {};
+  let setIds = (Array.isArray(snap.sets) && snap.sets.length) ? snap.sets.slice()
+    : (Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : []);
+  setIds = setIds.map(c => String(c).trim()).filter(c => c && regGet(c));
+  if (setIds.length) SELECTED_SETS = setIds;
+  if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
+  deriveStds(); rebuildAvail();
+  if (Array.isArray(snap.checked)) { const set = {}; snap.checked.forEach(c => { set[c] = 1; }); AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; }); }
+  fillFromCAL(cal);
+  // สถานะ/เลข Cert จริง → cert bar + ปุ่ม (ปริ้น/ยกเลิก/revision)
+  CAL_REC_ID = rec.id; CERT_NO = rec.cert_no || cal.cert_no || ''; CERT_REV = Number(rec.revision) || 0; CAL_STATE = rec.status || 'issued';
+  const mm = String(CERT_NO).match(/^(\d+)([A-Z])(\d+)-(\d+)/);
+  if (mm) { CERT_YY = Number(mm[1]); CERT_BASE = Number(mm[3]); }
+  renderCertBar();
+  switchMode('review');
+  const ib = byId('instBanner');
+  if (ib) {
+    ib.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#eef4fb;border:1px solid #b9d4ee;border-radius:8px;padding:8px 11px;font-size:12px;color:#1565c0;font-weight:700';
+    ib.innerHTML = `<i class="ti ti-eye"></i> ดูรายละเอียดใบที่ออกแล้ว: <b>${CERT_NO || '–'}</b> — โหมดตรวจทาน (อ่านอย่างเดียว)`;
+  }
+}
 function renderPrefillBanner() {
   const b = byId('prefillBanner'); if (!b) return;
   if (!PREFILL_REC) { b.style.display = 'none'; return; }
@@ -1389,6 +1460,7 @@ function presetForCapacity(cap) {
 
 const INCOMING_STD = readIncomingStd();
 const INCOMING_INST = readIncomingInst();
+const INCOMING_REC = readIncomingRec();   // #rec=<id> → เปิดดูรายละเอียดใบที่ออกแล้ว (โหมดตรวจทาน)
 applyIncomingStd(INCOMING_STD);   // อาจตั้ง SELECTED_SETS + เพิ่มชุดเข้าทะเบียน + banner
 if (INCOMING_STD) STD_IS_MOCK = false;   // ส่งชุดจริงมาจากทะเบียนใบ Cert
 deriveStds();
@@ -1462,14 +1534,18 @@ async function loadFromDB() {
       const { data: presetRes } = await SBCAL.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });
       CAL_PRESETS = presetRes || []; renderPresetPick();
     } catch (e) {}
-    await loadLastCalForPrefill();
-    if (!INCOMING_STD && !PREFILL_REC) {
-      const cap = (INCOMING_INST && INCOMING_INST.capacity) || parseFloat(val('iCap'));
-      const pm = presetForCapacity(cap);
-      if (pm) {
-        POINTS = pm.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
-        rebuildPoints(true);
-        const sel = byId('presetPick'); if (sel) sel.value = String(CAL_PRESETS.indexOf(pm));
+    if (INCOMING_REC) {
+      await loadRecForReview(INCOMING_REC);   // เปิดดูใบที่ออกแล้ว → เติมฟอร์ม + โหมดตรวจทาน (ข้าม prefill/preset)
+    } else {
+      await loadLastCalForPrefill();
+      if (!INCOMING_STD && !PREFILL_REC) {
+        const cap = (INCOMING_INST && INCOMING_INST.capacity) || parseFloat(val('iCap'));
+        const pm = presetForCapacity(cap);
+        if (pm) {
+          POINTS = pm.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
+          rebuildPoints(true);
+          const sel = byId('presetPick'); if (sel) sel.value = String(CAL_PRESETS.indexOf(pm));
+        }
       }
     }
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock

@@ -290,7 +290,7 @@ async function renderPendingCertWidget() {
       ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>`
       : `<strong>${name}</strong>`;
     const scanBtn = canEdit ? `<button onclick="calRecComplete('${r.id}')" style="padding:5px 11px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:12px;font-weight:600;cursor:pointer">📎 แนบสแกน → สมบูรณ์</button>` : '';
-    const viewBtn = `<button onclick="openSavedCert('${r.id}')" style="padding:5px 11px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-size:12px;cursor:pointer">ดูใบ</button>`;
+    const viewBtn = `<button onclick="openRecReview('${r.id}')" style="padding:5px 11px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-size:12px;cursor:pointer">ดูรายละเอียด</button>`;
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 8px;font-family:var(--mono),monospace;font-weight:700">${certNo}</td>
       <td style="padding:7px 8px">${nameCell} <span style="color:var(--text3);font-size:11px">${idc}</span></td>
@@ -357,7 +357,7 @@ function renderCalrecsTable() {
     const nameCell = inst.id != null ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>` : `<strong>${name}</strong>`;
     const acts = [];
     if (r.status === 'issued' && canEdit) acts.push(`<button onclick="calRecComplete('${r.id}')" style="padding:4px 9px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:11.5px;cursor:pointer">📎 แนบสแกน</button>`);
-    acts.push(`<button onclick="openSavedCert('${r.id}')" style="padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11.5px;cursor:pointer">ดูใบ</button>`);
+    acts.push(`<button onclick="openRecReview('${r.id}')" style="padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11.5px;cursor:pointer">ดูรายละเอียด</button>`);
     if (r.signed_file_path) acts.push(`<button onclick="viewSignedScan('${String(r.signed_file_path).replace(/'/g, '')}')" style="padding:4px 9px;border:1px solid #00695C;border-radius:6px;background:#fff;color:#00695C;font-size:11.5px;cursor:pointer">📎 สแกน</button>`);
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:8px;font-family:var(--mono),monospace;font-weight:700">${escapeHtmlText(r.cert_no || '–')}</td>
@@ -472,6 +472,8 @@ function calRecStatusBadge(status) {
   return `<span style="font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;background:${x[1]};color:${x[2]}">${x[0]}</span>`;
 }
 // เปิดใบ Cert ย้อนหลังจาก calibration_records → ยิง data jsonb เข้า cert-print (เหมือน balance-cal)
+// เปิดดูรายละเอียดใบบันทึก (balance-cal โหมดตรวจทาน) จาก record id
+function openRecReview(recordId) { window.open('balance-cal.html#rec=' + encodeURIComponent(recordId), '_blank'); }
 async function openSavedCert(recordId) {
   try {
     const { data, error } = await sb.from('calibration_records').select('data').eq('id', recordId).single();
