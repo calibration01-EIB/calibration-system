@@ -1372,12 +1372,18 @@ function fillFromCAL(cal) {
   setList('.tIn', cal.temp); setList('.rhIn', cal.rh); setList('.wuIn', cal.warmup); setList('.ctIn', cal.cal_time);
   if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: Number(t.tol) }));
   if (Array.isArray(cal.points) && cal.points.length) POINTS = cal.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
-  if (cal.repeat) { setv('repPoint', cal.repeat.point); if (Array.isArray(cal.repeat.reads)) REP_READS = cal.repeat.reads.slice(); }
-  if (cal.preload) { setv('plPoint', cal.preload.point); if (Array.isArray(cal.preload.reads)) PL_READS = cal.preload.reads.slice(); }
-  if (cal.ecc) { setv('eccWt', cal.ecc.wt); if (Array.isArray(cal.ecc.positions)) ECC = cal.ecc.positions.map((pos, i) => [pos, (cal.ecc.reads || [])[i]]); }
-  if (cal.tare && Array.isArray(cal.tare.checks)) { setv('tareWt', cal.tare.wt); TARE = cal.tare.checks.map(c => [c[0], c[1]]); }
-  buildStatic();
+  // REP_READS/PL_READS/ECC/TARE เป็น const (โครงสร้าง default) — ค่าจริงอยู่ใน input · เขียนทับ input หลัง buildStatic
+  setv('repPoint', cal.repeat && cal.repeat.point);
+  setv('plPoint', cal.preload && cal.preload.point);
+  setv('eccWt', cal.ecc && cal.ecc.wt);
+  setv('tareWt', cal.tare && cal.tare.wt);
+  buildStatic();   // render ตารางตามโครงสร้าง (ค่าอ่าน default) → แล้วเขียนทับด้วยค่าจาก record
   if (cal.ecc && cal.ecc.pan != null) setv('eccPan', cal.ecc.pan);
+  const setInputs = (cls, arr) => { const els = [...document.querySelectorAll(cls)]; (arr || []).forEach((v, i) => { if (els[i] && v != null) els[i].value = v; }); };
+  setInputs('.repIn', cal.repeat && cal.repeat.reads);
+  setInputs('.plIn', cal.preload && cal.preload.reads);
+  setInputs('.eccIn', cal.ecc && cal.ecc.reads);
+  setInputs('.tareIn', (cal.tare && Array.isArray(cal.tare.checks)) ? cal.tare.checks.map(c => c[1]) : null);
   (cal.points || []).forEach((p, i) => (p.reads || []).forEach((rv, j) => {
     const el = document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`); if (el && rv != null) el.value = rv;
   }));
@@ -1403,6 +1409,9 @@ async function loadRecForReview(recId) {
   deriveStds(); rebuildAvail();
   if (Array.isArray(snap.checked)) { const set = {}; snap.checked.forEach(c => { set[c] = 1; }); AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; }); }
   fillFromCAL(cal);
+  // เลข Cert/งาน จาก record column (เผื่อ data เก่าไม่มี) → เขียนทับช่อง
+  if (rec.cert_no) { const fc = byId('fCertNo'); if (fc) fc.value = rec.cert_no; }
+  if (rec.job_no) { const fj = byId('fJobNo'); if (fj) fj.value = rec.job_no; }
   // สถานะ/เลข Cert จริง → cert bar + ปุ่ม (ปริ้น/ยกเลิก/revision)
   CAL_REC_ID = rec.id; CERT_NO = rec.cert_no || cal.cert_no || ''; CERT_REV = Number(rec.revision) || 0; CAL_STATE = rec.status || 'issued';
   const mm = String(CERT_NO).match(/^(\d+)([A-Z])(\d+)-(\d+)/);
