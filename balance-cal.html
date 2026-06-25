@@ -937,13 +937,15 @@ function deriveCertStds() {
     const g = groups[k];
     const classG = g.clsSet.join(',');
     const noms = g.noms.filter(n => n > 0);
-    // MODEL: ใช้จาก DB ถ้ามี · ไม่งั้นประกอบ "CLASS <grade> ( <ช่วงหน่วยธรรมชาติ> )" เช่น CLASS E2 ( 1 mg - 1 kg )
+    // MODEL = "CLASS <grade> ( <ช่วงหน่วยธรรมชาติ> )" เช่น CLASS E2 ( 1 mg - 1 kg )
+    // เติมช่วงเสมอถ้ายังไม่มีวงเล็บ (DB model = "CLASS E2" → "CLASS E2 ( 1 mg - 1 kg )"; ว่าง → ประกอบจาก class)
     let model = g.modelSet.join(', ');
-    if (!model && noms.length) {
+    if (noms.length && model.indexOf('(') < 0) {
       const lo = fmtWeightUnit(Math.min.apply(null, noms)), hi = fmtWeightUnit(Math.max.apply(null, noms));
       const same = lo.val === hi.val && lo.unit === hi.unit;
       const rangeTxt = same ? `${lo.val} ${lo.unit}` : `${lo.val} ${lo.unit} - ${hi.val} ${hi.unit}`;
-      model = classG ? `CLASS ${classG} ( ${rangeTxt} )` : '';
+      const base = model || (classG ? `CLASS ${classG}` : '');
+      model = base ? `${base} ( ${rangeTxt} )` : `( ${rangeTxt} )`;
     }
     const auto = {
       name: 'STANDARD WEIGHT',
