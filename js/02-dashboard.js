@@ -243,7 +243,9 @@ async function calRecComplete(recordId) {
         .eq('id', recordId);
       if (error) throw error;
       showToast('แนบไฟล์สแกน + ทำให้สมบูรณ์แล้ว', 'success');
-      if (calHistInstId) openCalHistory(calHistInstId);
+      if (typeof renderPendingCertWidget === 'function') renderPendingCertWidget();
+      const hm = document.getElementById('calHistoryModal');
+      if (calHistInstId && hm && hm.classList.contains('open')) openCalHistory(calHistInstId);
     } catch (e) { showToast('ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
     finally { if (typeof hideLoading === 'function') hideLoading(); }
   };
@@ -255,6 +257,58 @@ async function viewSignedScan(path) {
     if (error || !data) throw (error || new Error('no url'));
     window.open(data.signedUrl, '_blank');
   } catch (e) { showToast('เปิดไฟล์สแกนไม่ได้: ' + (e.message || ''), 'error'); }
+}
+
+// ===== กล่องเตือน Dashboard: งานสอบเทียบค้างดำเนินการ (issued ที่ยังไม่สมบูรณ์) =====
+async function renderPendingCertWidget() {
+  const el = document.getElementById('pendingCertWidget'); if (!el) return;
+  let recs = [];
+  try {
+    const { data, error } = await sb.from('calibration_records')
+      .select('id,cert_no,cal_date,instrument_id,calibrated_by')
+      .eq('status', 'issued').order('cal_date', { ascending: true });
+    if (error) throw error;
+    recs = data || [];
+  } catch (e) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
+  if (!recs.length) {
+    el.innerHTML = `<div style="background:#e8f5e9;border:1px solid #b7e0bd;border-radius:10px;padding:12px 16px;color:#1b5e20;font-size:13px;font-weight:700">✅ ไม่มีงานสอบเทียบค้างดำเนินการ — ทุกใบแนบสแกน/สมบูรณ์แล้ว</div>`;
+    return;
+  }
+  const rows = recs.map(r => {
+    const inst = (allData || []).find(x => x.id === r.instrument_id) || {};
+    const name = escapeHtmlText(inst.instrument_name || '–');
+    const idc = escapeHtmlText(inst.id_code || '–');
+    const certNo = escapeHtmlText(r.cert_no || '–');
+    const nameCell = inst.id != null
+      ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>`
+      : `<strong>${name}</strong>`;
+    const scanBtn = canEdit ? `<button onclick="calRecComplete('${r.id}')" style="padding:5px 11px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:12px;font-weight:600;cursor:pointer">📎 แนบสแกน → สมบูรณ์</button>` : '';
+    const viewBtn = `<button onclick="openSavedCert('${r.id}')" style="padding:5px 11px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-size:12px;cursor:pointer">ดูใบ</button>`;
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 8px;font-family:var(--mono),monospace;font-weight:700">${certNo}</td>
+      <td style="padding:7px 8px">${nameCell} <span style="color:var(--text3);font-size:11px">${idc}</span></td>
+      <td style="padding:7px 8px;white-space:nowrap">${fmt(r.cal_date)}</td>
+      <td style="padding:7px 8px">${escapeHtmlText(r.calibrated_by || '–')}</td>
+      <td style="padding:7px 8px;text-align:right;white-space:nowrap"><span style="display:inline-flex;gap:6px">${scanBtn}${viewBtn}</span></td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--amber,#f0a500);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:15px;font-weight:800;color:var(--text)">📋 งานสอบเทียบค้างดำเนินการ</span>
+      <span style="background:#fff3e0;color:#b9770e;font-weight:800;border-radius:20px;padding:2px 11px;font-size:13px">${recs.length}</span>
+      <span style="font-size:12px;color:var(--text3)">ออกเลขแล้ว — รอแนบสแกน/อนุมัติ</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="color:var(--text3);text-align:left;border-bottom:2px solid var(--border)">
+        <th style="padding:6px 8px;font-weight:600">Cert No.</th><th style="padding:6px 8px;font-weight:600">เครื่องมือ / ID</th>
+        <th style="padding:6px 8px;font-weight:600">วันสอบ</th><th style="padding:6px 8px;font-weight:600">ผู้สอบ</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
 }
 
 async function openCalHistory(instrumentId) {
@@ -476,6 +530,7 @@ async function loadData(forceRefresh = false) {
     renderDonut();
     renderMonthlyBarChart();
     renderDashboardAuditLog();
+    renderPendingCertWidget();
     loadPlanStatusMap();
     updateNotificationBell();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();
