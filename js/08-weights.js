@@ -269,6 +269,7 @@ function addSWRow(w) {
     `<td><input class="swrin l sw-r-nom" type="number" step="any" value="${w.nominal_value != null ? w.nominal_value : ''}" placeholder="1"></td>` +
     `<td><select class="swrin sw-r-unit">${['mg', 'g', 'kg'].map(x => `<option ${x === u ? 'selected' : ''}>${x}</option>`).join('')}</select></td>` +
     `<td><input class="swrin sw-r-mark" type="text" value="${escapeHtmlAttr(w.marking || '')}" placeholder="* . **" title="เครื่องหมายแยกตุ้มค่าซ้ำ เช่น 2 กับ 2*" style="text-align:center"></td>` +
+    `<td><input class="swrin sw-r-sn" type="text" value="${escapeHtmlAttr(w.serial_no || '')}" placeholder="(ตาม S/N ชุด)" title="S/N รายลูก — เว้นว่าง = ใช้ S/N ของชุด"></td>` +
     `<td><input class="swrin l sw-r-idc" type="text" value="${escapeHtmlAttr(w.id_code || '')}" placeholder="CLCLCS01-WI07"></td>` +
     `<td><input class="swrin sw-r-corr" type="number" step="any" value="${w.correction != null ? w.correction : ''}" placeholder="0.000006"></td>` +
     `<td><input class="swrin sw-r-unc" type="number" step="any" value="${w.uncertainty != null ? w.uncertainty : ''}" placeholder="0.010"></td>` +
@@ -304,6 +305,7 @@ async function saveSWSet() {
       _id: tr.dataset.id ? Number(tr.dataset.id) : null,
       nominal_value: f('.sw-r-nom'), unit: q('.sw-r-unit')?.value || 'g',
       marking: (q('.sw-r-mark')?.value || '').trim() || null,
+      serial_no: (q('.sw-r-sn')?.value || '').trim() || null,
       id_code: (q('.sw-r-idc')?.value || '').trim() || null,
       correction: f('.sw-r-corr'), uncertainty: f('.sw-r-unc'), prev_correction: f('.sw-r-prev'),
     };
@@ -314,6 +316,7 @@ async function saveSWSet() {
     const actual = r.correction == null ? null : r.nominal_value + r.correction * SW_MASS_MG.g / (SW_MASS_MG[r.unit] || 1);
     return {
       ...header, nominal_value: r.nominal_value, unit: r.unit, marking: r.marking, id_code: r.id_code,
+      serial_no: r.serial_no || header.serial_no,   // S/N รายลูก · เว้นว่าง = ใช้ S/N ของชุด (fill-down)
       correction: r.correction, actual_value: actual, uncertainty: r.uncertainty, prev_correction: r.prev_correction,
       status: 'draft', approved_by: null, approved_at: null, updated_at: now,   // แก้ไข/เพิ่ม → อนุมัติใหม่ทั้งชุด
     };

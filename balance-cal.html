@@ -911,43 +911,56 @@ let AVAIL_WEIGHTS = [];
 function deriveStds() {
   STDS = SELECTED_SETS.map(regGet).filter(Boolean)
     .map(s => ({ name:s.name, model:s.model, cls:s.cls, serial:s.serial, id_code:s.id_code, cert:s.cert, due:s.due }));
-  deriveCertStds();
+  // deriveCertStds() เรียกท้าย rebuildAvail แทน (ต้องใช้สถานะติ๊กของ AVAIL_WEIGHTS)
 }
 // escape helpers สำหรับ value/attr และ string ในเครื่องหมาย ' ของ inline handler
 function _attr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function _jsq(v){ return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-// "พิกัด / Class": nominal + หน่วย + /class · ≥3 ค่าต่อเนื่อง→ช่วง min-max · ไม่งั้น→คอมมา
-function composeStdCls(nomsG, cls) {
-  const noms = (nomsG || []).map(Number).filter(n => n > 0);
-  if (!noms.length) return cls || '';
-  const useKg = Math.max.apply(null, noms) >= 1000;
-  const unit = useKg ? 'kg' : 'g';
-  const fmt = v => { const r = Math.round(v * 1e6) / 1e6; return String(r); };
-  const uniq = Array.from(new Set(noms.map(v => useKg ? v / 1000 : v))).sort((a, b) => a - b);
-  const valStr = uniq.length >= 3 ? (fmt(uniq[0]) + '-' + fmt(uniq[uniq.length - 1])) : uniq.map(fmt).join(',');
+// "พิกัด / Class" จากลูกตุ้มในกลุ่ม: nominal + mark + หน่วย + /class
+// ≥3 ค่าต่างกัน→ช่วง min-max · ไม่งั้น→คอมมา (ค่าซ้ำต่าง mark รวม เช่น "2,2*kg")
+function composeStdCls(weights, cls) {
+  const ws = (weights || []).filter(w => Number(w.nominal_g) > 0);
+  if (!ws.length) return cls || '';
+  const maxG = Math.max.apply(null, ws.map(w => Number(w.nominal_g)));
+  const unit = maxG >= 1000 ? 'kg' : (maxG >= 1 ? 'g' : 'mg');
+  const conv = g => unit === 'kg' ? g / 1000 : (unit === 'g' ? g : g * 1000);
+  const fmt = v => String(Math.round(v * 1e6) / 1e6);
+  const dmap = {};   // ค่าพิกัด(แสดง) → [mark...]
+  ws.forEach(w => { const v = fmt(conv(Number(w.nominal_g))); (dmap[v] = dmap[v] || []).push((w.marking && w.marking !== 'none') ? w.marking : ''); });
+  const denoms = Object.keys(dmap).map(Number).sort((a, b) => a - b);
+  const valStr = denoms.length >= 3
+    ? (fmt(denoms[0]) + '-' + fmt(denoms[denoms.length - 1]))
+    : denoms.map(d => dmap[fmt(d)].slice().sort().map(m => fmt(d) + m).join(',')).join(',');
   return valStr + unit + (cls ? '/' + cls : '');
 }
-// แถว cert: group ชุดที่เลือกตาม Serial No. → auto-compose 5 ช่อง แล้วทับด้วย STD_ROW_OV
+// แถว cert จาก "ลูกที่ติ๊ก": ครบชุด→1 แถว(ช่วง) · ไม่ครบ→แยกตามค่าพิกัด (ค่าเดียวกัน+mark รวมแถว) · auto แล้วทับด้วย STD_ROW_OV
 function deriveCertStds() {
-  const groups = {};
+  const groups = [];   // [{ key, weights, reg, full }]
   SELECTED_SETS.map(regGet).filter(Boolean).forEach(reg => {
-    const key = (reg.serial && reg.serial.trim()) || reg.id_code;
-    let g = groups[key];
-    if (!g) g = groups[key] = { key, serial: reg.serial || '', modelSet: [], clsSet: [], ids: [], certSet: [], dues: [], noms: [] };
-    if (reg.model && g.modelSet.indexOf(reg.model) < 0) g.modelSet.push(reg.model);
-    if (reg.cls && g.clsSet.indexOf(reg.cls) < 0) g.clsSet.push(reg.cls);
-    if (reg.id_code && g.ids.indexOf(reg.id_code) < 0) g.ids.push(reg.id_code);
-    if (reg.cert && g.certSet.indexOf(reg.cert) < 0) g.certSet.push(reg.cert);
-    if (reg.due) g.dues.push(reg.due);
-    (reg.weights || []).forEach(w => g.noms.push(w.nominal_g));
+    const setW = AVAIL_WEIGHTS.filter(w => w.set_id === reg.id_code);
+    const checked = setW.filter(w => w.checked);
+    if (!checked.length) return;
+    if (checked.length === setW.length) {
+      groups.push({ key: 'F:' + reg.id_code, weights: checked.slice(), reg, full: true });   // ครบชุด → 1 แถว(ช่วง)
+    } else {
+      const byNom = {};
+      checked.forEach(w => { const n = Number(w.nominal_g); (byNom[n] = byNom[n] || []).push(w); });
+      Object.keys(byNom).map(Number).sort((a, b) => a - b).forEach(n => {
+        groups.push({ key: 'P:' + reg.id_code + ':' + n, weights: byNom[n], reg, full: false });   // ไม่ครบ → 1 แถว/ค่าพิกัด
+      });
+    }
   });
-  CERT_STDS = Object.keys(groups).map(k => {
-    const g = groups[k];
-    const classG = g.clsSet.join(',');
-    const noms = g.noms.filter(n => n > 0);
-    // MODEL = "CLASS <grade> ( <ช่วงหน่วยธรรมชาติ> )" เช่น CLASS E2 ( 1 mg - 1 kg )
-    // เติมช่วงเสมอถ้ายังไม่มีวงเล็บ (DB model = "CLASS E2" → "CLASS E2 ( 1 mg - 1 kg )"; ว่าง → ประกอบจาก class)
-    let model = g.modelSet.join(', ');
+  groups.sort((a, b) => Math.min.apply(null, a.weights.map(w => +w.nominal_g)) - Math.min.apply(null, b.weights.map(w => +w.nominal_g)));
+  const liveKeys = {};
+  CERT_STDS = groups.map(g => {
+    const reg = g.reg, classG = reg.cls || '';
+    const noms = g.weights.map(w => Number(w.nominal_g)).filter(n => n > 0);
+    const serials = Array.from(new Set(g.weights.map(w => (w.serial && String(w.serial).trim()) || '').filter(Boolean)));
+    const serial = serials.length ? serials.join(',') : (reg.serial || '');
+    const certs = Array.from(new Set(g.weights.map(w => w.cert || reg.cert).filter(Boolean)));
+    const dues = g.weights.map(w => w.due || reg.due).filter(Boolean);
+    const ids = Array.from(new Set(g.weights.map(w => w.id_code).filter(Boolean)));
+    let model = reg.model || '';
     if (noms.length && model.indexOf('(') < 0) {
       const lo = fmtWeightUnit(Math.min.apply(null, noms)), hi = fmtWeightUnit(Math.max.apply(null, noms));
       const same = lo.val === hi.val && lo.unit === hi.unit;
@@ -956,21 +969,20 @@ function deriveCertStds() {
       model = base ? `${base} ( ${rangeTxt} )` : `( ${rangeTxt} )`;
     }
     const auto = {
-      name: 'STANDARD WEIGHT',
-      model,
-      cls: composeStdCls(g.noms, classG),
-      serial: g.serial,
-      id_code: g.ids.join(','),
-      cert: g.certSet.join(','),
-      due: g.dues.slice().sort()[0] || '',
+      name: 'STANDARD WEIGHT', model,
+      cls: composeStdCls(g.weights, classG),
+      serial,
+      id_code: g.full ? reg.id_code : ids.join(','),
+      cert: certs.join(','),
+      due: dues.slice().sort()[0] || '',
     };
+    liveKeys[g.key] = 1;
     const ov = STD_ROW_OV[g.key] || {};
     const pick = f => (ov[f] !== undefined ? ov[f] : auto[f]);
-    return { key: g.key, _auto: auto, sets: g.ids.slice(), name: pick('name'), model: pick('model'),
+    return { key: g.key, _auto: auto, setIds: [reg.id_code], wids: ids.slice(), name: pick('name'), model: pick('model'),
       cls: pick('cls'), serial: pick('serial'), id_code: pick('id_code'), cert: pick('cert'), due: pick('due') };
   });
-  const live = {}; CERT_STDS.forEach(r => { live[r.key] = 1; });
-  Object.keys(STD_ROW_OV).forEach(k => { if (!live[k]) delete STD_ROW_OV[k]; });
+  Object.keys(STD_ROW_OV).forEach(k => { if (!liveKeys[k]) delete STD_ROW_OV[k]; });
 }
 function editStdCell(key, field, value) {
   (STD_ROW_OV[key] = STD_ROW_OV[key] || {})[field] = value;
@@ -979,20 +991,22 @@ function editStdCell(key, field, value) {
 function resetStdRow(key) { delete STD_ROW_OV[key]; deriveCertStds(); renderStdTable(); }
 function removeStdGroup(key) {
   const row = CERT_STDS.find(r => r.key === key);
-  const ids = row ? row.sets : [key];
-  SELECTED_SETS = SELECTED_SETS.filter(x => ids.indexOf(x) < 0);
+  const wids = row ? (row.wids || []) : [];
+  AVAIL_WEIGHTS.forEach(w => { if (wids.indexOf(w.id_code) >= 0) w.checked = false; });   // ✕ = ไม่ใช้ลูกกลุ่มนี้ (เอาออกจาก cert)
   delete STD_ROW_OV[key];
-  refreshStds();
+  deriveCertStds(); assignWeights(); renderStdTable(); renderWeightPicker(); renderPointRows(); recalc();
 }
 function rebuildAvail() {
   const prev = {}; AVAIL_WEIGHTS.forEach(w => { prev[w.id_code] = w.checked; });
   AVAIL_WEIGHTS = [];
   SELECTED_SETS.forEach(sid => {
     const s = regGet(sid); if (!s) return;
-    s.weights.forEach(w => AVAIL_WEIGHTS.push({ id_code:w.id_code, set_id:sid, nominal_g:w.nominal_g, marking:w.marking, corr_g:w.corr_g, U_mg:w.U_mg, Ds_mg:w.Ds_mg, due:w.due }));
+    s.weights.forEach(w => AVAIL_WEIGHTS.push({ id_code:w.id_code, set_id:sid, nominal_g:w.nominal_g, marking:w.marking, corr_g:w.corr_g, U_mg:w.U_mg, Ds_mg:w.Ds_mg,
+      due: w.due || s.due, serial: w.serial || s.serial || '', cert: w.cert || s.cert || '' }));
   });
   const today = new Date(); today.setHours(0,0,0,0);
   AVAIL_WEIGHTS.forEach(w => { w.in_date = !w.due || new Date(w.due+'T00:00:00') >= today; w.checked = (w.id_code in prev) ? (prev[w.id_code] && w.in_date) : w.in_date; });
+  deriveCertStds();   // แถว cert ขึ้นกับลูกที่ติ๊ก → derive หลังตั้งสถานะ checked เสร็จ
 }
 function renderStdTable() {
   byId('stdRows').innerHTML = CERT_STDS.length ? CERT_STDS.map(s => {
@@ -1088,6 +1102,7 @@ function renderWeightPicker() {
 }
 function toggleWeight(i) {
   AVAIL_WEIGHTS[i].checked = !AVAIL_WEIGHTS[i].checked;
+  deriveCertStds(); renderStdTable();   // ติ๊กเปลี่ยน → แถว cert (group ตาม serial ของลูกที่ติ๊ก) อัปเดต
   assignWeights(); renderPointRows(); renderWeightPicker(); recalc();
 }
 
@@ -1525,7 +1540,8 @@ async function loadFromDB() {
           if (w.correction != null && w.prev_correction != null) Ds = Math.max(U, Math.abs(Number(w.correction) - Number(w.prev_correction)) * 1000);
           return { id_code: w.id_code || (set + '·' + w.nominal_value + w.unit), marking: w.marking || 'none',
             nominal_g: Number(w.nominal_value) * _gF(w.unit),
-            corr_g: Number(w.correction) || 0, U_mg: U, Ds_mg: Ds };
+            corr_g: Number(w.correction) || 0, U_mg: U, Ds_mg: Ds,
+            serial: w.serial_no || '', cert: w.cert_no || '', due: w.due_date || '' };
         });
         return { id_code: set, name: 'WEIGHT SET', model: ws[0].model || (ws[0].class_grade ? 'CLASS ' + ws[0].class_grade : ''),
           cls: ws[0].class_grade || '', serial: ws[0].serial_no || '', cert: ws[0].cert_no || '', due: ws[0].due_date || '', weights };
