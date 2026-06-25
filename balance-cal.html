@@ -63,6 +63,7 @@ input[type=number] { text-align: right; }
 .tbl td { height: 36px; padding: 2px 9px; border-bottom: 1px solid var(--line-soft); font-size: 12px; white-space: nowrap; }
 .tbl td.num, .tbl th.num { text-align: right; }
 .tbl input { width: 90px; min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; background: var(--input-edit); }
+.tbl input.roIn { background: #eef2f1; color: #4a6360; border-color: transparent; cursor: default; font-weight: 600; }
 .tbl input.txt { width: 100%; text-align: left; }
 .tbl input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
 .calc { color: #06718b; font-weight: 700; }
@@ -639,9 +640,9 @@ function renderPointRows() {
     return `<tr>
     <td><input type="number" step="any" class="nomIn" data-i="${i}" value="${p.nominal}" onchange="setPointNominal(${i},this.value)" style="width:84px"></td>
     <td><span class="chip">${used}</span>${warn}</td>
-    <td class="num"><input type="number" step="any" class="corrIn" data-i="${i}" value="${calRound(p.corr,7)}" oninput="POINTS[${i}].corr=parseFloat(this.value)||0;recalc()"></td>
+    <td class="num"><input type="number" step="any" class="corrIn roIn" data-i="${i}" value="${calRound(p.corr,7)}" readonly tabindex="-1" title="คำนวณจากตุ้มที่เลือก (แก้ไม่ได้)"></td>
     <td class="num calc" id="conv${i}">${fmt(p.nominal + p.corr, 6)}</td>
-    <td class="num"><input type="number" step="any" class="uIn" data-i="${i}" value="${p.U}" oninput="POINTS[${i}].U=parseFloat(this.value)||0;recalc()"></td>
+    <td class="num"><input type="number" step="any" class="uIn roIn" data-i="${i}" value="${p.U}" readonly tabindex="-1" title="คำนวณจากตุ้มที่เลือก (แก้ไม่ได้)"></td>
     <td class="num"><button type="button" class="rmset" onclick="removePoint(${i})" title="ลบจุด">✕</button></td>
   </tr>`;
   }).join('');
@@ -1487,6 +1488,13 @@ renderStdBanner();   // เริ่มต้นเป็นแดง (mock) จ
 // ฟิลด์ที่กระทบการคำนวณ/วันที่ — อัปเดตสดเมื่อพิมพ์
 ['iRes','iDate'].forEach(id => {
   const el = byId(id); if (el) el.addEventListener('input', recalc);
+});
+// แตะช่องตัวเลข (editable) → เลือกค่าเดิมทั้งหมด พิมพ์ใหม่ทับทันที (กรอกเร็วบน tablet ไม่ต้องเลื่อน/ลบ)
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (el && el.tagName === 'INPUT' && el.type === 'number' && !el.readOnly && !el.disabled) {
+    setTimeout(() => { try { el.select(); } catch (_) {} }, 0);
+  }
 });
 
 // ===== ต่อระบบจริง: โหลดชุดตุ้ม (standard_weights) + CMC (cmc_set/cmc_row) จาก Supabase =====
