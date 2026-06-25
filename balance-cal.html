@@ -846,6 +846,12 @@ function buildCAL() {
     cmc_revision: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).revision || null,
     cmc_based_on: (CMC_SETS.find(s => s.id === CMC_SET_SEL) || {}).based_on || null,
     standards: CERT_STDS.map(s => ({ name: s.name, model: s.model, cls: s.cls, serial: s.serial, id_code: s.id_code, cert: s.cert, due: s.due })),
+    // snapshot การเลือกทั้งหมด → prefill ครั้งหน้าของเครื่องนี้ (ชุด + ลูกที่ติ๊ก + การพิมพ์ทับ cert)
+    sel_snapshot: {
+      sets: SELECTED_SETS.slice(),
+      checked: AVAIL_WEIGHTS.filter(w => w.checked).map(w => w.id_code),
+      std_ov: STD_ROW_OV,
+    },
     preload: { point: num('plPoint', 0), reads: plReads },
     repeat: { point: num('repPoint', 0), reads: reps },
     points,
@@ -1318,10 +1324,23 @@ async function loadLastCalForPrefill() {
     const pts = Array.isArray(cal.points) ? cal.points.filter(p => Number.isFinite(Number(p.nominal))) : [];
     if (!pts.length) return;
     POINTS = pts.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
-    const ids = (Array.isArray(cal.standards) ? cal.standards.map(s => s.id_code).filter(Boolean) : []).filter(c => regGet(c));
-    if (ids.length) SELECTED_SETS = ids;
+    const snap = cal.sel_snapshot || {};
+    // ชุดที่เลือก: ใช้ snapshot ถ้ามี · ไม่งั้น fallback จาก standards (รองรับ id_code ที่ join ด้วย comma)
+    let setIds = (Array.isArray(snap.sets) && snap.sets.length)
+      ? snap.sets.slice()
+      : (Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : []);
+    setIds = setIds.map(c => String(c).trim()).filter(c => c && regGet(c));
+    if (setIds.length) SELECTED_SETS = setIds;
+    // คืนค่าการพิมพ์ทับ cert (override) ถ้ามี
+    if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
     PREFILL_REC = { cert_no: rec.cert_no, cal_date: rec.cal_date };
-    deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
+    deriveStds(); rebuildAvail();
+    // คืนค่าการติ๊กลูกตุ้มเดิม (เฉพาะที่ยังไม่หมดอายุ)
+    if (Array.isArray(snap.checked)) {
+      const set = {}; snap.checked.forEach(c => { set[c] = 1; });
+      AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; });
+    }
+    assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
     renderPrefillBanner();
   } catch (e) { console.warn('prefill:', e && e.message); }
 }
@@ -1329,7 +1348,7 @@ function renderPrefillBanner() {
   const b = byId('prefillBanner'); if (!b) return;
   if (!PREFILL_REC) { b.style.display = 'none'; return; }
   b.style.cssText = 'display:block;margin-bottom:10px;background:#eef4fb;border:1px solid #b9d4ee;border-radius:8px;padding:8px 10px;font-size:12px;color:#1565c0';
-  b.innerHTML = '↻ ใช้จุดสอบ + ตุ้มจากการสอบครั้งก่อน (Cert ' + (PREFILL_REC.cert_no || '–') + ' · ' + (PREFILL_REC.cal_date || '') + ') '
+  b.innerHTML = '↻ ใช้จุดสอบ + ชุดตุ้ม + ลูกที่ติ๊ก จากการสอบครั้งก่อน (Cert ' + (PREFILL_REC.cert_no || '–') + ' · ' + (PREFILL_REC.cal_date || '') + ') '
     + '<a onclick="resetPrefill()" style="cursor:pointer;text-decoration:underline;color:#b3261e;margin-left:6px">เริ่มใหม่</a>';
 }
 function resetPrefill() {
