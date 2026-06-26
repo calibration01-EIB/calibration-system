@@ -771,14 +771,14 @@ function exportExcel() {
   if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
 
   const headers = ['#','ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
-    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','หน่วยงาน','ID Code','CERT.',
+    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','Asset No.','หน่วยงาน','ID Code','CERT.',
     'วันสอบเทียบ','วันครบกำหนด','เหลือ (วัน)','ความถี่สอบเทียบ','ภายใน/ภายนอก','สถานะ','Remark'];
 
   const rows = filteredData.map((d, i) => {
     const days = d.days_left;
     const status = days === null ? '–' : days < 0 ? 'เลยกำหนด' : days <= 30 ? 'ใกล้ครบ' : 'ปกติ';
     return [i+1, d.instrument_type||'', d.machine_name||'', d.location||'', d.instrument_name||'',
-      d.brand||'', d.range_val||'', d.tolerance ? '±'+d.tolerance : '', d.serial_no||'',
+      d.brand||'', d.range_val||'', d.tolerance ? '±'+d.tolerance : '', d.serial_no||'', d.asset_no||'',
       d.department||'', d.id_code||'', d.cert_no||'', d.cal_date||'', d.due_date||'',
       days !== null ? days : '', d.cal_frequency||'', d.cal_type||'', status, d.remark||''];
   });
@@ -786,7 +786,7 @@ function exportExcel() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols'] = [{wch:4},{wch:32},{wch:20},{wch:16},{wch:24},{wch:20},{wch:12},{wch:14},
-    {wch:16},{wch:12},{wch:20},{wch:16},{wch:14},{wch:14},{wch:10},{wch:20},{wch:14},{wch:12},{wch:24}];
+    {wch:16},{wch:14},{wch:12},{wch:20},{wch:16},{wch:14},{wch:14},{wch:10},{wch:20},{wch:14},{wch:12},{wch:24}];
   XLSX.utils.book_append_sheet(wb, ws, 'เครื่องมือ');
   const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
   XLSX.writeFile(wb, 'calibration_' + today + '.xlsx');
@@ -810,13 +810,13 @@ let importAnalysis = {
 
 const IMPORT_DB_SELECT = [
   'id','instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
-  'serial_no','department','id_code','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
+  'serial_no','asset_no','department','id_code','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
   'prev_cert_no','prev_cal_date'
 ].join(',');
 
 const IMPORT_COMPARE_FIELDS = [
   'instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
-  'serial_no','department','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
+  'serial_no','asset_no','department','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
   'prev_cert_no','prev_cal_date'
 ];
 
@@ -829,6 +829,7 @@ const IMPORT_COL_MAP = {
   'range':'range_val','range_val':'range_val',
   'tolerance (±)':'tolerance','tolerance':'tolerance',
   's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
+  'asset no.':'asset_no','asset no':'asset_no','asset':'asset_no','asset_no':'asset_no','assetno':'asset_no',
   'หน่วยงาน':'department','department':'department',
   'id code':'id_code','id_code':'id_code','idcode':'id_code',
   // Cert ใหม่ (มี 2026) → cert_no ปัจจุบัน
@@ -847,10 +848,10 @@ const IMPORT_COL_MAP = {
 function downloadTemplate() {
   if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
   const headers = ['ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
-    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','หน่วยงาน','ID Code','CERT.',
+    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','Asset No.','หน่วยงาน','ID Code','CERT.',
     'วันสอบเทียบ','วันครบกำหนด','ความถี่สอบเทียบ','ภายใน/ภายนอก','Remark'];
   const example = ['เครื่องชั่ง (Balance)','MIX 1000L','ตึก 5/1','Electronic Balance',
-    'AND/GF-3000','30 kg','0.01 g','A1234567','PMP1','PMP1BB01-WI01','25B001-0',
+    'AND/GF-3000','30 kg','0.01 g','A1234567','701267','PMP1','PMP1BB01-WI01','25B001-0',
     '2025-01-15','2026-01-15','1 ครั้ง/ปี','ภายนอก',''];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, example]);

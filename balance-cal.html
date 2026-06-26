@@ -213,6 +213,7 @@ body.review #entryHint, body.review #certStatusBarBottom { display: none; }
       <div class="field"><label>User Range (g)</label><input id="eUserRange" value="1 - 2000"></div>
       <div class="field"><label>การปรับแต่ง (Adjusted)</label><select id="eAdjusted"><option value="without">without (ไม่ปรับ)</option><option value="with">with (ปรับแต่ง)</option></select></div>
       <div class="field"><label>สภาพเครื่อง (Condition)</label><select id="eCondition"><option>USED ITEM</option><option>NEW ITEM</option></select></div>
+      <div class="field"><label>ภายใน / ภายนอก</label><select id="eCalType"><option value="">— เลือก —</option><option value="ภายใน">ภายใน</option><option value="ภายนอก">ภายนอก</option></select></div>
     </div>
 
     <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
@@ -835,7 +836,7 @@ function buildCAL() {
     capacity: num('iCap', 0), resolution: num('iRes', 0.01),
     manufacturer: val('eMfr'), model: val('eModel'), serial: val('eSerial'),
     id_no: val('eId'), asset: val('eAsset'), accuracy_class: val('eClass'),
-    condition: val('eCondition'), adjusted: val('eAdjusted'), user_range: val('eUserRange'),
+    condition: val('eCondition'), adjusted: val('eAdjusted'), user_range: val('eUserRange'), cal_type: val('eCalType'),
     temp: temps, rh: rhs, warmup: warm, cal_time: ctime,
     location: val('cLocation'), section: val('cSection'), unit_dept: val('cUnitDept'),
     date_receive: val('iDateRecv'), date_cal: dateCal,
@@ -1123,6 +1124,7 @@ function applyIncomingInst(inst) {
   setv('eSerial', inst.serial); setv('iCap', inst.capacity); setv('iRes', inst.resolution);
   setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
   setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
+  setv('eCalType', inst.cal_type);
   const b = byId('instBanner');
   if (b) {
     b.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:8px 11px;font-size:12px;color:#185fa5;font-weight:700';
@@ -1265,7 +1267,7 @@ async function issueCert() {
     let instNote = '';
     if (INCOMING_INST && INCOMING_INST.instrument_id) {
       try {
-        const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no,brand,model,serial_no,id_code,range_val,capacity,resolution,accuracy_class').eq('id', INCOMING_INST.instrument_id).single();
+        const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no,brand,model,serial_no,id_code,range_val,capacity,resolution,accuracy_class,asset_no,cal_type').eq('id', INCOMING_INST.instrument_id).single();
         INST_PREV = cur || null;
         const { error: iErr } = await db.from('instruments').update({
           cert_no: CERT_NO, cal_date: calDate, due_date: val('iDateNext') || null,
@@ -1274,6 +1276,7 @@ async function issueCert() {
           brand: val('eMfr') || null, model: val('eModel') || null, serial_no: val('eSerial') || null,
           id_code: val('eId') || null, range_val: val('eUserRange') || null,
           capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
+          asset_no: val('eAsset') || null, cal_type: val('eCalType') || null,
         }).eq('id', INCOMING_INST.instrument_id);
         if (iErr) instNote = '\n⚠ ทะเบียนเครื่องไม่อัปเดต: ' + iErr.message;
       } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
@@ -1381,7 +1384,7 @@ function fillFromCAL(cal) {
   setv('iCap', cal.capacity); setv('iRes', cal.resolution);
   setv('eMfr', cal.manufacturer); setv('eModel', cal.model); setv('eSerial', cal.serial);
   setv('eId', cal.id_no); setv('eAsset', cal.asset); setv('eClass', cal.accuracy_class);
-  setv('eCondition', cal.condition); setv('eAdjusted', cal.adjusted); setv('eUserRange', cal.user_range);
+  setv('eCondition', cal.condition); setv('eAdjusted', cal.adjusted); setv('eUserRange', cal.user_range); setv('eCalType', cal.cal_type);
   setv('cLocation', cal.location); setv('cSection', cal.section); setv('cUnitDept', cal.unit_dept);
   setv('iDateRecv', cal.date_receive); setv('iDate', cal.date_cal); setv('iDateNext', cal.date_next);
   setv('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);

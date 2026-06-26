@@ -27,6 +27,7 @@ function getDiff(original, updated) {
     range_val: 'Range',
     tolerance: 'Tolerance',
     serial_no: 'S/N',
+    asset_no: 'Asset No.',
     department: 'หน่วยงาน',
     id_code: 'ID Code',
     cert_no: 'CERT.',

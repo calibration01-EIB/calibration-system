@@ -195,10 +195,10 @@ function openBalanceCal(id) {
     from: 'รายการเครื่องมือ',
     instrument_id: Number(d.id) || null,
     name: d.instrument_name || '', name_th: '',
-    id_code: d.id_code || '', asset: d.id_code || '',
+    id_code: d.id_code || '', asset: d.asset_no || '',
     manufacturer: d.brand || '', model: d.model || '', serial: d.serial_no || '',
     capacity: d.capacity ?? '', resolution: d.resolution ?? '', accuracy_class: d.accuracy_class || '',
-    user_range: d.range_val || '',
+    user_range: d.range_val || '', cal_type: d.cal_type || '',
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };
@@ -271,6 +271,7 @@ function openInstrumentDetail(id) {
       ${regDetailItem('Range', d.range_val)}
       ${regDetailItem('Tolerance (±)', d.tolerance)}
       ${regDetailItem('Serial No.', d.serial_no)}
+      ${regDetailItem('Asset No.', d.asset_no)}
       ${regDetailItem('หน่วยงาน', d.department)}
       ${regDetailItem('ความถี่สอบเทียบ', d.cal_frequency)}
       ${regDetailItem('ภายใน/ภายนอก', d.cal_type)}
@@ -534,6 +535,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCalType').value = d.cal_type || '';
     document.getElementById('iRemark').value = d.remark || '';
     document.getElementById('iSerial').value = d.serial_no || '';
+    document.getElementById('iAssetNo').value = d.asset_no || '';
     document.getElementById('iDept').value = d.department || '';
     document.getElementById('iIdCode').value = d.id_code || '';
     document.getElementById('iCertNo').value = d.cert_no || '';
@@ -542,7 +544,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
-    ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
+    ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iAssetNo','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   }
   document.getElementById('instrumentModal').classList.add('open');
@@ -699,6 +701,7 @@ async function saveInstrument() {
     range_val: document.getElementById('iRange').value.trim(),
     tolerance: document.getElementById('iTolerance').value.trim() || null,
     serial_no: document.getElementById('iSerial').value.trim(),
+    asset_no: document.getElementById('iAssetNo').value.trim() || null,
     department: document.getElementById('iDept').value.trim(),
     id_code: document.getElementById('iIdCode').value.trim(),
     cert_no: document.getElementById('iCertNo').value.trim(),
