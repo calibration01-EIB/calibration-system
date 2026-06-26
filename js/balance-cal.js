@@ -263,6 +263,12 @@ function nextYearOf(dateStr) {
 }
 
 // ===== คำนวณทั้งหน้า =====
+// d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
+function dForNominal(nom, globalD) {
+  const bands = TOLS.filter(t => Number.isFinite(t.to) && t.to > 0).sort((a, b) => a.to - b.to);
+  const b = bands.find(t => nom <= t.to) || bands[bands.length - 1];
+  return (b && Number.isFinite(b.d) && b.d > 0) ? b.d : globalD;
+}
 function recalc() {
   const d = parseFloat(byId('iRes').value) || 0.01;
   byId('iDateNext').value = nextYearOf(byId('iDate').value);
@@ -313,7 +319,7 @@ function recalc() {
 
   // 4 uncertainty budget per point — สูตร FRM-CAL92
   const SQ3 = 1.7321;
-  const d_mg = (d * 1000) / 2;
+  // d_mg คิดต่อจุดด้านล่าง (รองรับ d เปลี่ยนตามโหลด — multi-interval)
   const roundUp = byId('roundUpU').checked;
   const abPpm = parseFloat(byId('abMaterial').value) || 1;   // ppm ตามชนิดวัสดุตุ้ม
   const nRep = reps.length;                                  // จำนวนครั้ง repeatability (n)
@@ -323,7 +329,8 @@ function recalc() {
     const dsMag = Number.isFinite(p.dsIn) && p.dsIn > p.U ? p.dsIn : p.U;
     const uDS = dsMag / SQ3;
     p.ds = dsMag;
-    const udo = d_mg / SQ3, ud = d_mg / SQ3;
+    const dPt_mg = (dForNominal(p.nominal, d) * 1000) / 2; p.dmg = dPt_mg;   // d ต่อโหลด (segment) → fallback iRes
+    const udo = dPt_mg / SQ3, ud = dPt_mg / SQ3;
     const uAb = (p.nominal * 1000 * abPpm / 1e6) / SQ3;
     const uRr = uR_mg;
     const uc = Math.sqrt(uWS**2 + uDS**2 + udo**2 + ud**2 + uAb**2 + uRr**2);
@@ -384,7 +391,7 @@ function recalc() {
 function showUncDetail(i) {
   const p = window._rows[i];
   byId('uncDetail').innerHTML =
-    `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (5/√3)² + (5/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=${p.k ?? 2} (Veff ${Number.isFinite(p.veff) ? Math.round(p.veff) : '∞'}) → U = ${fmt(p.Ufinal_mg,4)} mg`;
+    `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (${fmt(p.dmg ?? 5,2)}/√3)² + (${fmt(p.dmg ?? 5,2)}/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=${p.k ?? 2} (Veff ${Number.isFinite(p.veff) ? Math.round(p.veff) : '∞'}) → U = ${fmt(p.Ufinal_mg,4)} mg`;
 }
 
 // ===== รวบข้อมูลที่กรอก + ผลคำนวณ → CAL object ที่ cert-print.html ใช้ =====
@@ -405,7 +412,7 @@ function buildCAL() {
 
   const points = rows.map((p, i) => {
     const reads = [0,1,2].map(j => parseFloat(document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`).value));
-    return { nominal: p.nominal, desc: pointDesc(p), conv: calRound(p.conv, 7), U: p.U, ds: calRound(p.ds, 6), reads };
+    return { nominal: p.nominal, desc: pointDesc(p), conv: calRound(p.conv, 7), U: p.U, ds: calRound(p.ds, 6), d: dForNominal(p.nominal, num('iRes', 0.01)), reads };
   });
 
   const tolText = TOLS.map((t, i) => `±  ${t.tol} g (${i === 0 ? '0' : '>' + t.from}-${t.to})`);
@@ -444,7 +451,7 @@ function buildCAL() {
     ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
     tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
     signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover') },
-    tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol })),   // raw → ใช้คืนค่าตอนเปิดดูรายละเอียด (#rec=)
+    tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol, d: t.d })),   // raw segments (tol + d ต่อโหลด) → คืนค่าตอนเปิดดู (#rec=)
   };
 }
 
@@ -1012,7 +1019,7 @@ function fillFromCAL(cal) {
   if (cal.ab_ppm != null) setv('abMaterial', cal.ab_ppm);
   if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sDirector', cal.signers.director); setv('sApprover', cal.signers.approver); }
   setList('.tIn', cal.temp); setList('.rhIn', cal.rh); setList('.wuIn', cal.warmup); setList('.ctIn', cal.cal_time);
-  if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: Number(t.tol) }));
+  if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: Number(t.tol), d: (t.d != null ? Number(t.d) : undefined) }));
   if (Array.isArray(cal.points) && cal.points.length) POINTS = cal.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
   // REP_READS/PL_READS/ECC/TARE เป็น const (โครงสร้าง default) — ค่าจริงอยู่ใน input · เขียนทับ input หลัง buildStatic
   setv('repPoint', cal.repeat && cal.repeat.point);
