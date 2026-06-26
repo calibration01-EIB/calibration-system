@@ -275,6 +275,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
       <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="genPoints()"><i class="ti ti-wand"></i> สร้างจุดอัตโนมัติ (พิกัด÷10)</button>
       <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="addPoint()"><i class="ti ti-plus"></i> เพิ่มจุด</button>
+      <button type="button" id="savePresetBtn" class="mbtn" style="display:none;min-height:30px;font-size:12px" onclick="saveCurrentAsPreset()" title="บันทึกจุดที่จัดไว้ตอนนี้เป็นพรีเซ็ท (เลือกใช้ซ้ำได้)"><i class="ti ti-bookmark"></i> บันทึกจุดนี้เป็นพรีเซ็ท</button>
     </div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้ตุ้ม (g)</th><th class="num">ค่าตุ้ม + ค่าแก้ (g)</th><th class="num">Uncert. (mg)</th><th></th></tr></thead>
@@ -1489,6 +1490,31 @@ function presetForCapacity(cap) {
     return c > lo && c <= hi && Array.isArray(p.points) && p.points.length;
   }) || null;
 }
+// ===== บันทึกจุดทดสอบที่จัดไว้ตอนนี้ → พรีเซ็ทใหม่ (เฉพาะ admin/editor · ช่วงพิกัด auto = 0–พิกัดเครื่อง) =====
+let CAL_USER = null;
+try { CAL_USER = JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch (e) {}
+const CAN_EDIT_PRESETS = !!(CAL_USER && (CAL_USER.role === 'admin' || CAL_USER.role === 'editor'));
+async function saveCurrentAsPreset() {
+  if (!CAN_EDIT_PRESETS) { alert('เฉพาะ admin/editor เท่านั้นที่บันทึกพรีเซ็ทได้'); return; }
+  const db = sbx(); if (!db) { alert('ยังเชื่อมต่อฐานข้อมูลไม่ได้ — ลองรีเฟรช'); return; }
+  const points = POINTS.map(p => Number(p.nominal)).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+  if (!points.length) { alert('ยังไม่มีจุดทดสอบให้บันทึก — จัดจุดก่อน'); return; }
+  const cap = numf('iCap');
+  const defName = 'เครื่องชั่ง ' + (cap ? cap + ' g' : points[points.length - 1] + ' g');
+  const name = (prompt('ตั้งชื่อพรีเซ็ท:', defName) || '').trim();
+  if (!name) return;
+  try {
+    const { error } = await db.from('cal_point_presets').insert({
+      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    const { data } = await db.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });
+    CAL_PRESETS = data || []; renderPresetPick();
+    const idx = CAL_PRESETS.findIndex(p => p.name === name);
+    if (idx >= 0 && byId('presetPick')) byId('presetPick').value = String(idx);
+    alert('บันทึกพรีเซ็ท "' + name + '" แล้ว (' + points.length + ' จุด) — เลือกใช้ซ้ำได้จากดรอปดาวน์ "พรีเซ็ทจุดสอบ"');
+  } catch (e) { alert('บันทึกพรีเซ็ทไม่ได้: ' + (e && e.message ? e.message : e)); }
+}
 
 const INCOMING_STD = readIncomingStd();
 const INCOMING_INST = readIncomingInst();
@@ -1504,6 +1530,7 @@ if (INCOMING_INST && INCOMING_INST.capacity) genPoints(INCOMING_INST.capacity); 
 renderWeightPicker();
 drawPanPrev();
 ensureEditButtons();
+if (CAN_EDIT_PRESETS) { const _sp = byId('savePresetBtn'); if (_sp) _sp.style.display = ''; }
 renderCertBar();
 recalc();
 renderStdBanner();   // เริ่มต้นเป็นแดง (mock) จนกว่า loadFromDB จะยืนยันข้อมูลจริง
