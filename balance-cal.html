@@ -106,6 +106,8 @@ input[type=number] { text-align: right; }
 .wset-head b { font-family: monospace; font-size: 12px; }
 .wset-sub { color: var(--muted); font-weight: 600; }
 .wset-cnt { margin-left: auto; color: var(--muted); font-size: 11px; }
+.wset-rm { flex: 0 0 auto; width: 24px; height: 24px; padding: 0; line-height: 1; border: 1px solid #f3c0c0; background: #fff4f4; color: #b03030; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; }
+.wset-rm:hover { background: #fce0e0; }
 .wset-body { padding: 9px 11px; }
 .wpick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 7px; }
 .wpick { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; background: var(--surface); cursor: pointer; font-size: 12px; }
@@ -1095,6 +1097,7 @@ function renderWeightPicker() {
       <div class="wset-head" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
         <i class="ti ti-package"></i> <b>${sid}</b> <span class="wset-sub">${setLabel(sid)}</span>
         <span class="wset-cnt">เลือก ${nChk}/${idxs.length} ลูก</span>
+        <button type="button" class="wset-rm" title="เอาชุดนี้ออกจากงาน (เพิ่มกลับได้จากดรอปดาวน์)" onclick="event.stopPropagation();removeStdSet('${_jsq(sid)}')">✕</button>
       </div>
       <div class="wset-body"><div class="wpick-grid">${items}</div></div>
     </div>`;
