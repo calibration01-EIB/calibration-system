@@ -1359,6 +1359,21 @@ function renderStdBanner() {
 
 // ===== prefill จุด+ตุ้มจากการสอบครั้งก่อนของเครื่องนี้ =====
 let PREFILL_REC = null;
+// คืนค่าการเลือกตุ้มจาก snapshot {sets, checked, std_ov} → ตั้ง SELECTED_SETS + ติ๊กลูก (ข้ามหมดอายุ) + re-derive/render ตาราง cert + picker
+// ใช้ร่วมกัน 3 ทาง: เปิดดูใบ (#rec) · prefill ครั้งก่อน · เลือกพรีเซ็ท — ก่อนหน้านี้ copy ไว้ 3 ที่ ทำให้บั๊ก "ตารางไม่ตรง picker" ต้องไล่แก้ทุกที่
+function restoreSelection(snap, fallbackSets) {
+  snap = snap || {};
+  let setIds = (Array.isArray(snap.sets) && snap.sets.length) ? snap.sets.slice() : (fallbackSets || []);
+  setIds = setIds.map(c => String(c).trim()).filter(c => c && regGet(c));
+  if (setIds.length) SELECTED_SETS = setIds;
+  if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
+  deriveStds(); rebuildAvail();
+  if (Array.isArray(snap.checked)) {
+    const set = {}; snap.checked.forEach(c => { set[c] = 1; });
+    AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; });   // ลูกที่หมดอายุติ๊กไม่ได้
+  }
+  deriveCertStds(); renderStdTable(); renderWeightPicker();
+}
 async function loadLastCalForPrefill() {
   if (INCOMING_STD) return;                       // มาทาง #std= → ไม่ prefill
   const id = INCOMING_INST && INCOMING_INST.instrument_id;
@@ -1373,23 +1388,11 @@ async function loadLastCalForPrefill() {
     if (!pts.length) return;
     POINTS = pts.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
     const snap = cal.sel_snapshot || {};
-    // ชุดที่เลือก: ใช้ snapshot ถ้ามี · ไม่งั้น fallback จาก standards (รองรับ id_code ที่ join ด้วย comma)
-    let setIds = (Array.isArray(snap.sets) && snap.sets.length)
-      ? snap.sets.slice()
-      : (Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : []);
-    setIds = setIds.map(c => String(c).trim()).filter(c => c && regGet(c));
-    if (setIds.length) SELECTED_SETS = setIds;
-    // คืนค่าการพิมพ์ทับ cert (override) ถ้ามี
-    if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
+    // ชุดที่เลือก: snapshot ถ้ามี · ไม่งั้น fallback จาก standards (รองรับ id_code ที่ join ด้วย comma)
+    const fb = Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : [];
+    restoreSelection(snap, fb);
     PREFILL_REC = { cert_no: rec.cert_no, cal_date: rec.cal_date };
-    deriveStds(); rebuildAvail();
-    // คืนค่าการติ๊กลูกตุ้มเดิม (เฉพาะที่ยังไม่หมดอายุ)
-    if (Array.isArray(snap.checked)) {
-      const set = {}; snap.checked.forEach(c => { set[c] = 1; });
-      AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; });
-    }
-    deriveCertStds();   // re-derive แถว cert จาก checked ที่คืนค่าแล้ว — ไม่งั้นตารางตุ้มค้างสภาพ default (ไม่ตรงกับ picker)
-    assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
+    assignWeights(); rebuildPoints(true); recalc();
     renderPrefillBanner();
   } catch (e) { console.warn('prefill:', e && e.message); }
 }
@@ -1449,14 +1452,8 @@ async function loadRecForReview(recId) {
   const cal = rec.data || {};
   // คืนค่าชุดตุ้ม/ลูกที่ติ๊ก/override ก่อน (ให้ recalc คำนวณค่าแก้/U ตามเดิม)
   const snap = cal.sel_snapshot || {};
-  let setIds = (Array.isArray(snap.sets) && snap.sets.length) ? snap.sets.slice()
-    : (Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : []);
-  setIds = setIds.map(c => String(c).trim()).filter(c => c && regGet(c));
-  if (setIds.length) SELECTED_SETS = setIds;
-  if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
-  deriveStds(); rebuildAvail();
-  if (Array.isArray(snap.checked)) { const set = {}; snap.checked.forEach(c => { set[c] = 1; }); AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; }); }
-  deriveCertStds(); renderStdTable(); renderWeightPicker();   // คืน checked แล้วต้อง re-derive+re-render std table/picker (เดิม fillFromCAL ไม่ render สองอันนี้ → ค้างสภาพ default จนกดแก้/ลบแถว)
+  const fb = Array.isArray(cal.standards) ? cal.standards.flatMap(s => String(s.id_code || '').split(',')) : [];
+  restoreSelection(snap, fb);
   fillFromCAL(cal);
   // เลข Cert/งาน จาก record column (เผื่อ data เก่าไม่มี) → เขียนทับช่อง
   if (rec.cert_no) { const fc = byId('fCertNo'); if (fc) fc.value = rec.cert_no; }
@@ -1504,15 +1501,7 @@ function applyPresetPick(idx) {
   if (!p || !Array.isArray(p.points) || !p.points.length) return;
   POINTS = p.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
   // ถ้าพรีเซ็ทเก็บการเลือกตุ้มไว้ → คืนชุด + ลูกที่ติ๊ก + override (ลูกหมดอายุข้ามให้)
-  const w = p.weights;
-  if (w && Array.isArray(w.sets) && w.sets.length) {
-    const setIds = w.sets.map(c => String(c).trim()).filter(c => c && regGet(c));
-    if (setIds.length) SELECTED_SETS = setIds;
-    if (w.std_ov && typeof w.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(w.std_ov)); } catch (e) {} }
-    deriveStds(); rebuildAvail();
-    if (Array.isArray(w.checked)) { const s = {}; w.checked.forEach(c => { s[c] = 1; }); AVAIL_WEIGHTS.forEach(x => { x.checked = !!s[x.id_code] && x.in_date; }); }
-    deriveCertStds(); renderStdTable(); renderWeightPicker();
-  }
+  if (p.weights && Array.isArray(p.weights.sets) && p.weights.sets.length) restoreSelection(p.weights);
   PREFILL_REC = null; renderPrefillBanner();
   rebuildPoints(true);
 }
