@@ -1,9 +1,7 @@
 /* ===== 01-core.js ===== (generated from index.html inline app script) */
 // ====================================================
-// SUPABASE CONFIG — ใส่ค่าจาก Supabase Dashboard
+// SUPABASE CONFIG — ย้ายไป js/00-config.js (โหลดก่อนไฟล์นี้) → SUPABASE_URL / SUPABASE_KEY
 // ====================================================
-const SUPABASE_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ====================================================

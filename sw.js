@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v63';
+const CACHE_NAME = 'calibration-app-v64';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
@@ -23,6 +23,7 @@ const APP_SHELL = [
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
   './assets/calibration-lab-hero.png',
+  './js/00-config.js',
   './js/01-core.js',
   './js/02-dashboard.js',
   './js/03-instruments.js',
