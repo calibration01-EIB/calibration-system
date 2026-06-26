@@ -736,14 +736,21 @@ function applyIncomingInst(inst) {
   setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
   setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
   setv('eCalType', inst.cal_type);
-  // Tolerance: ดึงจากช่อง Tolerance ของเครื่องในทะเบียน (ค่าเดียว เช่น "± 0.01 g") → ใช้เป็น band เดียวครอบทุกช่วง
-  const tolM = String(inst.tolerance || '').match(/[\d.]+/);
-  if (tolM) {
-    const tolV = parseFloat(tolM[0]);
-    const cap = parseFloat(inst.capacity) || parseFloat(val('iCap')) || 0;
-    if (Number.isFinite(tolV) && tolV > 0) {
-      TOLS = [{ from: 0, to: cap > 0 ? cap : 999999, tol: tolV }];
-      renderTolRows();
+  // ช่วงใช้งาน: ถ้ามี range_profile (multi-interval) → สร้าง segments {from,to,d,tol} เลย · ไม่งั้นถ้ามี tolerance เดี่ยว → 1 ช่วง
+  const prof = Array.isArray(inst.range_profile) ? inst.range_profile.filter(s => s && Number.isFinite(Number(s.to)) && Number(s.to) > 0) : null;
+  if (prof && prof.length) {
+    const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to));
+    let prev = 0;
+    TOLS = sorted.map(s => { const seg = { from: prev, to: Number(s.to),
+      d: (s.d != null && s.d !== '' ? Number(s.d) : undefined),
+      tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : 0) }; prev = Number(s.to); return seg; });
+    renderTolRows();
+  } else {
+    const tolM = String(inst.tolerance || '').match(/[\d.]+/);
+    if (tolM) {
+      const tolV = parseFloat(tolM[0]);
+      const cap = parseFloat(inst.capacity) || parseFloat(val('iCap')) || 0;
+      if (Number.isFinite(tolV) && tolV > 0) { TOLS = [{ from: 0, to: cap > 0 ? cap : 999999, tol: tolV }]; renderTolRows(); }
     }
   }
   const b = byId('instBanner');
