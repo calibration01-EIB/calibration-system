@@ -1378,6 +1378,7 @@ async function loadLastCalForPrefill() {
       const set = {}; snap.checked.forEach(c => { set[c] = 1; });
       AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; });
     }
+    deriveCertStds();   // re-derive แถว cert จาก checked ที่คืนค่าแล้ว — ไม่งั้นตารางตุ้มค้างสภาพ default (ไม่ตรงกับ picker)
     assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc();
     renderPrefillBanner();
   } catch (e) { console.warn('prefill:', e && e.message); }
