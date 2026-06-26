@@ -539,13 +539,13 @@ function pageWs2() {
         <td class="ctr fill">${f(r.sd,0)}</td>
       </tr>`).join('')}</tbody>
     </table>
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-top:5px">
+    <div style="display:grid;grid-template-columns:1.22fr 1fr;gap:14px;margin-top:5px">
       <div>
         <div class="row" style="margin-top:5px"><span class="sec" style="margin:0">3.ตรวจสอบค่า Eccentric or off-centre loading</span><span>(พิกัดตุ้มน้ำหนักที่ใช้ในการตรวจสอบ</span><span class="fv fill">${CAL.ecc.wt} g</span><span>)</span></div>
-        <table class="bx" style="width:148mm;margin-top:3px">
+        <table class="bx" style="width:126mm;margin-top:3px">
           <thead><tr><th style="width:92px">ตำแหน่ง</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความคลาดเคลื่อนที่เกิด<br>จากการไม่วางตรงกลางจาน<br>( g )</th></tr></thead>
           <tbody>
-            ${CAL.ecc.positions.map((pos,i)=>`<tr><td>${esc(pos)}</td><td class="ctr fill">${f(CAL.ecc.reads[i],2)}</td><td class="ctr fill">${f(eccDiffs[i],2)}</td></tr>`).join('')}
+            ${CAL.ecc.positions.map((pos,i)=>`<tr><td style="white-space:nowrap">${esc(pos)}</td><td class="ctr fill">${f(CAL.ecc.reads[i],2)}</td><td class="ctr fill">${f(eccDiffs[i],2)}</td></tr>`).join('')}
             <tr><td colspan="2">ความคลาดเคลื่อนสูงสุดที่เกิดจากการวางไม่ตรงกลางจาน</td><td class="ctr fill b">${f(eccMax,2)}</td></tr>
           </tbody>
         </table>
@@ -560,7 +560,7 @@ function pageWs2() {
           <tbody>${[0,1,2].map(()=>'<tr><td class="ctr">-</td><td class="ctr">-</td><td class="ctr">-</td></tr>').join('')}</tbody>
         </table>
         <div class="row" style="margin-top:14px"><span class="sec" style="margin:0">5.การตรวจสอบค่า Effect of tare</span><span>( พิกัดตุ้มน้ำหนักที่ใช้ในการ tare</span><span class="fv fill">${CAL.tare.wt} g</span><span>)</span></div>
-        <table class="bx" style="width:100mm;margin-top:3px">
+        <table class="bx" style="width:105mm;margin-top:3px">
           <thead><tr><th>พิกัดตุ้มน้ำหนักที่ตรวจสอบ<br>( g )</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความแตกต่างที่อ่านได้<br>( g )</th></tr></thead>
           <tbody>${CAL.tare.checks.map(c=>`<tr><td class="ctr">${c[0]}</td><td class="ctr fill">${f(c[1],2)}</td><td class="ctr fill">${f(c[0]-c[1],2)}</td></tr>`).join('')}</tbody>
         </table>
