@@ -375,7 +375,8 @@ function recalc() {
   const tolBands = TOLS.filter(t => Number.isFinite(t.to) && t.to > t.from).sort((a,b) => a.to - b.to);
   const tolFor = nom => {
     if (!tolBands.length) return Infinity;                       // ไม่มีช่วง → ไม่ตัด (ผ่าน)
-    return (tolBands.find(t => nom <= t.to) || tolBands[tolBands.length - 1]).tol;
+    const t = (tolBands.find(b => nom <= b.to) || tolBands[tolBands.length - 1]).tol;
+    return Number.isFinite(t) && t > 0 ? t : Infinity;           // segment ไม่ได้ตั้ง tolerance → ไม่มีเกณฑ์ (ไม่ตัด)
   };
   let allPass = true;
   byId('evalRows').innerHTML = rows.map(p => {
