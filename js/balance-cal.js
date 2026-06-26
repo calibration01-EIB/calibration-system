@@ -1109,7 +1109,9 @@ function presetForCapacity(cap) {
 let CAL_USER = null;
 try { CAL_USER = JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch (e) {}
 const CAN_EDIT_PRESETS = !!(CAL_USER && (CAL_USER.role === 'admin' || CAL_USER.role === 'editor'));
+let SAVING_PRESET = false;
 async function saveCurrentAsPreset() {
+  if (SAVING_PRESET) return;   // กันกดซ้ำระหว่างกำลังบันทึก
   if (!CAN_EDIT_PRESETS) { alert('เฉพาะ admin/editor เท่านั้นที่บันทึกพรีเซ็ทได้'); return; }
   const db = sbx(); if (!db) { alert('ยังเชื่อมต่อฐานข้อมูลไม่ได้ — ลองรีเฟรช'); return; }
   const points = POINTS.map(p => Number(p.nominal)).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
@@ -1118,9 +1120,13 @@ async function saveCurrentAsPreset() {
   const defName = 'เครื่องชั่ง ' + (cap ? cap + ' g' : points[points.length - 1] + ' g');
   const name = (prompt('ตั้งชื่อพรีเซ็ท:', defName) || '').trim();
   if (!name) return;
+  SAVING_PRESET = true;
   // เก็บการเลือกตุ้มไปด้วย (ชุด + ลูกที่ติ๊ก + override) → คืนได้ครบตอนเลือกพรีเซ็ท
   const weights = { sets: SELECTED_SETS.slice(),
     checked: AVAIL_WEIGHTS.filter(w => w.checked).map(w => w.id_code), std_ov: STD_ROW_OV };
+  const btn = byId('savePresetBtn'), orig = btn ? btn.innerHTML : '';
+  const revert = () => { if (btn) { btn.innerHTML = orig; btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; btn.disabled = false; } };
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> กำลังบันทึก…'; }
   try {
     const { error } = await db.from('cal_point_presets').insert({
       name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, updated_at: new Date().toISOString(),
@@ -1130,8 +1136,13 @@ async function saveCurrentAsPreset() {
     CAL_PRESETS = data || []; renderPresetPick();
     const idx = CAL_PRESETS.findIndex(p => p.name === name);
     if (idx >= 0 && byId('presetPick')) byId('presetPick').value = String(idx);
-    alert('บันทึกพรีเซ็ท "' + name + '" แล้ว (' + points.length + ' จุด) — เลือกใช้ซ้ำได้จากดรอปดาวน์ "พรีเซ็ทจุดสอบ"');
-  } catch (e) { alert('บันทึกพรีเซ็ทไม่ได้: ' + (e && e.message ? e.message : e)); }
+    if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> ✓ บันทึกแล้ว: ' + name; btn.style.background = '#e3f5e8'; btn.style.borderColor = '#16784a'; btn.style.color = '#12633f'; }
+    setTimeout(revert, 2800);   // โชว์สถานะเขียวค้างให้เห็นชัด แล้วค่อยกลับเป็นปุ่มเดิม
+    alert('✅ บันทึกพรีเซ็ท "' + name + '" แล้ว (' + points.length + ' จุด · ' + weights.checked.length + ' ลูก) — เลือกใช้ซ้ำได้จากดรอปดาวน์ "พรีเซ็ทจุดสอบ" และหน้า "พรีเซ็ทจุด"');
+  } catch (e) {
+    revert();
+    alert('❌ บันทึกพรีเซ็ทไม่ได้: ' + (e && e.message ? e.message : e));
+  } finally { SAVING_PRESET = false; }
 }
 
 const INCOMING_STD = readIncomingStd();
