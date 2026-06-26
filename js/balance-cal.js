@@ -745,6 +745,11 @@ function applyIncomingInst(inst) {
       d: (s.d != null && s.d !== '' ? Number(s.d) : undefined),
       tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : 0) }; prev = Number(s.to); return seg; });
     renderTolRows();
+    // Max = ขอบบนช่วงสุดท้าย · d รวม (fallback/แสดง) = d ละเอียดสุด — ตั้งให้ถ้า profile กำหนด (จุดทดสอบ÷10 จะ gen เต็มพิกัด)
+    const maxTo = Number(sorted[sorted.length - 1].to);
+    if (Number.isFinite(maxTo) && maxTo > 0) setv('iCap', maxTo);
+    const ds = sorted.map(s => Number(s.d)).filter(n => Number.isFinite(n) && n > 0);
+    if (ds.length) setv('iRes', Math.min(...ds));
   } else {
     const tolM = String(inst.tolerance || '').match(/[\d.]+/);
     if (tolM) {
@@ -1181,7 +1186,8 @@ rebuildAvail();
 assignWeights();
 buildStatic();                    // renders STDS (renderStdTable) + points (renderPointRows)
 applyIncomingInst(INCOMING_INST);
-if (INCOMING_INST && INCOMING_INST.capacity) genPoints(INCOMING_INST.capacity);   // มาจากรายการ → จุด = พิกัด÷10
+// มาจากรายการ → จุด = พิกัด÷10 (พิกัดจาก capacity ของเครื่อง หรือ Max ที่ profile ตั้งให้ใน iCap)
+if (INCOMING_INST && (INCOMING_INST.capacity || (Array.isArray(INCOMING_INST.range_profile) && INCOMING_INST.range_profile.length))) genPoints(parseFloat(val('iCap')));
 renderWeightPicker();
 drawPanPrev();
 ensureEditButtons();
