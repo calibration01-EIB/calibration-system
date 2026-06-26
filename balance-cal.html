@@ -1210,8 +1210,9 @@ function renderCertBar() {
   ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
 }
 // สอบเสร็จ → ออกเลขจริงจาก cert_sequences (type B) + บันทึก calibration_records
+let ISSUING = false;
 async function issueCert() {
-  if (CAL_STATE !== 'draft') return;
+  if (CAL_STATE !== 'draft' || ISSUING) return;   // กันกดซ้ำระหว่างกำลังออกเลข (เคยกดรัวแล้วได้ใบ/เลขซ้ำ)
   if (!calDataReady()) {
     alert('⛔ ยังออกใบ Cert จริงไม่ได้ — ระบบกำลังใช้ข้อมูลตัวอย่าง (MOCK)\n'
       + (STD_IS_MOCK ? '• ตุ้มมาตรฐานยังไม่ถูกอนุมัติ — ไปอนุมัติที่หน้า “ใบ Cert Reference (ตุ้มมาตรฐาน)” ก่อน\n' : '')
@@ -1225,6 +1226,14 @@ async function issueCert() {
   }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
+  // ยืนยันก่อนออกเลข — ออกแล้วกินลำดับเลข กดซ้ำไม่ได้
+  const _eqName = val('eEquipTh') || val('eEquip') || 'เครื่องชั่ง';
+  if (!confirm('ยืนยัน "สอบเสร็จ" — ออกเลข Cert + บันทึกผล?\n\nเครื่อง: ' + _eqName
+    + '\nจุดทดสอบ: ' + POINTS.length + ' จุด · ตุ้มมาตรฐาน: ' + CERT_STDS.length + ' แถว'
+    + '\n\n⚠ เลขใบรับรองจะถูกออกและกินลำดับถัดไป — ออกแล้วกดซ้ำไม่ได้')) return;
+  ISSUING = true;
+  const _issueBtns = [...document.querySelectorAll('.cbtn.primary')];
+  _issueBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.6'; b.style.cursor = 'wait'; });
   const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
   CERT_YY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
   const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };
@@ -1283,10 +1292,13 @@ async function issueCert() {
       } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
     }
     renderCertBar();
-    alert('สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผล + อัปเดตทะเบียนเครื่องแล้ว (โปรดรีเฟรชหน้าหลักเพื่อดูข้อมูลเครื่องที่อัปเดต)' + instNote);
+    alert('✅ สอบเสร็จ — ออกเลข Cert: ' + CERT_NO + '\nบันทึกผล + อัปเดตทะเบียนเครื่องแล้ว (โปรดรีเฟรชหน้าหลักเพื่อดูข้อมูลเครื่องที่อัปเดต)' + instNote);
     switchMode('review');
   } catch (e) {
     alert('ออกเลข/บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+  } finally {
+    ISSUING = false;
+    _issueBtns.forEach(b => { b.disabled = false; b.style.opacity = ''; b.style.cursor = ''; });
   }
 }
 async function setRecStatus(status) {
@@ -1294,8 +1306,8 @@ async function setRecStatus(status) {
   const db = sbx(); if (!db) return;
   try { await db.from('calibration_records').update({ status, revision: CERT_REV, cert_no: CERT_NO, updated_at: new Date().toISOString() }).eq('id', CAL_REC_ID); } catch (e) {}
 }
-async function markSigned()  { if (CAL_STATE === 'issued') { CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); } }
-async function approveCert() { if (CAL_STATE === 'signed') { CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); } }
+async function markSigned()  { if (CAL_STATE !== 'issued') return; if (!confirm('ยืนยันลงนามใบ ' + CERT_NO + ' ?')) return; CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); }
+async function approveCert() { if (CAL_STATE !== 'signed') return; if (!confirm('ยืนยันอนุมัติใบ ' + CERT_NO + ' (ทำให้สมบูรณ์) ?')) return; CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); }
 async function voidCert() {
   if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) · ทะเบียนเครื่องจะคืนเป็นใบก่อนหน้า')) return;
   CAL_STATE = 'voided'; renderCertBar(); await setRecStatus('voided');
@@ -1304,6 +1316,8 @@ async function voidCert() {
   }
 }
 async function reviseCert() {
+  if (CAL_STATE !== 'approved') return;
+  if (!confirm('ออก revision ใหม่ของใบ ' + CERT_NO + ' ?\n(ไม่กินเลขใหม่ — เพิ่มเลขแก้ไข แล้วกลับไปสถานะรอเซ็น)')) return;
   CERT_REV++; CERT_NO = certNoStr(); CAL_STATE = 'issued';
   if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
   renderCertBar(); await setRecStatus('issued');
