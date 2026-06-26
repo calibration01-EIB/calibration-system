@@ -217,6 +217,14 @@ body.review #entryHint, body.review #certStatusBarBottom { display: none; }
       <div class="field"><label>ภายใน / ภายนอก</label><select id="eCalType"><option value="">— เลือก —</option><option value="ภายใน">ภายใน</option><option value="ภายนอก">ภายนอก</option></select></div>
     </div>
 
+    <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วงใช้งาน: d (ความละเอียด) + Tolerance ต่อช่วง (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
+    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>ช่อง <b>d เว้นว่าง = ใช้ d รวมของเครื่อง</b> · กรอกเฉพาะเครื่อง <b>multi-interval</b> ที่ d เปลี่ยนตามโหลด (เช่น 0–15kg→5g, &gt;15–30kg→10g) แล้วกด "เพิ่มช่วง"</div></div>
+    <div class="table-wrap"><table class="tbl" style="max-width:680px">
+      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">d (g)</th><th class="num">Tolerance ± (g)</th><th></th></tr></thead>
+      <tbody id="tolRows"></tbody>
+    </table></div>
+    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addTolBand()"><i class="ti ti-plus"></i> เพิ่มช่วง</button>
+
     <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
     <div class="grid4">
       <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" type="date" value="2026-04-24"></div>
@@ -282,14 +290,6 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้ตุ้ม (g)</th><th class="num">ค่าตุ้ม + ค่าแก้ (g)</th><th class="num">Uncert. (mg)</th><th></th></tr></thead>
       <tbody id="pointRows"></tbody>
     </table></div>
-
-    <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วงใช้งาน: d (ความละเอียด) + Tolerance ต่อช่วง (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
-    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>ช่อง <b>d เว้นว่าง = ใช้ d รวมของเครื่อง</b> · กรอกเฉพาะเครื่อง <b>multi-interval</b> ที่ d เปลี่ยนตามโหลด (เช่น 0–15kg→5g, &gt;15–30kg→10g) แล้วกด "เพิ่มช่วง"</div></div>
-    <div class="table-wrap"><table class="tbl" style="max-width:680px">
-      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">d (g)</th><th class="num">Tolerance ± (g)</th><th></th></tr></thead>
-      <tbody id="tolRows"></tbody>
-    </table></div>
-    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addTolBand()"><i class="ti ti-plus"></i> เพิ่มช่วง</button>
     <div class="note"><i class="ti ti-info-circle"></i><div>ในระบบจริง: เลือกชุดมาตรฐาน → ระบบเสนอวิธีประกอบตุ้มแต่ละจุดให้อัตโนมัติ (แก้ได้) และเตือนถ้าใบ Cert ตุ้มหมดอายุ</div></div>
   </section>
 

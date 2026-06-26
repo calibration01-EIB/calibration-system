@@ -270,6 +270,12 @@ function openInstrumentDetail(id) {
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
       ${regDetailItem('Range', d.range_val)}
       ${regDetailItem('Tolerance (±)', d.tolerance)}
+      ${Array.isArray(d.range_profile) && d.range_profile.length
+        ? regDetailItem('ช่วง d / Tolerance (Multi-interval)', d.range_profile.map((s, i, a) => {
+            const from = i === 0 ? 0 : a[i-1].to;
+            return `${from}–${s.to} g: d ${s.d ?? '–'} g, tol ${s.tol != null ? '±' + s.tol + ' g' : '–'}`;
+          }).join('  ·  '), true)
+        : ''}
       ${regDetailItem('Serial No.', d.serial_no)}
       ${regDetailItem('Asset No.', d.asset_no)}
       ${regDetailItem('หน่วยงาน', d.department)}
