@@ -260,10 +260,11 @@ function cmcFor(nominal_g) {
   const t = (CAL.cmc || []).find(c => nominal_g > c.from && nominal_g <= c.to);
   return t && t.cmc > 0 ? t.cmc : 0;
 }
-function budget(nominal_g, U_std_mg, ds_mg) {
+function budget(nominal_g, U_std_mg, ds_mg, dPt) {
   // 5.1.2: ค่า Drift ที่ใช้ = ค่ามากกว่าระหว่าง U กับ drift ที่ส่งมา (ถ้าไม่มี → ใช้ U)
   const dsUse = (Number.isFinite(ds_mg) && ds_mg > U_std_mg) ? ds_mg : U_std_mg;
-  const uWS = U_std_mg / 2, uDS = dsUse / SQ3, udo = d_mg / SQ3, ud = d_mg / SQ3;
+  const dmg = ((Number.isFinite(dPt) && dPt > 0 ? dPt : CAL.resolution) * 1000) / 2;   // d ต่อจุด (multi-interval) → fallback resolution รวม
+  const uWS = U_std_mg / 2, uDS = dsUse / SQ3, udo = dmg / SQ3, ud = dmg / SQ3;
   const ab = nominal_g * 1000 * AB_PPM / 1e6;   // (ppm ของค่าระบุ) เป็น mg
   const uAb = ab / SQ3, uR = uR_mg;
   const uc = Math.sqrt(uWS**2 + uDS**2 + udo**2 + ud**2 + uAb**2 + uR**2);
@@ -273,14 +274,23 @@ function budget(nominal_g, U_std_mg, ds_mg) {
   const cmc = cmcFor(nominal_g);
   // floor เป็น CMC ถ้า U ≤ CMC · ไม่งั้นปัด: นน. ≥ 1000 g เต็มหน่วย mg, < 1000 g เป็น 2 เลขนัยสำคัญ
   const Ufinal = (cmc > 0 && U <= cmc) ? cmc : (nominal_g >= 1000 ? Math.ceil(U - 1e-9) : roundUp2sf(U));
-  return { uWS, uDS, dsUse, udo, ud, ab, uAb, uR, uc, veff, k, U, cmc, Ufinal };
+  return { uWS, uDS, dsUse, udo, ud, ab, uAb, uR, uc, veff, k, U, cmc, Ufinal, dmg };
 }
 // แถว ZERO + ทุกจุด
 const ROWS = [{ nominal: 0, desc: '0', conv: 0, U: 0, reads: [0,0,0], zero: true }, ...CAL.points].map(p => {
   const avg = p.reads.reduce((a,b)=>a+b,0)/p.reads.length;
   const corr = p.conv - avg;
-  return { ...p, avg, corr, sd: stdev(p.reads), bud: budget(p.zero ? 0 : p.nominal, p.zero ? 0 : p.U, p.zero ? 0 : p.ds) };
+  return { ...p, avg, corr, sd: stdev(p.reads), bud: budget(p.zero ? 0 : p.nominal, p.zero ? 0 : p.U, p.zero ? 0 : p.ds, p.zero ? CAL.resolution : p.d) };
 });
+// RESOLUTION บนใบ: ถ้า multi-interval (มี d ต่อช่วง ≥2 ค่าต่างกัน) → แสดงรายช่วง · ไม่งั้นค่าเดียว
+function resolutionText() {
+  const segs = Array.isArray(CAL.tols) ? CAL.tols.filter(t => Number.isFinite(t.d) && t.d > 0) : [];
+  const distinct = [...new Set(segs.map(s => s.d))];
+  if (segs.length >= 2 && distinct.length >= 2) {
+    return segs.map(s => `${s.d} ${CAL.unit} (${s.from}-${s.to} ${CAL.unit})`).join(' / ');
+  }
+  return `${CAL.resolution} ${CAL.unit}`;
+}
 // eccentricity: เสมอกันให้ค่าหลังชนะ (ตามใบจริง −0.01)
 let eccMax = 0; const eccDiffs = CAL.ecc.reads.map((v,i)=> i===0?0: v-CAL.ecc.reads[0]);
 eccDiffs.forEach(dv => { if (Math.abs(dv) >= Math.abs(eccMax) && dv !== 0) eccMax = dv; });
@@ -350,7 +360,7 @@ function pageCover() {
     <div class="cv-row it"><span class="cv-sub">MODEL :</span><span class="fill">${esc(CAL.model)}</span></div>
     <div class="cv-row it"><span class="cv-sub">SERIAL NUMBER :</span><span class="fill">${esc(CAL.serial)}</span></div>
     <div class="cv-row it"><span class="cv-sub">IDENTIFICATION NUMBER :</span><span class="fill">${esc(CAL.id_no)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">RESOLUTION :</span><span class="fill">${CAL.resolution} ${CAL.unit}</span></div>
+    <div class="cv-row it"><span class="cv-sub">RESOLUTION :</span><span class="fill">${resolutionText()}</span></div>
     <div class="cv-row" style="margin-top:14px"><span>CONDITION AS RECEIVED :</span><span class="fill">${esc(CAL.condition)}</span></div>
     <div class="cv-row"><span>AMBIENT TEMPERATURE :</span><span class="fill">( ${CAL.temp[0]} - ${CAL.temp[1]} ) °C</span></div>
     <div class="cv-row"><span>REL. HUMIDITY :</span><span class="fill">( ${CAL.rh[0]} - ${CAL.rh[1]} ) %RH</span></div>
@@ -392,7 +402,7 @@ function resultLine() {
     &nbsp;&nbsp;( ${CAL.adjusted === 'without' ? '✓' : '&nbsp;&nbsp;'} ) WITHOUT ADJUSTMENT
     &nbsp;&nbsp;&nbsp;&nbsp;( ${CAL.adjusted === 'after' ? '✓' : '&nbsp;&nbsp;'} ) AFTER ADJUSTMENT</p>
     <p>MAXIMUM CAPACITY : ${CAL.capacity} ${CAL.unit}
-    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${CAL.resolution} ${CAL.unit}</p>`;
+    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}</p>`;
 }
 
 // ====== PAGE: Cert page 2 (FRM-CAL55) ======
@@ -589,8 +599,8 @@ function uncBlock(r, prev, isLast) {
   ] : [
     [sym('W','s'), 'calibration of standard weight', f(r.zero ? 0 : r.U, 3), 'Normal', '2.0', '1.0', f(b.uWS, 4), inf],
     [sym('D','s'), 'Drift since last calibration', f(r.zero ? 0 : b.dsUse, 3), 'Rectangular', sqrt3, '1.0', f(b.uDS, 4), inf],
-    [strongSym('δI','do'), 'Digital rounding error (at zero)', f(d_mg, 3), 'Rectangular', sqrt3, '1.0', f(b.udo, 4), inf],
-    [strongSym('δI','d'), 'Digital rounding error (for indicated value)', f(d_mg, 3), 'Rectangular', sqrt3, '1.0', f(b.ud, 4), inf],
+    [strongSym('δI','do'), 'Digital rounding error (at zero)', f(b.dmg, 3), 'Rectangular', sqrt3, '1.0', f(b.udo, 4), inf],
+    [strongSym('δI','d'), 'Digital rounding error (for indicated value)', f(b.dmg, 3), 'Rectangular', sqrt3, '1.0', f(b.ud, 4), inf],
     [sym('A','b'), `Air buoyancy ( ${r.zero ? '……' : '…' + AB_PPM + '…'} ppm of nominal value)`, f(r.zero ? 0 : b.ab, 3), 'Rectangular', sqrt3, '1.0', f(b.uAb, 4), inf],
     [strongSym('I','R'), 'Repeatability of indication', f(uR_mg, 3), 'Normal', '1.0', '1.0', f(b.uR, 4), String(CAL.repeat.reads.length - 1)],
   ];
