@@ -122,7 +122,7 @@ table { border-collapse: collapse; }
 .xbar { font-weight: 400; font-style: normal; }
 .ws .jc { font-size: 14pt; } /* เลขงาน/เลขใบรับรองบน worksheet = 14pt (body 13pt) ตามฟอร์มต้นฉบับ Book1 ที่ตั้งเลขชุดนี้ใหญ่กว่าเนื้อความ 1pt */
 .un .jc { font-size: 1.22em; } /* เลข cert/หน้าที่ บนใบความไม่แน่นอน (.un = Sarabun) ขยายให้เด่นเท่ากันทั้งใบ */
-.sheet.land { font-family: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffd: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffl: 'Angsana New','AngsanaUPC','Cordia New',serif; --fd: 14.5pt; --fl: 14.5pt; } .sheet.land table.bx td, .sheet.land table.bx th { padding: 1.5px 8px; } .sheet.land table.bx.errtbl td, .sheet.land table.bx.errtbl th { padding: 2px 8px; } .sheet.land .panrow svg { height: 64px; width: auto; } .sheet.land .jc { font-size: var(--fd); } /* เลขงาน/เลขใบรับรองหน้าแนวนอน = ขนาดเท่า body ทั้งหน้า (Angsana 14.5) ไม่งั้น 14pt เดิมจะเล็กกว่ารอบข้าง */
+.sheet.land { font-family: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffd: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffl: 'Angsana New','AngsanaUPC','Cordia New',serif; --fd: 14.5pt; --fl: 14.5pt; } .sheet.land table.bx td, .sheet.land table.bx th { padding: 1px 8px; } .sheet.land table.bx.errtbl td, .sheet.land table.bx.errtbl th { padding: 1px 8px; } .sheet.land .panrow svg { height: 52px; width: auto; } .sheet.land .jc { font-size: var(--fd); } /* เลขงาน/เลขใบรับรองหน้าแนวนอน = ขนาดเท่า body ทั้งหน้า (Angsana 14.5) ไม่งั้น 14pt เดิมจะเล็กกว่ารอบข้าง */
 /* ===== uncert ===== */
 
 .sheet.un { padding: 6mm 7mm 8mm 14mm; font-family: "Sarabun", sans-serif; font-size: 12.5px; line-height: 1.12; }
@@ -539,17 +539,17 @@ function pageWs2() {
         <td class="ctr fill">${f(r.sd,0)}</td>
       </tr>`).join('')}</tbody>
     </table>
-    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;margin-top:8px">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-top:5px">
       <div>
-        <div class="row" style="margin-top:6px"><span class="sec" style="margin:0">3.ตรวจสอบค่า Eccentric or off-centre loading</span><span>(พิกัดตุ้มน้ำหนักที่ใช้ในการตรวจสอบ</span><span class="fv fill">${CAL.ecc.wt} g</span><span>)</span></div>
-        <table class="bx" style="width:115mm;margin-top:3px">
+        <div class="row" style="margin-top:5px"><span class="sec" style="margin:0">3.ตรวจสอบค่า Eccentric or off-centre loading</span><span>(พิกัดตุ้มน้ำหนักที่ใช้ในการตรวจสอบ</span><span class="fv fill">${CAL.ecc.wt} g</span><span>)</span></div>
+        <table class="bx" style="width:148mm;margin-top:3px">
           <thead><tr><th style="width:92px">ตำแหน่ง</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความคลาดเคลื่อนที่เกิด<br>จากการไม่วางตรงกลางจาน<br>( g )</th></tr></thead>
           <tbody>
             ${CAL.ecc.positions.map((pos,i)=>`<tr><td>${esc(pos)}</td><td class="ctr fill">${f(CAL.ecc.reads[i],2)}</td><td class="ctr fill">${f(eccDiffs[i],2)}</td></tr>`).join('')}
             <tr><td colspan="2">ความคลาดเคลื่อนสูงสุดที่เกิดจากการวางไม่ตรงกลางจาน</td><td class="ctr fill b">${f(eccMax,2)}</td></tr>
           </tbody>
         </table>
-        <div class="row panrow" style="margin-top:6px;align-items:center"><span class="b">ลักษณะของจานชั่ง</span>
+        <div class="row panrow" style="margin-top:4px;align-items:center"><span class="b">ลักษณะของจานชั่ง</span>
           ${[0,1,2].map(s => `<span style="display:inline-flex;align-items:center;gap:4px;margin-left:10px">${chk(CAL.ecc.pan===s)}${panSVG(s)}</span>`).join('')}
         </div>
       </div>
@@ -559,8 +559,8 @@ function pageWs2() {
           <thead><tr><th>จุดน้ำหนักที่ตรวจสอบ</th><th>พิกัดตุ้มน้ำหนัก<br>ที่ใช้ตรวจสอบ ( g )</th><th>ค่าที่อ่านได้<br>( g )</th></tr></thead>
           <tbody>${[0,1,2].map(()=>'<tr><td class="ctr">-</td><td class="ctr">-</td><td class="ctr">-</td></tr>').join('')}</tbody>
         </table>
-        <div class="row" style="margin-top:27px"><span class="sec" style="margin:0">5.การตรวจสอบค่า Effect of tare</span><span>( พิกัดตุ้มน้ำหนักที่ใช้ในการ tare</span><span class="fv fill">${CAL.tare.wt} g</span><span>)</span></div>
-        <table class="bx" style="width:105mm;margin-top:3px">
+        <div class="row" style="margin-top:14px"><span class="sec" style="margin:0">5.การตรวจสอบค่า Effect of tare</span><span>( พิกัดตุ้มน้ำหนักที่ใช้ในการ tare</span><span class="fv fill">${CAL.tare.wt} g</span><span>)</span></div>
+        <table class="bx" style="width:100mm;margin-top:3px">
           <thead><tr><th>พิกัดตุ้มน้ำหนักที่ตรวจสอบ<br>( g )</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความแตกต่างที่อ่านได้<br>( g )</th></tr></thead>
           <tbody>${CAL.tare.checks.map(c=>`<tr><td class="ctr">${c[0]}</td><td class="ctr fill">${f(c[1],2)}</td><td class="ctr fill">${f(c[0]-c[1],2)}</td></tr>`).join('')}</tbody>
         </table>
