@@ -121,7 +121,7 @@ table { border-collapse: collapse; }
 .ws table { font-size: var(--fd); } .ws table.bx td, .ws table.bx th { padding: 1px 5px; } .ws table.rep td, .ws table.rep th { padding: 3.9px 5px; } .ws table.pre td, .ws table.pre th { padding: 3.9px 7px; }
 .xbar { font-weight: 400; font-style: normal; }
 .ws .jc { font-size: 14pt; } /* เลขงาน/เลขใบรับรองบน worksheet = 14pt (body 13pt) ตามฟอร์มต้นฉบับ Book1 ที่ตั้งเลขชุดนี้ใหญ่กว่าเนื้อความ 1pt */
-.un .jc { font-size: 1.22em; } /* เลข cert/หน้าที่ บนใบความไม่แน่นอน (.un = Sarabun) ขยายให้เด่นเท่ากันทั้งใบ */
+.un span.jc { font-size: 14px; font-weight: 400; color: #555; } /* เลข cert/หน้าที่ บนใบความไม่แน่นอน (.un = Sarabun): ขนาด 14px น้ำหนักปกติ สีเทาจางลง (เดิม 1.22em สี #111 เข้มเกิน) · span.jc เพื่อชนะ .un .fill (#111) ที่อยู่บรรทัดถัดไป */
 .sheet.land { font-family: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffd: 'Angsana New','AngsanaUPC','Cordia New',serif; --ffl: 'Angsana New','AngsanaUPC','Cordia New',serif; --fd: 14.5pt; --fl: 14.5pt; } .sheet.land table.bx td, .sheet.land table.bx th { padding: 1px 8px; } .sheet.land table.bx.errtbl td, .sheet.land table.bx.errtbl th { padding: 1px 8px; } .sheet.land .panrow svg { height: 52px; width: auto; } .sheet.land .jc { font-size: var(--fd); } /* เลขงาน/เลขใบรับรองหน้าแนวนอน = ขนาดเท่า body ทั้งหน้า (Angsana 14.5) ไม่งั้น 14pt เดิมจะเล็กกว่ารอบข้าง */
 /* ===== uncert ===== */
 
