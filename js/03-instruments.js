@@ -198,7 +198,7 @@ function openBalanceCal(id) {
     id_code: d.id_code || '', asset: d.asset_no || '',
     manufacturer: d.brand || '', model: d.model || '', serial: d.serial_no || '',
     capacity: d.capacity ?? '', resolution: d.resolution ?? '', accuracy_class: d.accuracy_class || '',
-    user_range: d.range_val || '', cal_type: d.cal_type || '',
+    user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '',
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };

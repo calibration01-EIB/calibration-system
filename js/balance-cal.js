@@ -160,16 +160,19 @@ function stdev(arr) {
 }
 
 // ===== build inputs =====
-function buildStatic() {
-  byId('cPick').innerHTML = CLIENTS.map((c,i) => `<option value="${i}">${c.name}</option>`).join('') +
-    '<option value="-1">— กรอกเอง / อื่น ๆ —</option>';
-
+function renderTolRows() {
   byId('tolRows').innerHTML = TOLS.map((t,i) => `<tr>
     <td>ช่วงที่ ${i+1}</td>
     <td class="num"><input type="number" step="any" value="${t.from}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
     <td class="num"><input type="number" step="any" value="${t.to}" onchange="TOLS[${i}].to=+this.value;recalc()"></td>
     <td class="num"><input type="number" step="any" value="${t.tol}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
   </tr>`).join('');
+}
+function buildStatic() {
+  byId('cPick').innerHTML = CLIENTS.map((c,i) => `<option value="${i}">${c.name}</option>`).join('') +
+    '<option value="-1">— กรอกเอง / อื่น ๆ —</option>';
+
+  renderTolRows();
 
   renderStdTable();
 
@@ -714,6 +717,16 @@ function applyIncomingInst(inst) {
   setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
   setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
   setv('eCalType', inst.cal_type);
+  // Tolerance: ดึงจากช่อง Tolerance ของเครื่องในทะเบียน (ค่าเดียว เช่น "± 0.01 g") → ใช้เป็น band เดียวครอบทุกช่วง
+  const tolM = String(inst.tolerance || '').match(/[\d.]+/);
+  if (tolM) {
+    const tolV = parseFloat(tolM[0]);
+    const cap = parseFloat(inst.capacity) || parseFloat(val('iCap')) || 0;
+    if (Number.isFinite(tolV) && tolV > 0) {
+      TOLS = [{ from: 0, to: cap > 0 ? cap : 999999, tol: tolV }];
+      renderTolRows();
+    }
+  }
   const b = byId('instBanner');
   if (b) {
     b.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:8px 11px;font-size:12px;color:#185fa5;font-weight:700';
