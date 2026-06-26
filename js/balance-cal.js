@@ -161,12 +161,24 @@ function stdev(arr) {
 
 // ===== build inputs =====
 function renderTolRows() {
+  const gd = (parseFloat(byId('iRes') && byId('iRes').value) || 0.01);   // d รวม (placeholder ช่อง d ที่เว้นว่าง)
   byId('tolRows').innerHTML = TOLS.map((t,i) => `<tr>
     <td>ช่วงที่ ${i+1}</td>
     <td class="num"><input type="number" step="any" value="${t.from}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
     <td class="num"><input type="number" step="any" value="${t.to}" onchange="TOLS[${i}].to=+this.value;recalc()"></td>
+    <td class="num"><input type="number" step="any" value="${t.d ?? ''}" placeholder="${gd}" onchange="TOLS[${i}].d=(this.value===''?undefined:+this.value);recalc()"></td>
     <td class="num"><input type="number" step="any" value="${t.tol}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
+    <td class="num"><button type="button" class="rmset" title="ลบช่วง" onclick="removeTolBand(${i})">✕</button></td>
   </tr>`).join('');
+}
+function addTolBand() {
+  const last = TOLS[TOLS.length - 1] || { to: 0, tol: 0 };
+  TOLS.push({ from: last.to || 0, to: last.to || 0, tol: last.tol || 0, d: undefined });
+  renderTolRows(); recalc();
+}
+function removeTolBand(i) {
+  if (TOLS.length <= 1) { alert('ต้องมีอย่างน้อย 1 ช่วง'); return; }
+  TOLS.splice(i, 1); renderTolRows(); recalc();
 }
 function buildStatic() {
   byId('cPick').innerHTML = CLIENTS.map((c,i) => `<option value="${i}">${c.name}</option>`).join('') +
