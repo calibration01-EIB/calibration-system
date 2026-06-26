@@ -1427,6 +1427,7 @@ async function loadRecForReview(recId) {
   if (snap.std_ov && typeof snap.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(snap.std_ov)); } catch (e) {} }
   deriveStds(); rebuildAvail();
   if (Array.isArray(snap.checked)) { const set = {}; snap.checked.forEach(c => { set[c] = 1; }); AVAIL_WEIGHTS.forEach(w => { w.checked = !!set[w.id_code] && w.in_date; }); }
+  deriveCertStds(); renderStdTable(); renderWeightPicker();   // คืน checked แล้วต้อง re-derive+re-render std table/picker (เดิม fillFromCAL ไม่ render สองอันนี้ → ค้างสภาพ default จนกดแก้/ลบแถว)
   fillFromCAL(cal);
   // เลข Cert/งาน จาก record column (เผื่อ data เก่าไม่มี) → เขียนทับช่อง
   if (rec.cert_no) { const fc = byId('fCertNo'); if (fc) fc.value = rec.cert_no; }
