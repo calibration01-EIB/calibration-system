@@ -992,6 +992,16 @@ function editStdCell(key, field, value) {
   (STD_ROW_OV[key] = STD_ROW_OV[key] || {})[field] = value;
   const row = CERT_STDS.find(r => r.key === key); if (row) row[field] = value;
 }
+// ครบกำหนด: แสดง dd/mm/yyyy แต่เก็บค่าจริงเป็น ISO (yyyy-mm-dd) เพื่อให้ปริ้นใบ cert format ถูก
+function fmtDMY(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || ''); }
+function parseDMY(s) { const m = String(s || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : null; }
+function editStdDue(key, v) {
+  const t = String(v || '').trim();
+  if (!t) { editStdCell(key, 'due', ''); return; }
+  const iso = parseDMY(t);
+  if (iso) editStdCell(key, 'due', iso);
+  else { alert('รูปแบบวันที่ต้องเป็น dd/mm/yyyy เช่น 06/01/2027'); renderStdTable(); }
+}
 function resetStdRow(key) { delete STD_ROW_OV[key]; deriveCertStds(); renderStdTable(); }
 function removeStdGroup(key) {
   const row = CERT_STDS.find(r => r.key === key);
@@ -1021,7 +1031,7 @@ function renderStdTable() {
     <td><input class="stdin" value="${_attr(s.serial)}" oninput="editStdCell('${k}','serial',this.value)"></td>
     <td><input class="stdin mono" value="${_attr(s.id_code)}" oninput="editStdCell('${k}','id_code',this.value)"></td>
     <td><input class="stdin" value="${_attr(s.cert)}" oninput="editStdCell('${k}','cert',this.value)"></td>
-    <td><input class="stdin" type="date" value="${s.due || ''}" oninput="editStdCell('${k}','due',this.value)"></td>
+    <td><input class="stdin" value="${_attr(fmtDMY(s.due))}" placeholder="dd/mm/yyyy" inputmode="numeric" onchange="editStdDue('${k}',this.value)"></td>
     <td class="num" style="white-space:nowrap">
       <button type="button" class="rmset" title="คืนค่าอัตโนมัติ" onclick="resetStdRow('${k}')" ${ov ? '' : 'style="opacity:.3"'}>↺</button>
       <button type="button" class="rmset" title="เอาแถวนี้ออก" onclick="removeStdGroup('${k}')">✕</button>
