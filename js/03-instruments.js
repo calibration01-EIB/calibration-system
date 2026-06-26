@@ -543,13 +543,46 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iDueDate').value = d.due_date || '';
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
+    instRange = Array.isArray(d.range_profile) ? d.range_profile.map(s => ({ to: s.to, d: s.d, tol: s.tol })) : [];
+    renderInstRangeRows();
   } else {
     ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iAssetNo','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    instRange = []; renderInstRangeRows();
   }
   document.getElementById('instrumentModal').classList.add('open');
   initInstrumentDuplicateCheck();
   checkInstrumentDuplicates(false);
+}
+
+// ===== Multi-interval range_profile entry (ในฟอร์มเพิ่ม/แก้เครื่องมือ) =====
+let instRange = [];
+function renderInstRangeRows() {
+  const tb = document.getElementById('iRangeRows'); if (!tb) return;
+  const inp = 'width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)';
+  tb.innerHTML = instRange.map((s, i) => `<tr>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.to ?? ''}" style="${inp}"></td>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.d ?? ''}" style="${inp}"></td>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.tol ?? ''}" style="${inp}"></td>
+    <td style="text-align:center"><button type="button" onclick="removeInstRangeRow(${i})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px">✕</button></td>
+  </tr>`).join('');
+}
+function readInstRangeFromDom() {
+  return [...document.querySelectorAll('#iRangeRows tr')].map(tr => {
+    const ins = tr.querySelectorAll('input');
+    return { to: ins[0].value, d: ins[1].value, tol: ins[2].value };
+  });
+}
+function addInstRangeRow() { instRange = readInstRangeFromDom(); instRange.push({ to: '', d: '', tol: '' }); renderInstRangeRows(); }
+function removeInstRangeRow(i) { instRange = readInstRangeFromDom(); instRange.splice(i, 1); renderInstRangeRows(); }
+// อ่านตาราง → range_profile [{to,d,tol}] (เรียงตาม to · ข้ามแถวที่ to ว่าง) · ว่าง → null
+function buildRangeProfileFromForm() {
+  const rp = readInstRangeFromDom().map(s => ({
+    to: parseFloat(s.to),
+    d: (s.d !== '' && s.d != null) ? parseFloat(s.d) : null,
+    tol: (s.tol !== '' && s.tol != null) ? parseFloat(s.tol) : null,
+  })).filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
+  return rp.length ? rp : null;
 }
 
 function closeInstrumentModal() {
@@ -712,6 +745,7 @@ async function saveInstrument() {
     cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,
     cal_type: document.getElementById('iCalType').value || null,
     remark: document.getElementById('iRemark').value.trim() || null,
+    range_profile: buildRangeProfileFromForm(),
   };
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
