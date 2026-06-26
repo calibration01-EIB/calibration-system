@@ -275,7 +275,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
       <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="genPoints()"><i class="ti ti-wand"></i> สร้างจุดอัตโนมัติ (พิกัด÷10)</button>
       <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="addPoint()"><i class="ti ti-plus"></i> เพิ่มจุด</button>
-      <button type="button" id="savePresetBtn" class="mbtn" style="display:none;min-height:30px;font-size:12px" onclick="saveCurrentAsPreset()" title="บันทึกจุดที่จัดไว้ตอนนี้เป็นพรีเซ็ท (เลือกใช้ซ้ำได้)"><i class="ti ti-bookmark"></i> บันทึกจุดนี้เป็นพรีเซ็ท</button>
+      <button type="button" id="savePresetBtn" class="mbtn" style="display:none;min-height:30px;font-size:12px" onclick="saveCurrentAsPreset()" title="บันทึกจุดที่จัดไว้ + ตุ้มที่ติ๊กตอนนี้ เป็นพรีเซ็ท (เลือกใช้ซ้ำได้ครบทั้งจุดและตุ้ม)"><i class="ti ti-bookmark"></i> บันทึกจุด+ตุ้มเป็นพรีเซ็ท</button>
     </div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุดทดสอบ (g)</th><th>ตุ้มที่ใช้</th><th class="num">ค่าแก้ตุ้ม (g)</th><th class="num">ค่าตุ้ม + ค่าแก้ (g)</th><th class="num">Uncert. (mg)</th><th></th></tr></thead>
@@ -1478,6 +1478,16 @@ function applyPresetPick(idx) {
   const p = CAL_PRESETS[Number(idx)];
   if (!p || !Array.isArray(p.points) || !p.points.length) return;
   POINTS = p.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
+  // ถ้าพรีเซ็ทเก็บการเลือกตุ้มไว้ → คืนชุด + ลูกที่ติ๊ก + override (ลูกหมดอายุข้ามให้)
+  const w = p.weights;
+  if (w && Array.isArray(w.sets) && w.sets.length) {
+    const setIds = w.sets.map(c => String(c).trim()).filter(c => c && regGet(c));
+    if (setIds.length) SELECTED_SETS = setIds;
+    if (w.std_ov && typeof w.std_ov === 'object') { try { STD_ROW_OV = JSON.parse(JSON.stringify(w.std_ov)); } catch (e) {} }
+    deriveStds(); rebuildAvail();
+    if (Array.isArray(w.checked)) { const s = {}; w.checked.forEach(c => { s[c] = 1; }); AVAIL_WEIGHTS.forEach(x => { x.checked = !!s[x.id_code] && x.in_date; }); }
+    deriveCertStds(); renderStdTable(); renderWeightPicker();
+  }
   PREFILL_REC = null; renderPrefillBanner();
   rebuildPoints(true);
 }
@@ -1503,9 +1513,12 @@ async function saveCurrentAsPreset() {
   const defName = 'เครื่องชั่ง ' + (cap ? cap + ' g' : points[points.length - 1] + ' g');
   const name = (prompt('ตั้งชื่อพรีเซ็ท:', defName) || '').trim();
   if (!name) return;
+  // เก็บการเลือกตุ้มไปด้วย (ชุด + ลูกที่ติ๊ก + override) → คืนได้ครบตอนเลือกพรีเซ็ท
+  const weights = { sets: SELECTED_SETS.slice(),
+    checked: AVAIL_WEIGHTS.filter(w => w.checked).map(w => w.id_code), std_ov: STD_ROW_OV };
   try {
     const { error } = await db.from('cal_point_presets').insert({
-      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', updated_at: new Date().toISOString(),
+      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, updated_at: new Date().toISOString(),
     });
     if (error) throw error;
     const { data } = await db.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });

@@ -38,7 +38,7 @@ function renderCalPresets() {
     return `<tr>
       <td><strong>${escapeHtmlText(p.name || '–')}</strong></td>
       <td>${range}</td>
-      <td style="text-align:right">${pts.length}</td>
+      <td style="text-align:right">${pts.length}${(p.weights && Array.isArray(p.weights.checked) && p.weights.checked.length) ? ` <span title="พรีเซ็ทนี้เก็บตุ้มที่เลือกไว้ด้วย ${p.weights.checked.length} ลูก" style="color:var(--accent);font-size:11px;white-space:nowrap">🔩${p.weights.checked.length}</span>` : ''}</td>
       <td style="font-family:var(--mono);font-size:11px">${escapeHtmlText(pts.join(', ')) || '–'}</td>
       <td style="white-space:nowrap">${canEdit ? `<button class="btn-view" onclick="openPresetEdit('${p.id}')">✏️</button> <button class="btn-del" onclick="deleteCalPreset('${p.id}')">🗑️</button>` : ''}</td>
     </tr>`;
