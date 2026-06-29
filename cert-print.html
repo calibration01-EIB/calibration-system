@@ -54,6 +54,23 @@ table { border-collapse: collapse; }
 .bx td, .bx th { border: 1px solid #111; padding: 2px 6px; }
 .footrow { position: absolute; bottom: 8mm; left: 13mm; right: 13mm; display: flex; justify-content: space-between; align-items: center; font-size: var(--fd); }
 .conf { border: 1px solid #111; padding: 1px 8px; font-size: .8em; }
+/* ===== ใบประเมินผล (FRM-EIB55) ===== */
+.eib { font-family: var(--ffd); }
+.eib-head { display: flex; align-items: center; gap: 10px; }
+.eib-logo { width: 54px; height: auto; }
+.eib-co-th { font-family: "Sarabun", sans-serif; font-weight: 700; font-size: 15pt; line-height: 1.1; }
+.eib-co-en { font-weight: 700; font-size: 12pt; }
+.eib-title { font-family: "Sarabun", sans-serif; text-align: center; font-size: 18pt; margin: 4px 0 0; }
+.eib-sub { text-align: center; font-size: 12pt; margin-bottom: 10px; }
+.eib-inst { font-weight: 700; border-bottom: 1.5px solid #111; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: flex-end; }
+.eib-grid { width: 100%; border-collapse: collapse; margin: 5px 0 10px; }
+.eib-grid td { padding: 3px 4px; vertical-align: bottom; }
+.eib-lbl { white-space: nowrap; font-family: "Sarabun", sans-serif; width: 1%; }
+.eib-val { border-bottom: 1px dotted #777; padding: 0 6px; }
+.eib-tbl { width: 100%; }
+.eib-tbl th, .eib-tbl td { border: 1px solid #111; padding: 3px 6px; text-align: center; }
+.eib-fail { color: #b3261e; font-weight: 700; }
+.eib-sign { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; font-family: "Sarabun", sans-serif; }
 .fill { color: #111; font-weight: 400; } /* ค่าที่ระบบเติม: สีดำ + น้ำหนักปกติ (กัน faux-bold เพี้ยนบน Cordia/Angsana + ไม่ให้ปนกับหัวข้อตัวหนา) */
 .chk { display: inline-block; width: 12px; height: 12px; border: 1.2px solid #111; vertical-align: -2px; text-align: center; line-height: 11px; font-size: 11px; margin-right: 4px; }
 /* ===== cert cover (FRM-CAL54 (TP) Rev.01) =====
@@ -116,7 +133,7 @@ table { border-collapse: collapse; }
 .ws .row { display: flex; gap: 3px; align-items: baseline; padding: 0.5px 0; flex-wrap: nowrap; }
 .ws .sec { font-family: var(--ffl); font-size: var(--fl); font-weight: 700; } .ws .lbl { font-family: var(--ffl); font-size: var(--fd); font-weight: 700; white-space: nowrap; }
 .ws .dot { flex: 0 0 auto; }
-.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 3px; align-items: baseline; margin: 7px 0 4px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: max-content 1fr max-content max-content 1fr max-content max-content 1fr; column-gap: 7px; row-gap: 6px; align-items: baseline; margin: 14px 0 6px; } .ws .dtl-grid .fv { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .unit { white-space: nowrap; } .ws .det-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; row-gap: 6px; margin: 7px 0 4px; } .ws .det-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .det-grid .dcell .fv { flex: 1; min-width: 0; text-align: center; } .ws .env-grid { display: grid; grid-template-columns: max-content 48px max-content max-content 48px max-content max-content 48px max-content max-content 48px max-content; column-gap: 5px; row-gap: 7px; align-items: baseline; justify-content: start; margin: 7px 0 4px; } .ws .env-grid .ev { border-bottom: 1px dotted #555; text-align: center; font-weight: 400; min-width: 0; } .ws .env-grid .eu, .ws .env-grid .et { white-space: nowrap; font-weight: 700; } .ws .env-grid .lbl.er { padding-left: 22px; }
+.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 2px; align-items: baseline; margin: 3px 0 2px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: max-content 1fr max-content max-content 1fr max-content max-content 1fr; column-gap: 7px; row-gap: 4px; align-items: baseline; margin: 8px 0 4px; } .ws .dtl-grid .fv { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .fv.toltext { white-space: normal; overflow: visible; text-align: left; line-height: 1.15; } .ws .dtl-grid .unit { white-space: nowrap; } .ws .pre, .ws .rep { font-size: 12.5pt; } .ws .pre td, .ws .pre th, .ws .rep td, .ws .rep th { padding-top: 0.5px; padding-bottom: 0.5px; line-height: 1.1; } .ws .det-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; row-gap: 3px; margin: 3px 0 2px; } .ws .det-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .det-grid .dcell .fv { flex: 1; min-width: 0; text-align: center; } .ws .env-grid { display: grid; grid-template-columns: max-content 48px max-content max-content 48px max-content max-content 48px max-content max-content 48px max-content; column-gap: 5px; row-gap: 4px; align-items: baseline; justify-content: start; margin: 3px 0 2px; } .ws .env-grid .ev { border-bottom: 1px dotted #555; text-align: center; font-weight: 400; min-width: 0; } .ws .env-grid .eu, .ws .env-grid .et { white-space: nowrap; font-weight: 700; } .ws .env-grid .lbl.er { padding-left: 22px; }
 .ws .sec { font-weight: 700; text-decoration: underline; margin-top: 8px; }
 .ws table { font-size: var(--fd); } .ws table.bx td, .ws table.bx th { padding: 1px 5px; } .ws table.rep td, .ws table.rep th { padding: 3.9px 5px; } .ws table.pre td, .ws table.pre th { padding: 3.9px 7px; }
 .xbar { font-weight: 400; font-style: normal; }
@@ -317,6 +334,17 @@ function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่
   return u.toFixed(Math.max(0, 1 - mag));
 }
 function uUnit(u) { return (isFinite(u) && u > 100) ? 'g' : 'mg'; }  // หน่วย U รายงาน
+// ===== Tolerance (ใบประเมิน EIB55): หาเกณฑ์ผ่าน/ไม่ผ่านต่อจุด — ตรรกะเดียวกับ balance-cal recalc =====
+const tolUnitFactor = u => ({ g: 1, kg: 1000, mg: 0.001 }[u] || 1);   // หน่วย tolerance → g
+function tolForRow(nominal_g) {
+  const bands = (Array.isArray(CAL.tols) ? CAL.tols : [])
+    .filter(t => Number.isFinite(Number(t.to)) && Number(t.to) > Number(t.from || 0))
+    .sort((a, b) => a.to - b.to);
+  if (!bands.length) return null;                                      // ไม่มีช่วง → ไม่มีเกณฑ์
+  const b = bands.find(x => nominal_g <= Number(x.to)) || bands[bands.length - 1];
+  const tg = Number(b.tol) * tolUnitFactor(b.unit);
+  return (Number.isFinite(tg) && tg > 0) ? tg : null;
+}
 const MON = ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'];
 function dCert(s){ const d=new Date(s+'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}-${MON[d.getMonth()]}-${d.getFullYear()}`; }
 function dTH(s){ const p=s.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
@@ -367,7 +395,7 @@ function pageCover() {
     <div class="cv-row"><span>ADDRESS OF CLIENT :</span><span class="fill">${CAL.client.addr.map(a => esc(a)).join('<br>')}</span></div>
     <div class="cv-row" style="margin-top:14px"><span>DATE OF RECEIVE :</span><span class="fill">${dCert(CAL.date_receive)}</span></div>
     <div class="cv-row"><span>CALIBRATION DATE :</span><span class="fill">${dCert(CAL.date_cal)}</span></div>
-    <div class="cv-row"><span>EQUIPMENT :</span><span class="fill">${esc(CAL.equipment)}  ${CAL.capacity} ${CAL.unit}</span></div>
+    <div class="cv-row"><span>EQUIPMENT :</span><span class="fill">${esc(CAL.equipment)}</span></div>
     <div class="cv-row it"><span class="cv-sub">MANUFACTURER :</span><span class="fill">${esc(CAL.manufacturer)}</span></div>
     <div class="cv-row it"><span class="cv-sub">MODEL :</span><span class="fill">${esc(CAL.model)}</span></div>
     <div class="cv-row it"><span class="cv-sub">SERIAL NUMBER :</span><span class="fill">${esc(CAL.serial)}</span></div>
@@ -417,11 +445,9 @@ function resultLine() {
     &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}${CAL._rangeLabel ? `&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">RANGE : ${esc(CAL._rangeLabel)}</span>` : ''}</p>`;
 }
 
-// ====== PAGE: Cert page 2 (FRM-CAL55) ======
-function pageCert2() {
-  return `<section class="sheet ct">
-    ${ctHead(CERT_NO)}
-    <h4>CONDITION OF THIS RESULT</h4>
+// ====== Cert section builders (FRM-CAL55) — ใช้ซ้ำระหว่างหน้าแรก/หน้าอัดแน่นของแต่ละย่าน ======
+function secCondition() {
+  return `<h4>CONDITION OF THIS RESULT</h4>
     <p>1. CALIBRATION PROCEDURE :</p>
     <p style="padding-left:12px">THIS INSTRUMENT WAS CALIBRATED BY COMPARISON WITH STANDARD WEIGHTS ACCORDING TO IN-HOUSE</p>
     <p style="padding-left:12px">WORK INSTRUCTION NO.${esc(CAL.procedure)}</p>
@@ -439,31 +465,27 @@ function pageCert2() {
     <p style="margin-top:12px">4. THIS RESULT OF CALIBRATION WAS FOUND ACCURATE AS SHOWN ON DATE, PLACE OF CALIBRATION AND THIS</p>
     <p style="padding-left:12px">EQUIPMENT ONLY.</p>
     <p>5. THIS CERTIFICATION IS TRACEABLE TO THE INTERNATIONAL SYSTEM OF UNIT ( SI UNIT ) ACCORDING TO</p>
-    <p style="padding-left:12px">- NATIONAL INSTITUTE OF METROLOGY ( THAILAND )</p>
-    ${resultLine()}
-    <h4>REPEATABILITY</h4>
+    <p style="padding-left:12px">- NATIONAL INSTITUTE OF METROLOGY ( THAILAND )</p>`;
+}
+function secRepeatability() {
+  return `<h4>REPEATABILITY</h4>
     <table class="bx dep" style="margin:0 auto;width:84%">
       <thead><tr><th>NOMINAL VALUE<br>( g )</th><th>STANDARD DEVIATION<br>OF READING ( g )</th><th>MAXIMUM DIFFERENCE BETWEEN<br>SUCCESSIVE READINGS ( g )</th></tr></thead>
       <tbody><tr><td>${CAL.repeat.point}</td><td>${f(repStd,2)}</td><td>${f(repMaxDiff,2)}</td></tr></tbody>
-    </table>
-    <h4>EFFECT OF TARE</h4>
+    </table>`;
+}
+function secTare() {
+  return `<h4>EFFECT OF TARE</h4>
     <p style="padding-left:12px">WEIGHT OF TARE  ${CAL.tare.wt} g</p>
     <table class="bx dep" style="margin:0 auto;width:84%">
       <tbody>
         <tr><td style="text-align:left">NOMINAL VALUE ( g )</td>${CAL.tare.checks.map(c => `<td>${c[0]}</td>`).join('')}</tr>
         <tr><td style="text-align:left">DISPLAYED VALUE ( g )</td>${CAL.tare.checks.map(c => `<td>${f(c[1],2)}</td>`).join('')}</tr>
       </tbody>
-    </table>
-    <div class="footrow"><span>FRM-CAL55-00-1265</span><span class="conf">CONFIDENTIAL B</span></div>
-  </section>`;
+    </table>`;
 }
-
-// ====== PAGE: Cert page 3 ======
-function pageCert3() {
-  return `<section class="sheet ct">
-    ${ctHead(CERT_NO + 1)}
-    ${resultLine()}
-    <h4>DEPARTURE OF INDICATION FROM NOMINAL VALUE</h4>
+function secDeparture() {
+  return `<h4>DEPARTURE OF INDICATION FROM NOMINAL VALUE</h4>
     <table class="bx dep" style="margin:0 auto;width:92%">
       <thead>
         <tr><th>NOMINAL VALUE<br>( g )</th><th>CONVENTIONAL MASS<br>( g )</th><th>DISPLAYED VALUE<br>( g )</th><th>CORRECTION<br>( g )</th><th>UNCERTAINTY<br>± ( mg )</th></tr>
@@ -472,8 +494,10 @@ function pageCert3() {
         <td>${r.zero ? 'UNLOAD' : r.nominal}</td>
         <td>${f(r.conv,3)}</td><td>${f(r.avg,2)}</td><td>${f(r.corr,3)}</td><td>${fmtU(r.bud.Ufinal)}${r.bud.Ufinal > 100 ? ' g' : ''}</td>
       </tr>`).join('')}</tbody>
-    </table>
-    <h4>EFFECT OF ECCENTRIC OR OFF-CENTRE LOADING</h4>
+    </table>`;
+}
+function secEccentric() {
+  return `<h4>EFFECT OF ECCENTRIC OR OFF-CENTRE LOADING</h4>
     <p>A MASS OF ${CAL.ecc.wt} g WAS PLACED TO VARIOUS POSITION ON THE PAN. THE WEIGHING MACHINE READING ERROR</p>
     <p>OBTAINED IS GIVEN IN THE TABLE</p>
     <div style="display:flex;gap:14px;align-items:center;margin-top:6px">
@@ -484,24 +508,118 @@ function pageCert3() {
         <thead><tr>${[1,2,3,4,5].map(n=>`<th>${n}<br>( g )</th>`).join('')}<th>MAXIMUM DIFFERENCE<br>( g )</th></tr></thead>
         <tbody><tr>${CAL.ecc.reads.map(v=>`<td>${f(v,2)}</td>`).join('')}<td>${f(eccMax,2)}</td></tr></tbody>
       </table>
-    </div>
-    <p class="cn" style="margin-top:10px">THE REPORTED EXPANDED UNCERTAINTY IS BASED ON  A  STANDARD UNCERTAINTY MULTIPLIED</p>
+    </div>`;
+}
+function secEnd() {   // หมายเหตุ k=2 + ปิดท้าย — ขึ้นครั้งเดียวที่ท้ายชุด Cert (ย่านสุดท้าย)
+  return `<p class="cn" style="margin-top:10px">THE REPORTED EXPANDED UNCERTAINTY IS BASED ON  A  STANDARD UNCERTAINTY MULTIPLIED</p>
     <p class="cn">BY A  COVERAGE FACTOR   k =  2 , PROVIDING  A LEVEL OF CONFIDENCE OF  APPROXIMATELY  95%</p>
-    <p class="ctr cn b" style="margin-top:20px">THE END OF CERTIFICATE</p>
-    <div class="footrow"><span>FRM-CAL55-00-1265</span><span class="conf">CONFIDENTIAL B</span></div>
+    <p class="ctr cn b" style="margin-top:20px">THE END OF CERTIFICATE</p>`;
+}
+const certFoot = '<div class="footrow"><span>FRM-CAL55-00-1265</span><span class="conf">CONFIDENTIAL B</span></div>';
+
+// ====== PAGE: Cert — หน้าเงื่อนไข (ย่านแรก): condition + มาตรฐาน + result + repeatability + tare ======
+function pageCertConditions(pageNo) {
+  return `<section class="sheet ct">
+    ${ctHead(pageNo)}
+    ${secCondition()}
+    ${resultLine()}
+    ${secRepeatability()}
+    ${secTare()}
+    ${certFoot}
+  </section>`;
+}
+// ====== PAGE: Cert — หน้า departure (ย่านแรก): result + departure + eccentric [+ end] ======
+function pageCertDeparture(pageNo, withEnd) {
+  return `<section class="sheet ct">
+    ${ctHead(pageNo)}
+    ${resultLine()}
+    ${secDeparture()}
+    ${secEccentric()}
+    ${withEnd ? secEnd() : ''}
+    ${certFoot}
+  </section>`;
+}
+// ====== PAGE: Cert — หน้าอัดแน่น (ย่าน 2 เป็นต้นไป): result + tare + departure + eccentric [+ end] ======
+function pageCertCompact(pageNo, withEnd) {
+  return `<section class="sheet ct">
+    ${ctHead(pageNo)}
+    ${resultLine()}
+    ${secTare()}
+    ${secDeparture()}
+    ${secEccentric()}
+    ${withEnd ? secEnd() : ''}
+    ${certFoot}
+  </section>`;
+}
+
+// ====== PAGE: ใบประเมินผลการสอบเทียบ (FRM-EIB55) — 1 หน้า/ย่าน · เกณฑ์ผ่าน/ไม่ผ่านต่อจุด ======
+function pageEIB55(pageNo, total) {
+  const rangeTxt = CAL.capacity >= 1000 ? (+(CAL.capacity / 1000).toFixed(3)) + ' kg' : CAL.capacity + ' ' + CAL.unit;
+  const rows = ROWS.map(r => {
+    const errG = Math.round((-r.corr) * 1000) / 1000;
+    const Ug = r.bud.Ufinal / 1000;
+    const tol = tolForRow(r.zero ? 0 : r.nominal);
+    const hasTol = tol != null;
+    const pass = hasTol ? ((errG + Ug) <= tol && (errG - Ug) >= -tol) : null;
+    const res = !hasTol ? '-' : (pass ? 'PASS' : 'FAIL');
+    return `<tr>
+      <td>${r.zero ? 'UNLOAD' : r.nominal}</td>
+      <td>${f(errG,3)}</td><td>${f(Ug,4)}</td>
+      <td>${f(errG + Ug,4)}</td><td>${f(errG - Ug,4)}</td>
+      <td>${hasTol ? f(tol,3) : '-'}</td>
+      <td class="${pass === false ? 'eib-fail' : ''}">${res}</td>
+    </tr>`;
+  }).join('');
+  const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
+  return `<section class="sheet eib">
+    <div class="eib-head">
+      <img class="eib-logo" src="${IMG.ilc}" alt="ILC">
+      <div class="eib-co"><div class="eib-co-th">บริษัท อินเตอร์เนชั่นแนล แลบบอราทอรีส์ จำกัด</div><div class="eib-co-en">International Laboratories Corp., Ltd.</div></div>
+    </div>
+    <h2 class="eib-title">ใบประเมินผลการสอบเทียบ</h2>
+    <div class="eib-sub">(Record sheet for verification of calibration results)</div>
+    <div class="eib-inst">INSTRUMENT
+      <span class="rt b">Cert. No. <span class="eib-val">${esc(CAL.cert_no)}</span></span>
+    </div>
+    <table class="eib-grid">
+      <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
+      <tr>${cell('Range', rangeTxt)}${cell('User range', CAL.user_range)}${cell('Tolerance', (CAL.tolerances && CAL.tolerances[0]) || '')}</tr>
+      <tr>${cell('Section', CAL.section)}${cell('Unit', CAL.unit_dept)}<td></td><td></td></tr>
+    </table>
+    <table class="bx eib-tbl">
+      <thead><tr>
+        <th>Nominal Value<br>( g )</th><th>Error<br>( g )</th><th>Uncertainty<br>± ( g )</th>
+        <th>Error + Uncertainty<br>( g )</th><th>Error - Uncertainty<br>( g )</th><th>Tolerance<br>± ( g )</th><th>Result</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="eib-sign">
+      <span>Prepared by : __________ Date ____/____/____</span>
+      <span>Approved by : __________ (EIB) Date ____/____/____</span>
+      <span>Approved by : __________ (Owner) Date ____/____/____</span>
+    </div>
+    <div class="footrow"><span>FRM-EIB55 Rev.00</span><span>Effective Date: 09/09/2024 (4Y)</span><span>Page ${pageNo} of ${total}</span></div>
   </section>`;
 }
 
 // ====== PAGE: ใบบันทึกผล หน้า 1 (FRM-CAL77) ======
-function pageWs1() {
+function pageWs1(pageNo, instMax, instResText, instTols) {
+  // instMax/instResText/instTols = พิกัด+ความละเอียด+Tolerance ระดับเครื่อง (multi-range = ทุกย่าน) ส่งมาจาก assembly
+  // ส่วน preload/repeat คงค่าจริงของย่านที่ทดสอบ (ย่านแรก เช่น preload 6000, repeat 5000)
+  const capTxt = (instMax != null ? instMax : CAL.capacity);
+  const resTxt = (instResText != null ? instResText : resolutionText());
+  const tolList = (Array.isArray(instTols) && instTols.length) ? instTols : (CAL.tolerances || []);
+  // แสดงแบบตัวอย่าง WFP1BB01: แบนด์แรกบรรทัดบน · แบนด์ที่เหลือต่อกันบรรทัดล่าง (ประหยัดความสูง)
+  const tolHtml = !tolList.length ? '&nbsp;'
+    : esc(tolList[0]) + (tolList.length > 1 ? '<br>' + tolList.slice(1).map(esc).join(' &nbsp;&nbsp; ') : '');
   const fv = (v, w) => `<span class="fv fill" style="min-width:${w||60}px">${v}</span>`;
   return `<section class="sheet ws">
     <h2>ใบบันทึกผลการสอบเทียบเครื่องชั่งน้ำหนัก (UKAS LAB 14)</h2>
     <div class="row hdrck" style="justify-content:space-between">
       <span>${chk(true)} <span class="b u">เครื่องชั่งไฟฟ้า</span> &nbsp;&nbsp; ${chk(false)} <span class="b u">SPRING BALANCE</span></span>
-      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${WS_NO}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${pageNo}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
     </div>
-    <div class="dtl-grid"><span class="lbl">ยี่ห้อ/รุ่น</span><span class="fv fill">${esc(CAL.manufacturer)} ${esc(CAL.model)}</span><span class="unit"></span><span class="lbl">Serial. No.</span><span class="fv fill">${esc(CAL.serial)}</span><span class="unit"></span><span class="lbl">ID.No.</span><span class="fv fill">${esc(CAL.id_no)}</span><span class="lbl">พิกัด</span><span class="fv fill">${CAL.capacity}</span><span class="unit">g</span><span class="lbl">ความละเอียด (d)</span><span class="fv fill">${CAL.resolution}</span><span class="unit">g</span><span class="lbl">Accuracy Class</span><span class="fv fill">${esc(CAL.accuracy_class)}</span><span class="lbl">Tolerance</span><span class="fv fill">${esc(CAL.tolerances[0])}</span><span class="unit"></span><span class="lbl">User Range</span><span class="fv fill">${esc(CAL.user_range)}</span><span class="unit">g</span><span class="lbl">รหัสทรัพย์สิน</span><span class="fv fill">${esc(CAL.asset)}</span></div>
+    <div class="dtl-grid"><span class="lbl">ยี่ห้อ/รุ่น</span><span class="fv fill">${esc(CAL.manufacturer)} ${esc(CAL.model)}</span><span class="unit"></span><span class="lbl">Serial. No.</span><span class="fv fill">${esc(CAL.serial)}</span><span class="unit"></span><span class="lbl">ID.No.</span><span class="fv fill">${esc(CAL.id_no)}</span><span class="lbl">พิกัด</span><span class="fv fill">${capTxt}</span><span class="unit">g</span><span class="lbl">ความละเอียด (d)</span><span class="fv fill">${resTxt}</span><span class="unit"></span><span class="lbl">Accuracy Class</span><span class="fv fill">${esc(CAL.accuracy_class)}</span><span class="lbl">Tolerance</span><span class="fv fill toltext">${tolHtml}</span><span class="unit"></span><span class="lbl">User Range</span><span class="fv fill">${esc(CAL.user_range)}</span><span class="unit">g</span><span class="lbl">รหัสทรัพย์สิน</span><span class="fv fill">${esc(CAL.asset)}</span></div>
     <div class="row" style="margin-top:-8px"><span class="sec">ตุ้มน้ำหนักมาตรฐาน</span></div>
     <div class="std-grid">${[0,1,2,3,4].map(i => { const s = CAL.standards[i];
       return `<span class="lbl">พิกัด / Class</span><span class="fv fill">${s?esc(s.cls):'-'}</span><span class="lbl">Serial. No.</span><span class="fv fill">${s?esc(s.serial):'-'}</span><span class="lbl">ID. Code.</span><span class="fv fill idcode">${s?esc(s.id_code):'-'}</span><span class="lbl">Cert. No.</span><span class="fv fill">${s?esc(s.cert):'-'}</span><span class="lbl">Due. Date</span><span class="fv fill">${s?dTH(s.due):'-'}</span>`; }).join('')}</div>
@@ -509,8 +627,8 @@ function pageWs1() {
     <div class="env-grid"><span class="lbl">เวลาในการปรับอุณหภูมิ</span><span class="ev fill">${CAL.warmup[0]}</span><span class="eu">น.</span><span class="et">ถึง</span><span class="ev fill">${CAL.warmup[1]}</span><span class="eu">น.</span><span class="lbl er">เวลาในการสอบเทียบ เริ่ม</span><span class="ev fill">${CAL.cal_time[0]}</span><span class="eu">น.</span><span class="et">ถึง</span><span class="ev fill">${CAL.cal_time[1]}</span><span class="eu">น.</span><span class="lbl">อุณหภูมิในการสอบเทียบ เริ่ม</span><span class="ev fill">${CAL.temp[0]}</span><span class="eu">°C</span><span class="et">ถึง</span><span class="ev fill">${CAL.temp[1]}</span><span class="eu">°C</span><span class="lbl er">ความชื้นสัมพัทธ์ เริ่ม</span><span class="ev fill">${CAL.rh[0]}</span><span class="eu">%</span><span class="et">ถึง</span><span class="ev fill">${CAL.rh[1]}</span><span class="eu">%</span></div>
     <div class="sec" style="margin-top:0">รายละเอียดการสอบเทียบ</div>
     <div class="det-grid"><span class="dcell"><span class="lbl">วันที่ทำการสอบเทียบ</span><span class="fv fill">${dTH(CAL.date_cal)}</span></span><span class="dcell"><span class="lbl">หมายเลขใบขอรับบริการ</span><span class="fv fill">${esc(CAL.request_no)}</span></span><span class="dcell"><span class="lbl">หมายเลขของงาน</span><span class="fv fill jc">${esc(CAL.job_no)}</span></span><span class="dcell"><span class="lbl">วันที่สอบเทียบครั้งต่อไป</span><span class="fv fill">${dTH(CAL.date_next)}</span></span><span class="dcell"><span class="lbl">ผู้สอบเทียบ</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">ผู้ทบทวน</span><span class="fv fill">&nbsp;</span></span><span class="dcell"><span class="lbl">หมายเลขใบรับรองผล</span><span class="fv fill jc">${esc(CAL.cert_no)}</span></span><span class="dcell"><span class="lbl">Location</span><span class="fv fill">${esc(CAL.location)}</span></span><span></span></div>
-    <div class="row" style="margin-top:10px"><span class="sec">Preload Test</span><span style="margin-left:16px">${chk(true)} ก่อนปรับเทียบ</span><span style="margin-left:14px">${chk(false)} หลังปรับเทียบ</span><span style="margin-left:auto;width:332px"><span class="sec">สภาพของเครื่องชั่ง</span></span></div>
-    <div class="row" style="margin-top:9px"><span class="b">Maximum Capacity</span>${fv(CAL.capacity,70)}<span>( g )</span><span style="margin-left:auto;width:332px"><span>${chk(false)} New item</span><span style="margin-left:14px">${chk(true)} Used item</span></span></div>
+    <div class="row" style="margin-top:4px"><span class="sec">Preload Test</span><span style="margin-left:16px">${chk(true)} ก่อนปรับเทียบ</span><span style="margin-left:14px">${chk(false)} หลังปรับเทียบ</span><span style="margin-left:auto;width:332px"><span class="sec">สภาพของเครื่องชั่ง</span></span></div>
+    <div class="row" style="margin-top:4px"><span class="b">Maximum Capacity</span>${fv(capTxt,70)}<span>( g )</span><span style="margin-left:auto;width:332px"><span>${chk(false)} New item</span><span style="margin-left:14px">${chk(true)} Used item</span></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px">
       <div>
         <div class="row"><span class="sec" style="margin:0 0 16px;visibility:hidden">X</span></div>
@@ -538,13 +656,13 @@ function pageWs1() {
 }
 
 // ====== PAGE: ใบบันทึกผล หน้า 2 (แนวนอน) ======
-function pageWs2() {
+function pageWs2(pageNo) {
   return `<section class="sheet land ws">
     <div class="row" style="justify-content:space-between">
       <span><span class="sec" style="margin:0">2.การตรวจสอบค่า Error of indication from conventional mass value</span>
         &nbsp; หมายเลขของงาน <span class="fv fill jc">${esc(CAL.job_no)}</span>
         &nbsp; หมายเลขใบรับรองผล <span class="fv fill jc">${esc(CAL.cert_no)}</span></span>
-      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${WS_NO + 1}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${pageNo}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
     </div>
     <table class="bx errtbl" style="width:100%;margin-top:4px">
       <thead>
@@ -672,16 +790,24 @@ function pageUnc(blockRows, pageNo) {
   const uncPages = [];
   for (let i = 0; i < UNC_ROWS.length; i += 3) uncPages.push(UNC_ROWS.slice(i, i + 3));
   if (opt.coverOnly) return pageCover();
+  // ใบ Cert (flow ต่อเนื่องแบบ PDF): ย่านแรก = หน้าเงื่อนไข + หน้า departure (2 หน้า) · ย่านถัดไป = หน้าอัดแน่น (1 หน้า) · END ครั้งเดียวที่ย่านสุดท้าย
+  const certHtml = opt.isFirst
+    ? pageCertConditions(CERT_NO) + pageCertDeparture(CERT_NO + 1, opt.isLast)
+    : pageCertCompact(CERT_NO, opt.isLast);
   return {
-    cert: pageCert2() + pageCert3(),                                  // ใบ Cert: 2 หน้า/ย่าน (เลข CERT_NO, CERT_NO+1)
-    ws: pageWs1() + pageWs2() + uncPages.map((blk, i) => pageUnc(blk, WS_NO + 2 + i)).join(''),  // ใบบันทึกผล: ws1,ws2,unc...
+    cert: certHtml,
+    assess: pageEIB55(opt.assessNo, opt.assessTotal),                 // ใบประเมินผล EIB55: 1 หน้า/ย่าน
+    // ใบบันทึกผลแยกชิ้น (ให้ assembly จัดกลุ่ม): ws1 (พิมพ์เฉพาะย่านแรก) · ws2 ต่อย่าน · unc ต่อย่าน — เลขหน้าส่งมาจาก assembly
+    ws1: opt.isFirst ? pageWs1(1, opt.instMax, opt.instResText, opt.instTols) : '',
+    ws2: pageWs2(opt.ws2No),
+    unc: uncPages.map((blk, i) => pageUnc(blk, opt.uncStart + i)).join(''),
   };
 }
 // ====== ประกอบทุกหน้า ======
 // เลขหน้านับต่อเนื่องแยก 2 สาย: ใบ Cert (ปก + cert2/cert3 ต่อย่าน) · ใบบันทึกผล (ws1/ws2/unc ต่อย่าน)
 // จัดเรียง: ปก → หน้า Cert ทุกย่าน → ใบบันทึกผลทุกย่าน
 function rangeOverride(r) {
-  return { capacity: r.capacity, resolution: r.resolution, tolerances: r.tolerances, user_range: r.user_range,
+  return { capacity: r.capacity, resolution: r.resolution, tolerances: r.tolerances, tols: r.tols, user_range: r.user_range,
     points: r.points, repeat: r.repeat, preload: r.preload, ecc: r.ecc, tare: r.tare, dsegs: r.dsegs, _rangeLabel: r.label };
 }
 function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.points.length) || 0)) / 3)); }
@@ -689,17 +815,42 @@ function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.poi
   const list = (CAL.multi_range && Array.isArray(CAL.ranges) && CAL.ranges.length)
     ? CAL.ranges.map(r => Object.assign({}, CAL, rangeOverride(r)))
     : [CAL];
-  const certTotal = 1 + list.length * 2;                              // ปก + 2 หน้า/ย่าน
-  const wsTotal = list.reduce((n, C) => n + 2 + uncPageCount(C), 0);  // (ws1+ws2+unc) ต่อย่าน
-  let cp = 2, wp = 1;                                                 // ปก = Cert หน้า 1
+  const n = list.length;
+  // ความละเอียดระดับเครื่อง (สำหรับ ws1 ที่พิมพ์ครั้งเดียว) — แสดง d ทุกย่านจาก CAL.dsegs ระดับบนสุด
+  function instResolutionText() {
+    let prev = 0;
+    const segs = (Array.isArray(CAL.dsegs) ? CAL.dsegs : [])
+      .filter(s => Number.isFinite(s.to) && s.to > 0 && Number.isFinite(s.d) && s.d > 0)
+      .sort((a, b) => a.to - b.to)
+      .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
+    const distinct = [...new Set(segs.map(s => s.d))];
+    // ช่อง d บน ws1 แคบ → ใช้รูปแบบกระชับ "2 / 5 / 10 g" (หน้าปกใช้แบบเต็มมีช่วง)
+    if (segs.length >= 2 && distinct.length >= 2) return `${distinct.join(' / ')} ${CAL.unit}`;
+    return `${CAL.resolution} ${CAL.unit}`;
+  }
+  const instResText = instResolutionText();
+  // Tolerance ระดับเครื่อง: รวมทุกแบนด์จากทุกย่าน (เช่น WFP1BB01 = 3 แบนด์) → แสดงซ้อนบน ws1
+  const instTols = list.flatMap(C => Array.isArray(C.tolerances) ? C.tolerances : []);
+  const certTotal = 1 + 2 + (n - 1);                                 // ปก + ย่านแรก 2 หน้า + ย่านถัดไปย่านละ 1 หน้า (flow แบบ PDF)
+  // ใบบันทึกผล: ws1 ครั้งเดียว(1) + ws2 ต่อย่าน(n) + uncertainty ต่อย่าน (แบบเดิม) — ws2 ทุกย่านมาเรียงติดกัน
+  const uncCounts = list.map(uncPageCount);
+  const wsTotal = 1 + n + uncCounts.reduce((a, b) => a + b, 0);
+  let cp = 2;                                                         // ปก = Cert หน้า 1
+  let uncCursor = 1 + n + 1;                                          // unc เริ่มหลัง ws1(1) + ws2 ทุกย่าน(n)
   let certHtml = rangePages(CAL, { coverOnly: true, certTotal });
-  let wsHtml = '';
-  list.forEach(C => {
-    const part = rangePages(C, { certNo: cp, certTotal, wsNo: wp, wsTotal });
-    certHtml += part.cert; wsHtml += part.ws;
-    cp += 2; wp += 2 + uncPageCount(C);
+  let assessHtml = '', ws1Html = '', ws2Html = '', uncHtml = '';
+  list.forEach((C, i) => {
+    const isFirst = i === 0, isLast = i === n - 1;
+    const part = rangePages(C, { certNo: cp, certTotal, wsTotal, isFirst, isLast,
+      assessNo: i + 1, assessTotal: n, ws2No: 2 + i, uncStart: uncCursor, instMax: CAL.capacity, instResText, instTols });
+    certHtml += part.cert; assessHtml += part.assess;
+    if (isFirst) ws1Html = part.ws1;
+    ws2Html += part.ws2; uncHtml += part.unc;
+    cp += isFirst ? 2 : 1;
+    uncCursor += uncCounts[i];
   });
-  document.getElementById('pages').innerHTML = certHtml + wsHtml;
+  // ลำดับพิมพ์: ชุด Cert → ใบประเมิน (EIB55) → ใบบันทึกผล (ws1 → ws2 ทุกย่าน → uncertainty ทุกย่าน)
+  document.getElementById('pages').innerHTML = certHtml + assessHtml + ws1Html + ws2Html + uncHtml;
 })();
 // shrink-to-fit: ย่อเฉพาะค่า ID Code ที่ยาวเกินช่อง (หัวข้อคงเดิม) — เลียนแบบ shrink to fit ของ Excel
 (function(){

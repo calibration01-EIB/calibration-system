@@ -518,7 +518,7 @@ function buildCAL() {
   const base = buildCALSingle();
   const rangeView = (c, r) => ({
     label: rangeLabel(r), capacity: c.capacity, resolution: c.resolution, user_range: c.user_range,
-    tolerances: c.tolerances, points: c.points, repeat: c.repeat, preload: c.preload,
+    tolerances: c.tolerances, tols: c.tols, points: c.points, repeat: c.repeat, preload: c.preload,
     ecc: c.ecc, tare: c.tare, dsegs: c.dsegs,
   });
   const ranges = RANGES.map(r => { applyRangeData(r); return rangeView(buildCALSingle(), r); });
