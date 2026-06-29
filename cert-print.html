@@ -315,8 +315,9 @@ function resolutionText() {
     .sort((a, b) => a.to - b.to)
     .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
   const distinct = [...new Set(segs.map(s => s.d))];
+  // multi-interval → แสดงเฉพาะค่า d ทุกย่าน คั่นด้วยจุลภาค (เช่น 2,5,10 g) ไม่ใส่ช่วงพิกัด
   if (segs.length >= 2 && distinct.length >= 2) {
-    return segs.map(s => `${s.d} ${CAL.unit} (${s.from}-${s.to} ${CAL.unit})`).join(' / ');
+    return `${distinct.join(',')} ${CAL.unit}`;
   }
   return `${CAL.resolution} ${CAL.unit}`;
 }
@@ -442,7 +443,7 @@ function resultLine() {
     &nbsp;&nbsp;( ${CAL.adjusted === 'without' ? '✓' : '&nbsp;&nbsp;'} ) WITHOUT ADJUSTMENT
     &nbsp;&nbsp;&nbsp;&nbsp;( ${CAL.adjusted === 'after' ? '✓' : '&nbsp;&nbsp;'} ) AFTER ADJUSTMENT</p>
     <p>MAXIMUM CAPACITY : ${CAL.capacity} ${CAL.unit}
-    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}${CAL._rangeLabel ? `&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">RANGE : ${esc(CAL._rangeLabel)}</span>` : ''}</p>`;
+    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}</p>`;
 }
 
 // ====== Cert section builders (FRM-CAL55) — ใช้ซ้ำระหว่างหน้าแรก/หน้าอัดแน่นของแต่ละย่าน ======
@@ -829,7 +830,7 @@ function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.poi
       .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
     const distinct = [...new Set(segs.map(s => s.d))];
     // ช่อง d บน ws1 แคบ → ใช้รูปแบบกระชับ "2 / 5 / 10 g" (หน้าปกใช้แบบเต็มมีช่วง)
-    if (segs.length >= 2 && distinct.length >= 2) return `${distinct.join(' / ')} ${CAL.unit}`;
+    if (segs.length >= 2 && distinct.length >= 2) return `${distinct.join(',')} ${CAL.unit}`;
     return `${CAL.resolution} ${CAL.unit}`;
   }
   const instResText = instResolutionText();
