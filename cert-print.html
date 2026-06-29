@@ -233,9 +233,12 @@ const CAL = (() => {
 const SQ3 = 1.7321;
 function stdev(a) { if (a.length < 2) return 0; const m = a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); }
 // ====== หน้าต่อย่าน: ห่อการคำนวณ + ทุกหน้าไว้ในฟังก์ชัน (param CAL = มุมมองย่าน) → multi-range เรียกซ้ำต่อย่าน ======
-// opt.coverOnly → คืนเฉพาะหน้าปก · opt.pageBase → เลขหน้าเริ่มของ uncertainty (default 3)
+// opt.coverOnly → คืนเฉพาะหน้าปก · เลขหน้า: certNo/certTotal (ใบ Cert), wsNo/wsTotal (ใบบันทึกผล) นับต่อเนื่องทั้งเอกสาร
+// คืน { cert, ws } เพื่อให้ assembly จัดกลุ่มหน้า Cert ก่อน แล้วตามด้วยใบบันทึกผล
 function rangePages(CAL, opt) {
   opt = opt || {};
+  const CERT_TOTAL = opt.certTotal || 3, WS_TOTAL = opt.wsTotal || 6;
+  const CERT_NO = opt.certNo || 2, WS_NO = opt.wsNo || 1;
 const repStd = stdev(CAL.repeat.reads);
 const repAvg = CAL.repeat.reads.reduce((a,b)=>a+b,0)/CAL.repeat.reads.length;
 let repMaxDiff = 0; CAL.repeat.reads.forEach((v,i)=>{ if(i>0) repMaxDiff = Math.max(repMaxDiff, Math.abs(v-CAL.repeat.reads[i-1])); });
@@ -391,13 +394,13 @@ function pageCover() {
       <span><span style="white-space:nowrap">THIS CERTIFICATE MAY NOT BE REPRODUCED OTHER THAN IN FULL, EXCEPT WITH THE PRIOR WRITTEN APPROVAL OF THE</span><br>ISSUING LABORATORY.</span>
       <span class="conf" style="white-space:nowrap">CONFIDENTIAL B</span>
     </div>
-    <div class="footrow"><span style="margin-left:-11mm">FRM-CAL54 (TP) Rev.01</span><span>Effective Date: 20/06/2026 (5Y)</span><span>PAGE &nbsp;<span class="fill">1</span>&nbsp; OF &nbsp;<span class="fill">3</span></span></div>
+    <div class="footrow"><span style="margin-left:-11mm">FRM-CAL54 (TP) Rev.01</span><span>Effective Date: 20/06/2026 (5Y)</span><span>PAGE &nbsp;<span class="fill">1</span>&nbsp; OF &nbsp;<span class="fill">${CERT_TOTAL}</span></span></div>
   </section>`;
 }
 
 // ====== หัวซ้ำของหน้า cert ต่อเนื่อง ======
 function ctHead(pageNo) {
-  return `<div class="hd-right">CERT.NO. :  <span>${esc(CAL.cert_no)}</span><br>PAGE :  ${pageNo}  OF  3</div>
+  return `<div class="hd-right">CERT.NO. :  <span>${esc(CAL.cert_no)}</span><br>PAGE :  ${pageNo}  OF  ${CERT_TOTAL}</div>
     <p class="ct-title">CONTINUATION OF CERTIFICATE OF CALIBRATION FOR</p>
     <div class="kv"><span>EQUIPMENT :</span><span>${esc(CAL.equipment)}</span></div>
     <div class="kv2"><span></span><span>MANUFACTURER :</span><span>${esc(CAL.manufacturer)}</span></div>
@@ -417,7 +420,7 @@ function resultLine() {
 // ====== PAGE: Cert page 2 (FRM-CAL55) ======
 function pageCert2() {
   return `<section class="sheet ct">
-    ${ctHead(2)}
+    ${ctHead(CERT_NO)}
     <h4>CONDITION OF THIS RESULT</h4>
     <p>1. CALIBRATION PROCEDURE :</p>
     <p style="padding-left:12px">THIS INSTRUMENT WAS CALIBRATED BY COMPARISON WITH STANDARD WEIGHTS ACCORDING TO IN-HOUSE</p>
@@ -458,7 +461,7 @@ function pageCert2() {
 // ====== PAGE: Cert page 3 ======
 function pageCert3() {
   return `<section class="sheet ct">
-    ${ctHead(3)}
+    ${ctHead(CERT_NO + 1)}
     ${resultLine()}
     <h4>DEPARTURE OF INDICATION FROM NOMINAL VALUE</h4>
     <table class="bx dep" style="margin:0 auto;width:92%">
@@ -496,7 +499,7 @@ function pageWs1() {
     <h2>ใบบันทึกผลการสอบเทียบเครื่องชั่งน้ำหนัก (UKAS LAB 14)</h2>
     <div class="row hdrck" style="justify-content:space-between">
       <span>${chk(true)} <span class="b u">เครื่องชั่งไฟฟ้า</span> &nbsp;&nbsp; ${chk(false)} <span class="b u">SPRING BALANCE</span></span>
-      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">1</span> จาก <span class="fv fill jc" style="min-width:26px">6</span></span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${WS_NO}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
     </div>
     <div class="dtl-grid"><span class="lbl">ยี่ห้อ/รุ่น</span><span class="fv fill">${esc(CAL.manufacturer)} ${esc(CAL.model)}</span><span class="unit"></span><span class="lbl">Serial. No.</span><span class="fv fill">${esc(CAL.serial)}</span><span class="unit"></span><span class="lbl">ID.No.</span><span class="fv fill">${esc(CAL.id_no)}</span><span class="lbl">พิกัด</span><span class="fv fill">${CAL.capacity}</span><span class="unit">g</span><span class="lbl">ความละเอียด (d)</span><span class="fv fill">${CAL.resolution}</span><span class="unit">g</span><span class="lbl">Accuracy Class</span><span class="fv fill">${esc(CAL.accuracy_class)}</span><span class="lbl">Tolerance</span><span class="fv fill">${esc(CAL.tolerances[0])}</span><span class="unit"></span><span class="lbl">User Range</span><span class="fv fill">${esc(CAL.user_range)}</span><span class="unit">g</span><span class="lbl">รหัสทรัพย์สิน</span><span class="fv fill">${esc(CAL.asset)}</span></div>
     <div class="row" style="margin-top:-8px"><span class="sec">ตุ้มน้ำหนักมาตรฐาน</span></div>
@@ -541,7 +544,7 @@ function pageWs2() {
       <span><span class="sec" style="margin:0">2.การตรวจสอบค่า Error of indication from conventional mass value</span>
         &nbsp; หมายเลขของงาน <span class="fv fill jc">${esc(CAL.job_no)}</span>
         &nbsp; หมายเลขใบรับรองผล <span class="fv fill jc">${esc(CAL.cert_no)}</span></span>
-      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">2</span> จาก <span class="fv fill jc" style="min-width:26px">6</span></span>
+      <span class="b">หน้าที่ <span class="fv fill jc" style="min-width:26px">${WS_NO + 1}</span> จาก <span class="fv fill jc" style="min-width:26px">${WS_TOTAL}</span></span>
     </div>
     <table class="bx errtbl" style="width:100%;margin-top:4px">
       <thead>
@@ -651,7 +654,7 @@ function pageUnc(blockRows, pageNo) {
     <div class="thfont un-head1">
       <span>${chk(false)} เครื่องชั่งทางกล</span>
       <span>${chk(true)} เครื่องชั่งไฟฟ้า</span>
-      <span class="rt">หน้าที่ ……<span class="jc">${pageNo}</span>…….. จาก……<span class="jc">6</span>……...</span>
+      <span class="rt">หน้าที่ ……<span class="jc">${pageNo}</span>…….. จาก……<span class="jc">${WS_TOTAL}</span>……...</span>
     </div>
     <div class="thfont un-certline"><span>หมายเลขใบรับรองผล</span><span class="fill cert-val jc">${esc(CAL.cert_no)}</span></div>
     <div class="thfont un-signline">
@@ -669,24 +672,34 @@ function pageUnc(blockRows, pageNo) {
   const uncPages = [];
   for (let i = 0; i < UNC_ROWS.length; i += 3) uncPages.push(UNC_ROWS.slice(i, i + 3));
   if (opt.coverOnly) return pageCover();
-  const base = opt.pageBase || 3;
-  return pageCert2() + pageCert3() + pageWs1() + pageWs2() +
-    uncPages.map((blk, i) => pageUnc(blk, base + i)).join('');
+  return {
+    cert: pageCert2() + pageCert3(),                                  // ใบ Cert: 2 หน้า/ย่าน (เลข CERT_NO, CERT_NO+1)
+    ws: pageWs1() + pageWs2() + uncPages.map((blk, i) => pageUnc(blk, WS_NO + 2 + i)).join(''),  // ใบบันทึกผล: ws1,ws2,unc...
+  };
 }
 // ====== ประกอบทุกหน้า ======
-// multi-range: หน้าปก 1 ครั้ง (ค่ารวม) + หน้าข้อมูลต่อย่าน · ย่านเดียว: เหมือนเดิม
+// เลขหน้านับต่อเนื่องแยก 2 สาย: ใบ Cert (ปก + cert2/cert3 ต่อย่าน) · ใบบันทึกผล (ws1/ws2/unc ต่อย่าน)
+// จัดเรียง: ปก → หน้า Cert ทุกย่าน → ใบบันทึกผลทุกย่าน
 function rangeOverride(r) {
   return { capacity: r.capacity, resolution: r.resolution, tolerances: r.tolerances, user_range: r.user_range,
     points: r.points, repeat: r.repeat, preload: r.preload, ecc: r.ecc, tare: r.tare, dsegs: r.dsegs, _rangeLabel: r.label };
 }
+function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.points.length) || 0)) / 3)); }
 (function assemblePages() {
-  let html = rangePages(CAL, { coverOnly: true });
-  if (CAL.multi_range && Array.isArray(CAL.ranges) && CAL.ranges.length) {
-    html += CAL.ranges.map(r => rangePages(Object.assign({}, CAL, rangeOverride(r)), {})).join('');
-  } else {
-    html += rangePages(CAL, {});
-  }
-  document.getElementById('pages').innerHTML = html;
+  const list = (CAL.multi_range && Array.isArray(CAL.ranges) && CAL.ranges.length)
+    ? CAL.ranges.map(r => Object.assign({}, CAL, rangeOverride(r)))
+    : [CAL];
+  const certTotal = 1 + list.length * 2;                              // ปก + 2 หน้า/ย่าน
+  const wsTotal = list.reduce((n, C) => n + 2 + uncPageCount(C), 0);  // (ws1+ws2+unc) ต่อย่าน
+  let cp = 2, wp = 1;                                                 // ปก = Cert หน้า 1
+  let certHtml = rangePages(CAL, { coverOnly: true, certTotal });
+  let wsHtml = '';
+  list.forEach(C => {
+    const part = rangePages(C, { certNo: cp, certTotal, wsNo: wp, wsTotal });
+    certHtml += part.cert; wsHtml += part.ws;
+    cp += 2; wp += 2 + uncPageCount(C);
+  });
+  document.getElementById('pages').innerHTML = certHtml + wsHtml;
 })();
 // shrink-to-fit: ย่อเฉพาะค่า ID Code ที่ยาวเกินช่อง (หัวข้อคงเดิม) — เลียนแบบ shrink to fit ของ Excel
 (function(){
