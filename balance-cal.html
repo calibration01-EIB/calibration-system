@@ -272,7 +272,12 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <label style="font-size:12px;color:var(--muted);font-weight:700"><i class="ti ti-plus"></i> เพิ่มชุดตุ้มจากทะเบียน</label>
       <select id="stdAdd" onchange="addStdSet(this.value)" style="min-height:32px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--input);min-width:260px"></select>
     </div>
-    <div class="note" style="margin-bottom:8px"><i class="ti ti-edit"></i><div>แถวด้านล่างจะพิมพ์ลงใบรับรอง (ช่อง “ตุ้มน้ำหนักมาตรฐาน”) — ระบบเติมให้อัตโนมัติจากทะเบียน (จัดกลุ่มตาม Serial No.) <b>แก้ไขได้</b>ก่อนออกเลข · กด ↺ เพื่อคืนค่าอัตโนมัติ · ใบรับรองรองรับสูงสุด 5 แถว</div></div>
+    <div class="note" style="margin-bottom:8px"><i class="ti ti-edit"></i><div>แถวด้านล่างจะพิมพ์ลงใบรับรอง (ช่อง “ตุ้มน้ำหนักมาตรฐาน”) — <b>auto:</b> เติม+จัดกลุ่มจากตุ้มที่ติ๊ก (กลุ่มตาม Serial) · <b>ปรับแถวเอง:</b> ล็อกโครงสร้างแถว ติ๊ก/เลิกติ๊กตุ้มจะ<b>ไม่</b>เปลี่ยนตาราง (แก้/รวม/แยก/ลบแถวได้อิสระ) · ใบรับรองรองรับสูงสุด 5 แถว</div></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <button type="button" id="certManualBtn" class="mbtn" style="min-height:30px;font-size:12px" onclick="toggleCertManual()"></button>
+      <button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="resyncCertStds()" title="สร้างแถวใหม่จากตุ้มที่ติ๊กตอนนี้"><i class="ti ti-refresh"></i> ดึงจากที่ติ๊กใหม่</button>
+      <button type="button" id="certAddRowBtn" class="mbtn" style="min-height:30px;font-size:12px;display:none" onclick="addCertRow()"><i class="ti ti-plus"></i> เพิ่มแถว</button>
+    </div>
     <style>
       .tbl input.stdin{width:100%;min-width:78px;box-sizing:border-box;border:1px solid transparent;background:transparent;border-radius:4px;padding:3px 5px;font:inherit;color:inherit}
       .tbl input.stdin:hover{border-color:var(--line)}
@@ -431,6 +436,6 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260629-multirange"></script>
+<script src="js/balance-cal.js?v=20260629-certdecouple"></script>
 </body>
 </html>
