@@ -807,7 +807,11 @@ function pageUnc(blockRows, pageNo) {
 // เลขหน้านับต่อเนื่องแยก 2 สาย: ใบ Cert (ปก + cert2/cert3 ต่อย่าน) · ใบบันทึกผล (ws1/ws2/unc ต่อย่าน)
 // จัดเรียง: ปก → หน้า Cert ทุกย่าน → ใบบันทึกผลทุกย่าน
 function rangeOverride(r) {
-  return { capacity: r.capacity, resolution: r.resolution, tolerances: r.tolerances, tols: r.tols, user_range: r.user_range,
+  // tols/tolerances fallback ไปค่าระดับเอกสาร — รองรับ record เก่าที่ ranges[] ยังไม่เก็บ tols ต่อย่าน (ใบประเมินจะได้มีเกณฑ์)
+  return { capacity: r.capacity, resolution: r.resolution,
+    tolerances: (r.tolerances && r.tolerances.length) ? r.tolerances : CAL.tolerances,
+    tols: (r.tols && r.tols.length) ? r.tols : CAL.tols,
+    user_range: r.user_range,
     points: r.points, repeat: r.repeat, preload: r.preload, ecc: r.ecc, tare: r.tare, dsegs: r.dsegs, _rangeLabel: r.label };
 }
 function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.points.length) || 0)) / 3)); }
@@ -829,8 +833,8 @@ function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.poi
     return `${CAL.resolution} ${CAL.unit}`;
   }
   const instResText = instResolutionText();
-  // Tolerance ระดับเครื่อง: รวมทุกแบนด์จากทุกย่าน (เช่น WFP1BB01 = 3 แบนด์) → แสดงซ้อนบน ws1
-  const instTols = list.flatMap(C => Array.isArray(C.tolerances) ? C.tolerances : []);
+  // Tolerance ระดับเครื่อง: รวมทุกแบนด์จากทุกย่าน + ตัดซ้ำ (หลายย่านมักใช้ band ชุดเดียวกัน) → แสดงซ้อนบน ws1
+  const instTols = [...new Set(list.flatMap(C => Array.isArray(C.tolerances) ? C.tolerances : []))];
   const certTotal = 1 + 2 + (n - 1);                                 // ปก + ย่านแรก 2 หน้า + ย่านถัดไปย่านละ 1 หน้า (flow แบบ PDF)
   // ใบบันทึกผล: ws1 ครั้งเดียว(1) + ws2 ต่อย่าน(n) + uncertainty ต่อย่าน (แบบเดิม) — ws2 ทุกย่านมาเรียงติดกัน
   const uncCounts = list.map(uncPageCount);
