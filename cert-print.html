@@ -232,6 +232,10 @@ const CAL = (() => {
 // ====== คำนวณ (สูตรเดียวกับ FRM-CAL92 / mockup) ======
 const SQ3 = 1.7321;
 function stdev(a) { if (a.length < 2) return 0; const m = a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); }
+// ====== หน้าต่อย่าน: ห่อการคำนวณ + ทุกหน้าไว้ในฟังก์ชัน (param CAL = มุมมองย่าน) → multi-range เรียกซ้ำต่อย่าน ======
+// opt.coverOnly → คืนเฉพาะหน้าปก · opt.pageBase → เลขหน้าเริ่มของ uncertainty (default 3)
+function rangePages(CAL, opt) {
+  opt = opt || {};
 const repStd = stdev(CAL.repeat.reads);
 const repAvg = CAL.repeat.reads.reduce((a,b)=>a+b,0)/CAL.repeat.reads.length;
 let repMaxDiff = 0; CAL.repeat.reads.forEach((v,i)=>{ if(i>0) repMaxDiff = Math.max(repMaxDiff, Math.abs(v-CAL.repeat.reads[i-1])); });
@@ -407,7 +411,7 @@ function resultLine() {
     &nbsp;&nbsp;( ${CAL.adjusted === 'without' ? '✓' : '&nbsp;&nbsp;'} ) WITHOUT ADJUSTMENT
     &nbsp;&nbsp;&nbsp;&nbsp;( ${CAL.adjusted === 'after' ? '✓' : '&nbsp;&nbsp;'} ) AFTER ADJUSTMENT</p>
     <p>MAXIMUM CAPACITY : ${CAL.capacity} ${CAL.unit}
-    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}</p>`;
+    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}${CAL._rangeLabel ? `&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">RANGE : ${esc(CAL._rangeLabel)}</span>` : ''}</p>`;
 }
 
 // ====== PAGE: Cert page 2 (FRM-CAL55) ======
@@ -659,14 +663,31 @@ function pageUnc(blockRows, pageNo) {
   </section>`;
 }
 
+  // ====== ประกอบหน้าของย่านนี้ ======
+  const UNC_ROWS = ROWS.slice();
+  while (UNC_ROWS.length % 3) UNC_ROWS.push({ blank: true });
+  const uncPages = [];
+  for (let i = 0; i < UNC_ROWS.length; i += 3) uncPages.push(UNC_ROWS.slice(i, i + 3));
+  if (opt.coverOnly) return pageCover();
+  const base = opt.pageBase || 3;
+  return pageCert2() + pageCert3() + pageWs1() + pageWs2() +
+    uncPages.map((blk, i) => pageUnc(blk, base + i)).join('');
+}
 // ====== ประกอบทุกหน้า ======
-const UNC_ROWS = ROWS.slice();
-while (UNC_ROWS.length % 3) UNC_ROWS.push({ blank: true });
-const uncPages = [];
-for (let i = 0; i < UNC_ROWS.length; i += 3) uncPages.push(UNC_ROWS.slice(i, i + 3));
-document.getElementById('pages').innerHTML =
-  pageCover() + pageCert2() + pageCert3() + pageWs1() + pageWs2() +
-  uncPages.map((blk, i) => pageUnc(blk, 3 + i)).join('');
+// multi-range: หน้าปก 1 ครั้ง (ค่ารวม) + หน้าข้อมูลต่อย่าน · ย่านเดียว: เหมือนเดิม
+function rangeOverride(r) {
+  return { capacity: r.capacity, resolution: r.resolution, tolerances: r.tolerances, user_range: r.user_range,
+    points: r.points, repeat: r.repeat, preload: r.preload, ecc: r.ecc, tare: r.tare, dsegs: r.dsegs, _rangeLabel: r.label };
+}
+(function assemblePages() {
+  let html = rangePages(CAL, { coverOnly: true });
+  if (CAL.multi_range && Array.isArray(CAL.ranges) && CAL.ranges.length) {
+    html += CAL.ranges.map(r => rangePages(Object.assign({}, CAL, rangeOverride(r)), {})).join('');
+  } else {
+    html += rangePages(CAL, {});
+  }
+  document.getElementById('pages').innerHTML = html;
+})();
 // shrink-to-fit: ย่อเฉพาะค่า ID Code ที่ยาวเกินช่อง (หัวข้อคงเดิม) — เลียนแบบ shrink to fit ของ Excel
 (function(){
   function shrink(el, minPx){
