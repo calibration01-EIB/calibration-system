@@ -8,11 +8,13 @@ const REP_READS = [2000,2000,2000,2000,2000,2000,2000,2000,2000,2000];
 const PL_READS = [2999.99, 2999.99, 2999.99];
 const ECC = [['Middle (1)',1000],['Front left (2)',1000],['Back left (3)',1000.01],['Back right (4)',999.99],['Front right (5)',999.99]];
 const TARE = [[500,500],[2000,2000]];
-let TOLS = [
-  { from: 0, to: 300, tol: 0.05 },
-  { from: 300, to: 1000, tol: 0.10 },
-  { from: 1000, to: 3100, tol: 0.15 },
+let TOLS = [   // tolerance bands (เกณฑ์ผ่าน/ไม่ผ่าน) — tol ในหน่วย unit · from/to เป็น g
+  { from: 0, to: 300, tol: 0.05, unit: 'g' },
+  { from: 300, to: 1000, tol: 0.10, unit: 'g' },
+  { from: 1000, to: 3100, tol: 0.15, unit: 'g' },
 ];
+let DSEGS = [];   // d-segments [{to, d}] (g) — multi-interval (ว่าง = ใช้ d รวม iRes ทุกจุด)
+const tolUnitFactor = u => ({ g: 1, kg: 1000, mg: 0.001 }[u] || 1);   // หน่วย tolerance → g
 // ฐาน CMC — โหลดจาก cmc_set/cmc_row (เลือกชุด Permanent/Site ตอนสอบ) · หน่วยมาตรฐาน from_g/to_g=กรัม, cmc_mg=mg
 let CMC_SETS = [];                 // ชุด balance ที่ active
 let CMC_ROWS = [];                 // แถวของชุดที่เลือก (from_g/to_g กรัม, cmc_mg, low_inc)
@@ -160,20 +162,36 @@ function stdev(arr) {
 }
 
 // ===== build inputs =====
-function renderTolRows() {
-  const gd = (parseFloat(byId('iRes') && byId('iRes').value) || 0.01);   // d รวม (placeholder ช่อง d ที่เว้นว่าง)
-  byId('tolRows').innerHTML = TOLS.map((t,i) => `<tr>
+// ===== ตาราง d-segments (multi-interval) — ถึง | d (g) · from = ถึงของช่วงก่อน =====
+function renderDsegRows() {
+  const el = byId('dsegRows'); if (!el) return;
+  let prev = 0;
+  el.innerHTML = DSEGS.map((s,i) => { const from = prev; prev = s.to; return `<tr>
     <td>ช่วงที่ ${i+1}</td>
-    <td class="num"><input type="number" step="any" value="${t.from}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
-    <td class="num"><input type="number" step="any" value="${t.to}" onchange="TOLS[${i}].to=+this.value;recalc()"></td>
-    <td class="num"><input type="number" step="any" value="${t.d ?? ''}" placeholder="${gd}" onchange="TOLS[${i}].d=(this.value===''?undefined:+this.value);recalc()"></td>
-    <td class="num"><input type="number" step="any" value="${t.tol}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
-    <td class="num"><button type="button" class="rmset" title="ลบช่วง" onclick="removeTolBand(${i})">✕</button></td>
+    <td class="num" style="color:var(--muted)">${from}</td>
+    <td class="num"><input type="number" step="any" value="${s.to ?? ''}" onchange="DSEGS[${i}].to=+this.value;renderDsegRows();recalc()"></td>
+    <td class="num"><input type="number" step="any" value="${s.d ?? ''}" onchange="DSEGS[${i}].d=+this.value;recalc()"></td>
+    <td class="num"><button type="button" class="rmset" title="ลบช่วง d" onclick="removeDseg(${i})">✕</button></td>
+  </tr>`; }).join('') || `<tr><td colspan="5" style="color:var(--muted);padding:6px">— ไม่มี (เครื่องย่านเดียว ใช้ d ตาม "ความละเอียด d" ด้านบน) —</td></tr>`;
+}
+function addDseg() { const last = DSEGS[DSEGS.length - 1]; DSEGS.push({ to: last ? last.to : (parseFloat(val('iCap')) || 0), d: '' }); renderDsegRows(); recalc(); }
+function removeDseg(i) { DSEGS.splice(i, 1); renderDsegRows(); recalc(); }
+
+// ===== ตาราง Tolerance — Tolerance | หน่วย | จาก–ถึง (ช่วงพิกัดที่ใช้ · g) =====
+function renderTolRows() {
+  const el = byId('tolRows'); if (!el) return;
+  const unitOpts = (u) => ['g','kg','mg'].map(x => `<option value="${x}" ${(u||'g')===x?'selected':''}>${x}</option>`).join('');
+  el.innerHTML = TOLS.map((t,i) => `<tr>
+    <td class="num"><input type="number" step="any" value="${t.tol ?? ''}" onchange="TOLS[${i}].tol=+this.value;recalc()"></td>
+    <td><select onchange="TOLS[${i}].unit=this.value;recalc()">${unitOpts(t.unit)}</select></td>
+    <td class="num"><input type="number" step="any" value="${t.from ?? ''}" onchange="TOLS[${i}].from=+this.value;recalc()"></td>
+    <td class="num"><input type="number" step="any" value="${t.to ?? ''}" onchange="TOLS[${i}].to=+this.value;recalc()"></td>
+    <td class="num"><button type="button" class="rmset" title="ลบ Tolerance" onclick="removeTolBand(${i})">✕</button></td>
   </tr>`).join('');
 }
 function addTolBand() {
-  const last = TOLS[TOLS.length - 1] || { to: 0, tol: 0 };
-  TOLS.push({ from: last.to || 0, to: last.to || 0, tol: last.tol || 0, d: undefined });
+  const last = TOLS[TOLS.length - 1] || { to: 0 };
+  TOLS.push({ from: last.to || 0, to: last.to || 0, tol: '', unit: (last.unit || 'g') });
   renderTolRows(); recalc();
 }
 function removeTolBand(i) {
@@ -184,6 +202,7 @@ function buildStatic() {
   byId('cPick').innerHTML = CLIENTS.map((c,i) => `<option value="${i}">${c.name}</option>`).join('') +
     '<option value="-1">— กรอกเอง / อื่น ๆ —</option>';
 
+  renderDsegRows();
   renderTolRows();
 
   renderStdTable();
@@ -277,9 +296,10 @@ function nextYearOf(dateStr) {
 // ===== คำนวณทั้งหน้า =====
 // d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
 function dForNominal(nom, globalD) {
-  const bands = TOLS.filter(t => Number.isFinite(t.to) && t.to > 0).sort((a, b) => a.to - b.to);
-  const b = bands.find(t => nom <= t.to) || bands[bands.length - 1];
-  return (b && Number.isFinite(b.d) && b.d > 0) ? b.d : globalD;
+  const segs = DSEGS.filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
+  if (!segs.length) return globalD;
+  const s = segs.find(x => nom <= x.to) || segs[segs.length - 1];
+  return (s && Number.isFinite(s.d) && s.d > 0) ? s.d : globalD;
 }
 function recalc() {
   const d = parseFloat(byId('iRes').value) || 0.01;
@@ -375,8 +395,9 @@ function recalc() {
   const tolBands = TOLS.filter(t => Number.isFinite(t.to) && t.to > t.from).sort((a,b) => a.to - b.to);
   const tolFor = nom => {
     if (!tolBands.length) return Infinity;                       // ไม่มีช่วง → ไม่ตัด (ผ่าน)
-    const t = (tolBands.find(b => nom <= b.to) || tolBands[tolBands.length - 1]).tol;
-    return Number.isFinite(t) && t > 0 ? t : Infinity;           // segment ไม่ได้ตั้ง tolerance → ไม่มีเกณฑ์ (ไม่ตัด)
+    const b = tolBands.find(x => nom <= x.to) || tolBands[tolBands.length - 1];
+    const tg = Number(b.tol) * tolUnitFactor(b.unit);            // แปลงเป็น g ตามหน่วย
+    return Number.isFinite(tg) && tg > 0 ? tg : Infinity;        // ไม่ได้ตั้ง tolerance → ไม่มีเกณฑ์ (ไม่ตัด)
   };
   let allPass = true;
   byId('evalRows').innerHTML = rows.map(p => {
@@ -428,7 +449,7 @@ function buildCAL() {
     return { nominal: p.nominal, desc: pointDesc(p), conv: calRound(p.conv, 7), U: p.U, ds: calRound(p.ds, 6), d: dForNominal(p.nominal, num('iRes', 0.01)), reads };
   });
 
-  const tolText = TOLS.map((t, i) => `±  ${t.tol} g (${i === 0 ? '0' : '>' + t.from}-${t.to})`);
+  const tolText = TOLS.map((t, i) => `±  ${t.tol} ${t.unit || 'g'} (${i === 0 ? '0' : '>' + t.from}-${t.to})`);
 
   return {
     cert_no: val('fCertNo'), job_no: val('fJobNo'), request_no: val('fReqNo'),
@@ -464,7 +485,8 @@ function buildCAL() {
     ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
     tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
     signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover') },
-    tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol, d: t.d })),   // raw segments (tol + d ต่อโหลด) → คืนค่าตอนเปิดดู (#rec=)
+    tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol, unit: t.unit || 'g' })),   // tolerance bands (มีหน่วย) → คืนค่าตอนเปิดดู (#rec=)
+    dsegs: DSEGS.map(s => ({ to: s.to, d: s.d })),                                          // d-segments (multi-interval)
   };
 }
 
@@ -737,26 +759,35 @@ function applyIncomingInst(inst) {
   setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
   setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
   setv('eCalType', inst.cal_type);
-  // ช่วงใช้งาน: ถ้ามี range_profile (multi-interval) → สร้าง segments {from,to,d,tol} เลย · ไม่งั้นถ้ามี tolerance เดี่ยว → 1 ช่วง
+  // d-segments จาก range_profile (multi-interval) → DSEGS · tolerance จาก tolerance_bands ถ้ามี ไม่งั้น tol ใน range_profile / tolerance เดี่ยว
   const prof = Array.isArray(inst.range_profile) ? inst.range_profile.filter(s => s && Number.isFinite(Number(s.to)) && Number(s.to) > 0) : null;
   if (prof && prof.length) {
     const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to));
-    let prev = 0;
-    TOLS = sorted.map(s => { const seg = { from: prev, to: Number(s.to),
-      d: (s.d != null && s.d !== '' ? Number(s.d) : undefined),
-      tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : 0) }; prev = Number(s.to); return seg; });
-    renderTolRows();
-    // Max = ขอบบนช่วงสุดท้าย · d รวม (fallback/แสดง) = d ละเอียดสุด — ตั้งให้ถ้า profile กำหนด (จุดทดสอบ÷10 จะ gen เต็มพิกัด)
+    DSEGS = sorted.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) }));
+    renderDsegRows();
+    // Max = ขอบบนช่วงสุดท้าย · d รวม (fallback/แสดง) = d ละเอียดสุด
     const maxTo = Number(sorted[sorted.length - 1].to);
     if (Number.isFinite(maxTo) && maxTo > 0) setv('iCap', maxTo);
     const ds = sorted.map(s => Number(s.d)).filter(n => Number.isFinite(n) && n > 0);
     if (ds.length) setv('iRes', Math.min(...ds));
-  } else {
+  }
+  // Tolerance: ใช้ tolerance_bands ถ้ามี · ไม่งั้น tol ใน range_profile · ไม่งั้น tolerance เดี่ยว
+  const tb = Array.isArray(inst.tolerance_bands) ? inst.tolerance_bands.filter(b => b && Number.isFinite(Number(b.to)) && Number(b.to) > 0) : null;
+  if (tb && tb.length) {
+    const st = tb.slice().sort((a, b) => Number(a.to) - Number(b.to)); let prev = 0;
+    TOLS = st.map(b => { const seg = { from: (b.from != null ? Number(b.from) : prev), to: Number(b.to),
+      tol: (b.tol != null && b.tol !== '' ? Number(b.tol) : ''), unit: b.unit || 'g' }; prev = Number(b.to); return seg; });
+    renderTolRows();
+  } else if (prof && prof.some(s => s.tol != null && s.tol !== '')) {
+    const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to)); let prev = 0;
+    TOLS = sorted.map(s => { const seg = { from: prev, to: Number(s.to), tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : ''), unit: s.unit || 'g' }; prev = Number(s.to); return seg; });
+    renderTolRows();
+  } else if (!prof || !prof.length) {
     const tolM = String(inst.tolerance || '').match(/[\d.]+/);
     if (tolM) {
       const tolV = parseFloat(tolM[0]);
       const cap = parseFloat(inst.capacity) || parseFloat(val('iCap')) || 0;
-      if (Number.isFinite(tolV) && tolV > 0) { TOLS = [{ from: 0, to: cap > 0 ? cap : 999999, tol: tolV }]; renderTolRows(); }
+      if (Number.isFinite(tolV) && tolV > 0) { TOLS = [{ from: 0, to: cap > 0 ? cap : 999999, tol: tolV, unit: 'g' }]; renderTolRows(); }
     }
   }
   const b = byId('instBanner');
@@ -1044,7 +1075,8 @@ function fillFromCAL(cal) {
   if (cal.ab_ppm != null) setv('abMaterial', cal.ab_ppm);
   if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sDirector', cal.signers.director); setv('sApprover', cal.signers.approver); }
   setList('.tIn', cal.temp); setList('.rhIn', cal.rh); setList('.wuIn', cal.warmup); setList('.ctIn', cal.cal_time);
-  if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: Number(t.tol), d: (t.d != null ? Number(t.d) : undefined) }));
+  if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: (t.tol != null && t.tol !== '' ? Number(t.tol) : ''), unit: t.unit || 'g' }));
+  if (Array.isArray(cal.dsegs)) DSEGS = cal.dsegs.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) })).filter(s => Number.isFinite(s.to));
   if (Array.isArray(cal.points) && cal.points.length) POINTS = cal.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
   // REP_READS/PL_READS/ECC/TARE เป็น const (โครงสร้าง default) — ค่าจริงอยู่ใน input · เขียนทับ input หลัง buildStatic
   setv('repPoint', cal.repeat && cal.repeat.point);

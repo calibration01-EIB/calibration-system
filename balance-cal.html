@@ -217,13 +217,21 @@ body.review #entryHint, body.review #certStatusBarBottom { display: none; }
       <div class="field"><label>ภายใน / ภายนอก</label><select id="eCalType"><option value="">— เลือก —</option><option value="ภายใน">ภายใน</option><option value="ภายนอก">ภายนอก</option></select></div>
     </div>
 
-    <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วงใช้งาน: d (ความละเอียด) + Tolerance ต่อช่วง (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
-    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>ช่อง <b>d เว้นว่าง = ใช้ d รวมของเครื่อง</b> · กรอกเฉพาะเครื่อง <b>multi-interval</b> ที่ d เปลี่ยนตามโหลด (เช่น 0–15kg→5g, &gt;15–30kg→10g) แล้วกด "เพิ่มช่วง"</div></div>
-    <div class="table-wrap"><table class="tbl" style="max-width:680px">
-      <thead><tr><th>ช่วง (g)</th><th class="num">ตั้งแต่</th><th class="num">ถึง</th><th class="num">d (g)</th><th class="num">Tolerance ± (g)</th><th></th></tr></thead>
+    <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วง d (Multi-interval) — d เปลี่ยนตามโหลด</div>
+    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>กรอกเฉพาะเครื่อง <b>multi-interval</b> (เช่น 0–15kg→5g, &gt;15–30kg→10g) · เครื่องย่านเดียว <b>ไม่ต้องกรอก</b> (ใช้ "ความละเอียด d" ด้านบน)</div></div>
+    <div class="table-wrap"><table class="tbl" style="max-width:560px">
+      <thead><tr><th>ช่วง</th><th class="num">ตั้งแต่ (g)</th><th class="num">ถึง (g)</th><th class="num">d (g)</th><th></th></tr></thead>
+      <tbody id="dsegRows"></tbody>
+    </table></div>
+    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addDseg()"><i class="ti ti-plus"></i> เพิ่มช่วง d</button>
+
+    <div class="subhead" style="margin-top:14px"><i class="ti ti-ruler-2"></i> Tolerance (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
+    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>Tolerance ต่อช่วงพิกัด · เลือก<b>หน่วย</b>ได้ (g/kg/mg) · <b>จาก–ถึง</b> = ช่วงพิกัดที่ใช้ (g) · เว้นว่าง = ไม่มีเกณฑ์ตัด</div></div>
+    <div class="table-wrap"><table class="tbl" style="max-width:600px">
+      <thead><tr><th class="num">Tolerance ±</th><th>หน่วย</th><th class="num">จาก (g)</th><th class="num">ถึง (g)</th><th></th></tr></thead>
       <tbody id="tolRows"></tbody>
     </table></div>
-    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addTolBand()"><i class="ti ti-plus"></i> เพิ่มช่วง</button>
+    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addTolBand()"><i class="ti ti-plus"></i> เพิ่ม Tolerance</button>
 
     <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
     <div class="grid4">
@@ -422,6 +430,6 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260626-mi4c"></script>
+<script src="js/balance-cal.js?v=20260629-misplit"></script>
 </body>
 </html>

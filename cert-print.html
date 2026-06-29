@@ -284,7 +284,12 @@ const ROWS = [{ nominal: 0, desc: '0', conv: 0, U: 0, reads: [0,0,0], zero: true
 });
 // RESOLUTION บนใบ: ถ้า multi-interval (มี d ต่อช่วง ≥2 ค่าต่างกัน) → แสดงรายช่วง · ไม่งั้นค่าเดียว
 function resolutionText() {
-  const segs = Array.isArray(CAL.tols) ? CAL.tols.filter(t => Number.isFinite(t.d) && t.d > 0) : [];
+  // d-segments (multi-interval) เก็บใน CAL.dsegs [{to,d}] · from = ถึงของช่วงก่อน
+  let prev = 0;
+  const segs = (Array.isArray(CAL.dsegs) ? CAL.dsegs : [])
+    .filter(s => Number.isFinite(s.to) && s.to > 0 && Number.isFinite(s.d) && s.d > 0)
+    .sort((a, b) => a.to - b.to)
+    .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
   const distinct = [...new Set(segs.map(s => s.d))];
   if (segs.length >= 2 && distinct.length >= 2) {
     return segs.map(s => `${s.d} ${CAL.unit} (${s.from}-${s.to} ${CAL.unit})`).join(' / ');
