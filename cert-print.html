@@ -55,22 +55,25 @@ table { border-collapse: collapse; }
 .footrow { position: absolute; bottom: 8mm; left: 13mm; right: 13mm; display: flex; justify-content: space-between; align-items: center; font-size: var(--fd); }
 .conf { border: 1px solid #111; padding: 1px 8px; font-size: .8em; }
 /* ===== ใบประเมินผล (FRM-EIB55) ===== */
-.eib { font-family: var(--ffd); }
-.eib-head { display: flex; align-items: center; gap: 10px; }
-.eib-logo { width: 54px; height: auto; }
-.eib-co-th { font-family: "Sarabun", sans-serif; font-weight: 700; font-size: 15pt; line-height: 1.1; }
-.eib-co-en { font-weight: 700; font-size: 12pt; }
-.eib-title { font-family: "Sarabun", sans-serif; text-align: center; font-size: 18pt; margin: 4px 0 0; }
+.eib { font-family: "Angsana New", "AngsanaUPC", "Sarabun", serif; }
+.eib-head { }
+.eib-brand { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.eib-logo { width: 66px; height: auto; }
+.eib-co-th { font-weight: 700; font-size: 19pt; line-height: 1.1; }
+.eib-co-en { font-weight: 700; font-size: 15pt; }
+.eib-title { text-align: center; font-size: 22pt; font-weight: 700; margin: 4px 0 0; }
 .eib-sub { text-align: center; font-size: 12pt; margin-bottom: 10px; }
-.eib-inst { font-weight: 700; border-bottom: 1.5px solid #111; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: flex-end; }
+.eib-inst { font-weight: 700; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: flex-end; }
+.eib-inst-t { text-decoration: underline; }
 .eib-grid { width: 100%; border-collapse: collapse; margin: 5px 0 10px; }
 .eib-grid td { padding: 3px 4px; vertical-align: bottom; }
-.eib-lbl { white-space: nowrap; font-family: "Sarabun", sans-serif; width: 1%; }
+.eib-lbl { white-space: nowrap; width: 1%; font-weight: 700; }
 .eib-val { border-bottom: 1px dotted #777; padding: 0 6px; }
 .eib-tbl { width: 100%; }
 .eib-tbl th, .eib-tbl td { border: 1px solid #111; padding: 3px 6px; text-align: center; }
 .eib-fail { color: #b3261e; font-weight: 700; }
-.eib-sign { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; font-family: "Sarabun", sans-serif; }
+.eib-sign { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 18px; font-size: 16pt; }
+.eib-sign-r { display: flex; flex-direction: column; gap: 12px; }
 .fill { color: #111; font-weight: 400; } /* ค่าที่ระบบเติม: สีดำ + น้ำหนักปกติ (กัน faux-bold เพี้ยนบน Cordia/Angsana + ไม่ให้ปนกับหัวข้อตัวหนา) */
 .chk { display: inline-block; width: 12px; height: 12px; border: 1.2px solid #111; vertical-align: -2px; text-align: center; line-height: 11px; font-size: 11px; margin-right: 4px; }
 /* ===== cert cover (FRM-CAL54 (TP) Rev.01) =====
@@ -133,7 +136,9 @@ table { border-collapse: collapse; }
 .ws .row { display: flex; gap: 3px; align-items: baseline; padding: 0.5px 0; flex-wrap: nowrap; }
 .ws .sec { font-family: var(--ffl); font-size: var(--fl); font-weight: 700; } .ws .lbl { font-family: var(--ffl); font-size: var(--fd); font-weight: 700; white-space: nowrap; }
 .ws .dot { flex: 0 0 auto; }
-.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 2px; align-items: baseline; margin: 3px 0 2px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: max-content 1fr max-content max-content 1fr max-content max-content 1fr; column-gap: 7px; row-gap: 4px; align-items: baseline; margin: 8px 0 4px; } .ws .dtl-grid .fv { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .fv.toltext { white-space: normal; overflow: visible; text-align: left; line-height: 1.15; } .ws .dtl-grid .unit { white-space: nowrap; } .ws .pre, .ws .rep { font-size: 12.5pt; } .ws .pre td, .ws .pre th, .ws .rep td, .ws .rep th { padding-top: 0.5px; padding-bottom: 0.5px; line-height: 1.1; } .ws .det-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; row-gap: 3px; margin: 3px 0 2px; } .ws .det-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .det-grid .dcell .fv { flex: 1; min-width: 0; text-align: center; } .ws .env-grid { display: grid; grid-template-columns: max-content 48px max-content max-content 48px max-content max-content 48px max-content max-content 48px max-content; column-gap: 5px; row-gap: 4px; align-items: baseline; justify-content: start; margin: 3px 0 2px; } .ws .env-grid .ev { border-bottom: 1px dotted #555; text-align: center; font-weight: 400; min-width: 0; } .ws .env-grid .eu, .ws .env-grid .et { white-space: nowrap; font-weight: 700; } .ws .env-grid .lbl.er { padding-left: 22px; }
+.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 2px; align-items: baseline; margin: 3px 0 2px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: max-content 2.4fr max-content max-content 0.6fr max-content max-content 0.95fr; column-gap: 7px; row-gap: 4px; align-items: baseline; margin: 8px 0 4px; } .ws .dtl-grid .fv { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .fv.toltext { white-space: nowrap; overflow: visible; text-align: left; line-height: 1.15; border-bottom: 0; padding-bottom: 0; }
+.ws .toltext .tolln { display: block; border-bottom: 1px dotted #555; padding-bottom: 1px; line-height: 1.1; }
+.ws .toltext .tolln-gap { display: block; } .ws .dtl-grid .unit { white-space: nowrap; } .ws .pre, .ws .rep { font-size: 12.5pt; } .ws .pre td, .ws .pre th, .ws .rep td, .ws .rep th { padding-top: 0.5px; padding-bottom: 0.5px; line-height: 1.1; } .ws .det-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; row-gap: 3px; margin: 3px 0 2px; } .ws .det-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .det-grid .dcell .fv { flex: 1; min-width: 0; text-align: center; } .ws .env-grid { display: grid; grid-template-columns: max-content 48px max-content max-content 48px max-content max-content 48px max-content max-content 48px max-content; column-gap: 5px; row-gap: 4px; align-items: baseline; justify-content: start; margin: 3px 0 2px; } .ws .env-grid .ev { border-bottom: 1px dotted #555; text-align: center; font-weight: 400; min-width: 0; } .ws .env-grid .eu, .ws .env-grid .et { white-space: nowrap; font-weight: 700; } .ws .env-grid .lbl.er { padding-left: 22px; }
 .ws .sec { font-weight: 700; text-decoration: underline; margin-top: 8px; }
 .ws table { font-size: var(--fd); } .ws table.bx td, .ws table.bx th { padding: 1px 5px; } .ws table.rep td, .ws table.rep th { padding: 3.9px 5px; } .ws table.pre td, .ws table.pre th { padding: 3.9px 7px; }
 .xbar { font-weight: 400; font-style: normal; }
@@ -572,19 +577,25 @@ function pageEIB55(pageNo, total) {
     </tr>`;
   }).join('');
   const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
+  // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) ซ้อนบรรทัด — multi-range แต่ละย่านมาคนละใบอยู่แล้ว
+  // ปิดไว้ชั่วคราว (เก็บค่าว่าง) ระหว่างจัด layout — ยืนยันแล้วว่า logic ขึ้นถูก เปิดกลับได้โดยเอา `false &&` ออก
+  const tolHtml = (false && Array.isArray(CAL.tolerances) && CAL.tolerances.length)
+    ? CAL.tolerances.map(esc).join('<br>') : '';
   return `<section class="sheet eib">
     <div class="eib-head">
-      <img class="eib-logo" src="${IMG.ilc}" alt="ILC">
-      <div class="eib-co"><div class="eib-co-th">บริษัท อินเตอร์เนชั่นแนล แลบบอราทอรีส์ จำกัด</div><div class="eib-co-en">International Laboratories Corp., Ltd.</div></div>
+      <div class="eib-brand">
+        <img class="eib-logo" src="${IMG.ilc}" alt="ILC">
+        <div class="eib-co"><div class="eib-co-th">บริษัท อินเตอร์เนชั่นแนล แลบบอราทอรีส์ จำกัด</div><div class="eib-co-en">International Laboratories Corp., Ltd.</div></div>
+      </div>
+      <h2 class="eib-title">ใบประเมินผลการสอบเทียบ</h2>
+      <div class="eib-sub">(Record sheet for verification of calibration results)</div>
     </div>
-    <h2 class="eib-title">ใบประเมินผลการสอบเทียบ</h2>
-    <div class="eib-sub">(Record sheet for verification of calibration results)</div>
-    <div class="eib-inst">INSTRUMENT
+    <div class="eib-inst"><span class="eib-inst-t">INSTRUMENT</span>
       <span class="rt b">Cert. No. <span class="eib-val">${esc(CAL.cert_no)}</span></span>
     </div>
     <table class="eib-grid">
       <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
-      <tr>${cell('Range', rangeTxt)}${cell('User range', CAL.user_range)}${cell('Tolerance', (CAL.tolerances && CAL.tolerances[0]) || '')}</tr>
+      <tr>${cell('Range', rangeTxt)}${cell('User range', CAL.user_range)}<td class="eib-lbl">Tolerance</td><td class="eib-val">${tolHtml}</td></tr>
       <tr>${cell('Section', CAL.section)}${cell('Unit', CAL.unit_dept)}<td></td><td></td></tr>
     </table>
     <table class="bx eib-tbl">
@@ -595,9 +606,11 @@ function pageEIB55(pageNo, total) {
       <tbody>${rows}</tbody>
     </table>
     <div class="eib-sign">
-      <span>Prepared by : __________ Date ____/____/____</span>
-      <span>Approved by : __________ (EIB) Date ____/____/____</span>
-      <span>Approved by : __________ (Owner) Date ____/____/____</span>
+      <div class="eib-sign-l"><span>Prepared by : __________ Date ____/____/____</span></div>
+      <div class="eib-sign-r">
+        <span>Approved by : __________ (EIB) Date ____/____/____</span>
+        <span>Approved by : __________ (Owner) Date ____/____/____</span>
+      </div>
     </div>
     <div class="footrow"><span>FRM-EIB55 Rev.00</span><span>Effective Date: 09/09/2024 (4Y)</span><span>Page ${pageNo} of ${total}</span></div>
   </section>`;
@@ -610,9 +623,12 @@ function pageWs1(pageNo, instMax, instResText, instTols) {
   const capTxt = (instMax != null ? instMax : CAL.capacity);
   const resTxt = (instResText != null ? instResText : resolutionText());
   const tolList = (Array.isArray(instTols) && instTols.length) ? instTols : (CAL.tolerances || []);
-  // แสดงแบบตัวอย่าง WFP1BB01: แบนด์แรกบรรทัดบน · แบนด์ที่เหลือต่อกันบรรทัดล่าง (ประหยัดความสูง)
-  const tolHtml = !tolList.length ? '&nbsp;'
-    : esc(tolList[0]) + (tolList.length > 1 ? '<br>' + tolList.slice(1).map(esc).join(' &nbsp;&nbsp; ') : '');
+  // แบนด์แรกบรรทัดบน · แบนด์ที่เหลือต่อกันบรรทัดล่าง (เช่น band2+band3 บรรทัดเดียว) — nowrap+shrink ย่อพอดีช่อง
+  // แต่ละบรรทัดตีเส้นใต้ (.tolln) + เว้นบรรทัดเปล่าตีเส้น 1 บรรทัดท้าย
+  const tolRest = tolList.slice(1).map(esc).join(' &nbsp; ');
+  const tolData = tolList.length ? [esc(tolList[0])].concat(tolRest ? [tolRest] : []) : ['&nbsp;'];
+  // บรรทัดข้อมูลตีเส้นใต้ (.tolln) + บรรทัดเปล่าท้ายเว้นระยะ ไม่มีเส้น (.tolln-gap)
+  const tolHtml = tolData.map(l => `<span class="tolln">${l}</span>`).join('') + '<span class="tolln-gap">&nbsp;</span>';
   const fv = (v, w) => `<span class="fv fill" style="min-width:${w||60}px">${v}</span>`;
   return `<section class="sheet ws">
     <h2>ใบบันทึกผลการสอบเทียบเครื่องชั่งน้ำหนัก (UKAS LAB 14)</h2>
