@@ -261,11 +261,12 @@ function openInstrumentDetail(id) {
     <div class="reg-section">รายละเอียดเครื่องมือ</div>
     <div class="reg-info-grid">
       ${regDetailItem('ประเภทเครื่องมือ', displayType)}
+      ${regDetailItem('กลุ่มสินค้า (Product group)', d.product_group)}
       ${regDetailItem('ชื่อเครื่องจักร', d.machine_name)}
-      ${regDetailItem('ยี่ห้อ / รุ่น', d.brand)}
+      ${regDetailItem('ยี่ห้อ (Manufacturer)', d.brand)}
       ${regDetailItem('รุ่น (Model)', d.model)}
       ${regDetailItem('พิกัด Max (g)', d.capacity)}
-      ${regDetailItem('ความละเอียด d (g)', d.resolution)}
+      ${regDetailItem('ความละเอียด d (g)', d.resolution != null && d.resolution !== '' ? d.resolution : d.resolution_text)}
       ${regDetailItem('Accuracy Class', d.accuracy_class)}
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
       ${regDetailItem('Range', d.range_val)}
@@ -280,6 +281,10 @@ function openInstrumentDetail(id) {
                 return `${from}–${s.to} g: d ${s.d ?? '–'} g, tol ${s.tol != null ? '±' + s.tol + ' ' + (s.unit || 'g') : '–'}`;
               }).join('  ·  '), true))
         : ''}
+      ${regDetailItem('ใช้งานต่ำสุด (Min usage)', d.usage_min)}
+      ${regDetailItem('ใช้งานสูงสุด (Max usage)', d.usage_max)}
+      ${regDetailItem('ความถี่ใช้งาน (Usage freq.)', d.usage_frequency)}
+      ${regDetailItem('USP Type (A/B/C)', d.usp_type)}
       ${regDetailItem('Serial No.', d.serial_no)}
       ${regDetailItem('Asset No.', d.asset_no)}
       ${regDetailItem('หน่วยงาน', d.department)}

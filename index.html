@@ -3530,8 +3530,8 @@ body.app-mode textarea:focus {
         <div id="presetSection" style="display:none">
           <div style="background:#eef0fb;border:1px solid #534ab740;border-radius:14px;padding:14px 16px;margin-bottom:14px;color:#3b3680;font-size:13px;line-height:1.6">
             📋 <b>พรีเซ็ทจุดสอบเทียบ</b> — ชุดจุดทดสอบมาตรฐานตามช่วงพิกัด (หน่วยกรัม)<br>
-            หน้าสอบเทียบจะ <b>เสนอพรีเซ็ทที่ตรงพิกัดเครื่องอัตโนมัติ</b> และเลือกพรีเซ็ทอื่นจาก dropdown ได้ · ตุ้มมาตรฐานจะถูกเลือกให้แต่ละจุดเอง<br>
-            💡 ช่อง "เพิ่มพรีเซ็ท" ที่นี่ตั้งได้แค่ <b>จุดทดสอบ</b> · ถ้าต้องการให้พรีเซ็ท <b>เก็บตุ้มที่เลือกไว้ด้วย</b> (badge 🔩) ให้ไปจัดจุด+ติ๊กตุ้มในหน้าสอบเทียบ แล้วกดปุ่ม <b>"บันทึกจุด+ตุ้มเป็นพรีเซ็ท"</b>
+            หน้าสอบเทียบ <b>เลือกพรีเซ็ทเองจาก dropdown</b> (เครื่องที่ไม่เคยสอบเริ่มจากว่าง ไม่มีข้อมูลตัวอย่าง) → คืน <b>จุดทดสอบ + ตุ้ม + 3.1–3.5</b> (Preload / Repeatability / Eccentricity / Tare) ให้ครบ แก้ไขได้<br>
+            💡 ช่อง "เพิ่มพรีเซ็ท" ที่นี่ตั้งได้แค่ <b>จุดทดสอบ</b> · ถ้าต้องการพรีเซ็ทเต็ม (ตุ้ม 🔩 + 3.1–3.5 ⚙️) ให้ไปจัดจุด+ติ๊กตุ้ม+ตั้ง 3.1–3.5 ในหน้าสอบเทียบ แล้วกดปุ่ม <b>"บันทึกจุด+ตุ้มเป็นพรีเซ็ท"</b>
           </div>
           <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <input id="presetSearch" type="search" placeholder="🔍 ค้นหาชื่อพรีเซ็ท" oninput="renderCalPresets()"
@@ -3656,7 +3656,7 @@ body.app-mode textarea:focus {
       <div class="modal-overlay" id="presetModal" onclick="if(event.target===this)closePresetModal()">
         <div class="modal-box" style="max-width:520px">
           <div class="modal-header"><h3 id="presetModalTitle">เพิ่มพรีเซ็ทจุด</h3><button class="btn-close" onclick="closePresetModal()">×</button></div>
-          <div class="modal-body" style="padding:16px 20px">
+          <div class="modal-body" style="padding:16px 20px;max-height:78vh;overflow:auto">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">ชื่อพรีเซ็ท *</label><input id="presetName" type="text" placeholder="เครื่องชั่ง 30 kg (10 จุด)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">พิกัด: จาก (g)</label><input id="presetFrom" type="number" step="any" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
@@ -3664,6 +3664,16 @@ body.app-mode textarea:focus {
               <div><label style="font-size:12px;font-weight:600;color:var(--text2)">หน่วย</label><input id="presetUnit" type="text" placeholder="g" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
               <div></div>
               <div style="grid-column:1/-1"><label style="font-size:12px;font-weight:600;color:var(--text2)">จุดสอบ (g) — คั่นด้วยจุลภาค *</label><textarea id="presetPoints" rows="2" placeholder="3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px;resize:vertical"></textarea></div>
+
+              <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px"><label style="font-size:12px;font-weight:700;color:var(--text2)">🔩 ชุดตุ้มมาตรฐานที่ใช้ <span style="font-weight:400;color:var(--text3)">(เลือกได้หลายชุด · ระบบจะผูกตุ้มให้แต่ละจุดเอง)</span></label>
+                <div id="presetWeightSets" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;max-height:150px;overflow:auto;font-size:12px"><span style="color:var(--text3)">กำลังโหลดชุดตุ้ม…</span></div></div>
+
+              <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-bottom:-4px"><label style="font-size:12px;font-weight:700;color:var(--text2)">⚙️ 3.1–3.5 ค่าตั้งต้น <span style="font-weight:400;color:var(--text3)">(ค่าอ่านกรอกตอนสอบ)</span></label></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">3.1 Preload — จุด (g)</label><input id="presetPlPoint" type="number" step="any" placeholder="30000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">3.2 Repeatability — จุด (g)</label><input id="presetRepPoint" type="number" step="any" placeholder="15000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">3.4 Eccentricity — ตุ้ม (g)</label><input id="presetEccWt" type="number" step="any" placeholder="10000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">รูปจาน (Eccentricity)</label><select id="presetEccPan" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"><option value="0">สี่เหลี่ยม</option><option value="1">กลม</option><option value="2">สามเหลี่ยม</option></select></div>
+              <div><label style="font-size:12px;font-weight:600;color:var(--text2)">3.5 Effect of tare — ตุ้ม (g)</label><input id="presetTareWt" type="number" step="any" placeholder="10000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;box-sizing:border-box;margin-top:4px"></div>
             </div>
           </div>
           <div class="modal-footer">
@@ -4162,11 +4172,11 @@ body.app-mode textarea:focus {
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/00-config.js?v=20260626-config"></script>
 <script src="js/01-core.js?v=20260626-config"></script>
-<script src="js/02-dashboard.js?v=20260626-mi4"></script>
-<script src="js/03-instruments.js?v=20260629-multirange"></script>
+<script src="js/02-dashboard.js?v=20260630-register"></script>
+<script src="js/03-instruments.js?v=20260630-register2"></script>
 <script src="js/04-reports.js?v=20260611-balance-mass-split"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
-<script src="js/06-plan.js?v=20260611-balance-mass-split"></script>
+<script src="js/06-plan.js?v=20260630-register2"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260623-cert-files"></script>
 <script src="js/09-cert.js?v=20260622-cert-approval-wrap"></script>
@@ -4174,7 +4184,7 @@ body.app-mode textarea:focus {
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260611-balance-mass-split"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
-<script src="js/14-cal-presets.js?v=20260623-presets"></script>
+<script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">

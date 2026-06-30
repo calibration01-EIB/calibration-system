@@ -907,11 +907,11 @@ function applyIncomingInst(inst) {
   if (prof && prof.length && prof.some(s => s.mode === 'range')) {
     const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to));
     RANGES = sorted.map(s => {
-      const max = Number(s.to), step = max / 10;
+      const max = Number(s.to);
       return normRange({
         max: max, res: (s.d != null && s.d !== '' ? Number(s.d) : ''), userRange: s.userRange || '',
         tols: [{ from: 0, to: max, tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : ''), unit: s.unit || 'g' }],
-        dsegs: [], points: Array.from({ length: 10 }, (_, k) => ({ nominal: +(step * (k + 1)).toFixed(3), reads: [] })),
+        dsegs: [], points: [],
         repPoint: '', repReads: [], plPoint: '', plReads: [], eccWt: '', eccPan: 0, eccReads: [], tareWt: '', tareChecks: [],
       });
     });
@@ -1328,8 +1328,16 @@ function applyPresetPick(idx) {
   POINTS = p.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
   // ถ้าพรีเซ็ทเก็บการเลือกตุ้มไว้ → คืนชุด + ลูกที่ติ๊ก + override (ลูกหมดอายุข้ามให้)
   if (p.weights && Array.isArray(p.weights.sets) && p.weights.sets.length) restoreSelection(p.weights);
+  // คืน 3.1–3.5 (Preload / Repeatability / Eccentricity ตุ้ม+จาน / Tare) ถ้าพรีเซ็ทเก็บไว้
+  if (p.setup) {
+    const setv = (id, v) => { const el = byId(id); if (el && v != null && v !== '') el.value = v; };
+    setv('plPoint', p.setup.plPoint); setv('repPoint', p.setup.repPoint);
+    setv('eccWt', p.setup.eccWt); setv('eccPan', p.setup.eccPan); setv('tareWt', p.setup.tareWt);
+  }
   PREFILL_REC = null; renderPrefillBanner();
   rebuildPoints(true);
+  if (typeof drawPanPrev === 'function') drawPanPrev();
+  recalc();
 }
 function presetForCapacity(cap) {
   const c = Number(cap);
@@ -1359,12 +1367,15 @@ async function saveCurrentAsPreset() {
   // เก็บการเลือกตุ้มไปด้วย (ชุด + ลูกที่ติ๊ก + override) → คืนได้ครบตอนเลือกพรีเซ็ท
   const weights = { sets: SELECTED_SETS.slice(),
     checked: AVAIL_WEIGHTS.filter(w => w.checked).map(w => w.id_code), std_ov: STD_ROW_OV };
+  // เก็บ 3.1–3.5: Preload / Repeatability / Eccentricity (ตุ้ม+จาน) / Tare → คืนตอนเลือกพรีเซ็ท
+  const setup = { plPoint: val('plPoint'), repPoint: val('repPoint'),
+    eccWt: val('eccWt'), eccPan: val('eccPan'), tareWt: val('tareWt') };
   const btn = byId('savePresetBtn'), orig = btn ? btn.innerHTML : '';
   const revert = () => { if (btn) { btn.innerHTML = orig; btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; btn.disabled = false; } };
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> กำลังบันทึก…'; }
   try {
     const { error } = await db.from('cal_point_presets').insert({
-      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, updated_at: new Date().toISOString(),
+      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, setup, updated_at: new Date().toISOString(),
     });
     if (error) throw error;
     const { data } = await db.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });
@@ -1390,8 +1401,8 @@ rebuildAvail();
 assignWeights();
 buildStatic();                    // renders STDS (renderStdTable) + points (renderPointRows)
 applyIncomingInst(INCOMING_INST);
-// มาจากรายการ → จุด = พิกัด÷10 (พิกัดจาก capacity ของเครื่อง หรือ Max ที่ profile ตั้งให้ใน iCap)
-if (INCOMING_INST && (INCOMING_INST.capacity || (Array.isArray(INCOMING_INST.range_profile) && INCOMING_INST.range_profile.length))) genPoints(parseFloat(val('iCap')));
+// เปิดจากรายการ: ไม่ auto สร้างจุด/เลือกตุ้ม — ผู้ใช้เลือกพรีเซ็ท หรือกด "สร้างจุดอัตโนมัติ" เอง
+// (ถ้าเคยสอบแล้ว loadLastCalForPrefill จะคืนจุด+ตุ้มจากครั้งก่อนให้)
 renderWeightPicker();
 drawPanPrev();
 ensureEditButtons();
@@ -1449,7 +1460,7 @@ async function loadFromDB() {
         return { id_code: set, name: 'WEIGHT SET', model: ws[0].model || (ws[0].class_grade ? 'CLASS ' + ws[0].class_grade : ''),
           cls: ws[0].class_grade || '', serial: ws[0].serial_no || '', cert: ws[0].cert_no || '', due: ws[0].due_date || '', weights };
       });
-      if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = [reg[0].id_code]; STD_IS_MOCK = false; }
+      if (reg.length) { STD_REGISTRY.length = 0; reg.forEach(r => STD_REGISTRY.push(r)); SELECTED_SETS = INCOMING_INST ? [] : [reg[0].id_code]; STD_IS_MOCK = false; }
     }
 
     // CMC จากฐาน: เลือกชุด balance ที่ active (default Permanent) แล้วโหลดแถว
@@ -1474,15 +1485,8 @@ async function loadFromDB() {
       await loadRecForReview(INCOMING_REC);   // เปิดดูใบที่ออกแล้ว → เติมฟอร์ม + โหมดตรวจทาน (ข้าม prefill/preset)
     } else {
       await loadLastCalForPrefill();
-      if (!INCOMING_STD && !PREFILL_REC) {
-        const cap = (INCOMING_INST && INCOMING_INST.capacity) || parseFloat(val('iCap'));
-        const pm = presetForCapacity(cap);
-        if (pm) {
-          POINTS = pm.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
-          rebuildPoints(true);
-          const sel = byId('presetPick'); if (sel) sel.value = String(CAL_PRESETS.indexOf(pm));
-        }
-      }
+      // ไม่ auto ใส่พรีเซ็ท/ตุ้มให้เครื่องที่ไม่เคยสอบ — ล้างจุด/ตุ้ม mock ให้ section ว่าง ผู้ใช้เลือกพรีเซ็ทเอง
+      if (INCOMING_INST && !PREFILL_REC) { POINTS = []; SELECTED_SETS = []; deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc(); }
     }
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }

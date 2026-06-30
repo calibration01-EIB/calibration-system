@@ -809,15 +809,18 @@ let importAnalysis = {
 };
 
 const IMPORT_DB_SELECT = [
-  'id','instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
+  'id','instrument_type','machine_name','location','instrument_name','brand','model','range_val','tolerance',
   'serial_no','asset_no','department','id_code','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
-  'prev_cert_no','prev_cal_date'
+  'prev_cert_no','prev_cal_date',
+  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type',
+  'capacity','resolution','range_profile'
 ].join(',');
 
 const IMPORT_COMPARE_FIELDS = [
-  'instrument_type','machine_name','location','instrument_name','brand','range_val','tolerance',
+  'instrument_type','machine_name','location','instrument_name','brand','model','range_val','tolerance',
   'serial_no','asset_no','department','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
-  'prev_cert_no','prev_cal_date'
+  'prev_cert_no','prev_cal_date',
+  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type'
 ];
 
 const IMPORT_COL_MAP = {
@@ -825,7 +828,8 @@ const IMPORT_COL_MAP = {
   'ชื่อเครื่องจักร':'machine_name','machine_name':'machine_name',
   'สถานที่ใช้งาน':'location','สถานที่':'location','location':'location',
   'ชื่อเครื่องมือ':'instrument_name','เครื่องมือ':'instrument_name','instrument_name':'instrument_name',
-  'ยี่ห้อ/รุ่น':'brand','ยี่ห้อ':'brand','brand':'brand',
+  'ยี่ห้อ/รุ่น':'brand','ยี่ห้อ':'brand','brand':'brand','manufacturer':'brand',
+  'รุ่น':'model','รุ่น (model)':'model','รุ่น(model)':'model','model':'model',
   'range':'range_val','range_val':'range_val',
   'tolerance (±)':'tolerance','tolerance':'tolerance',
   's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
@@ -843,16 +847,95 @@ const IMPORT_COL_MAP = {
   'ความถี่สอบเทียบ':'cal_frequency','ความถี่':'cal_frequency','cal_frequency':'cal_frequency',
   'ภายใน/ภายนอก':'cal_type','cal_type':'cal_type',
   'remark':'remark','หมายเหตุ':'remark',
+  // ฟิลด์จากบัญชีรายการ (master register)
+  'ความละเอียด':'resolution_text','resolution':'resolution_text','resolution_text':'resolution_text',
+  'ใช้งานต่ำสุด':'usage_min','minimum usage':'usage_min','usage_min':'usage_min',
+  'ใช้งานสูงสุด':'usage_max','maximum usage':'usage_max','usage_max':'usage_max',
+  'ความถี่ใช้งาน':'usage_frequency','usage frequency':'usage_frequency','usage_frequency':'usage_frequency',
+  'กลุ่มสินค้า':'product_group','product group':'product_group','product_group':'product_group',
+  'usp type':'usp_type','type :a,b,c':'usp_type','type a,b,c':'usp_type','usp_type':'usp_type',
 };
+
+// ===== บัญชีรายการ (ข้อความ) → ตัวเลขสำหรับ cal engine (เฉพาะเครื่องชั่ง) =====
+// แปลงหน่วยเป็นกรัมเสมอ: "0.002 kg" → 2 · "0.01 g" → 0.01 · ">800kg" → 800000
+function regToGrams(str) {
+  const s = String(str || '').trim();
+  if (!s) return null;
+  const m = s.match(/-?\d+(?:\.\d+)?/);
+  if (!m) return null;
+  let n = parseFloat(m[0]);
+  if (!Number.isFinite(n)) return null;
+  if (/kg|kilogram/i.test(s)) n *= 1000;
+  else if (/\bmg\b/i.test(s)) n /= 1000;
+  return n;
+}
+// แตก band ที่ต่อด้วย " / " (multi-interval) → ["0.002 kg","0.005 kg",...]
+function regSplitBands(str) {
+  return String(str || '').split('/').map(x => x.trim()).filter(Boolean);
+}
+// ขอบบนของย่าน: "0-3100 g" → 3100 · "0 - 1500 kg" → 1500000 (เครื่องหมาย - = คั่น ไม่ใช่ลบ)
+function regRangeUpperG(rangeStr) {
+  const s = String(rangeStr || '').trim();
+  if (!s) return null;
+  const isKg = /kg|kilogram/i.test(s);
+  const nums = (s.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter(Number.isFinite);
+  if (!nums.length) return null;
+  let up = Math.max(...nums);
+  if (isKg) up *= 1000;
+  return up;
+}
+// แปลงข้อมูลบัญชีของแถวเครื่องชั่ง → { capacity, resolution, range_profile } (กรัม) · ไม่ใช่เครื่องชั่ง → null
+function parseBalanceRegister(row, extraTypeText) {
+  // ตรวจว่าเป็นเครื่องชั่งจากชื่อในแถว หรือจากทะเบียนเดิม (เผื่อไฟล์ import ไม่มีคอลัมน์ประเภท)
+  const hay = [row.instrument_type, row.instrument_name, extraTypeText].filter(Boolean).join(' ');
+  if (!/balance/i.test(hay)) return null;
+  const resBands = regSplitBands(row.resolution_text).map(regToGrams).filter(n => n != null && n > 0);
+  const maxBands = regSplitBands(row.usage_max).map(regToGrams).filter(n => n != null && n > 0);
+  const tolBands = regSplitBands(row.tolerance).map(regToGrams).filter(n => n != null && n > 0);
+  const rangeUpper = regRangeUpperG(row.range_val);
+
+  const capCands = [rangeUpper, maxBands.length ? Math.max(...maxBands) : null].filter(n => n != null && n > 0);
+  const capacity = capCands.length ? Math.max(...capCands) : null;
+  const resolution = resBands.length ? Math.min(...resBands) : null;
+  if (capacity == null && resolution == null) return null;
+
+  const out = {};
+  if (capacity != null) out.capacity = capacity;
+  if (resolution != null) out.resolution = resolution;
+
+  const segCount = Math.max(resBands.length, maxBands.length, tolBands.length);
+  const isMulti = segCount > 1;
+  const lastUnitKg = /kg|kilogram/i.test(row.tolerance || '');
+
+  if (isMulti) {
+    const prof = [];
+    for (let i = 0; i < segCount; i++) {
+      let to = (maxBands[i] != null) ? maxBands[i] : null;
+      if (i === segCount - 1 && capacity != null) to = capacity; // ย่านสุดท้ายให้ถึง Max
+      if (to == null || !(to > 0)) continue;
+      const d = (resBands[i] != null) ? resBands[i] : (resBands.length ? resBands[resBands.length - 1] : null);
+      const tol = (tolBands[i] != null) ? tolBands[i] : (tolBands.length ? tolBands[tolBands.length - 1] : null);
+      prof.push({ to, d: d != null ? d : null, tol: tol != null ? tol : null, unit: 'g' });
+    }
+    prof.sort((a, b) => a.to - b.to);
+    if (prof.length) out.range_profile = prof;
+  } else if (lastUnitKg && capacity != null && resolution != null && tolBands.length) {
+    // ย่านเดียวแต่ tolerance เป็น kg → ทำ range_profile 1 segment เพื่อให้หน่วยถูก (เลี่ยง text regex อ่านเป็นกรัม)
+    out.range_profile = [{ to: capacity, d: resolution, tol: tolBands[0], unit: 'g' }];
+  }
+  return out;
+}
 
 function downloadTemplate() {
   if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
   const headers = ['ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
-    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','Asset No.','หน่วยงาน','ID Code','CERT.',
-    'วันสอบเทียบ','วันครบกำหนด','ความถี่สอบเทียบ','ภายใน/ภายนอก','Remark'];
+    'ยี่ห้อ','รุ่น','Range','Tolerance (±)','S/N','Asset No.','หน่วยงาน','ID Code','CERT.',
+    'วันสอบเทียบ','วันครบกำหนด','ความถี่สอบเทียบ','ภายใน/ภายนอก','Remark',
+    'ความละเอียด','ใช้งานต่ำสุด','ใช้งานสูงสุด','ความถี่ใช้งาน','กลุ่มสินค้า','USP Type'];
   const example = ['เครื่องชั่ง (Balance)','MIX 1000L','ตึก 5/1','Electronic Balance',
-    'AND/GF-3000','30 kg','0.01 g','A1234567','701267','PMP1','PMP1BB01-WI01','25B001-0',
-    '2025-01-15','2026-01-15','1 ครั้ง/ปี','ภายนอก',''];
+    'AND','GF-3000','30 kg','0.01 g','A1234567','701267','PMP1','PMP1BB01-WI01','25B001-0',
+    '2025-01-15','2026-01-15','1 ครั้ง/ปี','ภายนอก','',
+    '0.01 g','1 g','3000 g','Every day','Drug product','B'];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, example]);
   ws['!cols'] = headers.map(() => ({ wch: 22 }));
@@ -1232,6 +1315,34 @@ async function confirmImport() {
         'กำลัง import... '+done+'/'+cleanRows.length+' รายการ' + (skipped ? ' (ข้ามซ้ำเดิม '+skipped+' รายการ)' : '');
       await new Promise(r => setTimeout(r, 30));
     }
+
+    // เติมค่าตัวเลขสำหรับเครื่องชั่ง (capacity/resolution/range_profile) → ใช้สอบเทียบได้เลย
+    // เติมเฉพาะช่องที่ว่าง — ไม่ทับค่าที่ปรับจากการสอบเทียบ · คีย์สม่ำเสมอกัน PostgREST NULL-clobber
+    try {
+      const balNumRows = [];
+      validRows.forEach(row => {
+        const ex = existingMap[row.id_code];
+        const exType = ex ? ((ex.instrument_type || '') + ' ' + (ex.instrument_name || '')) : '';
+        const parsed = parseBalanceRegister(row, exType);
+        if (!parsed) return;
+        const exHasCap  = ex && ex.capacity != null;
+        const exHasRes  = ex && ex.resolution != null;
+        const exHasProf = ex && Array.isArray(ex.range_profile) && ex.range_profile.length > 0;
+        if (exHasCap && exHasRes && exHasProf) return; // มีครบแล้ว ไม่ต้องแตะ
+        balNumRows.push({
+          id_code: row.id_code,
+          capacity:      exHasCap  ? ex.capacity     : (parsed.capacity ?? null),
+          resolution:    exHasRes  ? ex.resolution   : (parsed.resolution ?? null),
+          range_profile: exHasProf ? ex.range_profile : (parsed.range_profile ?? null),
+        });
+      });
+      if (balNumRows.length) {
+        const { error: numErr } = await sb.from('instruments')
+          .upsert(balNumRows, { onConflict: 'id_code', ignoreDuplicates: false });
+        if (numErr) console.warn('[Import] balance numeric fill error:', numErr.message);
+      }
+    } catch (numEx) { console.warn('[Import] balance numeric fill exception:', numEx && numEx.message); }
+
     await logAudit('แก้ไข', {
       id_code: 'IMPORT_BATCH',
       instrument_name: 'Import: เพิ่ม '+created+' / อัปเดต '+updated+' / ซ้ำเดิม '+skipped+' รายการ'
