@@ -151,6 +151,120 @@ body.review #entryHint, body.review #certStatusBarBottom { display: none; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/00-config.js?v=20260626-config"></script>
+<!-- ============ TOUCH-FIRST + RESPONSIVE OVERRIDES (มือถือ/แท็บเล็ต) — override ของเดิม ไม่ลบ ============ -->
+<style id="touch-responsive">
+:root { --tap: 46px; --radius: 11px; }
+html { -webkit-text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+body { font-size: 14px; }
+input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /* กัน iOS zoom ตอนแตะ */
+.field input, .field select, .field textarea { font-size: 16px; }
+
+/* ---- ปุ่ม/ช่องกรอก: เป้าสัมผัสใหญ่ขึ้น ขอบมนขึ้น ---- */
+.field input, .field select { min-height: var(--tap); border-radius: 10px; padding: 0 12px; }
+.field textarea { border-radius: 10px; padding: 10px 12px; min-height: 46px; }
+.mbtn { min-height: var(--tap); border-radius: 12px; }
+.cbtn { min-height: var(--tap); border-radius: 10px; padding: 0 14px; }
+.btn-cert { min-height: 50px; border-radius: 12px; font-size: 15px; padding: 0 22px; }
+.rmset, .wset-rm { min-width: 38px; min-height: 38px; border-radius: 9px; }
+.editStepBtn { min-height: 40px; border-radius: 10px; }
+.badge-pill { min-height: 36px; }
+
+/* ---- หัวเรื่อง/การ์ด ---- */
+.card { border-radius: 14px; padding: 16px; }
+.card-head { gap: 10px; }
+.jump a { min-height: var(--tap); border-radius: 12px; font-size: 13px; padding: 0 14px; }
+.modebar .mbtn { font-size: 13.5px; }
+
+/* ---- ตัวเลือกตุ้ม (wpick) แตะง่าย ---- */
+.wpick { min-height: 48px; border-radius: 11px; padding: 9px 11px; }
+.wpick input { width: 20px; height: 20px; }
+
+/* ---- ตาราง: เป้าสัมผัสในตารางใหญ่ขึ้น ---- */
+.tbl th { height: 42px; font-size: 12px; }
+.tbl td { height: auto; min-height: 48px; padding: 6px 9px; }
+.tbl input { min-height: 42px; border-radius: 9px; font-size: 16px; }
+.tbl-scroll .table-wrap, .table-wrap { -webkit-overflow-scrolling: touch; }
+/* ตารางอ่านหลายครั้ง (Repeatability/Preload) — เลื่อนแนวนอน ไม่ยุบ */
+.tbl-scroll input { width: 76px; }
+
+/* ====================== TABLET (≤ 980px): grid 2 คอลัมน์ ====================== */
+@media (max-width: 980px) {
+  .top h1 { font-size: 20px; }
+  .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ====================== PHONE (≤ 680px): ตาราง → การ์ด, ทุกอย่าง 1 คอลัมน์ ====================== */
+@media (max-width: 680px) {
+  body { font-size: 15px; }
+  .page { width: calc(100vw - 20px); padding: 14px 0 90px; }
+  .top { flex-direction: column; padding: 14px; border-radius: 14px; }
+  .top h1 { font-size: 19px; }
+  .top p { font-size: 12.5px; }
+
+  /* แถบขั้นตอน (jump) = stepper เลื่อนได้ ติดบนสุด */
+  .jump { gap: 7px; padding: 9px 0 10px; }
+  .jump a { font-size: 12.5px; font-weight: 800; }
+
+  .modebar { gap: 8px; }
+  .modebar .mbtn { flex: 1; justify-content: center; }
+  .modebar .lbl { flex-basis: 100%; }
+
+  .grid2, .grid3, .grid4, .kpis { grid-template-columns: 1fr; }
+  .span2 { grid-column: auto; }
+  .kpis { gap: 9px; }
+  .card { padding: 14px; }
+  .card-head { flex-wrap: wrap; }
+  .pagetag { order: 3; }
+
+  /* ===== แปลงตาราง .tbl (ที่ไม่ใช่ tbl-scroll) เป็นการ์ดต่อแถว ===== */
+  table.tbl:not(.tbl-scroll),
+  table.tbl:not(.tbl-scroll) > tbody,
+  table.tbl:not(.tbl-scroll) > tfoot,
+  table.tbl:not(.tbl-scroll) > tbody > tr,
+  table.tbl:not(.tbl-scroll) > tfoot > tr,
+  table.tbl:not(.tbl-scroll) > tbody > tr > td,
+  table.tbl:not(.tbl-scroll) > tfoot > tr > td { display: block; width: 100%; }
+  table.tbl:not(.tbl-scroll) { min-width: 0; }
+  table.tbl:not(.tbl-scroll) > thead { display: none; }
+  table.tbl:not(.tbl-scroll) > tbody > tr,
+  table.tbl:not(.tbl-scroll) > tfoot > tr {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+    margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(32,71,84,.05);
+  }
+  table.tbl:not(.tbl-scroll) > tbody > tr > td,
+  table.tbl:not(.tbl-scroll) > tfoot > tr > td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 50px; padding: 8px 13px; border: 0; border-bottom: 1px solid var(--line-soft);
+    text-align: right; white-space: normal;
+  }
+  table.tbl:not(.tbl-scroll) > tbody > tr > td:last-child,
+  table.tbl:not(.tbl-scroll) > tfoot > tr > td:last-child { border-bottom: 0; }
+  table.tbl:not(.tbl-scroll) td[data-label]:not([data-label=""])::before {
+    content: attr(data-label); flex: 0 0 auto; text-align: left;
+    font-size: 12px; font-weight: 800; color: var(--muted); max-width: 50%;
+  }
+  /* แถวแรกของการ์ด = หัวการ์ด (จุดทดสอบ) เน้นพื้น */
+  table.tbl:not(.tbl-scroll) > tbody > tr > td:first-child {
+    background: var(--surface2); min-height: 46px; font-weight: 700;
+  }
+  /* อินพุตในการ์ดยืดเต็มฝั่งขวา แตะง่าย */
+  table.tbl:not(.tbl-scroll) td input { width: auto; flex: 1 1 auto; min-width: 0; max-width: 64%; min-height: 44px; }
+  table.tbl:not(.tbl-scroll) td input.txt { max-width: 64%; }
+  table.tbl:not(.tbl-scroll) td .chip { white-space: normal; }
+  /* คอลัมน์ปุ่มลบ (ไม่มี label) ดันปุ่มไปขวา */
+  table.tbl:not(.tbl-scroll) td:not([data-label])::before,
+  table.tbl:not(.tbl-scroll) td[data-label=""]::before { content: ""; }
+  table.tbl:not(.tbl-scroll) td .rmset { margin-left: auto; }
+
+  /* tbl-scroll: ช่องอ่านค่าใหญ่ขึ้นเวลานิ้วแตะ */
+  .tbl-scroll input { width: 84px; min-height: 44px; }
+
+  /* การ์ด preview/cert ไม่ล้น */
+  .cert-preview { padding: 14px; }
+  .cp-row { grid-template-columns: 130px 1fr; }
+}
+</style>
 </head>
 <body>
 <main class="page">
@@ -326,13 +440,13 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
     </div>
 
     <div class="section-sub">3.1 Preload — จุด <input id="plPoint" type="number" value="3000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g (อ่าน 3 ซ้ำ)</div>
-    <div class="table-wrap"><table class="tbl" style="max-width:520px">
+    <div class="table-wrap"><table class="tbl tbl-scroll" style="max-width:520px">
       <thead><tr><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th></tr></thead>
       <tbody><tr id="plRow"></tr></tbody>
     </table></div>
 
     <div class="section-sub">3.2 Repeatability — จุดใช้งาน <input id="repPoint" type="number" value="2000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g (10 ครั้ง)</div>
-    <div class="table-wrap"><table class="tbl" style="max-width:880px">
+    <div class="table-wrap"><table class="tbl tbl-scroll" style="max-width:880px">
       <thead><tr><th>ครั้งที่</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
       <tbody><tr id="repRow"><td>อ่านได้ (g)</td></tr></tbody>
     </table></div>
@@ -437,5 +551,36 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
 </main>
 
 <script src="js/balance-cal.js?v=20260629-certdecouple"></script>
+<!-- ============ ติดป้ายหัวคอลัมน์ลงแต่ละ cell (data-label) เพื่อให้ตารางยุบเป็นการ์ดบนมือถืออ่านรู้เรื่อง ============ -->
+<!-- ไม่ยุ่งกับ logic เดิม: อ่าน <thead> มาเขียน data-label ให้ <td> และอัปเดตอัตโนมัติเมื่อ JS สร้างแถวใหม่ -->
+<script>
+(function () {
+  function labelize(tbody) {
+    try {
+      var table = tbody.closest('table');
+      if (!table || !table.tHead || !table.tHead.rows.length) return;
+      var head = table.tHead.rows[0].cells;
+      [].forEach.call(tbody.rows, function (tr) {
+        var ci = 0;
+        [].forEach.call(tr.cells, function (td) {
+          var span = td.colSpan || 1;
+          if (span === 1 && head[ci]) {
+            td.setAttribute('data-label', (head[ci].textContent || '').trim());
+          }
+          ci += span;
+        });
+      });
+    } catch (e) {}
+  }
+  function run() {
+    document.querySelectorAll('table.tbl:not(.tbl-scroll) > tbody').forEach(function (tb) {
+      labelize(tb);
+      try { new MutationObserver(function () { labelize(tb); }).observe(tb, { childList: true }); } catch (e) {}
+    });
+  }
+  if (document.readyState !== 'loading') run();
+  else document.addEventListener('DOMContentLoaded', run);
+})();
+</script>
 </body>
 </html>
