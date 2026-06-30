@@ -578,8 +578,7 @@ function pageEIB55(pageNo, total) {
   }).join('');
   const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
   // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) ซ้อนบรรทัด — multi-range แต่ละย่านมาคนละใบอยู่แล้ว
-  // ปิดไว้ชั่วคราว (เก็บค่าว่าง) ระหว่างจัด layout — ยืนยันแล้วว่า logic ขึ้นถูก เปิดกลับได้โดยเอา `false &&` ออก
-  const tolHtml = (false && Array.isArray(CAL.tolerances) && CAL.tolerances.length)
+  const tolHtml = (Array.isArray(CAL.tolerances) && CAL.tolerances.length)
     ? CAL.tolerances.map(esc).join('<br>') : '';
   return `<section class="sheet eib">
     <div class="eib-head">
