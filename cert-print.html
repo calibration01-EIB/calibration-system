@@ -376,7 +376,7 @@ function ilcRound(cls, size) {
 function pageCover() {
   const apDirector = CAL.signers.approver === 'director';
   const apName = apDirector ? CAL.signers.director : CAL.signers.tech_mgr;
-  const apPos = apDirector ? 'DIRECTOR OF CALIBRATION LABORATORY' : 'TECHNICAL  MANAGEMENT  STAFF';
+  const apPos = apDirector ? 'DIRECTOR OF CALIBRATION LABORATORY' : 'MANAGEMENT  STAFF';
   return `<section class="sheet cover">
     <img class="cv-nac" src="${IMG.nac}" alt="NSC-TISI-TIS 17025">
     <div class="cv-title">
@@ -414,7 +414,7 @@ function pageCover() {
     <div class="cv-sig">
       <div>
         <div><span class="b cv-sig-lbl">CALIBRATED BY :</span> <span class="fill">${esc(CAL.calibrated_by)}</span></div>
-        <div class="ctr b" style="margin-top:6px">TECHNICIAN</div>
+        <div class="ctr" style="margin-top:6px">TECHNICIAN</div>
       </div>
       <div>
         <div class="b cv-sig-lbl" style="margin-left:-10mm">APPROVED BY :</div>
