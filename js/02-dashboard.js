@@ -639,7 +639,13 @@ async function loadData(forceRefresh = false) {
 
 async function fetchFromSupabase() {
   try {
-    const COLS = 'id,instrument_type,machine_name,location,instrument_name,brand,model,range_val,capacity,resolution,accuracy_class,tolerance,serial_no,asset_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,range_profile,issued_by,responsible_by,request_no,job_no,approved_by,approved_at,resolution_text,usage_min,usage_max,usage_frequency,product_group,usp_type';
+    const COLS_BASE = 'id,instrument_type,machine_name,location,instrument_name,brand,model,range_val,capacity,resolution,accuracy_class,tolerance,serial_no,asset_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,range_profile,issued_by,responsible_by,request_no,job_no,approved_by,approved_at,resolution_text,usage_min,usage_max,usage_frequency,product_group,usp_type';
+    // tolerance_bands = คอลัมน์เสริม · ตรวจครั้งเดียวต่อ session — ถ้ายังไม่มีใน DB ให้ fallback (แอปไม่พัง) แล้วเปิดใช้เองเมื่อเพิ่มคอลัมน์
+    if (window.HAS_TOL_BANDS === undefined) {
+      try { const probe = await sb.from('instruments').select('tolerance_bands').limit(1); window.HAS_TOL_BANDS = !probe.error; }
+      catch (e) { window.HAS_TOL_BANDS = false; }
+    }
+    const COLS = window.HAS_TOL_BANDS ? (COLS_BASE + ',tolerance_bands') : COLS_BASE;
     const chunkSize = 500;
     const isFiltered = currentUser?.role !== 'admin' && currentUser?.instrument_types?.length > 0;
     const allowedTypes = isFiltered ? expandInstrumentTypeFilter(currentUser.instrument_types) : [];

@@ -198,7 +198,7 @@ function openBalanceCal(id) {
     id_code: d.id_code || '', asset: d.asset_no || '',
     manufacturer: d.brand || '', model: d.model || '', serial: d.serial_no || '',
     capacity: d.capacity ?? '', resolution: d.resolution ?? '', accuracy_class: d.accuracy_class || '',
-    user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || null,
+    user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || null, tolerance_bands: d.tolerance_bands || null,
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };
@@ -280,6 +280,12 @@ function openInstrumentDetail(id) {
                 const from = i === 0 ? 0 : a[i-1].to;
                 return `${from}–${s.to} g: d ${s.d ?? '–'} g, tol ${s.tol != null ? '±' + s.tol + ' ' + (s.unit || 'g') : '–'}`;
               }).join('  ·  '), true))
+        : ''}
+      ${Array.isArray(d.tolerance_bands) && d.tolerance_bands.length
+        ? regDetailItem('Tolerance หลายช่วง', d.tolerance_bands.map((b, i, a) => {
+            const from = b.from != null ? b.from : (i === 0 ? 0 : a[i-1].to);
+            return `${from}–${b.to} g: ±${b.tol} ${b.unit || 'g'}`;
+          }).join('  ·  '), true)
         : ''}
       ${regDetailItem('ใช้งานต่ำสุด (Min usage)', d.usage_min)}
       ${regDetailItem('ใช้งานสูงสุด (Max usage)', d.usage_max)}
@@ -562,11 +568,14 @@ function openInstrumentModal(instrumentId) {
     const _modeEl = document.getElementById('iRangeMode');
     if (_modeEl) _modeEl.value = (Array.isArray(d.range_profile) && d.range_profile.some(s => s && s.mode === 'range')) ? 'range' : 'interval';
     renderInstRangeRows();
+    instTolBands = Array.isArray(d.tolerance_bands) ? d.tolerance_bands.map(b => ({ from: b.from, to: b.to, tol: b.tol, unit: b.unit || 'g' })) : [];
+    renderInstTolBandRows();
   } else {
     ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iAssetNo','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const _modeEl = document.getElementById('iRangeMode'); if (_modeEl) _modeEl.value = 'interval';
     instRange = []; renderInstRangeRows();
+    instTolBands = []; renderInstTolBandRows();
   }
   document.getElementById('instrumentModal').classList.add('open');
   initInstrumentDuplicateCheck();
@@ -611,6 +620,40 @@ function buildRangeProfileFromForm() {
     mode: mode === 'range' ? 'range' : undefined,
   })).filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
   return rp.length ? rp : null;
+}
+
+// ===== Tolerance หลายช่วง (tolerance_bands) — เครื่อง d เดียว แต่ค่ายอมรับต่างตามช่วงน้ำหนัก =====
+let instTolBands = [];
+function renderInstTolBandRows() {
+  const tb = document.getElementById('iTolBandRows'); if (!tb) return;
+  const inp = 'width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)';
+  const unitOpts = (u) => ['g','kg','mg'].map(x => `<option value="${x}" ${(u||'g')===x?'selected':''}>${x}</option>`).join('');
+  tb.innerHTML = instTolBands.map((s, i) => `<tr>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.tol ?? ''}" style="${inp}"></td>
+    <td style="padding:2px 6px"><select style="${inp}">${unitOpts(s.unit)}</select></td>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.from ?? ''}" style="${inp}"></td>
+    <td style="padding:2px 6px"><input type="number" step="any" value="${s.to ?? ''}" style="${inp}"></td>
+    <td style="text-align:center"><button type="button" onclick="removeInstTolBandRow(${i})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px">✕</button></td>
+  </tr>`).join('');
+}
+function readInstTolBandsFromDom() {
+  return [...document.querySelectorAll('#iTolBandRows tr')].map(tr => {
+    const ins = tr.querySelectorAll('input');
+    const sel = tr.querySelector('select');
+    return { tol: ins[0].value, unit: sel ? sel.value : 'g', from: ins[1].value, to: ins[2].value };
+  });
+}
+function addInstTolBandRow() { instTolBands = readInstTolBandsFromDom(); instTolBands.push({ tol: '', unit: 'g', from: '', to: '' }); renderInstTolBandRows(); }
+function removeInstTolBandRow(i) { instTolBands = readInstTolBandsFromDom(); instTolBands.splice(i, 1); renderInstTolBandRows(); }
+// อ่านตาราง → tolerance_bands [{from,to,tol,unit}] (เรียงตาม to · ข้ามแถวที่ to/tol ว่าง) · ว่าง → null
+function buildTolBandsFromForm() {
+  const tb = readInstTolBandsFromDom().map(s => ({
+    from: (s.from !== '' && s.from != null) ? parseFloat(s.from) : 0,
+    to: parseFloat(s.to),
+    tol: (s.tol !== '' && s.tol != null) ? parseFloat(s.tol) : null,
+    unit: s.unit || 'g',
+  })).filter(s => Number.isFinite(s.to) && s.to > 0 && s.tol != null).sort((a, b) => a.to - b.to);
+  return tb.length ? tb : null;
 }
 
 function closeInstrumentModal() {
@@ -775,6 +818,8 @@ async function saveInstrument() {
     remark: document.getElementById('iRemark').value.trim() || null,
     range_profile: buildRangeProfileFromForm(),
   };
+  // tolerance_bands เฉพาะเมื่อ DB มีคอลัมน์ (กัน save พังตอนยังไม่ได้ ALTER)
+  if (window.HAS_TOL_BANDS !== false) payload.tolerance_bands = buildTolBandsFromForm();
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
 

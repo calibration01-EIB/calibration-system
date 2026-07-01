@@ -4101,6 +4101,21 @@ body.app-mode textarea:focus {
           </table>
           <button type="button" onclick="addInstRangeRow()" style="margin-top:6px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-size:13px;cursor:pointer">+ เพิ่มช่วง/ย่าน</button>
         </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label>Tolerance หลายช่วง — เว้นว่างถ้าใช้ Tolerance เดี่ยว (ด้านบน)</label>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">สำหรับเครื่อง <b>d เดียว</b> แต่ค่ายอมรับต่างตามช่วงน้ำหนัก · "จาก/ถึง" = ช่วงพิกัดที่ใช้ (กรัม) · ระบบสอบเทียบใช้ค่านี้<b>ก่อน</b> range_profile/Tolerance เดี่ยว</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr>
+              <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:600">Tolerance ±</th>
+              <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:600">หน่วย</th>
+              <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:600">จาก (g)</th>
+              <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:600">ถึง (g)</th>
+              <th style="width:36px"></th>
+            </tr></thead>
+            <tbody id="iTolBandRows"></tbody>
+          </table>
+          <button type="button" onclick="addInstTolBandRow()" style="margin-top:6px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-size:13px;cursor:pointer">+ เพิ่มช่วง Tolerance</button>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn-primary" id="saveInstrumentBtn" onclick="saveInstrument()">บันทึก</button>
@@ -4172,8 +4187,8 @@ body.app-mode textarea:focus {
 <!-- App logic extracted from the old inline script. Keep this order. -->
 <script src="js/00-config.js?v=20260626-config"></script>
 <script src="js/01-core.js?v=20260626-config"></script>
-<script src="js/02-dashboard.js?v=20260630-register"></script>
-<script src="js/03-instruments.js?v=20260630-register2"></script>
+<script src="js/02-dashboard.js?v=20260701-tolbands2"></script>
+<script src="js/03-instruments.js?v=20260701-tolbands2"></script>
 <script src="js/04-reports.js?v=20260611-balance-mass-split"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06-plan.js?v=20260630-register2"></script>
