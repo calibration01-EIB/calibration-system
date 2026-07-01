@@ -37,18 +37,17 @@ async function doLogin() {
 
   try {
     const hash = await sha256(password);
-    const { data, error } = await sb.from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', hash)
-      .eq('active', true)
-      .single();
+    const { data, error } = await sb.rpc('app_login', {
+      p_username: username,
+      p_password_hash: hash
+    });
+    const user = Array.isArray(data) ? data[0] : data;
 
-    if (error || !data) {
+    if (error || !user) {
       document.getElementById('loginError').style.display = 'block';
     } else {
-      setSession(data);
-      enterApp(data);
+      setSession(user);
+      enterApp(user);
     }
   } catch(e) {
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');

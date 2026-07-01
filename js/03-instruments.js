@@ -392,7 +392,7 @@ uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classL
 let usersData = [];
 
 async function loadUsers() {
-  const { data } = await sb.from('users').select('*').order('created_at');
+  const { data } = await sb.rpc('admin_list_users');
   usersData = data || [];
   renderUsersTable();
 }
@@ -498,16 +498,18 @@ async function saveUser() {
   try {
     // เก็บประเภทที่เลือก
     const checkedTypes = [...document.querySelectorAll('#uTypesContainer input[type=checkbox]:checked')].map(el => el.value);
-    const payload = { name, username, role, active, instrument_types: checkedTypes.length > 0 ? checkedTypes : null };
-    if (password) payload.password = await sha256(password);
+    const passwordHash = password ? await sha256(password) : '';
 
-    if (editingUserId) {
-      const { error } = await sb.from('users').update(payload).eq('id', editingUserId);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from('users').insert({ ...payload, active: true });
-      if (error) throw error;
-    }
+    const { error } = await sb.rpc('admin_save_user', {
+      p_id: editingUserId || null,
+      p_name: name,
+      p_username: username,
+      p_role: role,
+      p_active: editingUserId ? active : true,
+      p_instrument_types: checkedTypes.length > 0 ? checkedTypes : null,
+      p_password_hash: passwordHash
+    });
+    if (error) throw error;
     await loadUsers();
     closeUserModal();
     showToast('บันทึกสำเร็จ', 'success');
@@ -517,7 +519,7 @@ async function saveUser() {
 
 async function deleteUser(userId) {
   if (!confirm('ต้องการลบผู้ใช้นี้?')) return;
-  const { error } = await sb.from('users').delete().eq('id', userId);
+  const { error } = await sb.rpc('admin_delete_user', { p_id: userId });
   if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
   await loadUsers();
   showToast('ลบผู้ใช้แล้ว', 'success');
