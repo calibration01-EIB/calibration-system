@@ -392,7 +392,7 @@ uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classL
 let usersData = [];
 
 async function loadUsers() {
-  const { data } = await sb.rpc('admin_list_users');
+  const { data } = await sb.rpc('admin_list_users', { p_token: currentUser?.token });
   usersData = data || [];
   renderUsersTable();
 }
@@ -501,6 +501,7 @@ async function saveUser() {
     const passwordHash = password ? await sha256(password) : '';
 
     const { error } = await sb.rpc('admin_save_user', {
+      p_token: currentUser?.token,
       p_id: editingUserId || null,
       p_name: name,
       p_username: username,
@@ -519,7 +520,7 @@ async function saveUser() {
 
 async function deleteUser(userId) {
   if (!confirm('ต้องการลบผู้ใช้นี้?')) return;
-  const { error } = await sb.rpc('admin_delete_user', { p_id: userId });
+  const { error } = await sb.rpc('admin_delete_user', { p_token: currentUser?.token, p_id: userId });
   if (error) { showToast('ลบไม่สำเร็จ', 'error'); return; }
   await loadUsers();
   showToast('ลบผู้ใช้แล้ว', 'success');

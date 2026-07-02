@@ -81,6 +81,11 @@ function enterApp(user) {
   loadData();
 }
 
-function doLogout() { clearSession(); location.reload(); }
+async function doLogout() {
+  const token = currentUser?.token;
+  if (token) { try { await sb.rpc('app_logout', { p_token: token }); } catch(e) {} }
+  clearSession();
+  location.reload();
+}
 
 // ====================================================
