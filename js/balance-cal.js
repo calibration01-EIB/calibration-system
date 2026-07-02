@@ -1019,7 +1019,7 @@ const STATE_META = {
 };
 const certNoStr = () => '' + CERT_YY + CERT_TC + String(CERT_BASE).padStart(3, '0') + '-' + CERT_REV;
 const jobNoStr  = () => '' + CERT_YY + '/' + CERT_TC + String(CERT_BASE).padStart(3, '0');  // หมายเลขของงาน รูปแบบ "26/B318" (มี / คั่นปี) ตามฟอร์มต้นฉบับ Book1 — ต่างจาก cert_no "26B318-0"
-const sbx = () => SBCAL || (typeof supabase !== 'undefined' ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null);
+const sbx = () => SBCAL || (typeof supabase !== 'undefined' ? calCreateClient() : null);
 function renderCertBar() {
   const m = STATE_META[CAL_STATE];
   let a = '';
@@ -1434,7 +1434,7 @@ const _mgF = u => ({ mg:1, g:1000, kg:1e6 }[u] || 1);     // หน่วย →
 const _gF  = u => ({ mg:0.001, g:1, kg:1000 }[u] || 1);   // หน่วย → g
 async function loadFromDB() {
   if (typeof supabase === 'undefined') return;
-  try { SBCAL = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { return; }
+  try { SBCAL = calCreateClient(); } catch (e) { return; }
   try {
     const [wRes, setRes] = await Promise.all([
       SBCAL.from('standard_weights').select('*').eq('status', 'approved').order('set_code').order('nominal_value'),

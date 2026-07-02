@@ -2,7 +2,7 @@
 // ====================================================
 // SUPABASE CONFIG — ย้ายไป js/00-config.js (โหลดก่อนไฟล์นี้) → SUPABASE_URL / SUPABASE_KEY
 // ====================================================
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = calCreateClient();
 
 // ====================================================
 // SESSION
@@ -47,7 +47,8 @@ async function doLogin() {
       document.getElementById('loginError').style.display = 'block';
     } else {
       setSession(user);
-      enterApp(user);
+      // reload เพื่อสร้าง Supabase client ใหม่ที่แนบ header x-app-token (จำเป็นต่อการเขียนข้อมูล)
+      location.reload();
     }
   } catch(e) {
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
