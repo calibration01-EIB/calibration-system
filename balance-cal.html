@@ -642,7 +642,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
 <!-- ============ สลับ "เต็มจอย่อ": ให้มือถือเรนเดอร์เลย์เอาต์แท็บเล็ต (viewport 980) แล้วย่อพอดีจอ ============ -->
 <script>
 (function () {
-  var FULL_W = 980;   // ความกว้างเลย์เอาต์แท็บเล็ตที่จะย่อลงจอมือถือ
+  var FULL_W = 720;   // ความกว้างเลย์เอาต์แท็บเล็ต (2 คอลัมน์) ที่จะย่อลงจอมือถือ
   var vp = document.querySelector('meta[name=viewport]');
   function apply(full) {
     vp.setAttribute('content', full ? ('width=' + FULL_W) : 'width=device-width, initial-scale=1');
