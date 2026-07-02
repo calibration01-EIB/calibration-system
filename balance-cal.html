@@ -82,9 +82,13 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .subhead { display: flex; align-items: center; gap: 8px; margin: 18px 0 4px; font-size: 13px; font-weight: 800; color: #1c3450; }
 .subhead i { color: var(--accent); }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
-.kpi { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface3); padding: 8px 10px; }
-.kpi span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
-.kpi strong { display: block; margin-top: 2px; font-size: 14px; }
+.kpi { position: relative; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 11px;
+  background: linear-gradient(180deg,#ffffff,var(--surface3)); padding: 9px 11px 9px 15px;
+  box-shadow: 0 1px 2px rgba(32,71,84,.05); }
+.kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+.kpi span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .2px; }
+.kpi strong { display: block; margin-top: 3px; font-size: 19px; font-weight: 800; line-height: 1.1;
+  color: var(--accent); font-variant-numeric: tabular-nums; }
 .cert-preview { border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--input); padding: 18px 22px; max-width: 760px; margin: 0 auto; font-size: 12px; }
 .cert-preview h3 { text-align: center; letter-spacing: 2px; margin: 0 0 4px; font-size: 15px; }
 .cert-preview .lab { text-align: center; color: var(--muted); font-size: 11px; margin-bottom: 10px; }
@@ -189,6 +193,22 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
 .tbl-scroll .table-wrap, .table-wrap { -webkit-overflow-scrolling: touch; }
 /* ตารางอ่านหลายครั้ง (Repeatability/Preload) — เลื่อนแนวนอน ไม่ยุบ */
 .tbl-scroll input { width: 96px; }
+
+/* ---- ใบบันทึก: ปรับให้อ่านชัดขึ้น ---- */
+/* (1) ตรึงคอลัมน์ป้ายซ้ายไว้เวลาเลื่อนดูช่องอ่านค่า */
+.tbl-scroll th:first-child, .tbl-scroll td:first-child { position: sticky; left: 0; }
+.tbl-scroll th:first-child { z-index: 2; background: #e4f0ef; box-shadow: 1px 0 0 var(--line); }
+.tbl-scroll td:first-child { z-index: 1; background: var(--surface3); font-weight: 700; color: var(--muted); box-shadow: 1px 0 0 var(--line-soft); }
+
+/* (3) ช่องที่ยังไม่กรอก = พื้นประ + หน่วย g จาง ๆ บอกใบ้ */
+.tbl input[type=number]::placeholder { color: var(--soft); opacity: .85; font-weight: 600; }
+.tbl input[type=number]:placeholder-shown { background: #fff3ee; border-color: #e6b3a2; border-style: dashed; }
+
+/* (4) แผนภาพตำแหน่งจานเครื่องชั่ง (Eccentricity) — ใหญ่ ชัด */
+.pan-figure { display: inline-flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 16px; margin: 2px 0 10px; border: 1px dashed var(--line); border-radius: 12px; background: var(--surface2); }
+.pan-figure svg { width: auto; height: 116px; }
+.pan-figure .cap { font-size: 11px; font-weight: 800; color: var(--muted); }
 
 /* ====================== TABLET (≤ 980px): grid 2 คอลัมน์ ====================== */
 @media (max-width: 980px) {
@@ -475,7 +495,10 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
             <option value="1">กลม</option>
             <option value="2">สามเหลี่ยม</option>
           </select>
+        </div>
+        <div class="pan-figure">
           <span id="eccPanPrev" style="display:inline-flex;align-items:center"></span>
+          <span class="cap">ตำแหน่งวางตุ้ม 1–5 (1 = กลางจาน)</span>
         </div>
         <table class="tbl">
           <thead><tr><th>ตำแหน่ง</th><th>อ่านได้ (g)</th><th class="num">ต่างจากกลาง (g)</th></tr></thead>

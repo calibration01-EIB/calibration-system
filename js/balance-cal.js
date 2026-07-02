@@ -214,23 +214,23 @@ function buildStatic() {
   renderStdTable();
 
   byId('repRow').innerHTML = '<td>อ่านได้ (g)</td>' + REP_READS.map((v,i) =>
-    `<td><input type="number" step="any" class="repIn" value="${v}" oninput="recalc()"></td>`).join('');
+    `<td><input type="number" step="any" class="repIn" value="${v}" placeholder="g" oninput="recalc()"></td>`).join('');
 
   byId('plRow').innerHTML = PL_READS.map((v,i) =>
-    `<td><input type="number" step="any" class="plIn" value="${v}" oninput="recalc()"></td>`).join('') +
+    `<td><input type="number" step="any" class="plIn" value="${v}" placeholder="g" oninput="recalc()"></td>`).join('') +
     '<td class="num calc" id="plAvg">–</td>';
 
   renderErrRows(true);
 
   byId('eccRows').innerHTML = ECC.map((e,i) => `<tr>
     <td>${e[0]}</td>
-    <td><input type="number" step="any" class="eccIn" value="${e[1]}" oninput="recalc()"></td>
+    <td><input type="number" step="any" class="eccIn" value="${e[1]}" placeholder="g" oninput="recalc()"></td>
     <td class="num calc" id="eccD${i}">–</td>
   </tr>`).join('');
 
   byId('tareRows').innerHTML = TARE.map((t,i) => `<tr>
     <td class="num">${t[0]}</td>
-    <td><input type="number" step="any" class="tareIn" value="${t[1]}" oninput="recalc()"></td>
+    <td><input type="number" step="any" class="tareIn" value="${t[1]}" placeholder="g" oninput="recalc()"></td>
     <td class="num calc" id="tareD${i}">–</td>
   </tr>`).join('');
 
@@ -248,7 +248,7 @@ function renderErrRows(fresh) {
     return `<tr>
     <td><strong>${p.nominal}</strong> <span class="chip" style="margin-left:4px">${pointDesc(p)}</span></td>
     <td class="num calc" id="cm${i}">–</td>
-    ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${r[j]}" oninput="recalc()"></td>`).join('')}
+    ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${r[j]}" placeholder="g" oninput="recalc()"></td>`).join('')}
     <td class="num calc" id="avg${i}">–</td>
     <td class="num calc" id="cor${i}">–</td>
     <td class="num calc" id="sd${i}">–</td>
