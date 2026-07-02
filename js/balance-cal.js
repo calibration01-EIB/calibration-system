@@ -214,7 +214,7 @@ function buildStatic() {
   renderStdTable();
 
   byId('repRow').innerHTML = '<td>อ่านได้ (g)</td>' + REP_READS.map((v,i) =>
-    `<td><input type="number" step="any" class="repIn" value="${v}" oninput="recalc()" style="width:72px"></td>`).join('');
+    `<td><input type="number" step="any" class="repIn" value="${v}" oninput="recalc()"></td>`).join('');
 
   byId('plRow').innerHTML = PL_READS.map((v,i) =>
     `<td><input type="number" step="any" class="plIn" value="${v}" oninput="recalc()"></td>`).join('') +

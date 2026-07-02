@@ -22,7 +22,9 @@
 body { margin: 0; background: linear-gradient(180deg,#edf5f5 0%,var(--bg) 52%,#dfe9eb 100%); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.45; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-input[type=number] { text-align: right; }
+input[type=number] { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .page { width: min(1240px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 64px; }
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid rgba(14,127,146,.16); border-radius: 10px; background: linear-gradient(135deg,rgba(246,250,247,.92),rgba(232,243,238,.82)); box-shadow: 0 8px 22px rgba(32,71,84,.07); }
 .top h1 { margin: 0; font-size: 22px; line-height: 1.2; }
@@ -186,7 +188,7 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
 .tbl input { min-height: 42px; border-radius: 9px; font-size: 16px; }
 .tbl-scroll .table-wrap, .table-wrap { -webkit-overflow-scrolling: touch; }
 /* ตารางอ่านหลายครั้ง (Repeatability/Preload) — เลื่อนแนวนอน ไม่ยุบ */
-.tbl-scroll input { width: 76px; }
+.tbl-scroll input { width: 96px; }
 
 /* ====================== TABLET (≤ 980px): grid 2 คอลัมน์ ====================== */
 @media (max-width: 980px) {
@@ -258,7 +260,7 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
   table.tbl:not(.tbl-scroll) td .rmset { margin-left: auto; }
 
   /* tbl-scroll: ช่องอ่านค่าใหญ่ขึ้นเวลานิ้วแตะ */
-  .tbl-scroll input { width: 84px; min-height: 44px; }
+  .tbl-scroll input { width: 104px; min-height: 44px; }
 
   /* การ์ด preview/cert ไม่ล้น */
   .cert-preview { padding: 14px; }
