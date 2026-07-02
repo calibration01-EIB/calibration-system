@@ -315,6 +315,31 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
   .kpi strong { font-size: 16px; }
   .kpi span { font-size: 10.5px; }
   .pan-figure svg { height: 92px; }
+
+  /* ===== ตารางตุ้มมาตรฐาน: คงเป็นตารางเลื่อนแนวนอน แถวเดียว/ตุ้ม (ไม่ระเบิดเป็นการ์ด) ===== */
+  table.tbl.stdtbl { display: table; width: max-content; min-width: 100%; border-collapse: collapse; }
+  table.tbl.stdtbl > thead { display: table-header-group; }
+  table.tbl.stdtbl > tbody { display: table-row-group; }
+  table.tbl.stdtbl > tbody > tr {
+    display: table-row; border: 0; background: none; margin: 0; box-shadow: none; border-radius: 0;
+  }
+  table.tbl.stdtbl > thead > tr > th,
+  table.tbl.stdtbl > tbody > tr > td {
+    display: table-cell; width: auto; max-width: none; min-height: 0;
+    border: 0; border-bottom: 1px solid var(--line-soft);
+    text-align: left; white-space: nowrap; padding: 3px 8px; font-size: 12px;
+  }
+  table.tbl.stdtbl > tbody > tr > td:first-child { background: none; font-weight: 400; }
+  table.tbl.stdtbl td::before { content: "" !important; display: none !important; }
+  table.tbl.stdtbl input.stdin { width: 100%; min-width: 82px; min-height: 30px; }
+  /* ตรึงคอลัมน์พิกัดไว้ซ้ายเวลาเลื่อน */
+  table.tbl.stdtbl > thead > tr > th:first-child { position: sticky; left: 0; z-index: 2; background: #e4f0ef; }
+  table.tbl.stdtbl > tbody > tr > td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--line-soft); }
+
+  /* ===== ตัวเลือกติ๊กตุ้ม (wpick): กระชับ ===== */
+  .wpick-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 6px; }
+  .wpick { min-height: 40px; padding: 6px 9px; border-radius: 9px; font-size: 11.5px; }
+  .wpick input { width: 18px; height: 18px; }
 }
 </style>
 </head>
@@ -450,7 +475,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       .tbl input.stdin:focus{outline:none;border-color:var(--accent,#534ab7);background:var(--input)}
       .tbl input.stdin.mono{font-family:monospace;font-weight:700}
     </style>
-    <div class="table-wrap"><table class="tbl">
+    <div class="table-wrap"><table class="tbl stdtbl">
       <thead><tr><th>พิกัด / Class</th><th>Serial No.</th><th>ID Code</th><th>Cert No.</th><th>ครบกำหนด</th><th></th></tr></thead>
       <tbody id="stdRows"></tbody>
     </table></div>
