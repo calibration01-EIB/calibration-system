@@ -1,4 +1,9 @@
 docs/
+# Ghostscript scratch output + local reference material (not part of the app)
+$o1
+$o2
+ตัวอย่าง/
+.claude/settings.local.json
 constan.ttf
 constanb.ttf
 constani.ttf

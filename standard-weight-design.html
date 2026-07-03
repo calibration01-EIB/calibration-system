@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทะเบียนตุ้มน้ำหนักมาตรฐาน (รายตุ้ม) — Mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+:root{
+  --bg:#eef2f1; --surface:#fff; --surface2:#f6f9f8; --line:#d3e0dd; --line-soft:#e4edeb;
+  --text:#16322e; --muted:#5d736e; --soft:#90a39e; --accent:#0e7f92; --accent-soft:#d8f1ef;
+  --green:#0f7a52; --green-soft:#e2f5ec; --amber:#9a6112; --amber-soft:#fdf0db; --red:#b3372f; --red-soft:#fceceb;
+  --drift:#7a4ab0; --drift-soft:#efe7fa;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans Thai',sans-serif;font-size:14px;line-height:1.5}
+.page{max-width:1320px;margin:0 auto;padding:18px 16px 60px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:13px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.bar .grow{flex:1;min-width:180px}
+input,select{font-family:inherit;font-size:13px;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:0 10px;min-height:36px;background:var(--surface);outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;min-height:36px;padding:0 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{min-height:30px;padding:0 9px;font-size:12px}
+.btn.ghost{background:var(--surface2)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.set-head{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--accent-soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.set-head .code{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;color:#0b5e6d}
+.set-head .meta{color:var(--muted);font-size:12px}
+.set-head .cnt{margin-left:auto;color:var(--muted);font-size:12px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;white-space:nowrap}
+thead.grp th{background:var(--surface2);border-bottom:1px solid var(--line);padding:5px 8px;font-weight:700;color:var(--muted);text-align:center;font-size:11px;letter-spacing:.02em}
+thead.grp .cur{background:#e8f5f3;color:#0b5e6d}
+thead.grp .prev{background:#f0ecf8;color:#5a3c86}
+thead.cols th{position:sticky;top:0;background:#eef4f3;border-bottom:1px solid var(--line);padding:6px 8px;font-weight:600;color:var(--muted);text-align:center;font-size:11px}
+tbody td{border-bottom:1px solid var(--line-soft);padding:6px 8px;text-align:center}
+tbody tr:hover{background:var(--surface2)}
+.nom{font-weight:700;text-align:left!important;font-size:13px}
+.idc{font-family:'IBM Plex Mono',monospace;font-size:11.5px}
+.cur-cell{background:#f3faf9}
+.prev-cell{background:#f8f5fd;color:#4a4a55}
+.muted{color:var(--soft)}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.pill.u{background:var(--green-soft);color:var(--green)}
+.pill.d{background:var(--amber-soft);color:var(--amber)}
+.pill.none{background:#eef0f0;color:var(--soft)}
+.pill.new{background:var(--drift-soft);color:var(--drift)}
+.act i{cursor:pointer;color:var(--muted);font-size:15px;margin:0 3px}
+.act i:hover{color:var(--accent)}
+.note{display:flex;gap:9px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.note i{color:var(--accent);font-size:17px;flex:none;margin-top:1px}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,40,36,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:50}
+.modal.open{display:flex}
+.box{background:var(--surface);border-radius:16px;width:min(760px,100%);max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.box-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.box-h h3{margin:0;font-size:16px}
+.box-b{padding:16px 18px}
+.box-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.f label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:3px}
+.f input,.f select{width:100%}
+.sec-lbl{grid-column:1/-1;font-weight:700;font-size:12.5px;margin:6px 0 -2px;padding-top:8px;border-top:1px dashed var(--line)}
+.sec-lbl.cur{color:#0b5e6d} .sec-lbl.prev{color:#5a3c86}
+.x{background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:2px 0 0}
+.legend b{font-weight:700}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:3px}
+</style>
+</head>
+<body>
+<main class="page">
+  <h1><i class="ti ti-scale"></i> ทะเบียนตุ้มน้ำหนักมาตรฐาน — รายตุ้ม</h1>
+  <div class="sub">เก็บข้อมูลตุ้มทีละลูก พร้อม <b>ค่าปัจจุบัน + ครั้งก่อน</b> ในแถวเดียว (แบบไฟล์ STD) → คิด Drift / Dₛ ให้อัตโนมัติ · จัดกลุ่มตามชุด · ดึงไปลิงก์กับเครื่องชั่งตอนสอบเทียบ</div>
+
+  <div class="note"><i class="ti ti-info-circle"></i><div>
+    <b>ค่าจริง (g)</b> = ค่าพิกัด + ค่าแก้ (คำนวณให้) · <b>Drift</b> = | ค่าแก้ปัจจุบัน − ค่าแก้ครั้งก่อน | · <b>Dₛ = max(U, Drift)</b> (ใช้ในงบความไม่แน่นอน) · ตุ้มที่ยังไม่มีใบครั้งก่อน → Dₛ = U
+    <div class="legend" style="margin-top:6px">
+      <span><span class="sw" style="background:#e8f5f3"></span>คอลัมน์ฟ้า = ค่าปัจจุบัน</span>
+      <span><span class="sw" style="background:#f0ecf8"></span>คอลัมน์ม่วง = ค่าครั้งก่อน</span>
+      <span><span class="pill d" style="padding:0 6px">Drift</span> = drift &gt; U (Dₛ ใช้ drift)</span>
+      <span><span class="pill u" style="padding:0 6px">≤U</span> = Dₛ ใช้ U</span>
+    </div>
+  </div></div>
+
+  <div class="bar">
+    <input class="grow" id="q" placeholder="🔍 ค้นหา ค่าพิกัด / ID.No / S/N / Cert No." oninput="render()">
+    <select id="setF" onchange="render()"><option value="">ทุกชุด</option></select>
+    <button class="btn primary" onclick="openEdit(null)"><i class="ti ti-plus"></i> เพิ่มตุ้ม</button>
+  </div>
+
+  <div id="sets"></div>
+</main>
+
+<!-- modal -->
+<div class="modal" id="modal">
+  <div class="box">
+    <div class="box-h"><h3 id="mTitle">เพิ่มตุ้ม</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="box-b">
+      <div class="grid">
+        <div class="f"><label>ค่าพิกัด (Nominal)</label><input id="mNom" type="number" step="any" placeholder="1"></div>
+        <div class="f"><label>หน่วย</label><select id="mUnit"><option>g</option><option>mg</option><option>kg</option></select></div>
+        <div class="f"><label>Class</label><input id="mClass" placeholder="E2"></div>
+        <div class="f"><label>ชุด (Set / ID prefix)</label><input id="mSet" placeholder="CLCLCS01"></div>
+        <div class="f"><label>ID.No.</label><input id="mId" placeholder="CLCLCS01-WI07"></div>
+        <div class="f"><label>S/N</label><input id="mSn" placeholder="15839"></div>
+        <div class="f"><label>Model / ยี่ห้อ</label><input id="mModel" placeholder="Mettler Toledo"></div>
+        <div class="f"><label>หมายเหตุ</label><input id="mRemark" placeholder="เช่น New / ผู้รับผิดชอบ"></div>
+        <div></div>
+
+        <div class="sec-lbl cur"><i class="ti ti-clock"></i> ค่าปัจจุบัน (ใบล่าสุด)</div>
+        <div class="f"><label>ค่าแก้ (g)</label><input id="mCorr" type="number" step="any" placeholder="0.000006"></div>
+        <div class="f"><label>Uncertainty U, k=2 (mg)</label><input id="mU" type="number" step="any" placeholder="0.010"></div>
+        <div class="f"><label>Cert. No.</label><input id="mCert" placeholder="MM-0111-25"></div>
+        <div class="f"><label>วันสอบเทียบ</label><input id="mCal" type="date"></div>
+        <div class="f"><label>ครบกำหนด (Due)</label><input id="mDue" type="date"></div>
+        <div></div>
+
+        <div class="sec-lbl prev"><i class="ti ti-history"></i> ค่าครั้งก่อน (ไว้คิด Drift)</div>
+        <div class="f"><label>ค่าแก้ครั้งก่อน (g)</label><input id="mPCorr" type="number" step="any" placeholder="0.000021"></div>
+        <div class="f"><label>Cert. No. ครั้งก่อน</label><input id="mPCert" placeholder="MM-0093-21"></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="box-f"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn primary" onclick="saveW()"><i class="ti ti-device-floppy"></i> บันทึก</button></div>
+  </div>
+</div>
+
+<script>
+// ====== ข้อมูลตัวอย่าง (จากไฟล์ STD.xlsx — ID/Cert จริง, ค่าแก้/U เป็นตัวอย่าง) ======
+// w: [nominal, unit, class, set, id, sn, model, corr_g, U_mg, cert, due, prevCorr_g, prevCert, remark]
+let WID = 100;
+let WEIGHTS = [
+  // ชุด CLCLCS01 — E2 (1 g – 1 kg)
+  [1,'g','E2','CLCLCS01','CLCLCS01-WI07','15839','Mettler Toledo', 0.000006,0.010,'MM-0111-25','2027-01-06', 0.000021,'MM-0093-21',''],
+  [2,'g','E2','CLCLCS01','CLCLCS01-WI22','B431872283','Mettler Toledo', 0.000010,0.012,'MM-0112-25','2027-01-06', 0.000010,'MM-0094-21',''],
+  [5,'g','E2','CLCLCS01','CLCLCS01-WI08','15841','Mettler Toledo', -0.000002,0.016,'MM-0113-25','2027-01-06', 0.000004,'MM-0095-21',''],
+  [10,'g','E2','CLCLCS01','CLCLCS01-WI09','15842','Mettler Toledo', 0.000047,0.020,'MM-0114-25','2027-01-06', 0.000077,'MM-0096-21',''],
+  [20,'g','E2','CLCLCS01','CLCLCS01-WI17','15843','Mettler Toledo', 0.000079,0.025,'MM-0115-25','2027-01-06', 0.000079,'MM-0107-21',''],
+  [20,'g','E2','CLCLCS01','CLCLCS01-WI23','B920665489','Mettler Toledo', 0.000060,0.025,'MM-0116-25','2027-01-06', null,'',' New'],
+  [50,'g','E2','CLCLCS01','CLCLCS01-WI10','15844','Mettler Toledo', -0.000010,0.030,'MM-0117-25','2027-01-06', 0.000040,'MM-0098-21',''],
+  [100,'g','E2','CLCLCS01','CLCLCS01-WI11','15845','Mettler Toledo', -0.000070,0.050,'MM-0118-25','2027-01-06', -0.000030,'MM-0099-21','kitipat'],
+  [200,'g','E2','CLCLCS01','CLCLCS01-WI18','15846','Mettler Toledo', 0.000170,0.100,'MM-0119-25','2027-01-06', 0.000020,'MM-0100-21',''],
+  [500,'g','E2','CLCLCS01','CLCLCS01-WI12','15847','Mettler Toledo', 0.000100,0.250,'MM-0120-25','2027-01-06', 0.000300,'MM-0101-21',''],
+  [1,'kg','E2','CLCLCS01','CLCLCS01-WI13','15848','Mettler Toledo', -0.000490,0.500,'MM-0121-25','2027-01-06', -0.000460,'MM-0102-21',''],
+  // ชุด CLCLRS01 — E2 (1 mg – 500 mg)
+  [1,'mg','E2','CLCLRS01','CLCLRS01-WI01','—','Mettler Toledo', -0.0000021,0.0020,'MM-0140-24','2026-07-15', null,'',''],
+  [2,'mg','E2','CLCLRS01','CLCLRS01-WI02','—','Mettler Toledo', 0.0000016,0.0020,'MM-0140-24','2026-07-15', null,'',''],
+  [5,'mg','E2','CLCLRS01','CLCLRS01-WI04','—','Mettler Toledo', -0.0000011,0.0020,'MM-0140-24','2026-07-15', null,'',''],
+  [10,'mg','E2','CLCLRS01','CLCLRS01-WI05','—','Mettler Toledo', 0.0000040,0.0025,'MM-0140-24','2026-07-15', null,'',''],
+  [100,'mg','E2','CLCLRS01','CLCLRS01-WI09','—','Mettler Toledo', 0.0000072,0.0050,'MM-0140-24','2026-07-15', null,'',''],
+  [500,'mg','E2','CLCLRS01','CLCLRS01-WI12','—','Mettler Toledo', 0.0000074,0.0080,'MM-0140-24','2026-07-15', null,'',''],
+].map(a => ({ id:++WID, nominal:a[0], unit:a[1], cls:a[2], set:a[3], idno:a[4], sn:a[5], model:a[6],
+  corr:a[7], U:a[8], cert:a[9], due:a[10], pcorr:a[11], pcert:a[12], remark:a[13] }));
+
+const MASS_MG = { mg:1, g:1000, kg:1e6 };
+const fmtG = v => v==null ? '–' : (Math.abs(v)<1e-4 ? (v>0?'+':'') + (+v.toFixed(7)) : (v>0?'+':'') + (+v.toFixed(5)));
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function drift(w){ // คืน mg
+  if (w.pcorr==null || w.corr==null) return { has:false, drift:0, Ds:w.U };
+  const d = Math.abs(w.corr - w.pcorr) * 1000; // g → mg
+  return { has:true, drift:d, Ds:Math.max(w.U, d) };
+}
+function actual(w){ return w.corr==null ? null : w.nominal + w.corr * MASS_MG.g / MASS_MG[w.unit]; }
+
+let editId = null;
+function render(){
+  const q=(document.getElementById('q').value||'').trim().toLowerCase();
+  const sf=document.getElementById('setF').value;
+  // set filter options
+  const sets=[...new Set(WEIGHTS.map(w=>w.set))];
+  const sel=document.getElementById('setF'), cur=sel.value;
+  sel.innerHTML='<option value="">ทุกชุด</option>'+sets.map(s=>`<option ${s===cur?'selected':''}>${esc(s)}</option>`).join('');
+  const list=WEIGHTS.filter(w=>{
+    const mq=!q||[w.nominal+w.unit,w.idno,w.sn,w.cert,w.pcert].some(v=>String(v||'').toLowerCase().includes(q));
+    return mq && (!sf||w.set===sf);
+  });
+  const byset={}; list.forEach(w=>{(byset[w.set]=byset[w.set]||[]).push(w);});
+  document.getElementById('sets').innerHTML = Object.keys(byset).length ? Object.keys(byset).map(s=>{
+    const ws=byset[s]; const cls=ws[0].cls; const model=ws[0].model;
+    return `<div class="card">
+      <div class="set-head"><i class="ti ti-package" style="color:#0b5e6d"></i>
+        <span class="code">${esc(s)}</span><span class="meta">Class ${esc(cls)} · ${esc(model)}</span>
+        <span class="cnt">${ws.length} ลูก</span></div>
+      <div class="tw"><table>
+        <thead class="grp"><tr>
+          <th colspan="6" style="background:#fff"></th>
+          <th class="cur" colspan="5">◀ ค่าปัจจุบัน (ใบล่าสุด)</th>
+          <th class="prev" colspan="2">ค่าครั้งก่อน</th>
+          <th colspan="3" style="background:#fbf7ee">Drift / Dₛ</th>
+        </tr></thead>
+        <thead class="cols"><tr>
+          <th style="text-align:left">ค่าพิกัด</th><th>Class</th><th>Model</th><th>S/N</th><th>ID.No.</th><th>หมายเหตุ</th>
+          <th class="cur-cell">ค่าแก้ (g)</th><th class="cur-cell">ค่าจริง (g)</th><th class="cur-cell">Cert.No</th><th class="cur-cell">Due</th><th class="cur-cell">U (mg)</th>
+          <th class="prev-cell">ค่าแก้ (g)</th><th class="prev-cell">Cert.No</th>
+          <th>Drift (mg)</th><th>Dₛ (mg)</th><th></th>
+        </tr></thead>
+        <tbody>${ws.map(w=>{ const dr=drift(w); const av=actual(w);
+          return `<tr>
+            <td class="nom">${w.nominal} ${w.unit}</td><td>${esc(w.cls)}</td><td class="muted">${esc(w.model)}</td>
+            <td class="idc">${esc(w.sn)}</td><td class="idc">${esc(w.idno)}</td>
+            <td>${w.remark&&w.remark.trim()?`<span class="pill new">${esc(w.remark.trim())}</span>`:''}</td>
+            <td class="cur-cell">${fmtG(w.corr)}</td>
+            <td class="cur-cell"><b>${av==null?'–':(+av.toFixed(7))}</b></td>
+            <td class="cur-cell idc">${esc(w.cert)}</td>
+            <td class="cur-cell">${w.due?w.due.split('-').reverse().join('/'):'–'}</td>
+            <td class="cur-cell">${w.U}</td>
+            <td class="prev-cell">${fmtG(w.pcorr)}</td>
+            <td class="prev-cell idc">${esc(w.pcert)||'–'}</td>
+            <td>${dr.has?(+dr.drift.toFixed(4)):'–'}</td>
+            <td><b>${(+dr.Ds.toFixed(4))}</b> ${dr.has?(dr.drift>w.U?'<span class="pill d">Drift</span>':'<span class="pill u">≤U</span>'):'<span class="pill none">ใบเดียว</span>'}</td>
+            <td class="act"><i class="ti ti-pencil" onclick="openEdit(${w.id})"></i><i class="ti ti-trash" onclick="delW(${w.id})"></i></td>
+          </tr>`;}).join('')}</tbody>
+      </table></div></div>`;
+  }).join('') : '<div class="note"><i class="ti ti-search-off"></i><div>ไม่พบตุ้มที่ตรงเงื่อนไข</div></div>';
+}
+function openEdit(id){
+  editId=id; const w=id?WEIGHTS.find(x=>x.id===id):null;
+  document.getElementById('mTitle').textContent=w?`แก้ไขตุ้ม — ${w.nominal} ${w.unit} (${w.idno})`:'เพิ่มตุ้ม';
+  const set=(k,v)=>document.getElementById(k).value=(v==null?'':v);
+  set('mNom',w?.nominal); set('mUnit',w?.unit||'g'); set('mClass',w?.cls||'E2'); set('mSet',w?.set);
+  set('mId',w?.idno); set('mSn',w?.sn); set('mModel',w?.model); set('mRemark',w?.remark);
+  set('mCorr',w?.corr); set('mU',w?.U); set('mCert',w?.cert); set('mCal',''); set('mDue',w?.due);
+  set('mPCorr',w?.pcorr); set('mPCert',w?.pcert);
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); editId=null; }
+function numv(id){ const v=parseFloat(document.getElementById(id).value); return Number.isFinite(v)?v:null; }
+function valv(id){ return document.getElementById(id).value.trim(); }
+function saveW(){
+  const w={ nominal:numv('mNom')??0, unit:valv('mUnit')||'g', cls:valv('mClass'), set:valv('mSet'),
+    idno:valv('mId'), sn:valv('mSn'), model:valv('mModel'), remark:valv('mRemark'),
+    corr:numv('mCorr'), U:numv('mU')??0, cert:valv('mCert'), due:valv('mDue'),
+    pcorr:numv('mPCorr'), pcert:valv('mPCert') };
+  if(editId){ Object.assign(WEIGHTS.find(x=>x.id===editId), w); }
+  else { w.id=++WID; WEIGHTS.push(w); }
+  closeModal(); render();
+}
+function delW(id){ if(confirm('ลบตุ้มนี้?')){ WEIGHTS=WEIGHTS.filter(x=>x.id!==id); render(); } }
+render();
+</script>
+</body>
+</html>

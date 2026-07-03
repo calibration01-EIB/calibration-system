@@ -4,7 +4,19 @@
 // ====================================================
 const SUPABASE_URL = 'https://wgdzcchleuojkbnqvbfl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZHpjY2hsZXVvamtibnF2YmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODM4MDYsImV4cCI6MjA5NDA1OTgwNn0.kmJWFP6mCr10_aQ_AU30yd45lqSi0rX9hapdIKMsH2c';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ====================================================
+// SUPABASE CLIENT + APP TOKEN
+// RLS write policies require app_current_role() IS NOT NULL, which reads the
+// per-session token from the "x-app-token" request header. We recreate the
+// client with that header after login / on session restore so writes are allowed.
+// ====================================================
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+function applyAppToken(token) {
+  sb = token
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { headers: { 'x-app-token': token } } })
+    : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
 
 // ====================================================
 // SESSION
@@ -39,18 +51,17 @@ async function doLogin() {
 
   try {
     const hash = await sha256(password);
-    const { data, error } = await sb.from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', hash)
-      .eq('active', true)
-      .single();
+    // app_login (SECURITY DEFINER) verifies the credentials, creates a row in
+    // app_sessions and returns a token that authorizes writes via RLS.
+    const { data, error } = await sb.rpc('app_login', { p_username: username, p_password_hash: hash });
+    const user = Array.isArray(data) ? data[0] : data;
 
-    if (error || !data) {
+    if (error || !user || !user.token) {
       document.getElementById('loginError').style.display = 'block';
     } else {
-      setSession(data);
-      enterApp(data);
+      applyAppToken(user.token);
+      setSession(user);
+      enterApp(user);
     }
   } catch(e) {
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
@@ -60,6 +71,10 @@ async function doLogin() {
 }
 
 function enterApp(user) {
+  // Sessions cached before token-auth existed have no token → force a fresh
+  // login so writes are authorized instead of silently failing under RLS.
+  if (!user.token) { clearSession(); location.reload(); return; }
+  applyAppToken(user.token);
   document.body.classList.add('app-mode');
   document.body.classList.remove('login-mode');
   document.getElementById('loginPage').style.setProperty('display', 'none', 'important');
@@ -84,6 +99,12 @@ function enterApp(user) {
   loadData();
 }
 
-function doLogout() { clearSession(); location.reload(); }
+async function doLogout() {
+  const token = currentUser && currentUser.token;
+  if (token) { try { await sb.rpc('app_logout', { p_token: token }); } catch (e) {} }
+  applyAppToken(null);
+  clearSession();
+  location.reload();
+}
 
 // ====================================================
