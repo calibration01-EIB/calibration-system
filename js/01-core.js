@@ -58,6 +58,10 @@ async function doLogin() {
 }
 
 function enterApp(user) {
+  // Sessions created before token-auth (or any session missing a token) can read
+  // but silently fail every write under RLS. Force a fresh login so calCreateClient
+  // attaches x-app-token and edits actually save.
+  if (!user || !user.token) { clearSession(); location.reload(); return; }
   document.body.classList.add('app-mode');
   document.body.classList.remove('login-mode');
   document.getElementById('loginPage').style.setProperty('display', 'none', 'important');
