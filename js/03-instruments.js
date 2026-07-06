@@ -275,22 +275,6 @@ function openInstrumentDetail(id) {
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
       ${regDetailItem('Range', d.range_val)}
       ${regDetailItem('Tolerance (±)', d.tolerance)}
-      ${Array.isArray(d.range_profile) && d.range_profile.length
-        ? (d.range_profile.some(s => s && s.mode === 'range')
-            ? regDetailItem('ย่าน (Multi-range)', d.range_profile.map(s =>
-                `Max ${s.to} g: d ${s.d ?? '–'} g, tol ${s.tol != null ? '±' + s.tol + ' ' + (s.unit || 'g') : '–'}${s.userRange ? ', user ' + s.userRange : ''}`
-              ).join('  ·  '), true)
-            : regDetailItem('ช่วง d / Tolerance (Multi-interval)', d.range_profile.map((s, i, a) => {
-                const from = i === 0 ? 0 : a[i-1].to;
-                return `${from}–${s.to} g: d ${s.d ?? '–'} g, tol ${s.tol != null ? '±' + s.tol + ' ' + (s.unit || 'g') : '–'}`;
-              }).join('  ·  '), true))
-        : ''}
-      ${Array.isArray(d.tolerance_bands) && d.tolerance_bands.length
-        ? regDetailItem('Tolerance หลายช่วง', d.tolerance_bands.map((b, i, a) => {
-            const from = b.from != null ? b.from : (i === 0 ? 0 : a[i-1].to);
-            return `${from}–${b.to} g: ±${b.tol} ${b.unit || 'g'}`;
-          }).join('  ·  '), true)
-        : ''}
       ${regDetailItem('ใช้งานต่ำสุด (Min usage)', d.usage_min)}
       ${regDetailItem('ใช้งานสูงสุด (Max usage)', d.usage_max)}
       ${regDetailItem('ความถี่ใช้งาน (Usage freq.)', d.usage_frequency)}
