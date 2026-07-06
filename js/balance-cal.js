@@ -1094,6 +1094,20 @@ function renderCertBar() {
     + `<div class="cbar-actions">${a}</div>`;
   ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
 }
+// เลข Cert ใส่เอง — รับ "26B412-0" / "26B412" / "412" (ปีไม่ใส่ = ปีจากวันที่สอบ · rev ไม่ใส่ = 0)
+// คืน null เมื่อช่องว่าง (= รันอัตโนมัติ) · คืน {err} เมื่อรูปแบบผิด
+function parseManualCertNo(s, defYY) {
+  const t = String(s || '').trim().toUpperCase();
+  if (!t) return null;
+  // แบบเต็ม "26B412-0" — ปีต้องตามด้วย B เท่านั้น (กัน "412" โดนตีความเป็นปี 41 เลข 2)
+  let m = t.match(/^(\d{2})\s*B\s*(\d{1,4})(?:-(\d+))?$/);
+  if (m && Number(m[2])) return { yy: Number(m[1]), base: Number(m[2]), rev: m[3] ? Number(m[3]) : 0 };
+  // แบบย่อ "412" / "B412" / "412-1" — ปีใช้จากวันที่สอบ
+  m = t.match(/^B?\s*(\d{1,4})(?:-(\d+))?$/);
+  if (m && Number(m[1])) return { yy: defYY, base: Number(m[1]), rev: m[2] ? Number(m[2]) : 0 };
+  return { err: 'รูปแบบเลข Cert ไม่ถูกต้อง — ใช้แบบ 26B412-0 หรือ 412 (เว้นว่าง = รันอัตโนมัติ)' };
+}
+
 // สอบเสร็จ → ออกเลขจริงจาก cert_sequences (type B) + บันทึก calibration_records
 let ISSUING = false;
 async function issueCert() {
@@ -1111,34 +1125,71 @@ async function issueCert() {
   }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
+  const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
+  const defYY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
+  // เลขใส่เอง (ช่วงเปลี่ยนผ่าน — เลข Cert เดิมยังลงระบบไม่ครบ): พิมพ์ในช่อง Cert No. · เว้นว่าง = รันอัตโนมัติ
+  const manual = parseManualCertNo(val('fCertNo'), defYY);
+  if (manual && manual.err) { alert('⛔ ' + manual.err); return; }
+  const _manualNo = manual ? ('' + manual.yy + CERT_TC + String(manual.base).padStart(3, '0') + '-' + manual.rev) : null;
   // ยืนยันก่อนออกเลข — ออกแล้วกินลำดับเลข กดซ้ำไม่ได้
   const _eqName = val('eEquipTh') || val('eEquip') || 'เครื่องชั่ง';
   if (!confirm('ยืนยัน "สอบเสร็จ" — ออกเลข Cert + บันทึกผล?\n\nเครื่อง: ' + _eqName
     + '\nจุดทดสอบ: ' + POINTS.length + ' จุด · ตุ้มมาตรฐาน: ' + CERT_STDS.length + ' แถว'
-    + '\n\n⚠ เลขใบรับรองจะถูกออกและกินลำดับถัดไป — ออกแล้วกดซ้ำไม่ได้')) return;
+    + '\nเลขที่ Cert: ' + (_manualNo ? _manualNo + ' (ใส่เอง)' : 'รันอัตโนมัติถัดไป')
+    + '\n\n⚠ เลขใบรับรองจะถูกออก' + (_manualNo ? '' : 'และกินลำดับถัดไป') + ' — ออกแล้วกดซ้ำไม่ได้')) return;
   ISSUING = true;
   const _issueBtns = [...document.querySelectorAll('.cbtn.primary')];
   _issueBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.6'; b.style.cursor = 'wait'; });
-  const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
-  CERT_YY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
+  CERT_YY = defYY;
   const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };
-  let seqId = null, newNumber = null;
-  try {
-    // 1) รันเลข cert_sequences (year_code + type_code=B)
-    const { data: seq, error: selErr } = await db.from('cert_sequences')
-      .select('id,last_number').eq('year_code', CERT_YY).eq('type_code', CERT_TC).maybeSingle();
-    if (selErr) throw selErr;
-    if (!seq) {
-      const { data: ins, error } = await db.from('cert_sequences')
-        .insert({ year_code: CERT_YY, type_code: CERT_TC, last_number: 1 }).select('id').single();
-      if (error) throw error;
-      newNumber = 1; seqId = ins.id;
-    } else {
-      newNumber = seq.last_number + 1; seqId = seq.id;
-      const { error } = await db.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
-      if (error) throw error;
+  let seqId = null, newNumber = null, prevLast = null;
+  // คืนลำดับรันเป็นค่าก่อนหน้า (เฉพาะกรณีที่เราแก้ไป) — ใช้เมื่อบันทึก record ไม่สำเร็จ/เลขซ้ำ
+  const rollbackSeq = async () => {
+    if (seqId != null && prevLast != null) {
+      try { await db.from('cert_sequences').update({ last_number: prevLast }).eq('id', seqId); } catch (_) {}
     }
-    CERT_BASE = newNumber; CERT_REV = 0; CERT_NO = certNoStr();
+  };
+  try {
+    if (manual) {
+      // 1ก) เลขใส่เอง → ใช้เลขนั้นตรง ๆ + เลื่อนตัวรันให้วิ่งต่อจากเลขนี้ (ถ้าสูงกว่าลำดับปัจจุบัน)
+      CERT_YY = manual.yy;
+      const { data: seq, error: selErr } = await db.from('cert_sequences')
+        .select('id,last_number').eq('year_code', CERT_YY).eq('type_code', CERT_TC).maybeSingle();
+      if (selErr) throw selErr;
+      if (!seq) {
+        const { data: ins, error } = await db.from('cert_sequences')
+          .insert({ year_code: CERT_YY, type_code: CERT_TC, last_number: manual.base }).select('id').single();
+        if (error) throw error;
+        seqId = ins.id;   // แถวใหม่ — ไม่มีค่าเดิมให้ rollback (prevLast = null)
+      } else if (seq.last_number < manual.base) {
+        seqId = seq.id; prevLast = seq.last_number;
+        const { error } = await db.from('cert_sequences').update({ last_number: manual.base, updated_at: new Date().toISOString() }).eq('id', seqId);
+        if (error) throw error;
+      }
+      // เลขต่ำกว่าลำดับปัจจุบัน (ลงใบย้อนหลัง) → ไม่แตะตัวรัน
+      CERT_BASE = manual.base; CERT_REV = manual.rev;
+    } else {
+      // 1ข) รันเลข cert_sequences (year_code + type_code=B)
+      const { data: seq, error: selErr } = await db.from('cert_sequences')
+        .select('id,last_number').eq('year_code', CERT_YY).eq('type_code', CERT_TC).maybeSingle();
+      if (selErr) throw selErr;
+      if (!seq) {
+        const { data: ins, error } = await db.from('cert_sequences')
+          .insert({ year_code: CERT_YY, type_code: CERT_TC, last_number: 1 }).select('id').single();
+        if (error) throw error;
+        newNumber = 1; seqId = ins.id; prevLast = 0;
+      } else {
+        newNumber = seq.last_number + 1; seqId = seq.id; prevLast = seq.last_number;
+        const { error } = await db.from('cert_sequences').update({ last_number: newNumber, updated_at: new Date().toISOString() }).eq('id', seqId);
+        if (error) throw error;
+      }
+      CERT_BASE = newNumber; CERT_REV = 0;
+    }
+    CERT_NO = certNoStr();
+    // กันเลขซ้ำ — เคยมีใบเลขนี้ในระบบแล้วออกซ้ำไม่ได้ (สำคัญตอนใส่เลขเอง)
+    const { data: dup, error: dupErr } = await db.from('calibration_records').select('id').eq('cert_no', CERT_NO).limit(1);
+    if (dupErr) { await rollbackSeq(); throw dupErr; }
+    if (dup && dup.length) { await rollbackSeq(); throw new Error('เลข Cert ' + CERT_NO + ' มีในระบบแล้ว — ตรวจเลขที่ใส่อีกครั้ง'); }
     // เติมเลข Cert/Job/วันที่ออก ลงฟอร์ม "ก่อน" buildCAL → data.cert_no/job_no/date_issue ไม่ว่าง (ใช้ตอนปริ้น/ปริ้นย้อนหลัง)
     if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
     if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
@@ -1156,7 +1207,7 @@ async function issueCert() {
       data: buildCAL(),
     };
     const { data: recIns, error: recErr } = await db.from('calibration_records').insert(rec).select('id').single();
-    if (recErr) { if (seqId) await db.from('cert_sequences').update({ last_number: newNumber - 1 }).eq('id', seqId); throw recErr; }
+    if (recErr) { await rollbackSeq(); throw recErr; }
     CAL_REC_ID = recIns.id; CAL_STATE = 'issued';
     // 3) อัปเดตทะเบียนเครื่องมือ (instruments) ให้สะท้อนการสอบเทียบล่าสุด — เก็บค่าเดิมไว้เผื่อยกเลิก
     let instNote = '';
