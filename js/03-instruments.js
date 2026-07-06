@@ -549,8 +549,8 @@ function openInstrumentModal(instrumentId) {
     }
     document.getElementById('iBrand').value = _brand;
     document.getElementById('iModel').value = _model;
-    document.getElementById('iRange').value = d.range_val || '';
-    document.getElementById('iCapacity').value = (d.capacity != null && d.capacity !== '') ? d.capacity : '';
+    setRangeField(d.range_val || '');
+    setCapacityField(d.capacity);
     setToleranceFields(d.tolerance || '');
     // resolution_text (จากบัญชีรายการ) มาก่อน · เครื่องเก่าบางตัวมีแต่ resolution ตัวเลข (หน่วย g)
     setBandFields(d.resolution_text || (d.resolution != null && d.resolution !== '' ? d.resolution + ' g' : ''), RES_IDS, 'iResUnit');
@@ -576,9 +576,11 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
-    ['iCategory','iName','iBrand','iModel','iRange','iCapacity','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
+    ['iCategory','iName','iBrand','iModel','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
      'iUsageFreq','iProductGroup','iUspType','iBalanceType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    setRangeField('');
+    setCapacityField('');
     setToleranceFields('');
     setBandFields('', RES_IDS, 'iResUnit');
     setBandFields('', USE_MIN_IDS, 'iUsageMinUnit');
@@ -637,6 +639,41 @@ function buildBandStr(ids, unitId) {
 const TOL_IDS = ['iTol1', 'iTol2', 'iTol3'], USE_MIN_IDS = ['iUsageMin1', 'iUsageMin2', 'iUsageMin3'], USE_MAX_IDS = ['iUsageMax1', 'iUsageMax2', 'iUsageMax3'], RES_IDS = ['iRes1', 'iRes2', 'iRes3'];
 function setToleranceFields(str) { setBandFields(str, TOL_IDS, 'iTolUnit'); }
 function buildToleranceStr() { return buildBandStr(TOL_IDS, 'iTolUnit'); }
+
+// ===== พิกัด Max (capacity — DB เก็บกรัมเสมอ) + ย่านการวัด (range_val — ข้อความ+หน่วยต่อท้าย) =====
+const CAP_UNIT_G = { g: 1, kg: 1000, mg: 0.001 };
+// โหลด: ≥1000 g แสดงเป็น kg ให้อ่านง่ายแบบบัญชีรายการ (30000 → 30 kg)
+function setCapacityField(capacity) {
+  const inp = document.getElementById('iCapacity'), sel = document.getElementById('iCapacityUnit');
+  if (!inp || !sel) return;
+  const g = parseFloat(capacity);
+  if (!Number.isFinite(g)) { inp.value = ''; sel.value = 'g'; return; }
+  if (g >= 1000) { inp.value = +(g / 1000).toFixed(6); sel.value = 'kg'; }
+  else { inp.value = g; sel.value = 'g'; }
+}
+function buildCapacityG() {
+  const v = parseFloat((document.getElementById('iCapacity') || {}).value);
+  if (!Number.isFinite(v)) return null;
+  return v * (CAP_UNIT_G[(document.getElementById('iCapacityUnit') || {}).value] || 1);
+}
+// Range: แยกหน่วยท้ายข้อความเข้า dropdown ("0 - 30 kg" → "0 - 30" + kg) · หน่วยไม่รู้จักคงไว้ในข้อความ
+function setRangeField(str) {
+  const inp = document.getElementById('iRange'), sel = document.getElementById('iRangeUnit');
+  if (!inp || !sel) return;
+  ensureUnitOptions(sel);
+  const s = String(str || '').trim();
+  const m = s.match(/^(.*?)\s*([^\s\d.\-–()]+)$/);
+  const opt = m ? Array.from(sel.options).find(o => o.value.toLowerCase() === m[2].toLowerCase()) : null;
+  if (opt) { inp.value = m[1].trim(); sel.value = opt.value; }
+  else { inp.value = s; sel.value = 'g'; }
+}
+function buildRangeVal() {
+  const t = ((document.getElementById('iRange') || {}).value || '').trim();
+  if (!t) return '';
+  if (/[^\s\d.\-–()]$/.test(t)) return t;   // ลงท้ายด้วยตัวอักษร = มีหน่วยติดมาแล้ว ไม่เติมซ้ำ
+  const u = (document.getElementById('iRangeUnit') || {}).value || '';
+  return u ? t + ' ' + u : t;
+}
 
 function closeInstrumentModal() {
   document.getElementById('instrumentModal').classList.remove('open');
@@ -785,8 +822,8 @@ async function saveInstrument() {
     instrument_name: document.getElementById('iName').value.trim(),
     brand: document.getElementById('iBrand').value.trim(),
     model: document.getElementById('iModel').value.trim() || null,
-    range_val: document.getElementById('iRange').value.trim(),
-    capacity: (() => { const v = parseFloat(document.getElementById('iCapacity').value); return Number.isFinite(v) ? v : null; })(),
+    range_val: buildRangeVal(),
+    capacity: buildCapacityG(),
     tolerance: buildToleranceStr(),
     resolution_text: buildBandStr(RES_IDS, 'iResUnit'),
     usage_min: buildBandStr(USE_MIN_IDS, 'iUsageMinUnit'),

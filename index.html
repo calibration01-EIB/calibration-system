@@ -4045,12 +4045,22 @@ body.app-mode textarea:focus {
 
         <div style="grid-column:span 2;margin-top:6px;padding-bottom:6px;border-bottom:2px solid var(--accent-light);font-size:13px;font-weight:700;color:var(--accent)">2) สเปกการวัด (ตามบัญชีรายการ)</div>
         <div class="form-group">
-          <label>พิกัด Max (g)</label>
-          <input type="number" step="any" id="iCapacity" placeholder="เช่น 30000">
+          <label>พิกัด Max</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="any" id="iCapacity" placeholder="เช่น 3100" style="flex:1;min-width:0">
+            <select id="iCapacityUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด">
+              <option value="g" selected>g</option>
+              <option value="kg">kg</option>
+              <option value="mg">mg</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label>ย่านการวัด (Range)</label>
-          <input type="text" id="iRange" placeholder="เช่น 0 - 30 kg">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="iRange" placeholder="เช่น 0 - 30" style="flex:1;min-width:0">
+            <select id="iRangeUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
+          </div>
         </div>
         <div class="form-group" style="grid-column:span 2">
           <label>ความละเอียด (Resolution) — ใส่ได้ถึง 3 ช่วง</label>
