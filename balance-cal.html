@@ -55,6 +55,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .field input:focus, .field select:focus, .field textarea:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
 .field input[readonly], .field.auto input { background: var(--surface2); color: var(--muted); }
 .field .lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.date-dmy { margin-top: 3px; font-size: 11.5px; font-weight: 700; color: var(--brand, #0a7); }
 .tag-auto { font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: #7a6312; background: var(--amber-soft); border: 1px solid #f6dca6; border-radius: 999px; padding: 1px 7px; }
 .tag-edit { font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: #0d7038; background: var(--green-soft); border: 1px solid #b7efca; border-radius: 999px; padding: 1px 7px; }
 .dual { display: flex; gap: 6px; align-items: center; }
@@ -395,7 +396,7 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
       <div class="field"><div class="lbl-row"><label>Cert No.</label><span class="tag-edit">ใส่เองได้ · เว้นว่าง = รันอัตโนมัติ</span></div><input id="fCertNo" value="" placeholder="เช่น 26B412-0 (ว่าง = รันเลขให้)" oninput="syncCertNoInput(this)"></div>
       <div class="field auto"><div class="lbl-row"><label>Job No.</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fJobNo" value="" placeholder="—" readonly></div>
       <div class="field"><label>Request No.</label><input id="fReqNo" value="-"></div>
-      <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" readonly></div>
+      <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" readonly><div class="date-dmy" id="iDateNextHint"></div></div>
       <div class="field auto"><div class="lbl-row"><label>วันที่ออกใบ</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fDateIssue" value="" placeholder="—" readonly></div>
     </div>
 
@@ -442,8 +443,8 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
 
     <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
     <div class="grid4">
-      <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" type="date" value="2026-04-24"></div>
-      <div class="field"><label>วันที่สอบเทียบ</label><input id="iDate" type="date" value="2026-04-24"></div>
+      <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" type="date" value="" onchange="updateDateHints()"><div class="date-dmy" id="iDateRecvHint"></div></div>
+      <div class="field"><label>วันที่สอบเทียบ</label><input id="iDate" type="date" value="" onchange="updateDateHints()"><div class="date-dmy" id="iDateHint"></div></div>
       <div class="field"><label>ผู้สอบเทียบ</label><input id="fCalBy" value="WUTTIPONG  ATTAWAN"></div>
       <div class="field"><label>สถานที่ติดตั้ง (Location)</label><input id="cLocation" value="B.3/3"></div>
       <div class="field"><label>วิธีสอบเทียบ (Procedure)</label><input id="fProcedure" value="SWI-CAL-705"></div>

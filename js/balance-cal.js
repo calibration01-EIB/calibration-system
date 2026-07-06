@@ -421,6 +421,22 @@ function nextYearOf(dateStr) {
   const d = new Date(dateStr); if (isNaN(d)) return '';
   d.setFullYear(d.getFullYear() + 1); return d.toISOString().slice(0,10);
 }
+// วันนี้ตามเวลาเครื่อง (ไม่ใช้ toISOString ตรง ๆ — เป็น UTC ก่อน 7 โมงเช้าไทยจะได้วันเมื่อวาน)
+function localTodayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+// hint วัน/เดือน/ปี (dd/mm/yyyy) ใต้ช่องวันที่ — กันสับสน mm/dd ของเบราว์เซอร์
+function fmtDMY(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+}
+function updateDateHints() {
+  [['iDate', 'iDateHint'], ['iDateRecv', 'iDateRecvHint'], ['iDateNext', 'iDateNextHint']].forEach(([i, h]) => {
+    const a = byId(i), b = byId(h);
+    if (a && b) b.textContent = a.value ? '= ' + fmtDMY(a.value) + ' (วัน/เดือน/ปี)' : '';
+  });
+}
 
 // ===== คำนวณทั้งหน้า =====
 // d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
@@ -434,6 +450,7 @@ function dForNominal(nom, globalD) {
 function recalc() {
   const d = parseFloat(byId('iRes').value) || 0.01;
   byId('iDateNext').value = nextYearOf(byId('iDate').value);
+  updateDateHints();   // hint วัน/เดือน/ปี ใต้ช่องวันที่ (รับเครื่อง/สอบเทียบ/ครบกำหนด)
 
   // 3.1 repeatability
   const reps = [...document.querySelectorAll('.repIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
@@ -1135,7 +1152,7 @@ async function issueCert() {
   }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
-  const calDate = val('iDate') || new Date().toISOString().slice(0, 10);
+  const calDate = val('iDate') || localTodayISO();
   const defYY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
   // เลขใส่เอง (ช่วงเปลี่ยนผ่าน — เลข Cert เดิมยังลงระบบไม่ครบ): พิมพ์ในช่อง Cert No. · เว้นว่าง = รันอัตโนมัติ
   const manual = parseManualCertNo(val('fCertNo'), defYY);
@@ -1203,7 +1220,7 @@ async function issueCert() {
     // เติมเลข Cert/Job/วันที่ออก ลงฟอร์ม "ก่อน" buildCAL → data.cert_no/job_no/date_issue ไม่ว่าง (ใช้ตอนปริ้น/ปริ้นย้อนหลัง)
     if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
     if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
-    if (byId('fDateIssue')) byId('fDateIssue').value = new Date().toISOString().slice(0, 10);
+    if (byId('fDateIssue')) byId('fDateIssue').value = localTodayISO();
     // 2) บันทึกผลดิบ + CAL object ลง calibration_records
     const rec = {
       instrument_id: (INCOMING_INST && INCOMING_INST.instrument_id) || null,
@@ -1523,6 +1540,8 @@ if (INCOMING_STD) STD_IS_MOCK = false;   // ส่งชุดจริงมา
 deriveStds();
 rebuildAvail();
 assignWeights();
+// วันที่รับ/สอบเทียบ default = วันนี้ (ใบเปิดดูย้อนหลัง fillFromCAL จะทับด้วยวันจริงของใบนั้น)
+['iDate', 'iDateRecv'].forEach(id => { const el = byId(id); if (el && !el.value) el.value = localTodayISO(); });
 buildStatic();                    // renders STDS (renderStdTable) + points (renderPointRows)
 applyIncomingInst(INCOMING_INST);
 // เปิดจากรายการ: ไม่ auto สร้างจุด/เลือกตุ้ม — ผู้ใช้เลือกพรีเซ็ท หรือกด "สร้างจุดอัตโนมัติ" เอง

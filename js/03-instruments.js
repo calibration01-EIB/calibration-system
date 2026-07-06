@@ -127,6 +127,7 @@ async function loadDetailPhotos(d) {
     const id = Number(d.id) || 0;
     const cells = items.map(it => `<div class="reg-photo-cell">
       <img src="${it.url}" onclick="openPhotoFull('${it.url}')" alt="รูปเครื่องมือ">
+      ${canEdit ? `<button class="reg-photo-edit" title="หมุน / ครอปรูป" onclick="editInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✎</button>` : ''}
       ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✕</button>` : ''}
     </div>`).join('');
     const addCell = (canEdit && items.length < INST_PHOTO_MAX)
@@ -153,25 +154,127 @@ function uploadInstrumentPhoto(id, useCamera) {
   if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
   if (useCamera) inp.setAttribute('capture', 'environment');
-  inp.onchange = async () => {
+  inp.onchange = () => {
     const f = inp.files && inp.files[0]; if (!f) return;
     if (!/^image\//.test(f.type || '')) { showToast('รับเฉพาะไฟล์รูปภาพ', 'error'); return; }
-    const folder = instPhotoFolder(d);
-    try {
-      showLoading('กำลังอัพโหลดรูป...');
+    // เปิดตัวแก้รูปก่อนบันทึก — หมุนรูปที่ถ่ายกลับหัว/แนวนอน + ครอปได้ · บันทึกเป็น JPEG ย่อขนาด
+    openPhotoEditor(f, blob => saveInstrumentPhoto(d, `${Date.now()}_photo.jpg`, blob, true));
+  };
+  inp.click();
+}
+// อัพโหลดรูป (จากตัวแก้รูป) — isNew: เช็คจำนวนไม่เกิน INST_PHOTO_MAX ก่อน
+async function saveInstrumentPhoto(d, name, blob, isNew) {
+  const folder = instPhotoFolder(d);
+  try {
+    showLoading('กำลังบันทึกรูป...');
+    if (isNew) {
       const { data: cur } = await sb.storage.from('certificates').list(folder);
       const n = (cur || []).filter(x => x.name !== '.emptyFolderPlaceholder' && /\.(jpe?g|png|webp|gif)$/i.test(x.name)).length;
       if (n >= INST_PHOTO_MAX) { showToast(`รูปครบ ${INST_PHOTO_MAX} แล้ว — ลบก่อนถ้าจะเพิ่ม`, 'error'); return; }
-      if (f.size > 5 * 1024 * 1024) showToast('ไฟล์ใหญ่กว่า 5MB — แนะนำย่อก่อน', 'info');
-      const safe = f.name.replace(/[^\w.\-]/g, '_');
-      const { error } = await sb.storage.from('certificates').upload(`${folder}/${Date.now()}_${safe}`, f, { upsert: true, contentType: f.type });
-      if (error) throw error;
-      showToast('อัพโหลดรูปแล้ว', 'success');
-      await loadDetailPhotos(d);
-    } catch (e) { showToast('อัพโหลดไม่สำเร็จ: ' + (e.message || ''), 'error'); }
-    finally { hideLoading(); }
-  };
-  inp.click();
+    }
+    const { error } = await sb.storage.from('certificates').upload(`${folder}/${name}`, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (error) throw error;
+    showToast('บันทึกรูปแล้ว', 'success');
+    await loadDetailPhotos(d);
+  } catch (e) { showToast('บันทึกรูปไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+  finally { hideLoading(); }
+}
+// แก้รูปที่อัพไว้แล้ว: โหลดกลับมา → หมุน/ครอป → เขียนทับชื่อเดิม
+async function editInstrumentPhoto(folder, name, id) {
+  if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) return;
+  try {
+    showLoading('กำลังโหลดรูป...');
+    const { data: u, error } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${name}`, 120);
+    if (error || !u?.signedUrl) throw (error || new Error('no url'));
+    const blob = await (await fetch(u.signedUrl)).blob();
+    hideLoading();
+    const d = (allData || []).find(x => x.id === id);
+    openPhotoEditor(blob, out => { if (d) saveInstrumentPhoto(d, name, out, false); });
+  } catch (e) { hideLoading(); showToast('โหลดรูปไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+}
+
+// ===== ตัวแก้รูป: หมุน 90° + ครอปด้วยการลากกรอบ (canvas ล้วน ไม่ใช้ไลบรารี — เบากับเครื่อง GPU อ่อน) =====
+let PE = null;              // { bmp, rot, sel:{x,y,w,h}|null, cb }
+const PE_MAX_SIDE = 1600;   // จำกัดด้านยาวตอนบันทึก — ไฟล์เล็ก โหลดเร็ว
+function ensurePhotoEditor() {
+  if (document.getElementById('photoEditorOverlay')) return;
+  const div = document.createElement('div');
+  div.id = 'photoEditorOverlay';
+  div.innerHTML = `
+    <div class="pe-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <b style="font-size:14px">จัดรูปก่อนบันทึก — ลากบนรูปเพื่อครอป · ปุ่มหมุนถ้ารูปกลับหัว/แนวนอน</b>
+        <button onclick="closePhotoEditor()" style="border:none;background:none;font-size:20px;color:var(--text3);cursor:pointer">✕</button>
+      </div>
+      <div class="pe-canvas-wrap"><canvas id="peCanvas"></canvas></div>
+      <div class="pe-btns">
+        <button type="button" onclick="peRotate(-90)">↺ หมุนซ้าย</button>
+        <button type="button" onclick="peRotate(90)">↻ หมุนขวา</button>
+        <button type="button" onclick="peResetSel()">⛶ ยกเลิกกรอบครอป</button>
+        <button type="button" class="pe-primary" onclick="peSave()">✔ ใช้รูปนี้</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  const cv = document.getElementById('peCanvas');
+  let drag = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (cv.width / r.width), y: (e.clientY - r.top) * (cv.height / r.height) }; };
+  cv.addEventListener('pointerdown', e => { if (!PE) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); drag = pos(e); PE.sel = null; peDraw(); });
+  cv.addEventListener('pointermove', e => {
+    if (!PE || !drag) return;
+    const p = pos(e), x = Math.max(0, Math.min(drag.x, p.x)), y = Math.max(0, Math.min(drag.y, p.y));
+    PE.sel = { x, y, w: Math.min(cv.width, Math.max(drag.x, p.x)) - x, h: Math.min(cv.height, Math.max(drag.y, p.y)) - y };
+    peDraw();
+  });
+  cv.addEventListener('pointerup', () => { if (!PE) return; drag = null; if (PE.sel && (PE.sel.w < 16 || PE.sel.h < 16)) { PE.sel = null; peDraw(); } });
+}
+async function openPhotoEditor(blob, cb) {
+  ensurePhotoEditor();
+  let bmp;
+  try { bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); }   // ใช้ EXIF หมุนให้ก่อนอัตโนมัติ
+  catch (e) { try { bmp = await createImageBitmap(blob); } catch (e2) { showToast('เปิดรูปไม่สำเร็จ', 'error'); return; } }
+  PE = { bmp, rot: 0, sel: null, cb };
+  document.getElementById('photoEditorOverlay').style.display = 'flex';
+  peDraw();
+}
+function closePhotoEditor() { PE = null; const o = document.getElementById('photoEditorOverlay'); if (o) o.style.display = 'none'; }
+function peRotate(deg) { if (!PE) return; PE.rot = (PE.rot + deg + 360) % 360; PE.sel = null; peDraw(); }
+function peResetSel() { if (!PE) return; PE.sel = null; peDraw(); }
+function peDraw() {
+  const cv = document.getElementById('peCanvas'); if (!cv || !PE) return;
+  const rot90 = PE.rot % 180 !== 0;
+  const dw = rot90 ? PE.bmp.height : PE.bmp.width, dh = rot90 ? PE.bmp.width : PE.bmp.height;
+  const scale = Math.min(1, PE_MAX_SIDE / Math.max(dw, dh));
+  cv.width = Math.max(1, Math.round(dw * scale)); cv.height = Math.max(1, Math.round(dh * scale));
+  const ctx = cv.getContext('2d');
+  ctx.save();
+  ctx.translate(cv.width / 2, cv.height / 2);
+  ctx.rotate(PE.rot * Math.PI / 180);
+  const sw = rot90 ? cv.height : cv.width, sh = rot90 ? cv.width : cv.height;
+  ctx.drawImage(PE.bmp, -sw / 2, -sh / 2, sw, sh);
+  ctx.restore();
+  if (PE.sel) {   // มืดรอบนอกกรอบครอป + เส้นประ
+    const s = PE.sel;
+    ctx.fillStyle = 'rgba(0,0,0,.45)';
+    ctx.fillRect(0, 0, cv.width, s.y);
+    ctx.fillRect(0, s.y, s.x, s.h);
+    ctx.fillRect(s.x + s.w, s.y, cv.width - s.x - s.w, s.h);
+    ctx.fillRect(0, s.y + s.h, cv.width, cv.height - s.y - s.h);
+    ctx.strokeStyle = '#fff'; ctx.setLineDash([6, 4]); ctx.lineWidth = 2;
+    ctx.strokeRect(s.x + 1, s.y + 1, Math.max(0, s.w - 2), Math.max(0, s.h - 2));
+    ctx.setLineDash([]);
+  }
+}
+function peSave() {
+  if (!PE) return;
+  const cv = document.getElementById('peCanvas');
+  const sel = PE.sel;
+  PE.sel = null; peDraw();   // วาดใหม่แบบไม่มีกรอบก่อนตัด
+  const s = sel || { x: 0, y: 0, w: cv.width, h: cv.height };
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(s.w)); out.height = Math.max(1, Math.round(s.h));
+  out.getContext('2d').drawImage(cv, s.x, s.y, s.w, s.h, 0, 0, out.width, out.height);
+  const cb = PE.cb;
+  out.toBlob(b => { closePhotoEditor(); if (b && cb) cb(b); }, 'image/jpeg', 0.87);
 }
 async function deleteInstrumentPhoto(folder, name, id) {
   if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) return;
