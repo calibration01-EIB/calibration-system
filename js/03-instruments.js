@@ -270,7 +270,7 @@ function openInstrumentDetail(id) {
       ${regDetailItem('ยี่ห้อ (Manufacturer)', d.brand)}
       ${regDetailItem('รุ่น (Model)', d.model)}
       ${regDetailItem('พิกัด Max (g)', d.capacity)}
-      ${regDetailItem('ความละเอียด d (g)', d.resolution != null && d.resolution !== '' ? d.resolution : d.resolution_text)}
+      ${regDetailItem('ความละเอียด (Resolution)', d.resolution_text || d.resolution)}
       ${regDetailItem('Accuracy Class', d.accuracy_class)}
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
       ${regDetailItem('Range', d.range_val)}
@@ -550,6 +550,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iBrand').value = _brand;
     document.getElementById('iModel').value = _model;
     document.getElementById('iRange').value = d.range_val || '';
+    document.getElementById('iCapacity').value = (d.capacity != null && d.capacity !== '') ? d.capacity : '';
     setToleranceFields(d.tolerance || '');
     // resolution_text (จากบัญชีรายการ) มาก่อน · เครื่องเก่าบางตัวมีแต่ resolution ตัวเลข (หน่วย g)
     setBandFields(d.resolution_text || (d.resolution != null && d.resolution !== '' ? d.resolution + ' g' : ''), RES_IDS, 'iResUnit');
@@ -575,7 +576,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
-    ['iCategory','iName','iBrand','iModel','iRange','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
+    ['iCategory','iName','iBrand','iModel','iRange','iCapacity','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
      'iUsageFreq','iProductGroup','iUspType','iBalanceType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     setToleranceFields('');
@@ -785,6 +786,7 @@ async function saveInstrument() {
     brand: document.getElementById('iBrand').value.trim(),
     model: document.getElementById('iModel').value.trim() || null,
     range_val: document.getElementById('iRange').value.trim(),
+    capacity: (() => { const v = parseFloat(document.getElementById('iCapacity').value); return Number.isFinite(v) ? v : null; })(),
     tolerance: buildToleranceStr(),
     resolution_text: buildBandStr(RES_IDS, 'iResUnit'),
     usage_min: buildBandStr(USE_MIN_IDS, 'iUsageMinUnit'),

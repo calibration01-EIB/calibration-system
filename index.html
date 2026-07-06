@@ -4045,18 +4045,12 @@ body.app-mode textarea:focus {
 
         <div style="grid-column:span 2;margin-top:6px;padding-bottom:6px;border-bottom:2px solid var(--accent-light);font-size:13px;font-weight:700;color:var(--accent)">2) สเปกการวัด (ตามบัญชีรายการ)</div>
         <div class="form-group">
-          <label>ย่านการวัด (Range)</label>
-          <input type="text" id="iRange" placeholder="เช่น 0 - 3100 g">
+          <label>พิกัด Max (g)</label>
+          <input type="number" step="any" id="iCapacity" placeholder="เช่น 30000">
         </div>
         <div class="form-group">
-          <label>ความถี่ใช้งาน (Usage frequency)</label>
-          <input type="text" id="iUsageFreq" list="usageFreqList" placeholder="เช่น Every day">
-          <datalist id="usageFreqList">
-            <option value="Every day"></option>
-            <option value="Every week"></option>
-            <option value="Every month"></option>
-            <option value="Before use"></option>
-          </datalist>
+          <label>ย่านการวัด (Range)</label>
+          <input type="text" id="iRange" placeholder="เช่น 0 - 30 kg">
         </div>
         <div class="form-group" style="grid-column:span 2">
           <label>ความละเอียด (Resolution) — ใส่ได้ถึง 3 ช่วง</label>
@@ -4140,6 +4134,16 @@ body.app-mode textarea:focus {
             <input type="text" id="iUsageMax3" placeholder="ช่วง 3" style="flex:1;min-width:0" title="ใช้งานสูงสุดช่วงที่ 3 (ถ้ามี)">
             <select id="iUsageMaxUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
           </div>
+        </div>
+        <div class="form-group">
+          <label>ความถี่ใช้งาน (Usage frequency)</label>
+          <input type="text" id="iUsageFreq" list="usageFreqList" placeholder="เช่น Every day">
+          <datalist id="usageFreqList">
+            <option value="Every day"></option>
+            <option value="Every week"></option>
+            <option value="Every month"></option>
+            <option value="Before use"></option>
+          </datalist>
         </div>
         <div class="form-group">
           <label>Type : A,B,C (Ref.USP1058)</label>

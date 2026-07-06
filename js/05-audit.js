@@ -26,6 +26,7 @@ function getDiff(original, updated) {
     brand: 'ยี่ห้อ',
     model: 'รุ่น',
     range_val: 'Range',
+    capacity: 'พิกัด Max (g)',
     tolerance: 'Tolerance',
     resolution_text: 'ความละเอียด',
     usage_min: 'ใช้งานต่ำสุด',
