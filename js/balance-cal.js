@@ -1090,9 +1090,19 @@ function renderCertBar() {
   else if (CAL_STATE === 'approved')a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นซ้ำ</button><button class="cbtn" onclick="reviseCert()"><i class="ti ti-versions"></i> ออก revision</button>`;
   if (CAL_STATE === 'issued' || CAL_STATE === 'signed' || CAL_STATE === 'approved')
     a += `<button class="cbtn danger" onclick="voidCert()"><i class="ti ti-ban"></i> ยกเลิกใบ</button>`;
-  const html = `<div class="cbar-info"><span class="cbar-no">เลขที่ Cert: <b>${CERT_NO || '— ยังไม่ออกเลข —'}</b></span><span class="cbadge ${m.cls}">${m.label}</span></div>`
+  // draft: ช่องใส่เลขเองตรงแถบเลย (ช่วงเปลี่ยนผ่าน เลขเดิมยังลงไม่ครบ) · ว่าง = รันอัตโนมัติ · sync กับ fCertNo
+  const certPart = CAL_STATE === 'draft'
+    ? `<input class="cbarCertIn" value="${String(val('fCertNo') || '').replace(/"/g, '&quot;')}" placeholder="ใส่เลขเอง เช่น 26B412 · ว่าง = รันอัตโนมัติ" oninput="syncCertNoInput(this)" style="padding:6px 10px;border:1.5px solid #cdddd9;border-radius:8px;font:inherit;font-size:12.5px;width:230px;max-width:100%">`
+    : `<b>${CERT_NO || '— ยังไม่ออกเลข —'}</b>`;
+  const html = `<div class="cbar-info"><span class="cbar-no">เลขที่ Cert: ${certPart}</span><span class="cbadge ${m.cls}">${m.label}</span></div>`
     + `<div class="cbar-actions">${a}</div>`;
   ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
+}
+// ช่องเลข Cert มี 3 จุด (แถบบน/ล่าง + ข้อ 1 โหมดตรวจทาน) — พิมพ์ที่ไหนก็ sync ถึงกันหมด
+function syncCertNoInput(src) {
+  const v = src.value;
+  const f = byId('fCertNo'); if (f && f !== src) f.value = v;
+  document.querySelectorAll('.cbarCertIn').forEach(el => { if (el !== src) el.value = v; });
 }
 // เลข Cert ใส่เอง — รับ "26B412-0" / "26B412" / "412" (ปีไม่ใส่ = ปีจากวันที่สอบ · rev ไม่ใส่ = 0)
 // คืน null เมื่อช่องว่าง (= รันอัตโนมัติ) · คืน {err} เมื่อรูปแบบผิด

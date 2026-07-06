@@ -392,7 +392,7 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
     <div id="instBanner" style="display:none"></div>
     <div class="subhead review-only"><i class="ti ti-hash"></i> เลขที่งาน &amp; วันที่ (ออกโดยระบบ)</div>
     <div class="grid4 review-only">
-      <div class="field"><div class="lbl-row"><label>Cert No.</label><span class="tag-edit">ใส่เองได้ · เว้นว่าง = รันอัตโนมัติ</span></div><input id="fCertNo" value="" placeholder="เช่น 26B412-0 (ว่าง = รันเลขให้)"></div>
+      <div class="field"><div class="lbl-row"><label>Cert No.</label><span class="tag-edit">ใส่เองได้ · เว้นว่าง = รันอัตโนมัติ</span></div><input id="fCertNo" value="" placeholder="เช่น 26B412-0 (ว่าง = รันเลขให้)" oninput="syncCertNoInput(this)"></div>
       <div class="field auto"><div class="lbl-row"><label>Job No.</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fJobNo" value="" placeholder="—" readonly></div>
       <div class="field"><label>Request No.</label><input id="fReqNo" value="-"></div>
       <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" readonly></div>
