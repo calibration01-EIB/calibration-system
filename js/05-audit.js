@@ -33,6 +33,7 @@ function getDiff(original, updated) {
     usage_frequency: 'ความถี่ใช้งาน',
     product_group: 'กลุ่มสินค้า',
     usp_type: 'USP Type',
+    balance_type: 'ประเภทเครื่องชั่ง',
     serial_no: 'S/N',
     asset_no: 'Asset No.',
     department: 'หน่วยงาน',

@@ -191,14 +191,18 @@ async function deleteInstrumentPhoto(folder, name, id) {
 function openBalanceCal(id) {
   const d = (allData || []).find(x => x.id === id);
   if (!d) { if (typeof showToast === 'function') showToast('ไม่พบเครื่องมือ', 'error'); return; }
+  // เครื่องกรอกมือไม่มี capacity/resolution ตัวเลข และไม่มี range_profile → แปลงจากช่องหลายช่วง
+  // (resolution_text / usage_max / tolerance) ด้วย logic เดียวกับตัว import บัญชีรายการ
+  const reg = (typeof parseBalanceRegister === 'function' ? parseBalanceRegister(d, d.instrument_type) : null) || {};
   const inst = {
     from: 'รายการเครื่องมือ',
     instrument_id: Number(d.id) || null,
     name: d.instrument_name || '', name_th: '',
     id_code: d.id_code || '', asset: d.asset_no || '',
     manufacturer: d.brand || '', model: d.model || '', serial: d.serial_no || '',
-    capacity: d.capacity ?? '', resolution: d.resolution ?? '', accuracy_class: d.accuracy_class || '',
-    user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || null, tolerance_bands: d.tolerance_bands || null,
+    capacity: d.capacity ?? reg.capacity ?? '', resolution: d.resolution ?? reg.resolution ?? '', accuracy_class: d.accuracy_class || '',
+    user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || reg.range_profile || null, tolerance_bands: d.tolerance_bands || null,
+    balance_type: d.balance_type || null,   // single | range | interval — ใบบันทึกเปิดมาถูกประเภทเลย
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };
@@ -291,6 +295,7 @@ function openInstrumentDetail(id) {
       ${regDetailItem('ใช้งานสูงสุด (Max usage)', d.usage_max)}
       ${regDetailItem('ความถี่ใช้งาน (Usage freq.)', d.usage_frequency)}
       ${regDetailItem('USP Type (A/B/C)', d.usp_type)}
+      ${regDetailItem('ประเภทเครื่องชั่ง', ({ single: 'Single Range (ช่วงเดียว)', range: 'Multiple Range (หลายช่วง)', interval: 'Multi-Interval (หลายช่วงความละเอียด)' })[d.balance_type] || d.balance_type)}
       ${regDetailItem('Serial No.', d.serial_no)}
       ${regDetailItem('Asset No.', d.asset_no)}
       ${regDetailItem('หน่วยงาน (Unit)', d.department)}
@@ -569,6 +574,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iUsageFreq').value = d.usage_frequency || '';
     document.getElementById('iProductGroup').value = d.product_group || '';
     document.getElementById('iUspType').value = d.usp_type || '';
+    document.getElementById('iBalanceType').value = d.balance_type || '';
     document.getElementById('iMachineName').value = d.machine_name || '';
     document.getElementById('iLocation').value = d.location || '';
     document.getElementById('iCalFrequency').value = d.cal_frequency || '';
@@ -586,7 +592,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
     ['iCategory','iName','iBrand','iModel','iRange','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
-     'iUsageFreq','iProductGroup','iUspType']
+     'iUsageFreq','iProductGroup','iUspType','iBalanceType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     setToleranceFields('');
     setBandFields('', RES_IDS, 'iResUnit');
@@ -802,6 +808,7 @@ async function saveInstrument() {
     usage_frequency: document.getElementById('iUsageFreq').value.trim() || null,
     product_group: document.getElementById('iProductGroup').value.trim() || null,
     usp_type: document.getElementById('iUspType').value.trim() || null,
+    balance_type: document.getElementById('iBalanceType').value || null,
     serial_no: document.getElementById('iSerial').value.trim(),
     asset_no: document.getElementById('iAssetNo').value.trim() || null,
     department: document.getElementById('iDept').value.trim(),

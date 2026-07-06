@@ -338,19 +338,67 @@ function rangeLabel(r) {
   const dd = Number.isFinite(d) ? ' d' + (d >= 1 ? d + 'g' : (d * 1000) + 'mg') : '';
   return cap + dd;
 }
+// แท็บย่านโชว์เฉพาะโหมด Multiple Range (dropdown "ประเภทเครื่องชั่ง" เป็นตัวเปิด/ปิด)
 function renderRangeTabs() {
   const el = byId('rangeTabs'); if (!el) return;
-  if (document.body.classList.contains('review') && !RANGES.length) { el.style.display = 'none'; return; }
+  if (!RANGES.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'flex';
-  if (!RANGES.length) {
-    el.innerHTML = '<button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="enableMultiRange()"><i class="ti ti-stack-2"></i> เครื่องหลายย่าน (multi-range)…</button>';
-    return;
-  }
   el.innerHTML = '<span class="lbl"><i class="ti ti-stack-2"></i> ย่าน:</span>'
     + RANGES.map((r, i) => `<button type="button" class="mbtn${i === ACTIVE_RANGE ? ' active' : ''}" style="min-height:30px;font-size:12px" onclick="switchRange(${i})">${rangeLabel(r)}</button>`).join('')
-    + '<button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="addRange()" title="เพิ่มย่าน"><i class="ti ti-plus"></i></button>'
-    + (RANGES.length > 1 ? `<button type="button" class="mbtn" style="min-height:30px;font-size:12px;color:#b3261e" onclick="removeRange(${ACTIVE_RANGE})" title="ลบย่านนี้">✕ ลบย่านนี้</button>` : '')
-    + '<button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="disableMultiRange()" title="กลับเป็นย่านเดียว">ปิดหลายย่าน</button>';
+    + '<button type="button" class="mbtn" style="min-height:30px;font-size:12px" onclick="addRange()" title="เพิ่มย่าน"><i class="ti ti-plus"></i> เพิ่มย่าน</button>'
+    + (RANGES.length > 1 ? `<button type="button" class="mbtn" style="min-height:30px;font-size:12px;color:#b3261e" onclick="removeRange(${ACTIVE_RANGE})" title="ลบย่านนี้">✕ ลบย่านนี้</button>` : '');
+}
+
+// ===== ประเภทเครื่องชั่ง (bType) — single: ช่วงเดียว · range: Multiple Range (หลายย่านแยกกัน) · interval: Multi-Interval (d เปลี่ยนตามโหลด) =====
+function balanceType() { return val('bType') || 'single'; }
+function setBalanceType(t) { const el = byId('bType'); if (el) el.value = t; syncBalanceTypeUI(); }
+function syncBalanceTypeUI() {
+  const sec = byId('dsegSection'); if (sec) sec.style.display = balanceType() === 'interval' ? '' : 'none';
+  renderRangeTabs();
+}
+// ผู้ใช้เปลี่ยนประเภทเอง → สลับโหมด · ช่วง d ↔ ย่าน หน้าตาเดียวกัน (ขอบบน + d) → เสนอแปลงให้ ไม่ต้องกรอกใหม่
+function applyBalanceType(t) {
+  const sel = byId('bType'); if (sel && sel.value !== t) sel.value = t;   // เผื่อเรียกจากโค้ด (ไม่ผ่าน onchange)
+  if (t === 'range') {
+    // Multi-Interval → Multiple Range: แต่ละช่วง d กลายเป็น 1 ย่าน (Max = ขอบบนช่วง, d = d ช่วงนั้น, tol จาก band ที่ครอบ)
+    if (!RANGES.length && DSEGS.length
+        && confirm('แปลงช่วง d ที่กรอกไว้เป็นย่าน (Multiple Range) เลยไหม?\nแต่ละช่วงจะกลายเป็น 1 ย่าน: Max = ขอบบนช่วง · d = d ของช่วงนั้น')) {
+      const segs = DSEGS.filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
+      RANGES = segs.map(s => {
+        const tb = TOLS.find(x => Number(x.from) < s.to && s.to <= Number(x.to));
+        return normRange({ max: s.to, res: (Number.isFinite(s.d) ? s.d : ''), userRange: '',
+          tols: [{ from: 0, to: s.to, tol: tb ? tb.tol : '', unit: tb ? (tb.unit || 'g') : 'g' }],
+          dsegs: [], points: [], repPoint: '', repReads: [], plPoint: '', plReads: [], eccWt: '', eccPan: 0, eccReads: [], tareWt: '', tareChecks: [] });
+      });
+      DSEGS = []; renderDsegRows();
+      ACTIVE_RANGE = 0; applyRangeData(RANGES[0]);
+      syncBalanceTypeUI(); recalc(); return;
+    }
+    if (DSEGS.length) { DSEGS = []; renderDsegRows(); }
+    enableMultiRange();
+  } else {
+    // Multiple Range → Multi-Interval: ย่านทั้งหมดกลายเป็นตารางช่วง d (เก็บค่าอ่านของย่านที่แสดงอยู่ไว้)
+    if (t === 'interval' && RANGES.length > 1
+        && confirm('แปลงย่านทั้งหมดเป็นตารางช่วง d (Multi-Interval) เลยไหม?\nขอบบนแต่ละช่วง = Max ของย่าน · d = d ของย่านนั้น (ค่าอ่านใช้ของย่านที่แสดงอยู่)')) {
+      const segs = RANGES.map(r => ({ to: parseFloat(r.max), d: parseFloat(r.res) })).filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
+      let prev = 0;
+      const tols = RANGES.map((r, i) => { const tb = (r.tols || [])[0] || {}; const seg = { from: prev, to: parseFloat(r.max), tol: (tb.tol != null && tb.tol !== '' ? Number(tb.tol) : ''), unit: tb.unit || 'g' }; prev = parseFloat(r.max) || prev; return seg; }).filter(x => Number.isFinite(x.to) && x.to > 0);
+      RANGES = []; ACTIVE_RANGE = 0;                     // คงหน้าจอปัจจุบัน (ค่าอ่านย่านที่แสดงอยู่)
+      DSEGS = segs; renderDsegRows();
+      if (tols.length) { TOLS = tols; renderTolRows(); }
+      const maxTo = segs.length ? segs[segs.length - 1].to : NaN;
+      if (Number.isFinite(maxTo)) { const el = byId('iCap'); if (el) el.value = maxTo; }
+      const ds = segs.map(s => s.d).filter(n => Number.isFinite(n) && n > 0);
+      if (ds.length) { const el = byId('iRes'); if (el) el.value = Math.min(...ds); }
+      syncBalanceTypeUI(); recalc(); return;
+    }
+    if (RANGES.length > 1 && !confirm('ออกจาก Multiple Range จะเก็บเฉพาะย่านที่แสดงอยู่ — ย่านอื่นจะถูกลบ ยืนยัน?')) { setBalanceType('range'); return; }
+    if (t === 'single' && DSEGS.length && !confirm('เปลี่ยนประเภทจะลบตารางช่วง d (Multi-Interval) ยืนยัน?')) { setBalanceType('interval'); return; }
+    if (RANGES.length) disableMultiRange();
+    if (t === 'interval') { if (!DSEGS.length) addDseg(); else renderDsegRows(); }
+    else if (DSEGS.length) { DSEGS = []; renderDsegRows(); }
+  }
+  syncBalanceTypeUI(); recalc();
 }
 function switchRange(i) { if (i === ACTIVE_RANGE || !RANGES[i]) return; RANGES[ACTIVE_RANGE] = captureRangeData(); ACTIVE_RANGE = i; applyRangeData(RANGES[i]); renderRangeTabs(); }
 function addRange() { RANGES[ACTIVE_RANGE] = captureRangeData(); RANGES.push(captureRangeData()); ACTIVE_RANGE = RANGES.length - 1; applyRangeData(RANGES[ACTIVE_RANGE]); renderRangeTabs(); }
@@ -376,10 +424,11 @@ function nextYearOf(dateStr) {
 
 // ===== คำนวณทั้งหน้า =====
 // d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
+// ขอบช่วง = ของช่วงถัดไป (exclusive): เครื่อง 0–15kg d=5g / >15kg d=10g → จุดตรง 15kg เครื่องเปลี่ยนเป็น 10g แล้ว
 function dForNominal(nom, globalD) {
   const segs = DSEGS.filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
   if (!segs.length) return globalD;
-  const s = segs.find(x => nom <= x.to) || segs[segs.length - 1];
+  const s = segs.find(x => nom < x.to) || segs[segs.length - 1];
   return (s && Number.isFinite(s.d) && s.d > 0) ? s.d : globalD;
 }
 function recalc() {
@@ -560,6 +609,7 @@ function buildCALSingle() {
     client: { name: val('cClientName'), addr: byId('cAddr').value.split('\n').map(s => s.trim()).filter(Boolean) },
     lab: { name: LAB.name, dept: LAB.dept, addr: LAB.addr, phone: LAB.phone },
     equipment: val('eEquip'), equipment_th: val('eEquipTh'), unit: 'g',
+    balance_type: balanceType(),   // single | range | interval — ประเภทเครื่องชั่ง
     capacity: num('iCap', 0), resolution: num('iRes', 0.01),
     manufacturer: val('eMfr'), model: val('eModel'), serial: val('eSerial'),
     id_no: val('eId'), asset: val('eAsset'), accuracy_class: val('eClass'),
@@ -903,8 +953,12 @@ function applyIncomingInst(inst) {
   setv('eCalType', inst.cal_type);
   // d-segments จาก range_profile (multi-interval) → DSEGS · tolerance จาก tolerance_bands ถ้ามี ไม่งั้น tol ใน range_profile / tolerance เดี่ยว
   const prof = Array.isArray(inst.range_profile) ? inst.range_profile.filter(s => s && Number.isFinite(Number(s.to)) && Number(s.to) > 0) : null;
-  // multi-range: range_profile ที่ segment ติด mode==='range' → แต่ละ segment = 1 ย่านเต็ม (Max/d/tol/userRange) → seed RANGES
-  if (prof && prof.length && prof.some(s => s.mode === 'range')) {
+  // ประเภทเครื่องชั่ง: ทะเบียนเครื่อง (balance_type) มาก่อน · ไม่ระบุ → เดาจาก profile (mode range → หลายย่าน · หลาย segment → multi-interval)
+  const btHint = inst.balance_type || (prof && prof.length
+    ? (prof.some(s => s.mode === 'range') ? 'range' : (prof.length > 1 ? 'interval' : 'single'))
+    : '');
+  // Multiple Range: แต่ละ segment = 1 ย่านเต็ม (Max/d/tol/userRange) → seed RANGES
+  if (btHint === 'range' && prof && prof.length) {
     const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to));
     RANGES = sorted.map(s => {
       const max = Number(s.to);
@@ -916,17 +970,24 @@ function applyIncomingInst(inst) {
       });
     });
     ACTIVE_RANGE = 0; applyRangeData(RANGES[0]);
+    setBalanceType('range');
     showInstBanner(inst); return;
   }
   if (prof && prof.length) {
     const sorted = prof.slice().sort((a, b) => Number(a.to) - Number(b.to));
-    DSEGS = sorted.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) }));
+    if (btHint === 'interval') {
+      DSEGS = sorted.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) }));
+    } else DSEGS = [];   // ทะเบียนระบุ single → ใช้ profile แค่ Max/d รวม (เช่น profile 1 segment ที่สร้างเพื่อหน่วย kg)
     renderDsegRows();
+    setBalanceType(btHint || 'single');
     // Max = ขอบบนช่วงสุดท้าย · d รวม (fallback/แสดง) = d ละเอียดสุด
     const maxTo = Number(sorted[sorted.length - 1].to);
     if (Number.isFinite(maxTo) && maxTo > 0) setv('iCap', maxTo);
     const ds = sorted.map(s => Number(s.d)).filter(n => Number.isFinite(n) && n > 0);
     if (ds.length) setv('iRes', Math.min(...ds));
+  } else if (btHint) {
+    // ทะเบียนระบุประเภทแต่ไม่มีข้อมูลช่วง → เปิดโหมดเปล่าให้กรอก (range → แท็บย่าน · interval → ตารางช่วง d)
+    applyBalanceType(btHint);
   }
   // Tolerance: ใช้ tolerance_bands ถ้ามี · ไม่งั้น tol ใน range_profile · ไม่งั้น tolerance เดี่ยว
   const tb = Array.isArray(inst.tolerance_bands) ? inst.tolerance_bands.filter(b => b && Number.isFinite(Number(b.to)) && Number(b.to) > 0) : null;
@@ -1265,6 +1326,8 @@ function fillFromCAL(cal) {
   if (Array.isArray(cal.range_data) && cal.range_data.length) {
     RANGES = cal.range_data.map(normRange); ACTIVE_RANGE = 0; applyRangeData(RANGES[0]); renderRangeTabs();
   } else { RANGES = []; renderRangeTabs(); }
+  // ประเภทเครื่องชั่ง: ใช้ค่าที่บันทึกไว้ · record เก่าไม่มี → เดาจากข้อมูล (ranges → range, dsegs → interval)
+  setBalanceType(cal.balance_type || (RANGES.length ? 'range' : (DSEGS.length ? 'interval' : 'single')));
 }
 async function loadRecForReview(recId) {
   if (!recId || !SBCAL) return;

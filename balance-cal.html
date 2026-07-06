@@ -409,6 +409,11 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
       <div class="field"><label>รุ่น (Model)</label><input id="eModel" value="BP3100-S"></div>
       <div class="field"><label>Serial No.</label><input id="eSerial" value="13006505"></div>
       <div class="field"><label>Accuracy Class</label><input id="eClass" value="-"></div>
+      <div class="field"><label>ประเภทเครื่องชั่ง</label><select id="bType" onchange="applyBalanceType(this.value)">
+        <option value="single">Single Range (ช่วงเดียว)</option>
+        <option value="range">Multiple Range (หลายช่วง)</option>
+        <option value="interval">Multi-Interval (หลายช่วงความละเอียด)</option>
+      </select></div>
       <div class="field"><label>พิกัด Max (g)</label><input id="iCap" type="number" step="any" value="3100"></div>
       <div class="field"><label>ความละเอียด d (g)</label><input id="iRes" type="number" step="any" value="0.01"></div>
       <div class="field"><label>User Range (g)</label><input id="eUserRange" value="1 - 2000"></div>
@@ -417,13 +422,15 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
       <div class="field"><label>ภายใน / ภายนอก</label><select id="eCalType"><option value="">— เลือก —</option><option value="ภายใน">ภายใน</option><option value="ภายนอก">ภายนอก</option></select></div>
     </div>
 
-    <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วง d (Multi-interval) — d เปลี่ยนตามโหลด</div>
-    <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>กรอกเฉพาะเครื่อง <b>multi-interval</b> (เช่น 0–15kg→5g, &gt;15–30kg→10g) · เครื่องย่านเดียว <b>ไม่ต้องกรอก</b> (ใช้ "ความละเอียด d" ด้านบน)</div></div>
-    <div class="table-wrap"><table class="tbl" style="max-width:560px">
-      <thead><tr><th>ช่วง</th><th class="num">ตั้งแต่ (g)</th><th class="num">ถึง (g)</th><th class="num">d (g)</th><th></th></tr></thead>
-      <tbody id="dsegRows"></tbody>
-    </table></div>
-    <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addDseg()"><i class="ti ti-plus"></i> เพิ่มช่วง d</button>
+    <div id="dsegSection" style="display:none">
+      <div class="subhead"><i class="ti ti-ruler-2"></i> ช่วง d (Multi-Interval) — d เปลี่ยนตามโหลด</div>
+      <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>เครื่อง <b>Multi-Interval</b> (เช่น 0–15kg→5g, &gt;15–30kg→10g) · กรอกขอบบนแต่ละช่วง + d ของช่วงนั้น · จุดสอบที่ตรงขอบพอดี (เช่น 15kg) ใช้ d ของ<b>ช่วงถัดไป</b> — เครื่องเปลี่ยน d แล้ว</div></div>
+      <div class="table-wrap"><table class="tbl" style="max-width:560px">
+        <thead><tr><th>ช่วง</th><th class="num">ตั้งแต่ (g)</th><th class="num">ถึง (g)</th><th class="num">d (g)</th><th></th></tr></thead>
+        <tbody id="dsegRows"></tbody>
+      </table></div>
+      <button type="button" class="mbtn" style="min-height:30px;font-size:12px;margin-top:6px" onclick="addDseg()"><i class="ti ti-plus"></i> เพิ่มช่วง d</button>
+    </div>
 
     <div class="subhead" style="margin-top:14px"><i class="ti ti-ruler-2"></i> Tolerance (เกณฑ์ผ่าน/ไม่ผ่าน)</div>
     <div class="note" style="margin:4px 0 8px"><i class="ti ti-info-circle"></i><div>Tolerance ต่อช่วงพิกัด · เลือก<b>หน่วย</b>ได้ (g/kg/mg) · <b>จาก–ถึง</b> = ช่วงพิกัดที่ใช้ (g) · เว้นว่าง = ไม่มีเกณฑ์ตัด</div></div>
