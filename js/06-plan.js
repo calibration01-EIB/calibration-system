@@ -812,7 +812,7 @@ const IMPORT_DB_SELECT = [
   'id','instrument_type','machine_name','location','instrument_name','brand','model','range_val','tolerance',
   'serial_no','asset_no','department','id_code','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
   'prev_cert_no','prev_cal_date',
-  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type',
+  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type','division',
   'capacity','resolution','range_profile'
 ].join(',');
 
@@ -820,7 +820,7 @@ const IMPORT_COMPARE_FIELDS = [
   'instrument_type','machine_name','location','instrument_name','brand','model','range_val','tolerance',
   'serial_no','asset_no','department','cert_no','cal_date','due_date','cal_frequency','cal_type','remark',
   'prev_cert_no','prev_cal_date',
-  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type'
+  'resolution_text','usage_min','usage_max','usage_frequency','product_group','usp_type','division'
 ];
 
 const IMPORT_COL_MAP = {
@@ -835,6 +835,7 @@ const IMPORT_COL_MAP = {
   's/n':'serial_no','serial_no':'serial_no','serial no.':'serial_no',
   'asset no.':'asset_no','asset no':'asset_no','asset':'asset_no','asset_no':'asset_no','assetno':'asset_no',
   'หน่วยงาน':'department','department':'department',
+  'แผนก':'division','แผนก (section)':'division','section':'division','division':'division',
   'id code':'id_code','id_code':'id_code','idcode':'id_code',
   // Cert ใหม่ (มี 2026) → cert_no ปัจจุบัน
   'cert. 2026':'cert_no','cert.2026':'cert_no',

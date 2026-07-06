@@ -262,7 +262,7 @@ function openInstrumentDetail(id) {
     <div class="reg-info-grid">
       ${regDetailItem('ประเภทเครื่องมือ', displayType)}
       ${regDetailItem('กลุ่มสินค้า (Product group)', d.product_group)}
-      ${regDetailItem('ชื่อเครื่องจักร', d.machine_name)}
+      ${regDetailItem('รหัสเครื่องจักร (Machine Code)', d.machine_name)}
       ${regDetailItem('ยี่ห้อ (Manufacturer)', d.brand)}
       ${regDetailItem('รุ่น (Model)', d.model)}
       ${regDetailItem('พิกัด Max (g)', d.capacity)}
@@ -293,7 +293,8 @@ function openInstrumentDetail(id) {
       ${regDetailItem('USP Type (A/B/C)', d.usp_type)}
       ${regDetailItem('Serial No.', d.serial_no)}
       ${regDetailItem('Asset No.', d.asset_no)}
-      ${regDetailItem('หน่วยงาน', d.department)}
+      ${regDetailItem('หน่วยงาน (Unit)', d.department)}
+      ${regDetailItem('แผนก (Section)', d.division)}
       ${regDetailItem('ความถี่สอบเทียบ', d.cal_frequency)}
       ${regDetailItem('ภายใน/ภายนอก', d.cal_type)}
       ${regDetailItem('สถานะสอบเทียบ', cancelled ? 'ยกเลิกสอบเทียบ' : 'ใช้งาน / รอสอบเทียบ')}
@@ -550,9 +551,24 @@ function openInstrumentModal(instrumentId) {
       categoryEl.value = getDisplayInstrumentType(d) || '';
     }
     document.getElementById('iName').value = d.instrument_name || '';
-    document.getElementById('iBrand').value = d.brand || '';
+    // ข้อมูลเก่าเก็บ "ยี่ห้อ/รุ่น" รวมในช่องเดียว → ถ้ายังไม่มี model แยกให้อัตโนมัติ (บันทึกครั้งถัดไปจะเก็บแยก)
+    let _brand = d.brand || '', _model = d.model || '';
+    if (!_model && _brand.includes('/')) {
+      const _i = _brand.indexOf('/');
+      _model = _brand.slice(_i + 1).trim();
+      _brand = _brand.slice(0, _i).trim();
+    }
+    document.getElementById('iBrand').value = _brand;
+    document.getElementById('iModel').value = _model;
     document.getElementById('iRange').value = d.range_val || '';
-    document.getElementById('iTolerance').value = d.tolerance || '';
+    setToleranceFields(d.tolerance || '');
+    // resolution_text (จากบัญชีรายการ) มาก่อน · เครื่องเก่าบางตัวมีแต่ resolution ตัวเลข (หน่วย g)
+    setBandFields(d.resolution_text || (d.resolution != null && d.resolution !== '' ? d.resolution + ' g' : ''), RES_IDS, 'iResUnit');
+    setBandFields(d.usage_min || '', USE_MIN_IDS, 'iUsageMinUnit');
+    setBandFields(d.usage_max || '', USE_MAX_IDS, 'iUsageMaxUnit');
+    document.getElementById('iUsageFreq').value = d.usage_frequency || '';
+    document.getElementById('iProductGroup').value = d.product_group || '';
+    document.getElementById('iUspType').value = d.usp_type || '';
     document.getElementById('iMachineName').value = d.machine_name || '';
     document.getElementById('iLocation').value = d.location || '';
     document.getElementById('iCalFrequency').value = d.cal_frequency || '';
@@ -561,103 +577,75 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iSerial').value = d.serial_no || '';
     document.getElementById('iAssetNo').value = d.asset_no || '';
     document.getElementById('iDept').value = d.department || '';
+    document.getElementById('iDivision').value = d.division || '';
     document.getElementById('iIdCode').value = d.id_code || '';
     document.getElementById('iCertNo').value = d.cert_no || '';
     document.getElementById('iCalDate').value = d.cal_date || '';
     document.getElementById('iDueDate').value = d.due_date || '';
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
-    instRange = Array.isArray(d.range_profile) ? d.range_profile.map(s => ({ to: s.to, d: s.d, tol: s.tol, unit: s.unit || 'g', userRange: s.userRange || '' })) : [];
-    const _modeEl = document.getElementById('iRangeMode');
-    if (_modeEl) _modeEl.value = (Array.isArray(d.range_profile) && d.range_profile.some(s => s && s.mode === 'range')) ? 'range' : 'interval';
-    renderInstRangeRows();
-    instTolBands = Array.isArray(d.tolerance_bands) ? d.tolerance_bands.map(b => ({ from: b.from, to: b.to, tol: b.tol, unit: b.unit || 'g' })) : [];
-    renderInstTolBandRows();
   } else {
-    ['iCategory','iName','iBrand','iRange','iTolerance','iSerial','iAssetNo','iDept','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark']
+    ['iCategory','iName','iBrand','iModel','iRange','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
+     'iUsageFreq','iProductGroup','iUspType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    const _modeEl = document.getElementById('iRangeMode'); if (_modeEl) _modeEl.value = 'interval';
-    instRange = []; renderInstRangeRows();
-    instTolBands = []; renderInstTolBandRows();
+    setToleranceFields('');
+    setBandFields('', RES_IDS, 'iResUnit');
+    setBandFields('', USE_MIN_IDS, 'iUsageMinUnit');
+    setBandFields('', USE_MAX_IDS, 'iUsageMaxUnit');
   }
   document.getElementById('instrumentModal').classList.add('open');
   initInstrumentDuplicateCheck();
   checkInstrumentDuplicates(false);
 }
 
-// ===== Multi-interval range_profile entry (ในฟอร์มเพิ่ม/แก้เครื่องมือ) =====
-let instRange = [];
-function renderInstRangeRows() {
-  const tb = document.getElementById('iRangeRows'); if (!tb) return;
-  const inp = 'width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)';
-  const unitOpts = (u) => ['g','kg','mg'].map(x => `<option value="${x}" ${(u||'g')===x?'selected':''}>${x}</option>`).join('');
-  tb.innerHTML = instRange.map((s, i) => `<tr>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.to ?? ''}" style="${inp}"></td>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.d ?? ''}" style="${inp}"></td>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.tol ?? ''}" style="${inp}"></td>
-    <td style="padding:2px 6px"><select style="${inp}">${unitOpts(s.unit)}</select></td>
-    <td style="padding:2px 6px"><input type="text" value="${s.userRange ?? ''}" placeholder="เช่น 0.1-6 kg" style="${inp}"></td>
-    <td style="text-align:center"><button type="button" onclick="removeInstRangeRow(${i})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px">✕</button></td>
-  </tr>`).join('');
-}
-function readInstRangeFromDom() {
-  return [...document.querySelectorAll('#iRangeRows tr')].map(tr => {
-    const ins = tr.querySelectorAll('input');
-    const sel = tr.querySelector('select');
-    return { to: ins[0].value, d: ins[1].value, tol: ins[2].value, unit: sel ? sel.value : 'g', userRange: ins[3] ? ins[3].value : '' };
+// ===== ค่าแบบหลายช่วง (สูงสุด 3) + หน่วย SI — ใช้ร่วมกัน Tolerance / ใช้งานต่ำสุด / ใช้งานสูงสุด =====
+// เก็บเป็นสตริงเดียวในคอลัมน์เดิม: ต่อหน่วยไว้ท้ายทุกค่า คั่นด้วย " / " เช่น "0.1 g / 0.2 g" หรือ "150 kg / >800 kg"
+// (ต่อหน่วยทุกค่าเพื่อให้ตัว parse ฝั่ง cal engine — regSplitBands/regToGrams — แปลงหน่วยถูกทุกช่วง)
+function parseBandStr(str) {
+  const s = String(str || '').trim().replace(/^±\s*/, '');
+  if (!s) return { vals: ['', '', ''], unit: 'g' };
+  let unit = '';
+  const vals = [];
+  s.split('/').map(x => x.trim().replace(/^±\s*/, '')).filter(Boolean).forEach(p => {
+    // รองรับตัวเปรียบเทียบนำหน้า เช่น ">800 kg" → ค่า ">800" หน่วย "kg"
+    const m = p.match(/^([<>≤≥]?\s*-?[\d.]+)\s*(.*)$/);
+    if (m) { vals.push(m[1].replace(/\s+/g, '')); if (m[2]) unit = m[2].trim(); }
+    else { vals.push(p); }
   });
+  while (vals.length < 3) vals.push('');
+  return { vals: vals.slice(0, 3), unit: unit || 'g' };
 }
-function addInstRangeRow() { instRange = readInstRangeFromDom(); instRange.push({ to: '', d: '', tol: '', unit: 'g', userRange: '' }); renderInstRangeRows(); }
-function removeInstRangeRow(i) { instRange = readInstRangeFromDom(); instRange.splice(i, 1); renderInstRangeRows(); }
-// อ่านตาราง → range_profile [{to,d,tol,unit,userRange,mode}] (เรียงตาม to · ข้ามแถวที่ to ว่าง) · ว่าง → null
-// mode='range' (multi-range) ติดทุก segment เมื่อเลือกประเภท Multi-range ในฟอร์ม
-function buildRangeProfileFromForm() {
-  const modeEl = document.getElementById('iRangeMode');
-  const mode = modeEl ? modeEl.value : 'interval';
-  const rp = readInstRangeFromDom().map(s => ({
-    to: parseFloat(s.to),
-    d: (s.d !== '' && s.d != null) ? parseFloat(s.d) : null,
-    tol: (s.tol !== '' && s.tol != null) ? parseFloat(s.tol) : null,
-    unit: s.unit || 'g',
-    userRange: (s.userRange || '').trim() || undefined,
-    mode: mode === 'range' ? 'range' : undefined,
-  })).filter(s => Number.isFinite(s.to) && s.to > 0).sort((a, b) => a.to - b.to);
-  return rp.length ? rp : null;
+// dropdown หน่วยของ usage ใช้รายการเดียวกับ Tolerance — clone จาก iTolUnit ครั้งแรกที่ใช้
+function ensureUnitOptions(sel) {
+  if (!sel || sel.options.length) return;
+  const src = document.getElementById('iTolUnit');
+  if (src) sel.innerHTML = src.innerHTML;
 }
-
-// ===== Tolerance หลายช่วง (tolerance_bands) — เครื่อง d เดียว แต่ค่ายอมรับต่างตามช่วงน้ำหนัก =====
-let instTolBands = [];
-function renderInstTolBandRows() {
-  const tb = document.getElementById('iTolBandRows'); if (!tb) return;
-  const inp = 'width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)';
-  const unitOpts = (u) => ['g','kg','mg'].map(x => `<option value="${x}" ${(u||'g')===x?'selected':''}>${x}</option>`).join('');
-  tb.innerHTML = instTolBands.map((s, i) => `<tr>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.tol ?? ''}" style="${inp}"></td>
-    <td style="padding:2px 6px"><select style="${inp}">${unitOpts(s.unit)}</select></td>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.from ?? ''}" style="${inp}"></td>
-    <td style="padding:2px 6px"><input type="number" step="any" value="${s.to ?? ''}" style="${inp}"></td>
-    <td style="text-align:center"><button type="button" onclick="removeInstTolBandRow(${i})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px">✕</button></td>
-  </tr>`).join('');
+function setBandFields(str, ids, unitId) {
+  const p = parseBandStr(str);
+  ids.forEach((id, i) => { const el = document.getElementById(id); if (el) el.value = p.vals[i] || ''; });
+  const sel = document.getElementById(unitId);
+  if (sel) {
+    ensureUnitOptions(sel);
+    // ถ้าหน่วยที่เก็บไว้ไม่มีใน dropdown (เช่นจากไฟล์ import) ให้เพิ่ม option ชั่วคราวเพื่อแสดงค่าเดิม
+    if (p.unit && !Array.from(sel.options).some(o => o.value === p.unit)) {
+      sel.insertAdjacentHTML('beforeend', `<option value="${escapeHtmlText(p.unit)}">${escapeHtmlText(p.unit)}</option>`);
+    }
+    sel.value = p.unit || 'g';
+  }
 }
-function readInstTolBandsFromDom() {
-  return [...document.querySelectorAll('#iTolBandRows tr')].map(tr => {
-    const ins = tr.querySelectorAll('input');
-    const sel = tr.querySelector('select');
-    return { tol: ins[0].value, unit: sel ? sel.value : 'g', from: ins[1].value, to: ins[2].value };
-  });
+function buildBandStr(ids, unitId) {
+  const unit = (document.getElementById(unitId) || {}).value || '';
+  const u = unit ? ' ' + unit : '';
+  const vals = ids
+    .map(id => ((document.getElementById(id) || {}).value || '').trim())
+    .filter(Boolean);
+  if (!vals.length) return null;
+  return vals.map(v => v + u).join(' / ');
 }
-function addInstTolBandRow() { instTolBands = readInstTolBandsFromDom(); instTolBands.push({ tol: '', unit: 'g', from: '', to: '' }); renderInstTolBandRows(); }
-function removeInstTolBandRow(i) { instTolBands = readInstTolBandsFromDom(); instTolBands.splice(i, 1); renderInstTolBandRows(); }
-// อ่านตาราง → tolerance_bands [{from,to,tol,unit}] (เรียงตาม to · ข้ามแถวที่ to/tol ว่าง) · ว่าง → null
-function buildTolBandsFromForm() {
-  const tb = readInstTolBandsFromDom().map(s => ({
-    from: (s.from !== '' && s.from != null) ? parseFloat(s.from) : 0,
-    to: parseFloat(s.to),
-    tol: (s.tol !== '' && s.tol != null) ? parseFloat(s.tol) : null,
-    unit: s.unit || 'g',
-  })).filter(s => Number.isFinite(s.to) && s.to > 0 && s.tol != null).sort((a, b) => a.to - b.to);
-  return tb.length ? tb : null;
-}
+const TOL_IDS = ['iTol1', 'iTol2', 'iTol3'], USE_MIN_IDS = ['iUsageMin1', 'iUsageMin2', 'iUsageMin3'], USE_MAX_IDS = ['iUsageMax1', 'iUsageMax2', 'iUsageMax3'], RES_IDS = ['iRes1', 'iRes2', 'iRes3'];
+function setToleranceFields(str) { setBandFields(str, TOL_IDS, 'iTolUnit'); }
+function buildToleranceStr() { return buildBandStr(TOL_IDS, 'iTolUnit'); }
 
 function closeInstrumentModal() {
   document.getElementById('instrumentModal').classList.remove('open');
@@ -805,11 +793,19 @@ async function saveInstrument() {
     category: document.getElementById('iCategory').value || null,
     instrument_name: document.getElementById('iName').value.trim(),
     brand: document.getElementById('iBrand').value.trim(),
+    model: document.getElementById('iModel').value.trim() || null,
     range_val: document.getElementById('iRange').value.trim(),
-    tolerance: document.getElementById('iTolerance').value.trim() || null,
+    tolerance: buildToleranceStr(),
+    resolution_text: buildBandStr(RES_IDS, 'iResUnit'),
+    usage_min: buildBandStr(USE_MIN_IDS, 'iUsageMinUnit'),
+    usage_max: buildBandStr(USE_MAX_IDS, 'iUsageMaxUnit'),
+    usage_frequency: document.getElementById('iUsageFreq').value.trim() || null,
+    product_group: document.getElementById('iProductGroup').value.trim() || null,
+    usp_type: document.getElementById('iUspType').value.trim() || null,
     serial_no: document.getElementById('iSerial').value.trim(),
     asset_no: document.getElementById('iAssetNo').value.trim() || null,
     department: document.getElementById('iDept').value.trim(),
+    division: document.getElementById('iDivision').value.trim() || null,
     id_code: document.getElementById('iIdCode').value.trim(),
     cert_no: document.getElementById('iCertNo').value.trim(),
     cal_date: document.getElementById('iCalDate').value || null,
@@ -819,10 +815,9 @@ async function saveInstrument() {
     cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,
     cal_type: document.getElementById('iCalType').value || null,
     remark: document.getElementById('iRemark').value.trim() || null,
-    range_profile: buildRangeProfileFromForm(),
   };
-  // tolerance_bands เฉพาะเมื่อ DB มีคอลัมน์ (กัน save พังตอนยังไม่ได้ ALTER)
-  if (window.HAS_TOL_BANDS !== false) payload.tolerance_bands = buildTolBandsFromForm();
+  // หมายเหตุ: range_profile / tolerance_bands ไม่อยู่ใน payload แล้ว (ถอด UI ตารางออก 2026-07)
+  // — save จะไม่แตะคอลัมน์เหล่านี้ ค่าเดิมของเครื่อง multi-range ใน DB คงอยู่ให้ balance-cal ใช้ต่อ
 
   if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
 
