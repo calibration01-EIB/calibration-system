@@ -570,7 +570,25 @@ function getInstrumentCachePrefix() {
   return 'ilc_instruments_cache_' + roleKey + '_' + userKey;
 }
 
+// ===== List หน่วยงาน (Unit) — ตาราง departments: รหัส → ชื่อเต็ม + แผนก =====
+window.DEPT_INFO = window.DEPT_INFO || {};
+function deptUnitName(code) { return (window.DEPT_INFO[code] && window.DEPT_INFO[code].unit_name) || ''; }
+function deptSectionName(code) { return (window.DEPT_INFO[code] && window.DEPT_INFO[code].section_name) || ''; }
+async function loadDeptInfo() {
+  try { window.DEPT_INFO = JSON.parse(localStorage.getItem('ilc_dept_info') || '{}') || {}; } catch (e) {}
+  try {
+    const { data, error } = await sb.from('departments').select('code,unit_name,section_name');
+    if (error || !data || !data.length) return;
+    const map = {};
+    data.forEach(d => { map[d.code] = { unit_name: d.unit_name || '', section_name: d.section_name || '' }; });
+    window.DEPT_INFO = map;
+    try { localStorage.setItem('ilc_dept_info', JSON.stringify(map)); } catch (e) {}
+    if (Array.isArray(allData) && allData.length) populateFilters();
+  } catch (e) { /* ตารางยังไม่มี/ออฟไลน์ → ใช้รหัสอย่างเดียว */ }
+}
+
 async function loadData(forceRefresh = false) {
+  loadDeptInfo(); // โหลดชื่อหน่วยงานคู่ขนาน — เสร็จแล้วค่อย refresh ตัวกรองเอง
   const cachePrefix = getInstrumentCachePrefix();
   const CACHE_KEY = cachePrefix + '_rows';
   const CACHE_TIME_KEY = cachePrefix + '_time';
@@ -688,8 +706,19 @@ async function fetchFromSupabase() {
 function populateFilters() {
   const types = [...new Set(allData.map(d => getDisplayInstrumentType(d)))].filter(Boolean).sort();
   const units = [...new Set(allData.map(d => d.department))].filter(Boolean).sort();
+  // ป้ายตัวกรอง: "รหัส — ชื่อหน่วยงาน" (ชื่อจาก list departments ถ้ามี)
+  const unitLabel = (u) => {
+    const name = typeof deptUnitName === 'function' ? deptUnitName(u) : '';
+    return name ? `${u} — ${name.length > 42 ? name.slice(0, 40) + '…' : name}` : u;
+  };
   document.getElementById('typeFilter').innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t)}</option>`).join('');
-  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option value="${escapeHtmlAttr(u)}">${escapeHtmlText(u)}</option>`).join('');
+  document.getElementById('unitFilter').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + units.map(u => `<option value="${escapeHtmlAttr(u)}">${escapeHtmlText(unitLabel(u))}</option>`).join('');
+  // datalist ช่องหน่วยงานในฟอร์มเครื่องมือ — รวมรหัสจาก list departments กับที่มีอยู่ในข้อมูล
+  const dl = document.getElementById('deptCodeList');
+  if (dl) {
+    const codes = [...new Set([...Object.keys(window.DEPT_INFO || {}), ...units])].sort();
+    dl.innerHTML = codes.map(c => `<option value="${escapeHtmlAttr(c)}" label="${escapeHtmlAttr(deptUnitName(c))}"></option>`).join('');
+  }
   renderListCategoryPills();
 }
 

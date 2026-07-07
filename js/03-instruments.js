@@ -106,6 +106,14 @@ function regDetailItem(label, value, full = false) {
   return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
 }
 
+// แสดงชื่อหน่วยงานเต็มใต้ช่องรหัสหน่วยงานในฟอร์ม (จาก list departments)
+function updateDeptUnitHint() {
+  const el = document.getElementById('iDeptUnitHint');
+  if (!el) return;
+  const code = (document.getElementById('iDept')?.value || '').trim().toUpperCase();
+  el.textContent = (code && typeof deptUnitName === 'function') ? deptUnitName(code) : '';
+}
+
 // ===== รูปภาพประกอบเครื่องมือ (hero gallery) =====
 const INST_PHOTO_MAX = 5;
 function instPhotoFolder(d) { return `photos_${d.id}_${d.id_code}`; }
@@ -385,7 +393,7 @@ function openInstrumentDetail(id) {
       ${regDetailItem('ประเภทเครื่องชั่ง', ({ single: 'Single Range (ช่วงเดียว)', range: 'Multiple Range (หลายช่วง)', interval: 'Multi-Interval (หลายช่วงความละเอียด)' })[d.balance_type] || d.balance_type)}
       ${regDetailItem('Serial No.', d.serial_no)}
       ${regDetailItem('Asset No.', d.asset_no)}
-      ${regDetailItem('หน่วยงาน (Unit)', d.department)}
+      ${regDetailItem('หน่วยงาน (Unit)', d.department && typeof deptUnitName === 'function' && deptUnitName(d.department) ? `${d.department} · ${deptUnitName(d.department)}` : d.department)}
       ${regDetailItem('แผนก (Section)', d.division)}
       ${regDetailItem('ความถี่สอบเทียบ', d.cal_frequency)}
       ${regDetailItem('ภายใน/ภายนอก', d.cal_type)}
@@ -689,6 +697,7 @@ function openInstrumentModal(instrumentId) {
     setBandFields('', USE_MIN_IDS, 'iUsageMinUnit');
     setBandFields('', USE_MAX_IDS, 'iUsageMaxUnit');
   }
+  if (typeof updateDeptUnitHint === 'function') updateDeptUnitHint();
   document.getElementById('instrumentModal').classList.add('open');
   initInstrumentDuplicateCheck();
   checkInstrumentDuplicates(false);
