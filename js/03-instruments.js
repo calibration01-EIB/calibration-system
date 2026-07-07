@@ -311,7 +311,8 @@ function openBalanceCal(id) {
     name: d.instrument_name || '', name_th: '',
     id_code: d.id_code || '', asset: d.asset_no || '',
     manufacturer: d.brand || '', model: d.model || '', serial: d.serial_no || '',
-    capacity: d.capacity ?? reg.capacity ?? '', resolution: d.resolution ?? reg.resolution ?? '', accuracy_class: d.accuracy_class || '',
+    // capacity_unit มีค่า = พิกัดไม่ใช่หน่วยมวล (ไม่ใช่กรัม) — อย่าส่งให้ cal engine เครื่องชั่ง
+    capacity: (d.capacity_unit ? '' : d.capacity) ?? reg.capacity ?? '', resolution: d.resolution ?? reg.resolution ?? '', accuracy_class: d.accuracy_class || '',
     user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || reg.range_profile || null, tolerance_bands: d.tolerance_bands || null,
     balance_type: d.balance_type || null,   // single | range | interval — ใบบันทึกเปิดมาถูกประเภทเลย
     section: d.department || '', unit_dept: d.department || '', location: d.location || '',
@@ -380,7 +381,7 @@ function openInstrumentDetail(id) {
       ${regDetailItem('รหัสเครื่องจักร (Machine Code)', d.machine_name)}
       ${regDetailItem('ยี่ห้อ (Manufacturer)', d.brand)}
       ${regDetailItem('รุ่น (Model)', d.model)}
-      ${regDetailItem('พิกัด Max (g)', d.capacity)}
+      ${regDetailItem('พิกัด Max', d.capacity != null && d.capacity !== '' ? `${d.capacity} ${d.capacity_unit || 'g'}` : '')}
       ${regDetailItem('ความละเอียด (Resolution)', d.resolution_text || d.resolution)}
       ${regDetailItem('Accuracy Class', d.accuracy_class)}
       ${regDetailItem('สถานที่ใช้งาน', d.location)}
@@ -661,7 +662,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iBrand').value = _brand;
     document.getElementById('iModel').value = _model;
     setRangeField(d.range_val || '');
-    setCapacityField(d.capacity);
+    setCapacityField(d.capacity, d.capacity_unit);
     setToleranceFields(d.tolerance || '');
     // resolution_text (จากบัญชีรายการ) มาก่อน · เครื่องเก่าบางตัวมีแต่ resolution ตัวเลข (หน่วย g)
     setBandFields(d.resolution_text || (d.resolution != null && d.resolution !== '' ? d.resolution + ' g' : ''), RES_IDS, 'iResUnit');
@@ -752,21 +753,41 @@ const TOL_IDS = ['iTol1', 'iTol2', 'iTol3'], USE_MIN_IDS = ['iUsageMin1', 'iUsag
 function setToleranceFields(str) { setBandFields(str, TOL_IDS, 'iTolUnit'); }
 function buildToleranceStr() { return buildBandStr(TOL_IDS, 'iTolUnit'); }
 
-// ===== พิกัด Max (capacity — DB เก็บกรัมเสมอ) + ย่านการวัด (range_val — ข้อความ+หน่วยต่อท้าย) =====
-const CAP_UNIT_G = { g: 1, kg: 1000, mg: 0.001 };
-// โหลด: ≥1000 g แสดงเป็น kg ให้อ่านง่ายแบบบัญชีรายการ (30000 → 30 kg)
-function setCapacityField(capacity) {
+// ===== พิกัด Max + ย่านการวัด (range_val — ข้อความ+หน่วยต่อท้าย) =====
+// หน่วยมวล (g/kg/mg/µg): DB เก็บกรัมเสมอ (capacity_unit = null) — cal engine เครื่องชั่งอ่านเป็นกรัม
+// หน่วยอื่น (kgf.cm, °C, bar, ...): เก็บตัวเลขตามที่กรอก + หน่วยใน capacity_unit
+const CAP_UNIT_G = { g: 1, kg: 1000, mg: 0.001, 'µg': 0.000001 };
+// โหลด: มวล ≥1000 g แสดงเป็น kg ให้อ่านง่ายแบบบัญชีรายการ (30000 → 30 kg)
+function setCapacityField(capacity, capacityUnit) {
   const inp = document.getElementById('iCapacity'), sel = document.getElementById('iCapacityUnit');
   if (!inp || !sel) return;
-  const g = parseFloat(capacity);
-  if (!Number.isFinite(g)) { inp.value = ''; sel.value = 'g'; return; }
-  if (g >= 1000) { inp.value = +(g / 1000).toFixed(6); sel.value = 'kg'; }
-  else { inp.value = g; sel.value = 'g'; }
+  ensureUnitOptions(sel);
+  const v = parseFloat(capacity);
+  if (!Number.isFinite(v)) { inp.value = ''; sel.value = 'g'; return; }
+  const u = String(capacityUnit || '').trim();
+  if (u && !CAP_UNIT_G[u]) {
+    // หน่วยไม่ใช่มวล — แสดงตามที่เก็บ (เพิ่ม option ชั่วคราวถ้าไม่มีในลิสต์)
+    if (!Array.from(sel.options).some(o => o.value === u)) {
+      sel.insertAdjacentHTML('beforeend', `<option value="${escapeHtmlText(u)}">${escapeHtmlText(u)}</option>`);
+    }
+    inp.value = v; sel.value = u;
+    return;
+  }
+  if (v >= 1000) { inp.value = +(v / 1000).toFixed(6); sel.value = 'kg'; }
+  else { inp.value = v; sel.value = 'g'; }
 }
 function buildCapacityG() {
   const v = parseFloat((document.getElementById('iCapacity') || {}).value);
   if (!Number.isFinite(v)) return null;
-  return v * (CAP_UNIT_G[(document.getElementById('iCapacityUnit') || {}).value] || 1);
+  const u = (document.getElementById('iCapacityUnit') || {}).value;
+  if (!CAP_UNIT_G[u]) return v;                 // หน่วยไม่ใช่มวล — เก็บตัวเลขตรง ๆ
+  return v * (CAP_UNIT_G[u] || 1);
+}
+function buildCapacityUnit() {
+  const v = parseFloat((document.getElementById('iCapacity') || {}).value);
+  if (!Number.isFinite(v)) return null;
+  const u = (document.getElementById('iCapacityUnit') || {}).value;
+  return CAP_UNIT_G[u] ? null : (u || null);    // มวล → null (สื่อว่าเป็นกรัม)
 }
 // Range: แยกหน่วยท้ายข้อความเข้า dropdown ("0 - 30 kg" → "0 - 30" + kg) · หน่วยไม่รู้จักคงไว้ในข้อความ
 function setRangeField(str) {
@@ -936,6 +957,7 @@ async function saveInstrument() {
     model: document.getElementById('iModel').value.trim() || null,
     range_val: buildRangeVal(),
     capacity: buildCapacityG(),
+    capacity_unit: buildCapacityUnit(),
     tolerance: buildToleranceStr(),
     resolution_text: buildBandStr(RES_IDS, 'iResUnit'),
     usage_min: buildBandStr(USE_MIN_IDS, 'iUsageMinUnit'),

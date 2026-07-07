@@ -4059,11 +4059,7 @@ body.app-mode textarea:focus {
           <label>พิกัด Max</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="number" step="any" id="iCapacity" placeholder="เช่น 3100" style="flex:1;min-width:0">
-            <select id="iCapacityUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด">
-              <option value="g" selected>g</option>
-              <option value="kg">kg</option>
-              <option value="mg">mg</option>
-            </select>
+            <select id="iCapacityUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
           </div>
         </div>
         <div class="form-group">
@@ -4110,30 +4106,59 @@ body.app-mode textarea:focus {
                 <option value="ppm">ppm</option>
                 <option value="%RH">%RH</option>
                 <option value="pH">pH</option>
+                <option value="%FS">%FS</option>
               </optgroup>
               <optgroup label="ความยาว (Length)">
                 <option value="m">m</option>
                 <option value="mm">mm</option>
                 <option value="µm">µm</option>
                 <option value="nm">nm</option>
+                <option value="inch">inch</option>
               </optgroup>
               <optgroup label="ความดัน (Pressure)">
                 <option value="Pa">Pa</option>
                 <option value="kPa">kPa</option>
+                <option value="MPa">MPa</option>
                 <option value="bar">bar</option>
                 <option value="mbar">mbar</option>
                 <option value="psi">psi</option>
+                <option value="mmHg">mmHg</option>
+                <option value="cmHg">cmHg</option>
+                <option value="inH2O">inH2O</option>
+                <option value="kgf/cm²">kgf/cm²</option>
               </optgroup>
-              <optgroup label="อื่น ๆ (Other)">
+              <optgroup label="แรง/แรงบิด (Force/Torque)">
                 <option value="N">N</option>
+                <option value="kgf">kgf</option>
+                <option value="gf">gf</option>
+                <option value="kgf.cm">kgf.cm</option>
+                <option value="kgf.m">kgf.m</option>
+                <option value="N.m">N.m</option>
+                <option value="cN.m">cN.m</option>
+              </optgroup>
+              <optgroup label="ความหนืด/ความนำ (Visc./Cond.)">
+                <option value="cP">cP</option>
+                <option value="mPa.s">mPa.s</option>
+                <option value="µS/cm">µS/cm</option>
+                <option value="mS/cm">mS/cm</option>
+              </optgroup>
+              <optgroup label="ไฟฟ้า (Electrical)">
                 <option value="V">V</option>
                 <option value="mV">mV</option>
+                <option value="VAC">VAC</option>
+                <option value="VDC">VDC</option>
                 <option value="A">A</option>
                 <option value="mA">mA</option>
                 <option value="Ω">Ω</option>
+              </optgroup>
+              <optgroup label="อื่น ๆ (Other)">
                 <option value="s">s</option>
+                <option value="min">min</option>
+                <option value="hr">hr</option>
                 <option value="Hz">Hz</option>
                 <option value="rpm">rpm</option>
+                <option value="lux">lux</option>
+                <option value="GU">GU</option>
               </optgroup>
             </select>
           </div>
