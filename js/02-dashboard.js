@@ -278,7 +278,7 @@ async function renderPendingCertWidget() {
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
   if (!recs.length) {
-    el.innerHTML = `<div style="background:#e8f5e9;border:1px solid #b7e0bd;border-radius:10px;padding:12px 16px;color:#1b5e20;font-size:13px;font-weight:700">✅ ไม่มีงานสอบเทียบค้างดำเนินการ — ทุกใบแนบสแกน/สมบูรณ์แล้ว</div>`;
+    el.innerHTML = `<div class="dsh-pending dsh-pending--ok"><div class="dsh-pending-n"><i class="ti ti-check"></i></div><div><b>ไม่มีงานสอบเทียบค้างดำเนินการ</b><div class="dsh-pending-sub">ทุกใบแนบสแกน / สมบูรณ์แล้วเรียบร้อย</div></div></div>`;
     return;
   }
   const rows = recs.map(r => {
@@ -287,31 +287,29 @@ async function renderPendingCertWidget() {
     const idc = escapeHtmlText(inst.id_code || '–');
     const certNo = escapeHtmlText(r.cert_no || '–');
     const nameCell = inst.id != null
-      ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>`
+      ? `<a onclick="openCalHistory(${inst.id})" class="dsh-plink">${name}</a>`
       : `<strong>${name}</strong>`;
-    const scanBtn = canEdit ? `<button onclick="calRecComplete('${r.id}')" style="padding:5px 11px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:12px;font-weight:600;cursor:pointer">📎 แนบสแกน → สมบูรณ์</button>` : '';
-    const viewBtn = `<button onclick="openRecReview('${r.id}')" style="padding:5px 11px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-size:12px;cursor:pointer">ดูรายละเอียด</button>`;
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:7px 8px;font-family:var(--mono),monospace;font-weight:700">${certNo}</td>
-      <td style="padding:7px 8px">${nameCell} <span style="color:var(--text3);font-size:11px">${idc}</span></td>
-      <td style="padding:7px 8px;white-space:nowrap">${fmt(r.cal_date)}</td>
-      <td style="padding:7px 8px">${escapeHtmlText(r.calibrated_by || '–')}</td>
-      <td style="padding:7px 8px;text-align:right;white-space:nowrap"><span style="display:inline-flex;gap:6px">${scanBtn}${viewBtn}</span></td>
+    const scanBtn = canEdit ? `<button onclick="calRecComplete('${r.id}')" class="dsh-btn-dark">📎 แนบสแกน → สมบูรณ์</button>` : '';
+    const viewBtn = `<button onclick="openRecReview('${r.id}')" class="dsh-btn-ghost">ดูรายละเอียด</button>`;
+    return `<tr>
+      <td class="dsh-mono">${certNo}</td>
+      <td>${nameCell} <span class="dsh-sub">${idc}</span></td>
+      <td style="white-space:nowrap">${fmt(r.cal_date)}</td>
+      <td>${escapeHtmlText(r.calibrated_by || '–')}</td>
+      <td style="text-align:right;white-space:nowrap"><span style="display:inline-flex;gap:6px">${scanBtn}${viewBtn}</span></td>
     </tr>`;
   }).join('');
-  el.innerHTML = `<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--amber,#f0a500);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:15px;font-weight:800;color:var(--text)">📋 งานสอบเทียบค้างดำเนินการ</span>
-      <span style="background:#fff3e0;color:#b9770e;font-weight:800;border-radius:20px;padding:2px 11px;font-size:13px">${recs.length}</span>
-      <span style="font-size:12px;color:var(--text3)">ออกเลขแล้ว — รอแนบสแกน/อนุมัติ</span>
+  el.innerHTML = `<div class="dsh-card" style="padding:0;overflow:hidden">
+    <div class="dsh-pending">
+      <div class="dsh-pending-n">${recs.length}</div>
+      <div><b>งานสอบเทียบค้างดำเนินการ</b><div class="dsh-pending-sub">ออกเลขแล้ว — รอแนบสแกน / อนุมัติ</div></div>
     </div>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
-      <thead><tr style="color:var(--text3);text-align:left;border-bottom:2px solid var(--border)">
-        <th style="padding:6px 8px;font-weight:600">Cert No.</th><th style="padding:6px 8px;font-weight:600">เครื่องมือ / ID</th>
-        <th style="padding:6px 8px;font-weight:600">วันสอบ</th><th style="padding:6px 8px;font-weight:600">ผู้สอบ</th><th></th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
+    <div style="overflow-x:auto;padding:2px 18px 14px">
+      <table class="dsh-ptable">
+        <thead><tr><th>Cert No.</th><th>เครื่องมือ / ID</th><th>วันสอบ</th><th>ผู้สอบ</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   </div>`;
 }
 
@@ -949,7 +947,7 @@ function renderDashboardAuditItems(items) {
   const el = document.getElementById('dashboardAuditList');
   if (!el) return;
   if (!items.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">ยังไม่มีกิจกรรมล่าสุด</div>';
+    el.innerHTML = '<div class="dsh-empty">ยังไม่มีกิจกรรมล่าสุด</div>';
     return;
   }
 
@@ -961,15 +959,15 @@ function renderDashboardAuditItems(items) {
       item.username || item.created_by,
       formatDashboardAuditTime(item.created_at)
     ].filter(Boolean).join(' · ');
-    return `<div style="display:flex;align-items:flex-start;gap:10px;background:${style.bg};border-radius:8px;padding:9px 10px">
-      <div style="width:24px;height:24px;border-radius:50%;background:white;color:${style.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">${style.icon}</div>
+    return `<div class="dsh-aitem">
+      <div class="dsh-aic" style="background:${style.bg};color:${style.color}">${style.icon}</div>
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div style="font-size:12px;font-weight:700;color:${style.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtmlText(item.action || 'กิจกรรม')}</div>
-          <div style="font-size:10px;color:var(--text3);white-space:nowrap">${formatDashboardAuditTime(item.created_at)}</div>
+          <div class="dsh-atitle">${escapeHtmlText(item.action || 'กิจกรรม')}</div>
+          <div class="dsh-atime">${formatDashboardAuditTime(item.created_at)}</div>
         </div>
-        <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${escapeHtmlText(title)}</div>
-        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${escapeHtmlText(meta || '–')}</div>
+        <div class="dsh-aline">${escapeHtmlText(title)}</div>
+        <div class="dsh-ameta">${escapeHtmlText(meta || '–')}</div>
       </div>
     </div>`;
   }).join('');
@@ -978,7 +976,7 @@ function renderDashboardAuditItems(items) {
 async function renderDashboardAuditLog() {
   const el = document.getElementById('dashboardAuditList');
   if (!el || typeof sb === 'undefined') return;
-  el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>';
+  el.innerHTML = '<div class="dsh-empty">กำลังโหลดกิจกรรม...</div>';
 
   try {
     const [auditRes, planRes] = await Promise.all([
@@ -996,7 +994,7 @@ async function renderDashboardAuditLog() {
     const items = auditItems.concat(planItems).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderDashboardAuditItems(items);
   } catch(e) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--red);text-align:center;padding:16px 0">โหลด Audit log ไม่สำเร็จ</div>';
+    el.innerHTML = '<div class="dsh-empty">โหลด Audit log ไม่สำเร็จ</div>';
   }
 }
 
