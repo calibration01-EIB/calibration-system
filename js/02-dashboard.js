@@ -890,6 +890,12 @@ function updateStats() {
   if (pOut) pOut.textContent = exPct + '%';
   if (bIn) bIn.style.width = inPct + '%';
   if (bOut) bOut.style.width = exPct + '%';
+  const heroDate = document.getElementById('dashHeroDate');
+  if (heroDate) {
+    const now = new Date();
+    heroDate.textContent = now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      + ' · อัปเดตล่าสุด ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+  }
   renderDashMiniList();
 }
 

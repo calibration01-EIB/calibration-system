@@ -727,6 +727,91 @@ tbody tr:hover { background: var(--surface2); }
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Dashboard redesign: Soft Modern + Executive Teal hero (2026-07) ===== */
+.dsh-hero { background: linear-gradient(118deg, #00564c, #00897B 78%, #26a69a); border-radius: 14px; padding: 22px 26px 64px; color: #fff; }
+.dsh-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dsh-hero-title { font-size: 19px; font-weight: 700; color: #fff; }
+.dsh-hero-sub { font-size: 11.5px; color: rgba(255,255,255,.78); margin-top: 3px; }
+.dsh-hero-btn { font-size: 12px; padding: 7px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.13); color: #fff; font-weight: 500; cursor: pointer; font-family: var(--font); transition: background .15s; }
+.dsh-hero-btn:hover { background: rgba(255,255,255,.24); }
+
+.dsh-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: -46px 18px 16px; }
+.dsh-kpi { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 6px 22px rgba(0,60,53,.13); cursor: pointer; transition: transform .15s; }
+.dsh-kpi:hover { transform: translateY(-2px); }
+.dsh-kpi-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px; }
+.dsh-kpi-v { font-size: 27px; font-weight: 700; letter-spacing: -.5px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.dsh-kpi-lb { font-size: 11.5px; color: #71827f; margin-top: 3px; }
+
+.dsh-card { background: #fff; border-radius: 16px; padding: 17px 19px; box-shadow: 0 3px 14px rgba(16,58,52,.07); }
+.dsh-ct { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dsh-ct small { display: block; font-size: 10.5px; font-weight: 400; color: #8a9793; margin-top: 1px; }
+.dsh-pill-link { color: #00897B; font-weight: 600; background: #e0f2ef; padding: 6px 15px; border-radius: 999px; font-size: 11.5px; white-space: nowrap; cursor: pointer; border: none; font-family: var(--font); transition: background .15s; }
+.dsh-pill-link:hover { background: #cdeae4; }
+.dsh-year { font-size: 11.5px; color: #5c6f6c; background: #eef4f2; padding: 4px 13px; border-radius: 999px; white-space: nowrap; }
+.dsh-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 16px 0; }
+
+.dsh-pending { display: flex; align-items: center; gap: 12px; background: linear-gradient(90deg, #fff8ec, #fff 62%); border-radius: 16px; padding: 13px 18px; font-size: 12px; box-shadow: 0 3px 14px rgba(16,58,52,.06); }
+.dsh-pending-n { width: 36px; height: 36px; border-radius: 11px; background: #f59e0b; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none; }
+.dsh-pending-sub { color: #71827f; font-size: 10.5px; }
+.dsh-pending--ok { background: linear-gradient(90deg, #eef9f0, #fff 62%); }
+.dsh-pending--ok .dsh-pending-n { background: #2E7D32; }
+.dsh-card > .dsh-pending { box-shadow: none; border-radius: 0; }
+
+.dsh-row2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; margin-bottom: 16px; align-items: start; }
+
+.dsh-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+.dsh-tcard { border: 1.5px solid #e4ebe9; border-radius: 13px; padding: 11px 12px; background: #fff; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.dsh-tic { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-bottom: 7px; }
+.dsh-tn { font-size: 10.5px; color: #5c6f6c; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dsh-tv { font-size: 16px; font-weight: 700; margin-top: 2px; }
+
+.dsh-mgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.dsh-mcard { border: 1.5px solid #e4ebe9; border-radius: 13px; padding: 10px 8px; text-align: center; background: #fff; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.dsh-mname { font-size: 11px; color: #5c6f6c; margin-bottom: 4px; font-weight: 600; }
+.dsh-mnum { font-size: 20px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.dsh-mdash { font-size: 10px; color: var(--text3); }
+
+.dsh-sbar { height: 4px; background: #eef4f2; border-radius: 2px; margin: 7px 3px 6px; display: flex; gap: 2px; overflow: hidden; }
+.dsh-sbar > div { border-radius: 2px; }
+.dsh-chiprow { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-height: 18px; }
+.dsh-tcard .dsh-chiprow { justify-content: flex-start; }
+.dsh-chip { font-size: 10px; padding: 1px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.dsh-chip--ov { background: #fde8e8; color: #b91c1c; }
+.dsh-chip--wa { background: #fdf3dd; color: #92600a; }
+.dsh-chip--ok { background: #e5f6ec; color: #0b7a44; }
+
+.dsh-alist { display: flex; flex-direction: column; gap: 4px; max-height: 380px; overflow-y: auto; }
+.dsh-aitem { display: flex; align-items: flex-start; gap: 10px; border-radius: 11px; padding: 9px 11px; }
+.dsh-aitem:nth-child(even) { background: #f4f8f7; }
+.dsh-aic { width: 28px; height: 28px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+.dsh-atitle { font-size: 12px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsh-atime { font-size: 10px; color: var(--text3); white-space: nowrap; }
+.dsh-aline { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.dsh-ameta { font-size: 10px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+.dsh-ptable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dsh-ptable th { padding: 6px 8px; font-weight: 600; color: var(--text3); text-align: left; border-bottom: 2px solid #eef2f1; }
+.dsh-ptable td { padding: 7px 8px; border-bottom: 1px solid #f0f4f3; }
+.dsh-ptable tr:last-child td { border-bottom: none; }
+.dsh-mono { font-family: var(--mono), monospace; font-weight: 700; }
+.dsh-sub { color: var(--text3); font-size: 11px; }
+.dsh-plink { cursor: pointer; color: #00695C; font-weight: 700; }
+.dsh-btn-dark { padding: 5px 12px; border: none; border-radius: 999px; background: #1b5e20; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.dsh-btn-ghost { padding: 5px 12px; border: 1px solid #dde5e3; border-radius: 999px; background: #fff; color: var(--text); font-size: 12px; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .dsh-kpis { grid-template-columns: repeat(2, 1fr); }
+  .dsh-row2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .dsh-hero { padding: 18px 16px 56px; }
+  .dsh-kpis { margin: -44px 10px 14px; gap: 10px; }
+  .dsh-kpi { padding: 13px 14px; }
+  .dsh-kpi-v { font-size: 24px; }
+  .dsh-mgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dsh-tgrid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+}
 </style>
 <style id="calibrationLoginRefresh">
 :root{--cal-ink:#15343b;--cal-muted:#597177;--cal-line:rgba(21,52,59,.14);--cal-panel:rgba(255,255,255,.90);--cal-aqua:#1fb9c7;--cal-mint:#4ed7a8;--cal-sun:#ffc84a;--cal-coral:#ff7f62;}
@@ -2657,82 +2742,69 @@ body.app-mode textarea:focus {
 
       <div id="pageDashboard" class="page-content">
 
-        <!-- ROW 1: KPI CARDS -->
-        <div id="statCardsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-          <div onclick="filterByStatus('')" style="background:linear-gradient(135deg,#00897B,#005a4f);border-radius:10px;padding:20px 22px;cursor:pointer;box-shadow:0 4px 18px rgba(0,105,92,.28);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:11px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;letter-spacing:.08em">ทั้งหมด</span>
-              <div style="background:rgba(255,255,255,.18);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:17px">🔧</div>
+        <!-- HERO -->
+        <div class="dsh-hero">
+          <div class="dsh-hero-top">
+            <div>
+              <div class="dsh-hero-title">ภาพรวมระบบสอบเทียบ</div>
+              <div class="dsh-hero-sub" id="dashHeroDate"></div>
             </div>
-            <div style="font-size:38px;font-weight:800;color:white;line-height:1;letter-spacing:-1px" id="statTotal">–</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">เครื่องมือ</div>
-          </div>
-          <div onclick="filterByStatus('ok')" style="background:white;border:1px solid var(--border);border-top:3px solid var(--green);border-radius:10px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em">ปกติ</span>
-              <div style="background:var(--green-light);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:17px">✅</div>
-            </div>
-            <div style="font-size:38px;font-weight:800;color:var(--green);line-height:1;letter-spacing:-1px" id="statOk">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:6px">สอบเทียบแล้ว</div>
-          </div>
-          <div onclick="filterByStatus('overdue')" style="background:white;border:1px solid var(--border);border-top:3px solid var(--red);border-radius:10px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em">เกินกำหนด</span>
-              <div style="background:var(--red-light);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:17px">🔴</div>
-            </div>
-            <div style="font-size:38px;font-weight:800;color:var(--red);line-height:1;letter-spacing:-1px" id="statOverdue">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:6px">ต้องดำเนินการ</div>
-          </div>
-          <div onclick="filterByStatus('warning')" style="background:white;border:1px solid var(--border);border-top:3px solid var(--amber);border-radius:10px;padding:20px 22px;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em">ใกล้ครบ</span>
-              <div style="background:var(--amber-light);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:17px">🟡</div>
-            </div>
-            <div style="font-size:38px;font-weight:800;color:var(--amber);line-height:1;letter-spacing:-1px" id="statWarning">–</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:6px">ภายใน 30 วัน</div>
+            <button class="dsh-hero-btn" onclick="loadData(true)"><i class="ti ti-refresh"></i> รีเฟรชข้อมูล</button>
           </div>
         </div>
 
-        <!-- ROW 1.5: งานสอบเทียบค้างดำเนินการ -->
-        <div id="pendingCertWidget" style="margin-bottom:20px"></div>
-
-        <!-- ROW 2: Instrument Types -->
-        <div id="dashDonutAlertsRow" style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px">
-
-          <!-- Instrument Type Cards -->
-          <div id="dashboardCategoryPanel" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow)">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-              <div>
-                <div style="font-size:14px;font-weight:700;color:var(--text)">ประเภทเครื่องมือ</div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px">แตะประเภทเพื่อกรองรายการเครื่องมือ</div>
-              </div>
-              <button onclick="activeCategory='all';renderCategoryCards();filterData();showPage('list')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap">ดูทั้งหมด →</button>
-            </div>
-            <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:360px;overflow-y:auto;padding-right:4px"></div>
+        <!-- KPI CARDS (ลอยทับ hero) -->
+        <div id="statCardsGrid" class="dsh-kpis">
+          <div class="dsh-kpi" onclick="filterByStatus('')">
+            <div class="dsh-kpi-ic" style="background:#e0f2ef;color:#00897B"><i class="ti ti-tools"></i></div>
+            <div class="dsh-kpi-v" id="statTotal">–</div>
+            <div class="dsh-kpi-lb">เครื่องมือทั้งหมด</div>
           </div>
-
+          <div class="dsh-kpi" onclick="filterByStatus('ok')">
+            <div class="dsh-kpi-ic" style="background:#e5f6ec;color:#2E7D32"><i class="ti ti-circle-check"></i></div>
+            <div class="dsh-kpi-v" style="color:#0b7a44" id="statOk">–</div>
+            <div class="dsh-kpi-lb">ปกติ · สอบเทียบแล้ว</div>
+          </div>
+          <div class="dsh-kpi" onclick="filterByStatus('warning')">
+            <div class="dsh-kpi-ic" style="background:#fdf3dd;color:#b45309"><i class="ti ti-hourglass"></i></div>
+            <div class="dsh-kpi-v" style="color:#b45309" id="statWarning">–</div>
+            <div class="dsh-kpi-lb">ใกล้ครบกำหนด · ภายใน 30 วัน</div>
+          </div>
+          <div class="dsh-kpi" onclick="filterByStatus('overdue')">
+            <div class="dsh-kpi-ic" style="background:#fde8e8;color:#b91c1c"><i class="ti ti-alert-triangle"></i></div>
+            <div class="dsh-kpi-v" style="color:#b91c1c" id="statOverdue">–</div>
+            <div class="dsh-kpi-lb">เกินกำหนด · ต้องดำเนินการ</div>
+          </div>
         </div>
 
-        <!-- ROW 3: Monthly Cards + Audit Log -->
-        <div id="dashMonthlyAuditRow" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);gap:16px;margin-bottom:16px">
-          <div id="dashMonthlyRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-              <div>
-                <div style="font-size:14px;font-weight:700;color:var(--text)">ครบกำหนดสอบเทียบรายเดือน</div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px">แสดงจำนวนเครื่องมือที่ครบกำหนดในแต่ละเดือน</div>
-              </div>
-              <span style="font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap" id="monthlyYearLabel"></span>
-            </div>
-            <div id="monthGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px"></div>
-          </div>
+        <!-- งานสอบเทียบค้างดำเนินการ -->
+        <div id="pendingCertWidget" style="margin-bottom:16px"></div>
 
-          <div id="dashAuditRow" style="background:white;border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:var(--shadow);margin-bottom:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-              <div style="font-size:14px;font-weight:700;color:var(--text)">กิจกรรมล่าสุด · Audit Log</div>
-              <button onclick="showPage('audit')" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font);font-weight:600">ดูทั้งหมด →</button>
+        <!-- ประเภทเครื่องมือ -->
+        <div class="dsh-card" style="margin-bottom:16px">
+          <div class="dsh-ct">
+            <span>ประเภทเครื่องมือ<small>แตะประเภทเพื่อกรองรายการเครื่องมือ</small></span>
+            <button class="dsh-pill-link" onclick="activeCategory='all';renderCategoryCards();filterData();showPage('list')">ดูทั้งหมด →</button>
+          </div>
+          <div id="categoryGrid" class="dsh-tgrid"></div>
+        </div>
+
+        <!-- รายเดือน + Audit Log -->
+        <div class="dsh-row2">
+          <div class="dsh-card">
+            <div class="dsh-ct">
+              <span>ครบกำหนดสอบเทียบรายเดือน<small>แตะเดือนเพื่อกรองรายการเครื่องมือ</small></span>
+              <span class="dsh-year" id="monthlyYearLabel"></span>
             </div>
-            <div id="dashboardAuditList" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto">
-              <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">กำลังโหลดกิจกรรม...</div>
+            <div id="monthGrid" class="dsh-mgrid"></div>
+          </div>
+          <div class="dsh-card">
+            <div class="dsh-ct">
+              <span>กิจกรรมล่าสุด<small>Audit Log</small></span>
+              <button class="dsh-pill-link" onclick="showPage('audit')">ทั้งหมด →</button>
+            </div>
+            <div id="dashboardAuditList" class="dsh-alist">
+              <div class="dsh-empty">กำลังโหลดกิจกรรม...</div>
             </div>
           </div>
         </div>
