@@ -136,7 +136,7 @@ table { border-collapse: collapse; }
 .ws .row { display: flex; gap: 3px; align-items: baseline; padding: 0.5px 0; flex-wrap: nowrap; }
 .ws .sec { font-family: var(--ffl); font-size: var(--fl); font-weight: 700; } .ws .lbl { font-family: var(--ffl); font-size: var(--fd); font-weight: 700; white-space: nowrap; }
 .ws .dot { flex: 0 0 auto; }
-.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 2px; align-items: baseline; margin: 3px 0 2px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: 1.8fr 1fr 1.06fr; column-gap: 12px; row-gap: 4px; align-items: baseline; margin: 8px 0 4px; } .ws .dtl-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .dtl-grid .fv { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .fv.toltext { white-space: nowrap; overflow: visible; text-align: left; line-height: 1.15; border-bottom: 0; padding-bottom: 0; }
+.ws .fv { border-bottom: 1px dotted #555; min-width: 60px; text-align: center; padding: 0 6px; } .ws .std-grid { display: grid; grid-template-columns: max-content 1fr max-content 1.1fr max-content 1.6fr max-content 1fr max-content 1.1fr; column-gap: 5px; row-gap: 2px; align-items: baseline; margin: 3px 0 2px; } .ws .std-grid .fv { min-width: 0; white-space: nowrap; overflow: hidden; } .ws .dtl-grid { display: grid; grid-template-columns: 1.45fr 1.1fr 1.1fr; column-gap: 12px; row-gap: 4px; align-items: baseline; margin: 8px 0 4px; } .ws .dtl-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .dtl-grid .fv { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; } .ws .dtl-grid .fv.toltext { white-space: nowrap; overflow: visible; text-align: left; line-height: 1.15; border-bottom: 0; padding-bottom: 0; }
 .ws .toltext .tolln { display: block; border-bottom: 1px dotted #555; padding-bottom: 1px; line-height: 1.1; }
 .ws .toltext .tolln-gap { display: block; } .ws .dtl-grid .unit { white-space: nowrap; } .ws .pre, .ws .rep { font-size: 12.5pt; } .ws .pre td, .ws .pre th, .ws .rep td, .ws .rep th { padding-top: 0.5px; padding-bottom: 0.5px; line-height: 1.1; } .ws .det-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; row-gap: 3px; margin: 3px 0 2px; } .ws .det-grid .dcell { display: flex; align-items: baseline; gap: 6px; } .ws .det-grid .dcell .fv { flex: 1; min-width: 0; text-align: center; } .ws .env-grid { display: grid; grid-template-columns: max-content 48px max-content max-content 48px max-content max-content 48px max-content max-content 48px max-content; column-gap: 5px; row-gap: 4px; align-items: baseline; justify-content: start; margin: 3px 0 2px; } .ws .env-grid .ev { border-bottom: 1px dotted #555; text-align: center; font-weight: 400; min-width: 0; } .ws .env-grid .eu, .ws .env-grid .et { white-space: nowrap; font-weight: 700; } .ws .env-grid .lbl.er { padding-left: 22px; }
 .ws .sec { font-weight: 700; text-decoration: underline; margin-top: 8px; }
@@ -622,10 +622,13 @@ function pageWs1(pageNo, instMax, instResText, instTols) {
   const capTxt = (instMax != null ? instMax : CAL.capacity);
   const resTxt = (instResText != null ? instResText : resolutionText());
   const tolList = (Array.isArray(instTols) && instTols.length) ? instTols : (CAL.tolerances || []);
-  // แบนด์แรกบรรทัดบน · แบนด์ที่เหลือต่อกันบรรทัดล่าง (เช่น band2+band3 บรรทัดเดียว) — nowrap+shrink ย่อพอดีช่อง
+  // แบนด์ละบรรทัด (คอลัมน์แรกแคบลง — ต่อกันบรรทัดเดียวยาวเกินช่อง) · >4 แบนด์จับคู่ 2 ต่อบรรทัดกันหน้าล้น
   // แต่ละบรรทัดตีเส้นใต้ (.tolln) + เว้นบรรทัดเปล่าตีเส้น 1 บรรทัดท้าย
-  const tolRest = tolList.slice(1).map(esc).join(' &nbsp; ');
-  const tolData = tolList.length ? [esc(tolList[0])].concat(tolRest ? [tolRest] : []) : ['&nbsp;'];
+  const tolRest = tolList.slice(1).map(esc);
+  const restLines = [];
+  if (tolList.length > 4) { for (let i = 0; i < tolRest.length; i += 2) restLines.push(tolRest.slice(i, i + 2).join(' &nbsp; ')); }
+  else restLines.push.apply(restLines, tolRest);
+  const tolData = tolList.length ? [esc(tolList[0])].concat(restLines) : ['&nbsp;'];
   // บรรทัดข้อมูลตีเส้นใต้ (.tolln) + บรรทัดเปล่าท้ายเว้นระยะ ไม่มีเส้น (.tolln-gap)
   const tolHtml = tolData.map(l => `<span class="tolln">${l}</span>`).join('') + '<span class="tolln-gap">&nbsp;</span>';
   const fv = (v, w) => `<span class="fv fill" style="min-width:${w||60}px">${v}</span>`;
