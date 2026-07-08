@@ -279,6 +279,7 @@ tbody tr:hover { background: var(--surface2); }
 .notif-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:8px; color:rgba(255,255,255,.7); font-size:20px; transition:all .15s; display:flex; align-items:center; }
 .notif-btn:hover { background:rgba(255,255,255,.1); color:white; }
 .notif-badge { position:absolute; top:2px; right:2px; background:var(--red); color:white; border-radius:10px; min-width:17px; height:17px; font-size:10px; font-weight:700; display:none; align-items:center; justify-content:center; padding:0 4px; border:2px solid #00695C; }
+.notif-badge--scan { background:#f59e0b; }
 .notif-wrapper { position:relative; }
 .notif-dropdown { display:none; position:absolute; top:calc(100% + 10px); right:0; width:360px; background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.18); z-index:500; border:1px solid var(--border); overflow:hidden; }
 .notif-dropdown::before { content:''; position:absolute; top:-6px; right:18px; width:12px; height:12px; background:white; border-left:1px solid var(--border); border-top:1px solid var(--border); transform:rotate(45deg); }
@@ -751,13 +752,6 @@ tbody tr:hover { background: var(--surface2); }
 .dsh-year { font-size: 11.5px; color: #5c6f6c; background: #eef4f2; padding: 4px 13px; border-radius: 999px; white-space: nowrap; }
 .dsh-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 16px 0; }
 
-.dsh-pending { display: flex; align-items: center; gap: 12px; background: linear-gradient(90deg, #fff8ec, #fff 62%); border-radius: 16px; padding: 13px 18px; font-size: 12px; box-shadow: 0 3px 14px rgba(16,58,52,.06); }
-.dsh-pending-n { width: 36px; height: 36px; border-radius: 11px; background: #f59e0b; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none; }
-.dsh-pending-sub { color: #71827f; font-size: 10.5px; }
-.dsh-pending--ok { background: linear-gradient(90deg, #eef9f0, #fff 62%); }
-.dsh-pending--ok .dsh-pending-n { background: #2E7D32; }
-.dsh-card > .dsh-pending { box-shadow: none; border-radius: 0; }
-
 .dsh-row2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; margin-bottom: 16px; align-items: start; }
 
 .dsh-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
@@ -790,15 +784,6 @@ tbody tr:hover { background: var(--surface2); }
 .dsh-aline { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .dsh-ameta { font-size: 10px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 
-.dsh-ptable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.dsh-ptable th { padding: 6px 8px; font-weight: 600; color: var(--text3); text-align: left; border-bottom: 2px solid #eef2f1; }
-.dsh-ptable td { padding: 7px 8px; border-bottom: 1px solid #f0f4f3; }
-.dsh-ptable tr:last-child td { border-bottom: none; }
-.dsh-mono { font-family: var(--mono), monospace; font-weight: 700; }
-.dsh-sub { color: var(--text3); font-size: 11px; }
-.dsh-plink { cursor: pointer; color: #00695C; font-weight: 700; }
-.dsh-btn-dark { padding: 5px 12px; border: none; border-radius: 999px; background: #1b5e20; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); white-space: nowrap; }
-.dsh-btn-ghost { padding: 5px 12px; border: 1px solid #dde5e3; border-radius: 999px; background: #fff; color: var(--text); font-size: 12px; cursor: pointer; font-family: var(--font); white-space: nowrap; }
 
 @media (max-width: 1100px) {
   .dsh-kpis { grid-template-columns: repeat(2, 1fr); }
@@ -2728,6 +2713,13 @@ body.app-mode textarea:focus {
             <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
           </div>
         <div style="display:flex;align-items:center;gap:12px">
+          <div class="notif-wrapper" id="scanNotifWrapper">
+            <button class="notif-btn" onclick="toggleScanNotifDropdown()" title="สอบเสร็จแล้ว — รอแนบสแกน">
+              📎
+              <span class="notif-badge notif-badge--scan" id="scanNotifBadge"><span id="scanNotifCount">0</span></span>
+            </button>
+            <div class="notif-dropdown" id="scanNotifDropdown"></div>
+          </div>
           <div class="notif-wrapper" id="notifWrapper">
             <button class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน">
               🔔
@@ -2776,9 +2768,6 @@ body.app-mode textarea:focus {
             <div class="dsh-kpi-lb">เกินกำหนด · ต้องดำเนินการ</div>
           </div>
         </div>
-
-        <!-- งานสอบเทียบค้างดำเนินการ -->
-        <div id="pendingCertWidget" style="margin-bottom:16px"></div>
 
         <!-- ประเภทเครื่องมือ -->
         <div class="dsh-card" style="margin-bottom:16px">

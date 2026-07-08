@@ -261,9 +261,10 @@ async function viewSignedScan(path) {
   } catch (e) { showToast('เปิดไฟล์สแกนไม่ได้: ' + (e.message || ''), 'error'); }
 }
 
-// ===== กล่องเตือน Dashboard: งานสอบเทียบค้างดำเนินการ (issued ที่ยังไม่สมบูรณ์) =====
+// ===== แจ้งเตือนข้างระฆัง 📎: สอบเทียบเสร็จแล้ว (issued) แต่ยังไม่แนบสแกน =====
+// ชื่อฟังก์ชันคงเดิมเพราะถูกเรียกจาก loadData/calRecComplete หลายจุด — เปลี่ยนจาก
+// วาดกล่องบน Dashboard มาเป็นอัปเดต badge ที่ topbar + เก็บรายการให้ dropdown (07-notifications.js)
 async function renderPendingCertWidget() {
-  const el = document.getElementById('pendingCertWidget'); if (!el) return;
   let recs = [];
   try {
     const { data, error } = await sb.from('calibration_records')
@@ -271,46 +272,16 @@ async function renderPendingCertWidget() {
       .eq('status', 'issued').order('cal_date', { ascending: true });
     if (error) throw error;
     recs = data || [];
-  } catch (e) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
+  } catch (e) { recs = []; }
+  window._scanNotifRecs = recs;
   const navBadge = document.getElementById('navCalrecsBadge');
   if (navBadge) { navBadge.textContent = recs.length; navBadge.style.display = recs.length ? 'inline-block' : 'none'; }
-  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
-  if (!recs.length) {
-    el.innerHTML = `<div class="dsh-pending dsh-pending--ok"><div class="dsh-pending-n"><i class="ti ti-check"></i></div><div><b>ไม่มีงานสอบเทียบค้างดำเนินการ</b><div class="dsh-pending-sub">ทุกใบแนบสแกน / สมบูรณ์แล้วเรียบร้อย</div></div></div>`;
-    return;
-  }
-  const rows = recs.map(r => {
-    const inst = (allData || []).find(x => x.id === r.instrument_id) || {};
-    const name = escapeHtmlText(inst.instrument_name || '–');
-    const idc = escapeHtmlText(inst.id_code || '–');
-    const certNo = escapeHtmlText(r.cert_no || '–');
-    const nameCell = inst.id != null
-      ? `<a onclick="openCalHistory(${inst.id})" class="dsh-plink">${name}</a>`
-      : `<strong>${name}</strong>`;
-    const scanBtn = canEdit ? `<button onclick="calRecComplete('${r.id}')" class="dsh-btn-dark">📎 แนบสแกน → สมบูรณ์</button>` : '';
-    const viewBtn = `<button onclick="openRecReview('${r.id}')" class="dsh-btn-ghost">ดูรายละเอียด</button>`;
-    return `<tr>
-      <td class="dsh-mono">${certNo}</td>
-      <td>${nameCell} <span class="dsh-sub">${idc}</span></td>
-      <td style="white-space:nowrap">${fmt(r.cal_date)}</td>
-      <td>${escapeHtmlText(r.calibrated_by || '–')}</td>
-      <td style="text-align:right;white-space:nowrap"><span style="display:inline-flex;gap:6px">${scanBtn}${viewBtn}</span></td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = `<div class="dsh-card" style="padding:0;overflow:hidden">
-    <div class="dsh-pending">
-      <div class="dsh-pending-n">${recs.length}</div>
-      <div><b>งานสอบเทียบค้างดำเนินการ</b><div class="dsh-pending-sub">ออกเลขแล้ว — รอแนบสแกน / อนุมัติ</div></div>
-    </div>
-    <div style="overflow-x:auto;padding:2px 18px 14px">
-      <table class="dsh-ptable">
-        <thead><tr><th>Cert No.</th><th>เครื่องมือ / ID</th><th>วันสอบ</th><th>ผู้สอบ</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  </div>`;
+  const badge = document.getElementById('scanNotifBadge');
+  const countEl = document.getElementById('scanNotifCount');
+  if (badge) badge.style.display = recs.length ? 'flex' : 'none';
+  if (countEl) countEl.textContent = recs.length > 99 ? '99+' : recs.length;
+  const dd = document.getElementById('scanNotifDropdown');
+  if (dd && dd.style.display === 'block') renderScanNotifDropdown();
 }
 
 // ===== หน้าติดตามผลสอบเทียบ: ตารางรวม calibration_records ทั้งหมด + กรองสถานะ/ค้นหา =====

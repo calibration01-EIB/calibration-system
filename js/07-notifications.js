@@ -28,8 +28,59 @@ function toggleNotifDropdown() {
   const dd = document.getElementById('notifDropdown');
   if (!dd) return;
   if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  const scanDd = document.getElementById('scanNotifDropdown');
+  if (scanDd) scanDd.style.display = 'none';
   renderNotifDropdown();
   dd.style.display = 'block';
+}
+
+// ===== Dropdown 📎: สอบเทียบเสร็จแล้ว — รอแนบสแกน (ข้อมูลจาก renderPendingCertWidget) =====
+function toggleScanNotifDropdown() {
+  const dd = document.getElementById('scanNotifDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  const bellDd = document.getElementById('notifDropdown');
+  if (bellDd) bellDd.style.display = 'none';
+  renderScanNotifDropdown();
+  dd.style.display = 'block';
+}
+
+function renderScanNotifDropdown() {
+  const dd = document.getElementById('scanNotifDropdown');
+  if (!dd) return;
+  const recs = window._scanNotifRecs || [];
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '–';
+  if (!recs.length) {
+    dd.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">✅ ไม่มีงานรอแนบสแกน — ทุกใบสมบูรณ์แล้ว</div>';
+    return;
+  }
+  dd.innerHTML = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">📎 สอบเสร็จแล้ว — รอแนบสแกน</span>
+      <span style="font-size:11px;background:var(--amber-light);color:#92600a;padding:2px 8px;border-radius:10px;font-weight:600">${recs.length} ใบ</span>
+    </div>
+    ${recs.slice(0, 10).map(r => {
+      const inst = (allData || []).find(x => x.id === r.instrument_id) || {};
+      const name = escapeHtmlText(inst.instrument_name || '–');
+      const idc = escapeHtmlText(inst.id_code || '–');
+      return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s"
+                   onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''"
+                   onclick="scanNotifGo()">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--accent);white-space:nowrap">${escapeHtmlText(r.cert_no || '–')}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${idc} &nbsp;·&nbsp; สอบ ${fmt(r.cal_date)} &nbsp;·&nbsp; ${escapeHtmlText(r.calibrated_by || '–')}</div>
+      </div>`;
+    }).join('')}
+    <div style="padding:10px 16px;text-align:center;font-size:12px;color:var(--accent);cursor:pointer;font-weight:600" onclick="scanNotifGo()">ไปหน้าติดตามผลสอบเทียบ${recs.length > 10 ? ' (ทั้งหมด ' + recs.length + ' ใบ)' : ''} →</div>
+  `;
+}
+
+function scanNotifGo() {
+  const dd = document.getElementById('scanNotifDropdown');
+  if (dd) dd.style.display = 'none';
+  showPage('calrecs');
 }
 
 function renderNotifDropdown() {

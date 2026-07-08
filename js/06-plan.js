@@ -1369,6 +1369,11 @@ document.addEventListener('click', (e) => {
     const dd = document.getElementById('notifDropdown');
     if (dd) dd.style.display = 'none';
   }
+  const scanWrapper = document.getElementById('scanNotifWrapper');
+  if (scanWrapper && !scanWrapper.contains(e.target)) {
+    const dd = document.getElementById('scanNotifDropdown');
+    if (dd) dd.style.display = 'none';
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
