@@ -319,35 +319,35 @@ function renderMonthly() {
     const barColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : 'var(--green)';
     const numColor  = ov > 0 ? 'var(--red)' : wa > 0 ? 'var(--amber)' : cnt > 0 ? 'var(--green)' : 'var(--text3)';
     const card = document.createElement('div');
-    card.style.cssText = `border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s;background:white`;
+    card.className = 'dsh-mcard';
+    card.style.cursor = cnt ? 'pointer' : 'default';
     const ok = cnt - ov - wa;
     card.innerHTML = `
-      <div style="font-size:11px;color:#444;margin-bottom:4px;font-weight:600">${MONTH_NAMES_SHORT[i]}</div>
-      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">เครื่องมือ</div>
-      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
-        ${ov>0?`<div style="flex:${ov};background:var(--red);border-radius:2px"></div>`:''}
-        ${wa>0?`<div style="flex:${wa};background:var(--amber);border-radius:2px"></div>`:''}
-        ${ok>0?`<div style="flex:${ok};background:var(--green);border-radius:2px"></div>`:''}
+      <div class="dsh-mname">${MONTH_NAMES_SHORT[i]}</div>
+      <div class="dsh-mnum" style="color:${numColor}">${cnt}</div>
+      <div class="dsh-sbar">
+        ${ov>0?`<div style="flex:${ov};background:var(--red)"></div>`:''}
+        ${wa>0?`<div style="flex:${wa};background:var(--amber)"></div>`:''}
+        ${ok>0?`<div style="flex:${ok};background:var(--green)"></div>`:''}
       </div>
-      <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-        ${ov>0?`<span style="font-size:10px;color:#c0392b;font-weight:600">🔴 ${ov}</span>`:''}
-        ${wa>0?`<span style="font-size:10px;color:#b8690a;font-weight:600">🟡 ${wa}</span>`:''}
-        ${ok>0&&cnt>0?`<span style="font-size:10px;color:#1a6b3c;font-weight:600">🟢 ${ok}</span>`:''}
-        ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
+      <div class="dsh-chiprow">
+        ${ov>0?`<span class="dsh-chip dsh-chip--ov" title="เกินกำหนด">${ov}</span>`:''}
+        ${wa>0?`<span class="dsh-chip dsh-chip--wa" title="ใกล้ครบกำหนด">${wa}</span>`:''}
+        ${ok>0&&cnt>0?`<span class="dsh-chip dsh-chip--ok" title="ปกติ">${ok}</span>`:''}
+        ${cnt===0?`<span class="dsh-mdash">–</span>`:''}
       </div>`;
     if (cnt) {
       card.addEventListener('mouseenter', () => { card.style.borderColor = barColor; card.style.transform = 'translateY(-1px)'; });
-      card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = 'var(--border)'; card.style.transform = ''; } });
+      card.addEventListener('mouseleave', () => { if (activeMonthCard !== card) { card.style.borderColor = '#e4ebe9'; card.style.transform = ''; } });
       card.addEventListener('click', () => {
         if (activeMonthCard && activeMonthCard !== card) {
-          activeMonthCard.style.borderColor = 'var(--border)';
+          activeMonthCard.style.borderColor = '#e4ebe9';
           activeMonthCard.style.transform = '';
           activeMonthCard.style.boxShadow = '';
         }
         if (activeMonthCard === card) {
           activeMonthCard = null;
-          card.style.borderColor = 'var(--border)';
+          card.style.borderColor = '#e4ebe9';
           card.style.transform = '';
           document.getElementById('monthFilter').value = '';
         } else {
@@ -400,24 +400,28 @@ function renderCategoryCards() {
 
     const numColor  = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : cnt > 0 ? '#1a6b3c' : 'var(--text3)';
     const mainColor = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : 'var(--green)';
-    const cardBorder = isActive ? mainColor : 'var(--border)';
+    const cardBorder = isActive ? mainColor : '#e4ebe9';
     const boxShadow  = isActive ? `0 0 0 2px ${mainColor}40` : 'none';
 
+    const [letter, , typeColor] = typeof regTypeMeta === 'function' ? regTypeMeta(fullName) : ['·', '', '#52667d'];
     const card = document.createElement('div');
-    card.style.cssText = `background:white;border:1.5px solid ${cardBorder};box-shadow:${boxShadow};border-radius:10px;padding:10px 8px;text-align:center;cursor:${cnt?'pointer':'default'};transition:all .15s`;
+    card.className = 'dsh-tcard';
+    card.style.cursor = cnt ? 'pointer' : 'default';
+    if (isActive) { card.style.borderColor = mainColor; card.style.boxShadow = `0 0 0 2px ${mainColor}40`; }
     card.innerHTML = `
-      <div style="font-size:11px;color:#444;margin-bottom:4px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${thName}</div>
-      <div style="font-size:20px;font-weight:700;color:${numColor};line-height:1">${cnt||'–'}</div>
-      <div style="height:3px;background:var(--surface2);border-radius:2px;margin:5px 3px 4px;display:flex;gap:1px;overflow:hidden">
-        ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red);border-radius:2px"></div>`:''}
-        ${s.warning>0?`<div style="flex:${s.warning};background:var(--amber);border-radius:2px"></div>`:''}
-        ${s.ok>0?`<div style="flex:${s.ok};background:var(--green);border-radius:2px"></div>`:''}
+      <div class="dsh-tic" style="color:${typeColor};background:${typeColor}14">${letter}</div>
+      <div class="dsh-tn" title="${thName}">${thName}</div>
+      <div class="dsh-tv" style="color:${numColor}">${cnt||'–'}</div>
+      <div class="dsh-sbar" style="margin-left:0;margin-right:0">
+        ${s.overdue>0?`<div style="flex:${s.overdue};background:var(--red)"></div>`:''}
+        ${s.warning>0?`<div style="flex:${s.warning};background:var(--amber)"></div>`:''}
+        ${s.ok>0?`<div style="flex:${s.ok};background:var(--green)"></div>`:''}
       </div>
-      <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-        ${s.overdue>0?`<span style="font-size:10px;color:#c0392b;font-weight:600">🔴 ${s.overdue}</span>`:''}
-        ${s.warning>0?`<span style="font-size:10px;color:#b8690a;font-weight:600">🟡 ${s.warning}</span>`:''}
-        ${s.ok>0&&cnt>0?`<span style="font-size:10px;color:#1a6b3c;font-weight:600">🟢 ${s.ok}</span>`:''}
-        ${cnt===0?`<span style="font-size:10px;color:var(--text3)">–</span>`:''}
+      <div class="dsh-chiprow">
+        ${s.overdue>0?`<span class="dsh-chip dsh-chip--ov" title="เกินกำหนด">${s.overdue}</span>`:''}
+        ${s.warning>0?`<span class="dsh-chip dsh-chip--wa" title="ใกล้ครบกำหนด">${s.warning}</span>`:''}
+        ${s.ok>0&&cnt>0?`<span class="dsh-chip dsh-chip--ok" title="ปกติ">${s.ok}</span>`:''}
+        ${cnt===0?`<span class="dsh-mdash">–</span>`:''}
       </div>`;
 
     if (cnt) {
