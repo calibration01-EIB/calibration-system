@@ -70,21 +70,6 @@ body.app-mode #app .user-avatar {
   background: linear-gradient(135deg, #2563eb, #0891b2) !important;
   box-shadow: 0 10px 22px rgba(37,99,235,.24) !important;
 }
-body.app-mode #statCardsGrid > div {
-  border-radius: 8px !important;
-  background: #ffffff !important;
-  border: 1px solid rgba(37,99,235,.13) !important;
-  box-shadow: 0 14px 32px rgba(30,64,175,.08) !important;
-}
-body.app-mode #statCardsGrid > div:first-child {
-  background: linear-gradient(135deg, #00695C 0%, #00897B 55%, #26A69A 100%) !important;
-  border-color: transparent !important;
-  box-shadow: 0 18px 38px rgba(0,105,92,.22) !important;
-}
-body.app-mode #dashDonutAlertsRow > div,
-body.app-mode #dashMonthlyRow,
-body.app-mode #dashAuditRow,
-body.app-mode #pageDashboard > div:nth-of-type(3),
 body.app-mode .controls-bar,
 body.app-mode .table-wrap,
 body.app-mode .modal-box,
@@ -94,26 +79,12 @@ body.app-mode .users-table-wrap {
   border-radius: 8px !important;
   box-shadow: 0 18px 40px rgba(30,64,175,.08) !important;
 }
-body.app-mode #dashMiniPanel,
-body.app-mode .dash-risk-list {
-  display: none !important;
-}
 body.app-mode #app #pageList .table-wrap,
 body.app-mode #pageList .table-wrap {
   height: clamp(390px, calc(100vh - 378px), 620px) !important;
   min-height: clamp(390px, calc(100vh - 378px), 620px) !important;
   max-height: clamp(390px, calc(100vh - 378px), 620px) !important;
   overflow: auto !important;
-}
-body.app-mode #monthGrid > div,
-body.app-mode #categoryGrid > div {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-  border: 1px solid rgba(37,99,235,.13) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 10px 24px rgba(30,64,175,.07) !important;
-}
-body.app-mode #alertList > div {
-  border-radius: 8px !important;
 }
 body.app-mode input,
 body.app-mode select,

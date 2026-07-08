@@ -416,12 +416,6 @@ tbody tr:hover { background: var(--surface2); }
   .stat-card { padding: 10px 12px; }
   .stat-num { font-size: 28px !important; }
   .stat-label { font-size: 11px !important; }
-  #statCardsGrid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-  #statCardsGrid > div { padding: 14px 12px !important; }
-  #statCardsGrid > div > div:first-child { margin-bottom: 8px !important; }
-  #statCardsGrid > div > div:first-child > div:first-child { width:32px !important; height:32px !important; font-size:16px !important; }
-  #statCardsGrid > div > div:nth-child(2) { font-size: 28px !important; }
-  #statCardsGrid > div > div:nth-child(3) { font-size: 11px !important; }
   .meta-row { grid-template-columns: 1fr; }
   #dashRow2 { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: span 1; }
@@ -546,34 +540,7 @@ tbody tr:hover { background: var(--surface2); }
   body.app-mode .section-header {
     margin-bottom: 14px !important;
   }
-  body.app-mode #statCardsGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-  }
-  body.app-mode #statCardsGrid > div {
-    border-radius: 14px !important;
-    min-height: 112px !important;
-    padding: 14px 12px !important;
-  }
-  body.app-mode #dashboardCategoryPanel {
-    border-radius: 14px !important;
-    padding: 16px !important;
-    margin-bottom: 14px !important;
-  }
-  body.app-mode #categoryGrid {
-    display: flex !important;
-    gap: 10px !important;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scroll-snap-type: x proximity;
-  }
-  body.app-mode #categoryGrid > div {
-    flex: 0 0 148px;
-    min-height: 92px;
-    scroll-snap-align: start;
-  }
-  body.app-mode #dashRow2,
-  body.app-mode #monthGrid {
+  body.app-mode #dashRow2 {
     grid-template-columns: 1fr !important;
   }
   body.app-mode .controls-bar {
@@ -753,9 +720,6 @@ tbody tr:hover { background: var(--surface2); }
   }
 }
 @media (max-width: 420px) {
-  body.app-mode #statCardsGrid {
-    grid-template-columns: 1fr !important;
-  }
   body.app-mode #topbarSub {
     display: none;
   }
@@ -999,34 +963,6 @@ body {
 }
 .status-dot.ok { background: #009879 !important; }
 .page-content { padding: 20px 24px 26px !important; }
-#statCardsGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 16px !important;
-  margin-bottom: 22px !important;
-}
-#statCardsGrid > div {
-  min-height: 150px !important;
-  border-radius: 8px !important;
-  padding: 20px 22px !important;
-  border: 1px solid rgba(197, 219, 214, .86) !important;
-  box-shadow: var(--shadow) !important;
-  transform: none !important;
-}
-#statCardsGrid > div:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 16px 34px rgba(20,82,73,.13) !important;
-}
-#statCardsGrid > div:first-child {
-  background: linear-gradient(135deg, #075c52 0%, #07927f 100%) !important;
-  border-color: rgba(7, 146, 127, .42) !important;
-}
-#statCardsGrid > div:not(:first-child) { background: #fff !important; }
-#statCardsGrid > div > div:first-child > div:first-child {
-  width: 42px !important;
-  height: 42px !important;
-  border-radius: 8px !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.32) !important;
-}
 #statTotal, #statOk, #statOverdue, #statWarning {
   font-size: 34px !important;
   font-weight: 800 !important;
@@ -1038,7 +974,6 @@ body {
   margin-bottom: 18px !important;
 }
 #dashRow2 > div,
-#dashMiniPanel,
 #pagePlan .page-card,
 .page-content > div[style*="background:white"] {
   background: rgba(255,255,255,.96) !important;
@@ -1046,46 +981,8 @@ body {
   border-radius: 8px !important;
   box-shadow: var(--shadow) !important;
 }
-#dashRow2 > div:first-child, #dashMiniPanel { padding: 22px !important; }
+#dashRow2 > div:first-child { padding: 22px !important; }
 #dashRow2 > div:last-child { padding: 18px 20px !important; }
-#monthGrid {
-  gap: 10px !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-}
-#monthGrid > div,
-#categoryGrid > div {
-  min-height: 86px !important;
-  border-radius: 8px !important;
-  border-color: var(--border) !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%) !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset !important;
-}
-#monthGrid > div:hover,
-#categoryGrid > div:hover {
-  box-shadow: 0 12px 24px rgba(20,82,73,.10) !important;
-}
-#categoryGrid {
-  gap: 12px !important;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
-}
-/* perf: จำกัดขอบเขต repaint ของการ์ด → hover การ์ดหนึ่งไม่ลาม repaint ทั้งหน้า */
-#categoryGrid > div, #monthGrid > div, #statCardsGrid > div, #alertList > div {
-  contain: layout paint style;
-}
-#alertList {
-  gap: 8px !important;
-  padding-right: 4px !important;
-  scrollbar-width: thin;
-  scrollbar-color: #b8d4cf transparent;
-}
-#alertList::-webkit-scrollbar { width: 8px; }
-#alertList::-webkit-scrollbar-thumb { background: #b8d4cf; border-radius: 999px; }
-#alertList > div {
-  border-radius: 8px !important;
-  padding: 9px 11px !important;
-  margin-bottom: 6px !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.62) !important;
-}
 #dashBarIn, #dashBarOut { min-width: 4px; }
 .controls-bar {
   padding: 12px !important;
@@ -1333,9 +1230,7 @@ tbody tr:hover td { background: #eff8f6 !important; }
 .app-layout.collapsed .sidebar:not(:hover) .sidebar-user { margin: 0 8px 12px !important; padding: 10px 0 !important; justify-content: center !important; }
 .app-layout.collapsed .sidebar:not(:hover) .sidebar-user-action { display: none !important; }
 @media (max-width: 1180px) {
-  #statCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   #dashRow2 { grid-template-columns: 1fr !important; }
-  #dashMonthlyAuditRow { grid-template-columns: 1fr !important; }
   #dashRow2 > div:last-child { grid-column: auto !important; }
 }
 @media (max-width: 1024px) {
@@ -1357,16 +1252,11 @@ tbody tr:hover td { background: #eff8f6 !important; }
   .main-content { margin-left: 0 !important; padding-top: 70px !important; }
   .topbar { padding: 8px 14px !important; }
   .page-content { padding: 14px !important; }
-  #statCardsGrid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  #statCardsGrid > div { min-height: 126px !important; padding: 14px !important; }
   #statTotal, #statOk, #statOverdue, #statWarning { font-size: 28px !important; }
-  #monthGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  #categoryGrid { grid-template-columns: 1fr 1fr !important; }
   .controls-bar { align-items: stretch !important; }
   .controls-bar input, .controls-bar select, .controls-bar button { width: 100% !important; }
 }
 @media (max-width: 520px) {
-  #statCardsGrid, #categoryGrid { grid-template-columns: 1fr !important; }
   .topbar > div:last-child { gap: 6px !important; }
   .db-status span { display: none !important; }
 }
@@ -1663,19 +1553,7 @@ body.app-mode #app .user-avatar {
   background: linear-gradient(135deg, #2563eb, #0891b2) !important;
   box-shadow: 0 10px 22px rgba(37,99,235,.24) !important;
 }
-body.app-mode #statCardsGrid > div {
-  border-radius: 8px !important;
-  background: #ffffff !important;
-  border: 1px solid rgba(37,99,235,.13) !important;
-  box-shadow: 0 14px 32px rgba(30,64,175,.08) !important;
-}
-body.app-mode #statCardsGrid > div:first-child {
-  background: linear-gradient(135deg, #1d4ed8 0%, #0891b2 58%, #22c55e 100%) !important;
-  border-color: transparent !important;
-  box-shadow: 0 18px 38px rgba(37,99,235,.20) !important;
-}
 body.app-mode #dashRow2 > div,
-body.app-mode #dashMiniPanel,
 body.app-mode .controls-bar,
 body.app-mode .table-wrap,
 body.app-mode .modal-box,
@@ -1684,16 +1562,6 @@ body.app-mode .users-table-wrap {
   border: 1px solid rgba(37,99,235,.12) !important;
   border-radius: 8px !important;
   box-shadow: 0 18px 40px rgba(30,64,175,.08) !important;
-}
-body.app-mode #monthGrid > div,
-body.app-mode #categoryGrid > div {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-  border: 1px solid rgba(37,99,235,.13) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 10px 24px rgba(30,64,175,.07) !important;
-}
-body.app-mode #alertList > div {
-  border-radius: 8px !important;
 }
 body.app-mode input,
 body.app-mode select,
@@ -1873,28 +1741,6 @@ body.app-mode textarea:focus {
     padding: 12px 12px 16px !important;
   }
 
-  body.app-mode #statCardsGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-    margin-bottom: 12px !important;
-  }
-
-  body.app-mode #statCardsGrid > div {
-    min-height: 96px !important;
-    padding: 13px !important;
-    border-radius: 8px !important;
-  }
-
-  body.app-mode #statCardsGrid > div > div:first-child {
-    margin-bottom: 8px !important;
-  }
-
-  body.app-mode #statCardsGrid > div > div:first-child > div:last-child {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 15px !important;
-  }
-
   body.app-mode #statTotal,
   body.app-mode #statOk,
   body.app-mode #statOverdue,
@@ -1903,47 +1749,13 @@ body.app-mode textarea:focus {
     letter-spacing: 0 !important;
   }
 
-  body.app-mode #dashDonutAlertsRow {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-    margin-bottom: 12px !important;
-  }
-
-  body.app-mode #dashMonthlyAuditRow {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-    margin-bottom: 12px !important;
-  }
-
-  body.app-mode #dashDonutAlertsRow > div,
-  body.app-mode #dashMonthlyRow,
-  body.app-mode #dashAuditRow,
   body.app-mode #pageCert > div[style*="background:var(--surface)"],
   body.app-mode #pageWeights > div[style*="background:white"] {
     padding: 14px !important;
     border-radius: 8px !important;
   }
 
-  body.app-mode #dashDonutAlertsRow > div:first-child > div:nth-child(2) {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 14px !important;
-  }
-
-  body.app-mode #dashDonutAlertsRow canvas {
-    margin: 0 auto !important;
-  }
-
-  body.app-mode #dashMonthlyRow > div[style*="height:220px"] {
-    height: 190px !important;
-  }
-
-  body.app-mode #monthGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
-  body.app-mode #dashboardAuditList,
-  body.app-mode #alertList {
+  body.app-mode #dashboardAuditList {
     max-height: 260px !important;
   }
 
@@ -2376,7 +2188,6 @@ body.app-mode textarea:focus {
 }
 
 @media (max-width: 420px) {
-  body.app-mode #statCardsGrid,
   body.app-mode #pageWeights > div:first-child {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
