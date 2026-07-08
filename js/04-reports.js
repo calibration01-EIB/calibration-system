@@ -401,7 +401,6 @@ function renderCategoryCards() {
     const numColor  = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : cnt > 0 ? '#1a6b3c' : 'var(--text3)';
     const mainColor = s.overdue > 0 ? 'var(--red)' : s.warning > 0 ? 'var(--amber)' : 'var(--green)';
     const cardBorder = isActive ? mainColor : '#e4ebe9';
-    const boxShadow  = isActive ? `0 0 0 2px ${mainColor}40` : 'none';
 
     const [letter, , typeColor] = typeof regTypeMeta === 'function' ? regTypeMeta(fullName) : ['·', '', '#52667d'];
     const card = document.createElement('div');
