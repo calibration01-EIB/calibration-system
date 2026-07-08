@@ -752,7 +752,6 @@ function deriveCertStds() {
     }
   });
   groups.sort((a, b) => Math.min.apply(null, a.weights.map(w => +w.nominal_g)) - Math.min.apply(null, b.weights.map(w => +w.nominal_g)));
-  const liveKeys = {};
   CERT_STDS = groups.map(g => {
     const reg = g.reg, classG = reg.cls || '';
     const noms = g.weights.map(w => Number(w.nominal_g)).filter(n => n > 0);
@@ -777,13 +776,14 @@ function deriveCertStds() {
       cert: certs.join(','),
       due: dues.slice().sort()[0] || '',
     };
-    liveKeys[g.key] = 1;
     const ov = STD_ROW_OV[g.key] || {};
     const pick = f => (ov[f] !== undefined ? ov[f] : auto[f]);
     return { key: g.key, _auto: auto, setIds: [reg.id_code], wids: ids.slice(), name: pick('name'), model: pick('model'),
       cls: pick('cls'), serial: pick('serial'), id_code: pick('id_code'), cert: pick('cert'), due: pick('due') };
   });
-  Object.keys(STD_ROW_OV).forEach(k => { if (!liveKeys[k]) delete STD_ROW_OV[k]; });
+  // ห้าม GC ลบ override ของ key ที่ไม่ live ตรงนี้ — restoreSelection เรียก derive ก่อนคืนค่าติ๊ก checkbox
+  // (กลุ่มยังเป็นค่า default → key ไม่ตรง → override ที่บันทึกไว้โดนลบก่อน derive รอบจริง = ค่าที่แก้หาย)
+  // override ที่ค้างไม่มีโทษ: key ผูกกับกลุ่มเดิมเสมอ และลบตรงได้ที่ปุ่ม ↺/✕
 }
 function editStdCell(key, field, value) {
   (STD_ROW_OV[key] = STD_ROW_OV[key] || {})[field] = value;
