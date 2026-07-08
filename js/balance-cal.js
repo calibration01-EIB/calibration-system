@@ -1077,9 +1077,15 @@ function switchMode(mode) {
     b.style.display = REVIEW_MODE ? 'flex' : 'none';
     if (REVIEW_MODE) {
       b.style.cssText = 'display:flex;align-items:center;gap:8px;margin:10px 0 0;background:#fff8e1;border:1px solid #f2dcb0;border-radius:8px;padding:9px 12px;font-size:12px;color:#854f0b;font-weight:700';
-      b.innerHTML = '<i class="ti ti-list-check"></i> โหมดตรวจทาน — ข้อ 2–5 ถูกล็อกไว้ให้ตรวจว่าถูกไหม · ข้อ 1 แก้ได้ · ถ้าผิดกด “แก้ไขข้อนี้” → แก้ → “เสร็จ” → แล้วกด “ออกใบรับรอง”';
+      if (certHardLocked())
+        b.innerHTML = '<i class="ti ti-lock"></i> ใบนี้' + (STATE_META[CAL_STATE] || {}).label + ' — ล็อกทุกช่อง แก้ไม่ได้ · ต้องแก้ข้อมูลให้ยกเลิกใบ หรือออก revision (ใบที่สมบูรณ์แล้ว)';
+      else if (CAL_STATE === 'issued')
+        b.innerHTML = '<i class="ti ti-list-check"></i> ออกเลขแล้ว — ยังแก้ได้จนกว่าจะเซ็น · ถ้าผิดกด “แก้ไขข้อนี้” → แก้ → กด “บันทึกการแก้ไข” ที่แถบสถานะ (ไม่กดบันทึก = ที่แก้จะหาย)';
+      else
+        b.innerHTML = '<i class="ti ti-list-check"></i> โหมดตรวจทาน — ข้อ 2–5 ถูกล็อกไว้ให้ตรวจว่าถูกไหม · ข้อ 1 แก้ได้ · ถ้าผิดกด “แก้ไขข้อนี้” → แก้ → “เสร็จ” → แล้วกด “ออกใบรับรอง”';
     }
   }
+  applyStateLocks();
   if (REVIEW_MODE) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1087,6 +1093,8 @@ function switchMode(mode) {
 // draft → issued(ออกเลข) → signed(เซ็น) → approved(สมบูรณ์) · voided(ยกเลิก-เก็บเลข) · revision
 let CAL_STATE = 'draft', CERT_NO = '', CERT_REV = 0;
 let CAL_REC_ID = null, CERT_YY = null, CERT_BASE = null, INST_PREV = null;   // record id + เลขรัน + ค่าทะเบียนเครื่องเดิม (เผื่อยกเลิก)
+let CAL_INST_ID = null;                                     // instrument id ของ record นี้ (จาก issue/โหลด record) — ใช้ sync ทะเบียนตอนบันทึกแก้ไข
+const certHardLocked = () => CAL_STATE === 'signed' || CAL_STATE === 'approved' || CAL_STATE === 'voided';
 const CERT_TC = 'B';                                        // type code เครื่องชั่ง
 const STATE_META = {
   draft:    { label: 'กำลังสอบเทียบ (ยังไม่ออกเลข)', cls: 'st-draft' },
@@ -1102,7 +1110,7 @@ function renderCertBar() {
   const m = STATE_META[CAL_STATE];
   let a = '';
   if (CAL_STATE === 'draft')        a = `<button class="cbtn primary" onclick="issueCert()"><i class="ti ti-checks"></i> สอบเสร็จ → บันทึก + ออกเลข Cert</button>`;
-  else if (CAL_STATE === 'issued')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นเอกสาร</button><span style="font-size:12px;color:#7a8a87;align-self:center;margin-left:8px">ปริ้นไปเซ็น → แนบไฟล์สแกน + ทำให้สมบูรณ์ ที่หน้าประวัติเครื่อง</span>`;
+  else if (CAL_STATE === 'issued')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นเอกสาร</button><button class="cbtn" onclick="saveEdits()"><i class="ti ti-device-floppy"></i> บันทึกการแก้ไข</button><span style="font-size:12px;color:#7a8a87;align-self:center;margin-left:8px">แก้ข้อมูลได้จนกว่าจะเซ็น (แก้แล้วกด "บันทึกการแก้ไข") · ปริ้นไปเซ็น → แนบสแกน + ทำให้สมบูรณ์ ที่หน้าประวัติเครื่อง</span>`;
   else if (CAL_STATE === 'signed')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้น</button>`;
   else if (CAL_STATE === 'approved')a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นซ้ำ</button><button class="cbtn" onclick="reviseCert()"><i class="ti ti-versions"></i> ออก revision</button>`;
   if (CAL_STATE === 'issued' || CAL_STATE === 'signed' || CAL_STATE === 'approved')
@@ -1114,6 +1122,12 @@ function renderCertBar() {
   const html = `<div class="cbar-info"><span class="cbar-no">เลขที่ Cert: ${certPart}</span><span class="cbadge ${m.cls}">${m.label}</span></div>`
     + `<div class="cbar-actions">${a}</div>`;
   ['certStatusBar', 'certStatusBarBottom'].forEach(id => { if (byId(id)) byId(id).innerHTML = html; });
+  applyStateLocks();
+}
+// เซ็น/อนุมัติ/ยกเลิกแล้ว → ล็อกทุกข้อถาวร (รวมข้อ 1) + ซ่อนปุ่ม "แก้ไขข้อนี้" (CSS .hardlock) — แก้ต้องออก revision
+function applyStateLocks() {
+  document.body.classList.toggle('hardlock', certHardLocked());
+  if (certHardLocked()) [1, 2, 3, 4, 5].forEach(n => setStepEditable(n, false));
 }
 // ช่องเลข Cert มี 3 จุด (แถบบน/ล่าง + ข้อ 1 โหมดตรวจทาน) — พิมพ์ที่ไหนก็ sync ถึงกันหมด
 function syncCertNoInput(src) {
@@ -1236,6 +1250,7 @@ async function issueCert() {
     const { data: recIns, error: recErr } = await db.from('calibration_records').insert(rec).select('id').single();
     if (recErr) { await rollbackSeq(); throw recErr; }
     CAL_REC_ID = recIns.id; CAL_STATE = 'issued';
+    CAL_INST_ID = (INCOMING_INST && INCOMING_INST.instrument_id) || null;
     // 3) อัปเดตทะเบียนเครื่องมือ (instruments) ให้สะท้อนการสอบเทียบล่าสุด — เก็บค่าเดิมไว้เผื่อยกเลิก
     let instNote = '';
     if (INCOMING_INST && INCOMING_INST.instrument_id) {
@@ -1269,6 +1284,60 @@ async function setRecStatus(status) {
   const db = sbx(); if (!db) return;
   try { await db.from('calibration_records').update({ status, revision: CERT_REV, cert_no: CERT_NO, updated_at: new Date().toISOString() }).eq('id', CAL_REC_ID); } catch (e) {}
 }
+// บันทึกการแก้ไขหลังออกเลข (เฉพาะ issued = ยังไม่เซ็น) — เขียนค่าบนจอทับ record เดิม เลขใบเดิม ไม่เพิ่ม revision
+let SAVING_EDITS = false;
+async function saveEdits() {
+  if (CAL_STATE !== 'issued' || SAVING_EDITS) return;
+  if (!CAL_REC_ID) { alert('ไม่พบ record ของใบนี้ในระบบ — บันทึกการแก้ไขไม่ได้'); return; }
+  const db = sbx();
+  if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — บันทึกไม่ได้'); return; }
+  if (!confirm('บันทึกการแก้ไขทับข้อมูลใบ ' + CERT_NO + ' ?\n(เลขใบเดิม ไม่เพิ่ม revision — ใช้แก้ก่อนปริ้นไปเซ็นเท่านั้น)')) return;
+  SAVING_EDITS = true;
+  const _btns = [...document.querySelectorAll('.cbtn')];
+  _btns.forEach(b => { b.disabled = true; });
+  // เลข Cert/งาน ต้องเป็นของใบนี้เสมอ (กันข้อ 1 ถูกแก้ช่องเลขแล้ว data ไม่ตรงกับ column)
+  if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+  if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
+  const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };
+  try {
+    const upd = {
+      request_no: val('fReqNo') || null,
+      cal_date: val('iDate') || localTodayISO(), date_recv: val('iDateRecv') || null, due_date: val('iDateNext') || null,
+      calibrated_by: val('fCalBy') || null, location: val('cLocation') || null, procedure: val('fProcedure') || null,
+      capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
+      adjusted: val('eAdjusted') || null, condition: val('eCondition') || null,
+      ab_ppm: numf('abMaterial') || 1, pan: parseInt(val('eccPan'), 10) || 0,
+      data: buildCAL(),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await db.from('calibration_records').update(upd).eq('id', CAL_REC_ID);
+    if (error) throw error;
+    // ใบนี้ยังเป็นใบล่าสุดของเครื่อง → sync ทะเบียนเครื่องด้วย (ชุดฟิลด์เดียวกับตอนสอบเสร็จ)
+    let instNote = '';
+    if (CAL_INST_ID) {
+      try {
+        const { data: cur } = await db.from('instruments').select('cert_no').eq('id', CAL_INST_ID).single();
+        if (cur && cur.cert_no === CERT_NO) {
+          const { error: iErr } = await db.from('instruments').update({
+            cal_date: upd.cal_date, due_date: upd.due_date, job_no: jobNoStr(), request_no: upd.request_no,
+            brand: val('eMfr') || null, model: val('eModel') || null, serial_no: val('eSerial') || null,
+            id_code: val('eId') || null, range_val: val('eUserRange') || null,
+            capacity: upd.capacity, resolution: upd.resolution, accuracy_class: upd.accuracy_class,
+            asset_no: val('eAsset') || null, cal_type: val('eCalType') || null,
+          }).eq('id', CAL_INST_ID);
+          if (iErr) instNote = '\n⚠ ทะเบียนเครื่องไม่อัปเดต: ' + iErr.message;
+        }
+      } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
+    }
+    alert('✅ บันทึกการแก้ไขใบ ' + CERT_NO + ' แล้ว' + instNote);
+    switchMode('review');   // ล็อกข้อ 2–5 กลับ ให้ตรวจอีกรอบก่อนปริ้น
+  } catch (e) {
+    alert('บันทึกการแก้ไขไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+  } finally {
+    SAVING_EDITS = false;
+    _btns.forEach(b => { b.disabled = false; });
+  }
+}
 async function markSigned()  { if (CAL_STATE !== 'issued') return; if (!confirm('ยืนยันลงนามใบ ' + CERT_NO + ' ?')) return; CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); }
 async function approveCert() { if (CAL_STATE !== 'signed') return; if (!confirm('ยืนยันอนุมัติใบ ' + CERT_NO + ' (ทำให้สมบูรณ์) ?')) return; CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); }
 async function voidCert() {
@@ -1287,9 +1356,22 @@ async function reviseCert() {
   if (INCOMING_INST && INCOMING_INST.instrument_id) { const db = sbx(); if (db) { try { await db.from('instruments').update({ cert_no: CERT_NO }).eq('id', INCOMING_INST.instrument_id); } catch (e) {} } }
   alert('ออก revision: ' + CERT_NO + ' (ไม่กินเลขใหม่ — แค่เพิ่มเลขแก้ไข)');
 }
-function printCert() {
+async function printCert() {
   if (CAL_STATE === 'draft') { alert('ต้องกด "สอบเสร็จ → ออกเลข Cert" ก่อนจึงจะปริ้นได้'); return; }
-  switchMode('review'); openCert();
+  switchMode('review');
+  // ปริ้นจากข้อมูลที่บันทึกไว้ใน DB เสมอ (ใบที่ปริ้น = ข้อมูลที่บันทึก) — แก้บนจอแล้วไม่กด "บันทึกการแก้ไข" จะไม่ติดไปในใบ
+  const db = CAL_REC_ID ? sbx() : null;
+  if (!db) { openCert(); return; }
+  const w = window.open('', '_blank');   // เปิดหน้าต่างก่อน await — กัน popup blocker
+  let json = null;
+  try {
+    const { data: rec, error } = await db.from('calibration_records').select('data').eq('id', CAL_REC_ID).single();
+    if (!error && rec && rec.data) json = JSON.stringify(rec.data);
+  } catch (e) { console.warn('printCert: โหลดจาก DB ไม่ได้ ใช้ค่าบนจอแทน', e && e.message); }
+  if (!json) { try { json = JSON.stringify(buildCAL()); } catch (e) { if (w) w.close(); alert('สร้างใบรับรองไม่สำเร็จ: ' + e.message); return; } }
+  try { localStorage.setItem('calData', json); } catch (e) {}
+  const url = 'cert-print.html#data=' + encodeURIComponent(json);
+  if (w) w.location = url; else window.open(url, '_blank');
 }
 
 // ===== สถานะข้อมูลจริง vs MOCK — กันออกใบจริงด้วยข้อมูลตัวอย่าง =====
@@ -1427,6 +1509,7 @@ async function loadRecForReview(recId) {
   if (rec.job_no) { const fj = byId('fJobNo'); if (fj) fj.value = rec.job_no; }
   // สถานะ/เลข Cert จริง → cert bar + ปุ่ม (ปริ้น/ยกเลิก/revision)
   CAL_REC_ID = rec.id; CERT_NO = rec.cert_no || cal.cert_no || ''; CERT_REV = Number(rec.revision) || 0; CAL_STATE = rec.status || 'issued';
+  CAL_INST_ID = rec.instrument_id || null;
   const mm = String(CERT_NO).match(/^(\d+)([A-Z])(\d+)-(\d+)/);
   if (mm) { CERT_YY = Number(mm[1]); CERT_BASE = Number(mm[3]); }
   renderCertBar();
@@ -1434,7 +1517,9 @@ async function loadRecForReview(recId) {
   const ib = byId('instBanner');
   if (ib) {
     ib.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#eef4fb;border:1px solid #b9d4ee;border-radius:8px;padding:8px 11px;font-size:12px;color:#1565c0;font-weight:700';
-    ib.innerHTML = `<i class="ti ti-eye"></i> ดูรายละเอียดใบที่ออกแล้ว: <b>${CERT_NO || '–'}</b> — โหมดตรวจทาน (อ่านอย่างเดียว)`;
+    ib.innerHTML = `<i class="ti ti-eye"></i> ดูรายละเอียดใบที่ออกแล้ว: <b>${CERT_NO || '–'}</b> — ` + (certHardLocked()
+      ? 'ล็อกทุกช่อง (เซ็น/อนุมัติ/ยกเลิกแล้ว)'
+      : 'ยังแก้ได้ก่อนเซ็น: กด "แก้ไขข้อนี้" → แก้ → "บันทึกการแก้ไข"');
   }
 }
 function renderPrefillBanner() {

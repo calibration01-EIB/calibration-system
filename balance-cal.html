@@ -147,6 +147,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .editStepBtn { border: 1px solid #f2dcb0; background: #fff8e1; color: #854f0b; border-radius: 7px; min-height: 30px; padding: 0 12px; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .editStepBtn:hover { background: #fdeecb; }
 body:not(.review) .editStepBtn { display: none; }
+body.hardlock .editStepBtn { display: none !important; }   /* เซ็น/อนุมัติ/ยกเลิกแล้ว — ห้ามปลดล็อกแก้ (ต้องออก revision) */
 /* โหมดกรอกข้อมูล/สอบเทียบ = ข้อ 1 เฉพาะข้อมูลเครื่อง+ผู้สอบเทียบ (เหมือนหัวใบบันทึกข้อมูลดิบ) + ข้อ 2,3 · ใบรายงานเต็ม (4,5 + เลขที่งาน/ลูกค้า) โชว์ตอนสรุป */
 body:not(.review) #st4, body:not(.review) #st5 { display: none; }
 body:not(.review) #st1 .review-only { display: none; }
@@ -646,7 +647,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260630-presetsetup"></script>
+<script src="js/balance-cal.js?v=20260708-saveedits"></script>
 <!-- ============ สลับ "เต็มจอย่อ": ให้มือถือเรนเดอร์เลย์เอาต์แท็บเล็ต (viewport 980) แล้วย่อพอดีจอ ============ -->
 <script>
 (function () {
