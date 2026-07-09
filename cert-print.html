@@ -566,7 +566,9 @@ function pageCertCompact(pageNo, withEnd) {
 
 // ====== PAGE: ใบประเมินผลการสอบเทียบ (FRM-EIB55) — 1 หน้า/ย่าน · เกณฑ์ผ่าน/ไม่ผ่านต่อจุด ======
 function pageEIB55(pageNo, total) {
-  const rangeTxt = CAL.capacity >= 1000 ? (+(CAL.capacity / 1000).toFixed(3)) + ' kg' : CAL.capacity + ' ' + CAL.unit;
+  // Range = พิกัดเครื่อง (MAX) จาก opt.instMax — ไม่ใช่ capacity ของย่านที่พิมพ์ (multi-range ทุกใบแสดงพิกัดเดียวกัน)
+  const instCap = (opt.instMax != null ? opt.instMax : CAL.capacity);
+  const rangeTxt = instCap >= 1000 ? (+(instCap / 1000).toFixed(3)) + ' kg' : instCap + ' ' + CAL.unit;
   const rows = ROWS.map(r => {
     const errG = Math.round((-r.corr) * 1000) / 1000;
     const Ug = r.bud.Ufinal / 1000;
