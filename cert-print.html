@@ -69,6 +69,10 @@ table { border-collapse: collapse; }
 .eib-grid td { padding: 3px 4px; vertical-align: bottom; }
 .eib-lbl { white-space: nowrap; width: 1%; font-weight: 700; }
 .eib-val { border-bottom: 1px dotted #777; padding: 0 6px; }
+/* แถว Tolerance หลายแบนด์: ทุกช่องชิดบน + เส้นใต้รายบรรทัด (แบบเดียวกับใบบันทึกผล ws1) */
+.eib-grid td.top { vertical-align: top; }
+.eib-grid td.top.eib-val { border-bottom: none; }
+.eib-tolln { display: block; border-bottom: 1px dotted #777; }
 .eib-tbl { width: 100%; }
 .eib-tbl th, .eib-tbl td { border: 1px solid #111; padding: 3px 6px; text-align: center; }
 .eib-fail { color: #b3261e; font-weight: 700; }
@@ -576,9 +580,11 @@ function pageEIB55(pageNo, total) {
     </tr>`;
   }).join('');
   const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
-  // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) ซ้อนบรรทัด — multi-range แต่ละย่านมาคนละใบอยู่แล้ว
+  // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) แบนด์ละบรรทัดตีเส้นใต้
+  // ทั้งแถวชิดบน → label Tolerance อยู่บรรทัดเดียวกับแบนด์แรก (จัดแบบเดียวกับใบบันทึกผล ws1)
+  const tolLine = v => `<span class="eib-tolln">${v || '&nbsp;'}</span>`;
   const tolHtml = (Array.isArray(CAL.tolerances) && CAL.tolerances.length)
-    ? CAL.tolerances.map(esc).join('<br>') : '';
+    ? CAL.tolerances.map(t => tolLine(esc(t))).join('') : tolLine('');
   return `<section class="sheet eib">
     <div class="eib-head">
       <div class="eib-brand">
@@ -593,7 +599,7 @@ function pageEIB55(pageNo, total) {
     </div>
     <table class="eib-grid">
       <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
-      <tr>${cell('Range', rangeTxt)}${cell('User range', CAL.user_range)}<td class="eib-lbl">Tolerance</td><td class="eib-val">${tolHtml}</td></tr>
+      <tr><td class="eib-lbl top">Range</td><td class="eib-val top">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl top">User range</td><td class="eib-val top">${tolLine(esc(CAL.user_range))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolHtml}</td></tr>
       <tr>${cell('Section', CAL.section)}${cell('Unit', CAL.unit_dept)}<td></td><td></td></tr>
     </table>
     <table class="bx eib-tbl">
