@@ -245,7 +245,7 @@ function renderErrRows(fresh) {
       const el = document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`);
       return (el && el.value !== '') ? el.value : def[j];
     });
-    return `<tr>
+    return `<tr onclick="showErrDetail(${i})" style="cursor:pointer">
     <td><strong>${p.nominal}</strong> <span class="chip" style="margin-left:4px">${pointDesc(p)}</span></td>
     <td class="num calc" id="cm${i}">–</td>
     ${[0,1,2].map(j => `<td><input type="number" step="any" class="errIn" data-p="${i}" data-r="${j}" value="${r[j]}" placeholder="g" oninput="recalc()"></td>`).join('')}
@@ -463,10 +463,16 @@ function recalc() {
   byId('repStd').textContent = fmt(repStd, 6) + ' g';
   byId('repMaxDiff').textContent = fmt(maxDiff, 4) + ' g';
   byId('repUr').textContent = fmt(uR_mg, 4);
+  if (byId('repDetail')) byId('repDetail').textContent = reps.length > 1
+    ? `Average = Σxᵢ/${reps.length} = ${fmt(repAvg,4)} g · S(WR) = √( Σ(xᵢ−x̄)² / (n−1) ) = ${fmt(repStd,6)} g (n=${reps.length}) · u(R) = S(WR)/√3 = (${fmt(repStd,6)}/1.7321)×1000 = ${fmt(uR_mg,4)} mg`
+    : '–';
 
   // 3.3 preload average
   const plReads = [...document.querySelectorAll('.plIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
   if (byId('plAvg')) byId('plAvg').textContent = plReads.length ? fmt(plReads.reduce((a,b)=>a+b,0)/plReads.length, 4) : '–';
+  if (byId('plDetail')) byId('plDetail').textContent = plReads.length
+    ? `เฉลี่ย = ( ${plReads.map(v => fmt(v,4)).join(' + ')} ) / ${plReads.length} = ${fmt(plReads.reduce((a,b)=>a+b,0)/plReads.length, 4)} g`
+    : '–';
 
   // 3.2 error per point
   const rows = POINTS.map((p, i) => {
@@ -480,21 +486,30 @@ function recalc() {
     byId('avg'+i).textContent = fmt(avg, 4);
     byId('cor'+i).textContent = fmt(corr, 6);
     byId('sd'+i).textContent = fmt(sd, 6);
-    return { ...p, avg, conv, corrBal: corr, sd };
+    return { ...p, reads, avg, conv, corrBal: corr, sd };
   });
 
   // 3.4 ecc / 3.5 tare
   const eccVals = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
-  let eccMax = 0;
+  let eccMax = 0, eccMaxIdx = 0;
   eccVals.forEach((v, i) => {
     const diff = i === 0 ? 0 : v - eccVals[0];
     byId('eccD'+i).textContent = fmt(diff, 4);
-    if (Math.abs(diff) > Math.abs(eccMax)) eccMax = diff;
+    if (Math.abs(diff) > Math.abs(eccMax)) { eccMax = diff; eccMaxIdx = i; }
   });
   byId('eccMax').textContent = fmt(eccMax, 4) + ' g';
+  if (byId('eccDetail')) byId('eccDetail').textContent = Number.isFinite(eccVals[0])
+    ? `ต่างจากกลาง = อ่านได้ − ตำแหน่ง 1 (กลาง) · สูงสุดที่ตำแหน่ง ${eccMaxIdx + 1}: ${fmt(eccVals[eccMaxIdx],4)} − ${fmt(eccVals[0],4)} = ${fmt(eccMax,4)} g`
+    : '–';
+  const tareParts = [];
   [...document.querySelectorAll('.tareIn')].forEach((el, i) => {
-    byId('tareD'+i).textContent = fmt(TARE[i][0] - parseFloat(el.value), 4);
+    const tDiff = TARE[i][0] - parseFloat(el.value);
+    byId('tareD'+i).textContent = fmt(tDiff, 4);
+    if (Number.isFinite(tDiff)) tareParts.push(`${TARE[i][0]} − ${fmt(parseFloat(el.value),4)} = ${fmt(tDiff,4)}`);
   });
+  if (byId('tareDetail')) byId('tareDetail').textContent = tareParts.length
+    ? `ผลต่าง = ตุ้มตรวจสอบ − อ่านได้ : ${tareParts.join(' · ')} g`
+    : '–';
 
   // 4 uncertainty budget per point — สูตร FRM-CAL92
   const SQ3 = 1.7321;
@@ -547,13 +562,14 @@ function recalc() {
     return Number.isFinite(tg) && tg > 0 ? tg : Infinity;        // ไม่ได้ตั้ง tolerance → ไม่มีเกณฑ์ (ไม่ตัด)
   };
   let allPass = true;
-  byId('evalRows').innerHTML = rows.map(p => {
+  byId('evalRows').innerHTML = rows.map((p, i) => {
     const errG = Math.round(-p.corrBal * 1000) / 1000;
     const Ug = p.Ufinal_mg / 1000;
     const tol = tolFor(p.nominal);
     const pass = (errG + Ug) <= tol && (errG - Ug) >= -tol;
     if (!pass) allPass = false;
-    return `<tr>
+    p.errG = errG; p.Ug = Ug; p.tolG = tol; p.pass = pass;
+    return `<tr onclick="showEvalDetail(${i})" style="cursor:pointer">
       <td><strong>${p.nominal}</strong></td>
       <td class="num">${fmt(errG,3)}</td>
       <td class="num">${fmt(Ug,4)}</td>
@@ -573,6 +589,22 @@ function showUncDetail(i) {
   const p = window._rows[i];
   byId('uncDetail').innerHTML =
     `จุด ${p.nominal} g: u = √( (${p.U}/2)² + (${p.U}/√3)² + (${fmt(p.dmg ?? 5,2)}/√3)² + (${fmt(p.dmg ?? 5,2)}/√3)² + (${fmt(p.nominal/1000,3)}/√3)² + u(R)² ) × k=${p.k ?? 2} (Veff ${Number.isFinite(p.veff) ? Math.round(p.veff) : '∞'}) → U = ${fmt(p.Ufinal_mg,4)} mg`;
+}
+
+// ที่มาการคำนวณข้อ 3.3 (Error of indication) ต่อจุด — คลิกแถวในตาราง
+function showErrDetail(i) {
+  const p = window._rows && window._rows[i]; if (!p) return;
+  const reads = (p.reads || []).map(v => fmt(v, 4));
+  byId('errDetail').innerHTML =
+    `จุด ${p.nominal} g: เฉลี่ย = ( ${reads.join(' + ')} ) / ${reads.length} = ${fmt(p.avg,4)} g · Conv. mass = ${p.nominal} + (${fmt(p.corr,7)}) = ${fmt(p.conv,6)} g · Correction = Conv. − เฉลี่ย = ${fmt(p.conv,6)} − ${fmt(p.avg,4)} = ${fmt(p.corrBal,6)} g · S(WR) = ${fmt(p.sd,6)} g`;
+}
+
+// ที่มาการประเมินผลข้อ 5 ต่อจุด — คลิกแถวในตาราง
+function showEvalDetail(i) {
+  const p = window._rows && window._rows[i]; if (!p) return;
+  const tolTxt = Number.isFinite(p.tolG) ? `±${fmt(p.tolG,3)} g` : 'ไม่มีเกณฑ์ (ไม่ตัด)';
+  byId('evalDetail').innerHTML =
+    `จุด ${p.nominal} g: Error = −Correction = ${fmt(p.errG,3)} g · U = ${fmt(p.Ufinal_mg,4)} mg = ${fmt(p.Ug,4)} g · Error+U = ${fmt(p.errG + p.Ug,4)} · Error−U = ${fmt(p.errG - p.Ug,4)} · เทียบ Tolerance ${tolTxt} → ${p.pass ? '✓ PASS' : '✗ FAIL'}`;
 }
 
 // ===== รวบข้อมูลที่กรอก + ผลคำนวณ → CAL object ที่ cert-print.html ใช้ =====

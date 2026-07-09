@@ -540,6 +540,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <thead><tr><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th></tr></thead>
       <tbody><tr id="plRow"></tr></tbody>
     </table></div>
+    <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="plDetail" class="calc">–</span></div></div>
 
     <div class="section-sub">3.2 Repeatability — จุดใช้งาน <input id="repPoint" type="number" value="2000" style="width:80px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g (10 ครั้ง)</div>
     <div class="table-wrap"><table class="tbl tbl-scroll" style="max-width:880px">
@@ -552,12 +553,14 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <div class="kpi"><span>Max diff successive</span><strong class="calc" id="repMaxDiff">–</strong></div>
       <div class="kpi"><span>u(R) = S/√3 (mg)</span><strong class="calc" id="repUr">–</strong></div>
     </div>
+    <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="repDetail" class="calc">–</span></div></div>
 
     <div class="section-sub">3.3 Error of indication — อ่าน 3 ซ้ำต่อจุด</div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>จุด (g)</th><th class="num">Conv. mass (g)</th><th>ครั้งที่ 1</th><th>ครั้งที่ 2</th><th>ครั้งที่ 3</th><th class="num">เฉลี่ย (g)</th><th class="num">Correction (g)</th><th class="num">S(WR)</th></tr></thead>
       <tbody id="errRows"></tbody>
     </table></div>
+    <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>เลือกจุดดูที่มา: <span id="errDetail" class="calc">–</span></div></div>
 
     <div class="grid2" style="margin-top:14px">
       <div>
@@ -579,6 +582,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
           <tbody id="eccRows"></tbody>
           <tfoot><tr><td colspan="2" style="font-weight:700">ความคลาดเคลื่อนสูงสุด</td><td class="num"><strong class="calc" id="eccMax">–</strong></td></tr></tfoot>
         </table>
+        <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="eccDetail" class="calc">–</span></div></div>
       </div>
       <div>
         <div class="section-sub">3.5 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g</div>
@@ -586,6 +590,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
           <thead><tr><th class="num">ตุ้มตรวจสอบ (g)</th><th>อ่านได้ (g)</th><th class="num">ผลต่าง (g)</th></tr></thead>
           <tbody id="tareRows"></tbody>
         </table>
+        <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="tareDetail" class="calc">–</span></div></div>
         <div class="note" style="margin-top:8px"><i class="ti ti-adjustments"></i><div>Sensitivity test: ไม่ใช้กับงานนี้ (เปิด/ปิดได้ต่อเครื่อง)</div></div>
       </div>
     </div>
@@ -637,6 +642,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
       <thead><tr><th>จุด (g)</th><th class="num">Error (g)</th><th class="num">U ± (g)</th><th class="num">Error + U</th><th class="num">Error − U</th><th class="num">Tolerance ± (g)</th><th>ผล</th></tr></thead>
       <tbody id="evalRows"></tbody>
     </table></div>
+    <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>เลือกจุดดูที่มา: <span id="evalDetail" class="calc">–</span></div></div>
 
     <div class="subhead"><i class="ti ti-signature"></i> ผู้ลงนามในใบรับรอง</div>
     <div class="grid3">
@@ -648,7 +654,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260709-approver-pos2"></script>
+<script src="js/balance-cal.js?v=20260709-calc-detail"></script>
 <!-- ============ สลับ "เต็มจอย่อ": ให้มือถือเรนเดอร์เลย์เอาต์แท็บเล็ต (viewport 980) แล้วย่อพอดีจอ ============ -->
 <script>
 (function () {
