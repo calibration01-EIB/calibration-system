@@ -447,7 +447,7 @@ function ctHead(pageNo) {
     <div class="kv2"><span></span><span>MODEL :</span><span>${esc(CAL.model)}</span></div>
     <div class="kv2"><span></span><span>SERIAL NUMBER :</span><span>${esc(CAL.serial)}</span></div>
     <div class="kv2"><span></span><span>IDENTIFICATION NUMBER :</span><span>${esc(CAL.id_no)}</span></div>
-    <p>CALIBRATION DATE : ${dCert(CAL.date_cal)}</p>`;
+    <div class="kv"><span>CALIBRATION DATE :</span><span>${dCert(CAL.date_cal)}</span></div>`;
 }
 function resultLine() {
   return `<p style="margin-top:8px"><span class="u b">RESULT OF CALIBRATION :</span>
