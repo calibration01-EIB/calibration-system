@@ -233,7 +233,7 @@ const CAL_DEFAULT = {
   ],
   ecc:  { wt: 1000, positions: ['Middle (1)', 'Front left (2)', 'Back left (3)', 'Back right ( 4)', 'Front right ( 5 )'], reads: [1000, 1000, 1000.01, 999.99, 999.99], pan: 0 },
   tare: { wt: 1000, checks: [[500, 500], [2000, 2000]] },
-  signers: { tech_mgr: 'PRASERT    PLAINPRASERT', director: 'DR.WANLOP   CHUSATTAYANOND', approver: 'tech_mgr', approver_pos: 'Laboratory Manager' },
+  signers: { tech_mgr: 'PRASERT    PLAINPRASERT', approver_pos: 'Laboratory Manager' },
 };
 // รับข้อมูลจริงจากระบบป้อนค่า (balance-cal): ผ่าน #data= ใน URL หรือ localStorage 'calData'
 // ถ้าไม่มี ใช้ CAL_DEFAULT (ตัวอย่าง 26B232-0) เพื่อเปิดดู template เดี่ยวๆ ได้
@@ -374,9 +374,8 @@ function ilcRound(cls, size) {
   return `<img class="${cls}" src="${IMG.ilc}" width="${size}" alt="ILC CALIBRATION LABORATORY">`;
 }
 function pageCover() {
-  const apDirector = CAL.signers.approver === 'director';
-  const apName = apDirector ? CAL.signers.director : CAL.signers.tech_mgr;
-  const apPos = (CAL.signers.approver_pos || '').trim() || (apDirector ? 'DIRECTOR OF CALIBRATION LABORATORY' : 'Laboratory Manager');
+  const apName = CAL.signers.tech_mgr;
+  const apPos = (CAL.signers.approver_pos || '').trim() || 'Laboratory Manager';
   return `<section class="sheet cover">
     <img class="cv-nac" src="${IMG.nac}" alt="NSC-TISI-TIS 17025">
     <div class="cv-title">
@@ -417,8 +416,10 @@ function pageCover() {
         <div class="ctr" style="margin-top:6px">TECHNICIAN</div>
       </div>
       <div>
-        <div><span class="b cv-sig-lbl" style="margin-left:-10mm">APPROVED BY :</span> <span class="fill">${esc(apName)}</span></div>
-        <div class="ctr" style="margin-top:6px"><span class="fill">${esc(apPos)}</span></div>
+        <div class="b cv-sig-lbl" style="margin-left:-10mm">APPROVED BY :</div>
+        <div class="ctr" style="margin-top:26px"><span style="border-bottom:1px solid #111;display:inline-block;min-width:185px">&nbsp;</span></div>
+        <div class="ctr" style="margin-top:4px">( <span class="fill">${esc(apName)}</span> )</div>
+        <div class="ctr"><span class="fill">${esc(apPos)}</span></div>
       </div>
     </div>
     <div class="cv-approval">DATE OF APPROVAL : …..../….…./…..…</div>
