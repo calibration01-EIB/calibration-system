@@ -640,14 +640,15 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
     <div class="grid3">
       <div class="field"><label>ผู้ทบทวน / Technical Manager</label><input id="sTechMgr" value="PRASERT    PLAINPRASERT"></div>
       <div class="field"><label>ผู้อนุมัติ / Lab Director</label><input id="sDirector" value="DR.WANLOP   CHUSATTAYANOND"></div>
-      <div class="field"><label>ผู้เซ็นออกใบ (Approver)</label><select id="sApprover"><option value="tech_mgr">Technical Manager</option><option value="director">Lab Director</option></select></div>
+      <div class="field"><label>ผู้เซ็นออกใบ (Approver)</label><select id="sApprover" onchange="syncApproverPos()"><option value="tech_mgr">Technical Manager</option><option value="director">Lab Director</option></select></div>
+      <div class="field"><label>ตำแหน่งผู้เซ็นออกใบ (พิมพ์บนใบ Cert — แก้ข้อความได้)</label><input id="sApproverPos" value="Laboratory Manager"></div>
     </div>
 
     <div class="note"><i class="ti ti-route"></i><div>ในระบบจริง: บันทึกเป็น “งานสอบเทียบ” สถานะ ร่าง → รอทบทวน (EIB) → รออนุมัติ (Owner) → ออกเลข Cert จาก <code>cert_sequences</code> อัตโนมัติ → สร้าง PDF + ใบประเมินผล → อัปเดต cal_date/due_date ในทะเบียนเครื่องมือ</div></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260708-stdov-keep"></script>
+<script src="js/balance-cal.js?v=20260709-approver-pos"></script>
 <!-- ============ สลับ "เต็มจอย่อ": ให้มือถือเรนเดอร์เลย์เอาต์แท็บเล็ต (viewport 980) แล้วย่อพอดีจอ ============ -->
 <script>
 (function () {

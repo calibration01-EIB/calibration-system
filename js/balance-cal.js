@@ -657,10 +657,16 @@ function buildCALSingle() {
     points,
     ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
     tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
-    signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover') },
+    signers: { tech_mgr: val('sTechMgr'), director: val('sDirector'), approver: val('sApprover'), approver_pos: val('sApproverPos') },
     tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol, unit: t.unit || 'g' })),   // tolerance bands (มีหน่วย) → คืนค่าตอนเปิดดู (#rec=)
     dsegs: DSEGS.map(s => ({ to: s.to, d: s.d })),                                          // d-segments (multi-interval)
   };
+}
+
+// เปลี่ยนผู้เซ็นออกใบ → เติมตำแหน่ง default ของคนนั้นให้ก่อน (พิมพ์ทับแก้ได้ในช่อง)
+function syncApproverPos() {
+  const el = byId('sApproverPos');
+  if (el) el.value = val('sApprover') === 'director' ? 'DIRECTOR OF CALIBRATION LABORATORY' : 'Laboratory Manager';
 }
 
 // เก็บ CAL ลง localStorage แล้วเปิด template ใบรับรอง
@@ -1461,7 +1467,7 @@ function fillFromCAL(cal) {
   setv('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);
   setv('fCertNo', cal.cert_no); setv('fJobNo', cal.job_no); setv('fReqNo', cal.request_no);
   if (cal.ab_ppm != null) setv('abMaterial', cal.ab_ppm);
-  if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sDirector', cal.signers.director); setv('sApprover', cal.signers.approver); }
+  if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sDirector', cal.signers.director); setv('sApprover', cal.signers.approver); setv('sApproverPos', cal.signers.approver_pos); }
   setList('.tIn', cal.temp); setList('.rhIn', cal.rh); setList('.wuIn', cal.warmup); setList('.ctIn', cal.cal_time);
   if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: (t.tol != null && t.tol !== '' ? Number(t.tol) : ''), unit: t.unit || 'g' }));
   if (Array.isArray(cal.dsegs)) DSEGS = cal.dsegs.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) })).filter(s => Number.isFinite(s.to));
