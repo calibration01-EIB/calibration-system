@@ -790,12 +790,25 @@ tbody tr:hover { background: var(--surface2); }
   .dsh-row2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .dsh-hero { padding: 18px 16px 56px; }
-  .dsh-kpis { margin: -44px 10px 14px; gap: 10px; }
-  .dsh-kpi { padding: 13px 14px; }
-  .dsh-kpi-v { font-size: 24px; }
-  .dsh-mgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dsh-tgrid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .dsh-hero { padding: 13px 14px 44px; border-radius: 12px; }
+  .dsh-hero-title { font-size: 16px; }
+  .dsh-hero-sub { font-size: 10.5px; }
+  .dsh-hero-btn { font-size: 11px; padding: 5px 12px; }
+  .dsh-kpis { margin: -34px 8px 12px; gap: 8px; }
+  .dsh-kpi { padding: 10px 12px; border-radius: 13px; }
+  .dsh-kpi-ic { width: 32px; height: 32px; font-size: 16px; border-radius: 10px; margin-bottom: 7px; }
+  .dsh-kpi-v { font-size: 21px; }
+  .dsh-kpi-lb { font-size: 10.5px; }
+  .dsh-card { padding: 12px 13px; border-radius: 13px; }
+  .dsh-ct { font-size: 12.5px; margin-bottom: 10px; }
+  .dsh-mgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .dsh-mcard { padding: 8px 6px; }
+  .dsh-mnum { font-size: 17px; }
+  .dsh-tgrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .dsh-tcard { padding: 9px 10px; }
+  .dsh-tv { font-size: 14px; }
+  .dsh-tic { width: 26px; height: 26px; font-size: 12px; margin-bottom: 5px; }
+  .dsh-row2 { gap: 12px; margin-bottom: 12px; }
 }
 </style>
 <style id="calibrationLoginRefresh">
@@ -1648,16 +1661,16 @@ body.app-mode textarea:focus {
 <style id="codexMobileAppRefresh">
 @media (max-width: 768px) {
   html {
-    scroll-padding-top: 124px;
+    scroll-padding-top: 104px;
   }
 
   body.app-mode {
     background: #eef4fb !important;
-    font-size: 13px !important;
+    font-size: 12.5px !important;
   }
 
   body.app-mode #app {
-    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   body.app-mode #app .app-layout {
@@ -1667,13 +1680,13 @@ body.app-mode textarea:focus {
 
   body.app-mode #app .sidebar {
     width: 100% !important;
-    height: 62px !important;
-    min-height: 62px !important;
+    height: 52px !important;
+    min-height: 52px !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 10px !important;
-    padding: 8px 12px !important;
+    gap: 8px !important;
+    padding: 6px 10px !important;
     background: rgba(16, 35, 55, .97) !important;
     border-right: 0 !important;
     border-bottom: 1px solid rgba(186, 230, 253, .16) !important;
@@ -1682,9 +1695,9 @@ body.app-mode textarea:focus {
 
   body.app-mode #app .sidebar-brand {
     width: auto !important;
-    min-width: 46px !important;
+    min-width: 40px !important;
     max-width: none !important;
-    min-height: 46px !important;
+    min-height: 40px !important;
     padding: 0 !important;
     border: 0 !important;
     display: flex !important;
@@ -1692,10 +1705,10 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode #app .sidebar-logo {
-    width: 46px !important;
-    min-height: 46px !important;
+    width: 40px !important;
+    min-height: 40px !important;
     margin: 0 !important;
-    padding: 7px !important;
+    padding: 6px !important;
     border-radius: 8px !important;
   }
 
@@ -1708,14 +1721,14 @@ body.app-mode textarea:focus {
 
   body.app-mode #app .sidebar-logo-img-mini {
     display: block !important;
-    width: 32px !important;
-    max-width: 32px !important;
+    width: 28px !important;
+    max-width: 28px !important;
   }
 
   body.app-mode #app .sidebar-user {
     margin: 0 0 0 auto !important;
     padding: 0 !important;
-    min-height: 44px !important;
+    min-height: 36px !important;
     border: 0 !important;
     background: transparent !important;
     gap: 8px !important;
@@ -1724,10 +1737,10 @@ body.app-mode textarea:focus {
   body.app-mode #app .user-avatar,
   body.app-mode #app .btn-logout,
   body.app-mode #app .sidebar-user-action {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    border-radius: 12px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 10px !important;
   }
 
   body.app-mode #app .btn-logout,
@@ -1740,16 +1753,16 @@ body.app-mode textarea:focus {
 
   body.app-mode #app .main-content {
     margin-left: 0 !important;
-    padding-top: 62px !important;
-    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: 52px !important;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
     min-height: 100dvh !important;
     background: linear-gradient(180deg, #f7fbff 0%, #eef4fb 100%) !important;
   }
 
   body.app-mode #app .topbar {
-    top: 62px !important;
-    min-height: 58px !important;
-    padding: 10px 12px !important;
+    top: 52px !important;
+    min-height: 48px !important;
+    padding: 7px 10px !important;
     gap: 8px !important;
     background: rgba(247, 251, 255, .94) !important;
     border-bottom: 1px solid rgba(37, 99, 235, .12) !important;
@@ -1762,7 +1775,7 @@ body.app-mode textarea:focus {
 
   body.app-mode #topbarTitle {
     max-width: 58vw !important;
-    font-size: 17px !important;
+    font-size: 15px !important;
     line-height: 1.16 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1771,16 +1784,16 @@ body.app-mode textarea:focus {
 
   body.app-mode #topbarSub {
     max-width: 58vw !important;
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
   body.app-mode .db-status {
-    width: 38px !important;
-    min-width: 38px !important;
-    height: 38px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
     padding: 0 !important;
     justify-content: center !important;
     border-radius: 12px !important;
@@ -1796,10 +1809,10 @@ body.app-mode textarea:focus {
 
   body.app-mode .notif-dropdown {
     position: fixed !important;
-    top: 126px !important;
+    top: 106px !important;
     right: 10px !important;
     width: min(340px, calc(100vw - 20px)) !important;
-    max-height: calc(100dvh - 212px) !important;
+    max-height: calc(100dvh - 186px) !important;
     overflow-y: auto !important;
   }
 
@@ -1808,14 +1821,14 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .page-content {
-    padding: 12px 12px 16px !important;
+    padding: 10px 10px 14px !important;
   }
 
   body.app-mode #statTotal,
   body.app-mode #statOk,
   body.app-mode #statOverdue,
   body.app-mode #statWarning {
-    font-size: 27px !important;
+    font-size: 21px !important;
     letter-spacing: 0 !important;
   }
 
@@ -1831,12 +1844,12 @@ body.app-mode textarea:focus {
 
   body.app-mode .controls-bar {
     position: sticky !important;
-    top: 120px !important;
+    top: 100px !important;
     z-index: 32 !important;
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    padding: 10px !important;
+    gap: 7px !important;
+    padding: 8px !important;
     margin: 0 0 10px !important;
     border-radius: 8px !important;
     box-shadow: 0 14px 34px rgba(30, 64, 175, .12) !important;
@@ -1852,8 +1865,8 @@ body.app-mode textarea:focus {
   body.app-mode .controls-bar button {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 42px !important;
-    font-size: 13px !important;
+    min-height: 38px !important;
+    font-size: 12.5px !important;
   }
 
   body.app-mode #pageList > div[style*="justify-content:space-between"] {
@@ -1883,7 +1896,7 @@ body.app-mode textarea:focus {
   body.app-mode #btnNext,
   body.app-mode #pageNum {
     flex: 0 0 auto !important;
-    min-height: 38px !important;
+    min-height: 34px !important;
     white-space: nowrap !important;
   }
 
@@ -1923,9 +1936,9 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .mobile-card-head {
-    padding: 13px 13px 9px 17px !important;
+    padding: 10px 11px 7px 14px !important;
     margin: 0 !important;
-    gap: 10px !important;
+    gap: 8px !important;
   }
 
   body.app-mode .mobile-card-kicker {
@@ -1939,7 +1952,7 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .mobile-card-title {
-    font-size: 15px !important;
+    font-size: 13.5px !important;
     line-height: 1.28 !important;
     white-space: normal !important;
     display: -webkit-box;
@@ -1948,30 +1961,30 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .mobile-card-sub {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   body.app-mode .mobile-badge {
-    min-height: 28px !important;
+    min-height: 24px !important;
     display: inline-flex !important;
     align-items: center !important;
     border-radius: 999px !important;
-    padding: 4px 9px !important;
+    padding: 2px 8px !important;
   }
 
   body.app-mode .mobile-card-grid {
     margin: 0 !important;
-    padding: 0 13px 11px 17px !important;
+    padding: 0 11px 9px 14px !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
+    gap: 7px !important;
   }
 
   body.app-mode .mobile-field {
-    min-height: 58px;
-    padding: 8px 9px;
+    min-height: 46px;
+    padding: 6px 8px;
     border: 1px solid rgba(37, 99, 235, .10);
     border-radius: 8px;
     background: #f8fbff;
@@ -1983,17 +1996,17 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .mobile-field strong {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     line-height: 1.35 !important;
   }
 
   body.app-mode .mobile-plan-row {
-    padding: 0 13px 11px 17px;
+    padding: 0 11px 9px 14px;
   }
 
   body.app-mode .mobile-plan-badge {
     margin: 0 !important;
-    min-height: 30px !important;
+    min-height: 26px !important;
     align-items: center !important;
     border-radius: 8px !important;
   }
@@ -2001,35 +2014,35 @@ body.app-mode textarea:focus {
   body.app-mode .mobile-card-actions {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    padding: 11px 13px 13px 17px !important;
+    gap: 7px !important;
+    padding: 9px 11px 11px 14px !important;
     border-top: 1px solid rgba(37, 99, 235, .10);
     background: #fbfdff;
   }
 
   body.app-mode .mobile-card-action {
-    min-height: 42px !important;
+    min-height: 38px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
+    gap: 5px !important;
     border-radius: 8px !important;
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     white-space: nowrap !important;
   }
 
   body.app-mode .mobile-card-action i {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   body.app-mode .bottom-nav {
     display: flex !important;
     align-items: stretch !important;
     justify-content: flex-start !important;
-    gap: 6px !important;
+    gap: 5px !important;
     overflow-x: auto !important;
     overscroll-behavior-x: contain;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px)) !important;
     background: rgba(255, 255, 255, .97) !important;
     border-top: 1px solid rgba(37, 99, 235, .14) !important;
     box-shadow: 0 -16px 34px rgba(15, 23, 42, .14) !important;
@@ -2041,23 +2054,23 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .bottom-nav .mobile-nav-item {
-    flex: 0 0 64px !important;
-    min-width: 64px !important;
-    min-height: 52px !important;
+    flex: 0 0 56px !important;
+    min-width: 56px !important;
+    min-height: 44px !important;
     display: grid !important;
     place-items: center !important;
     align-content: center !important;
     border-radius: 8px !important;
-    padding: 6px 4px !important;
+    padding: 4px 3px !important;
   }
 
   body.app-mode .bottom-nav .mobile-nav-item > div:first-child {
-    font-size: 19px !important;
+    font-size: 17px !important;
   }
 
   body.app-mode .bottom-nav .mobile-nav-item > div:last-child {
     color: var(--text3) !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 800 !important;
     line-height: 1.1 !important;
   }
@@ -2086,9 +2099,9 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode #certTypeCards > div {
-    flex: 0 0 108px !important;
-    min-height: 82px !important;
-    padding: 10px 8px !important;
+    flex: 0 0 96px !important;
+    min-height: 72px !important;
+    padding: 8px 7px !important;
     scroll-snap-align: start;
   }
 
@@ -2105,7 +2118,7 @@ body.app-mode textarea:focus {
 
   body.app-mode #pageCert button,
   body.app-mode #pageCert select {
-    min-height: 40px !important;
+    min-height: 38px !important;
     width: 100% !important;
   }
 
@@ -2145,7 +2158,7 @@ body.app-mode textarea:focus {
   body.app-mode #pageWeights > div:nth-child(2) button {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 42px !important;
+    min-height: 38px !important;
   }
 
   body.app-mode #pagePlan .plan-tabs {
@@ -2163,7 +2176,7 @@ body.app-mode textarea:focus {
 
   body.app-mode #pagePlan .plan-tabs button {
     flex: 0 0 auto !important;
-    min-height: 40px !important;
+    min-height: 36px !important;
     white-space: nowrap !important;
   }
 
@@ -2190,7 +2203,7 @@ body.app-mode textarea:focus {
   body.app-mode #pagePlan .plan-btn {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 42px !important;
+    min-height: 38px !important;
   }
 
   body.app-mode .modal-overlay.open {
@@ -2209,11 +2222,11 @@ body.app-mode textarea:focus {
   }
 
   body.app-mode .modal-header {
-    padding: 16px !important;
+    padding: 13px 14px !important;
   }
 
   body.app-mode .modal-body {
-    padding: 16px !important;
+    padding: 13px 14px !important;
   }
 
   body.app-mode .modal-footer {
@@ -2227,7 +2240,7 @@ body.app-mode textarea:focus {
 
   body.app-mode .modal-footer button {
     width: 100% !important;
-    min-height: 44px !important;
+    min-height: 40px !important;
   }
 
   body.app-mode .modal-body [style*="grid-template-columns:1fr 1fr"],
@@ -2247,13 +2260,13 @@ body.app-mode textarea:focus {
 
   body.app-mode .upload-area,
   body.app-mode #planDropZone {
-    padding: 22px 16px !important;
+    padding: 16px 14px !important;
   }
 
   body.app-mode input,
   body.app-mode select,
   body.app-mode textarea {
-    font-size: 16px !important;
+    font-size: 15px !important;
   }
 }
 

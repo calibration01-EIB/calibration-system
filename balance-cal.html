@@ -228,8 +228,8 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
 /* ====================== PHONE (≤ 680px): ตาราง → การ์ด, ทุกอย่าง 1 คอลัมน์ ====================== */
 @media (max-width: 680px) {
   body { font-size: 15px; }
-  .page { width: calc(100vw - 20px); padding: 14px 0 90px; }
-  .top { flex-direction: column; padding: 14px; border-radius: 14px; }
+  .page { width: calc(100vw - 16px); padding: 10px 0 80px; }
+  .top { flex-direction: column; padding: 12px; border-radius: 12px; }
   .top h1 { font-size: 19px; }
   .top p { font-size: 12.5px; }
 
@@ -296,12 +296,12 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
   .cp-row { grid-template-columns: 130px 1fr; }
 
   /* ===== โหมดกระชับมือถือ: ลดขนาด/ความสูง/ระยะห่างลงทั้งชุด ===== */
-  :root { --tap: 38px; }
-  body { font-size: 13.5px; }
-  .top h1 { font-size: 17px; }
-  .top p { font-size: 11.5px; }
-  .card { padding: 11px; margin-bottom: 12px; }
-  .card h2 { font-size: 14.5px; }
+  :root { --tap: 36px; }
+  body { font-size: 13px; }
+  .top h1 { font-size: 16px; }
+  .top p { font-size: 11px; }
+  .card { padding: 10px; margin-bottom: 10px; border-radius: 12px; }
+  .card h2 { font-size: 13.5px; }
   .card .hint { font-size: 11px; }
   .card-head { padding-bottom: 9px; margin-bottom: 10px; }
   .step-num { width: 27px; height: 27px; }
@@ -310,20 +310,22 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
   .field label { font-size: 10.5px; margin-bottom: 2px; }
   .field input, .field select, .field textarea { font-size: 15px; padding: 0 10px; border-radius: 9px; }
   input[type=number], input[type=text], input:not([type]) { font-size: 15px; }
-  .mbtn { font-size: 12.5px; padding: 0 13px; }
-  .cbtn { font-size: 13px; }
-  .jump a { font-size: 12px; }
-  .grid2, .grid3, .grid4 { gap: 8px 10px; }
-  .tbl input { font-size: 15px; min-height: 36px; }
-  .tbl-scroll input { width: 92px; min-height: 36px; }
+  .mbtn { font-size: 12px; padding: 0 12px; }
+  .cbtn { font-size: 12.5px; }
+  .jump a { font-size: 11.5px; min-height: 38px; padding: 0 12px; }
+  .btn-cert { min-height: 44px; font-size: 14px; padding: 0 18px; }
+  #fullViewBtn { min-height: 38px; font-size: 12px; }
+  .grid2, .grid3, .grid4 { gap: 7px 9px; }
+  .tbl input { font-size: 15px; min-height: 34px; }
+  .tbl-scroll input { width: 88px; min-height: 34px; }
   table.tbl:not(.tbl-scroll) > tbody > tr > td,
-  table.tbl:not(.tbl-scroll) > tfoot > tr > td { min-height: 40px; padding: 6px 11px; }
-  table.tbl:not(.tbl-scroll) > tbody > tr > td:first-child { min-height: 38px; }
-  table.tbl:not(.tbl-scroll) td input { min-height: 36px; }
-  .kpi { padding: 8px 10px 8px 13px; }
-  .kpi strong { font-size: 16px; }
-  .kpi span { font-size: 10.5px; }
-  .pan-figure svg { height: 92px; }
+  table.tbl:not(.tbl-scroll) > tfoot > tr > td { min-height: 36px; padding: 5px 10px; }
+  table.tbl:not(.tbl-scroll) > tbody > tr > td:first-child { min-height: 34px; }
+  table.tbl:not(.tbl-scroll) td input { min-height: 34px; }
+  .kpi { padding: 7px 9px 7px 12px; }
+  .kpi strong { font-size: 15px; }
+  .kpi span { font-size: 10px; }
+  .pan-figure svg { height: 78px; }
 
   /* ===== ตารางตุ้มมาตรฐาน: คงเป็นตารางเลื่อนแนวนอน แถวเดียว/ตุ้ม (ไม่ระเบิดเป็นการ์ด) ===== */
   table.tbl.stdtbl { display: table; width: max-content; min-width: 100%; border-collapse: collapse; }
@@ -346,9 +348,9 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
   table.tbl.stdtbl > tbody > tr > td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--line-soft); }
 
   /* ===== ตัวเลือกติ๊กตุ้ม (wpick): กระชับ ===== */
-  .wpick-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 6px; }
-  .wpick { min-height: 40px; padding: 6px 9px; border-radius: 9px; font-size: 11.5px; }
-  .wpick input { width: 18px; height: 18px; }
+  .wpick-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .wpick { min-height: 36px; padding: 5px 8px; border-radius: 9px; font-size: 11px; }
+  .wpick input { width: 17px; height: 17px; }
 }
 </style>
 </head>
