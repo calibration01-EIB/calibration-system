@@ -568,7 +568,7 @@ function pageCertCompact(pageNo, withEnd) {
 function pageEIB55(pageNo, total) {
   // Range = พิกัดเครื่อง (MAX) จาก opt.instMax — ไม่ใช่ capacity ของย่านที่พิมพ์ (multi-range ทุกใบแสดงพิกัดเดียวกัน)
   const instCap = (opt.instMax != null ? opt.instMax : CAL.capacity);
-  const rangeTxt = instCap >= 1000 ? (+(instCap / 1000).toFixed(3)) + ' kg' : instCap + ' ' + CAL.unit;
+  const rangeTxt = instCap > 30000 ? (+(instCap / 1000).toFixed(3)) + ' kg' : instCap + ' ' + CAL.unit;
   const rows = ROWS.map(r => {
     const errG = Math.round((-r.corr) * 1000) / 1000;
     const Ug = r.bud.Ufinal / 1000;
