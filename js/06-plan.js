@@ -370,7 +370,7 @@ async function loadPlanList() {
           ${p.plan_file_url ? `<button onclick="viewPlanFile('${escapeJsSingle(p.plan_file_url)}')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์แผน</button>` : ''}
           ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>รายการ (${cnt.toLocaleString()})</button>` : ''}
           ${p.cert_file_url ? `<button onclick="viewPlanFile('${escapeJsSingle(p.cert_file_url)}')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
-          ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" class="plan-btn accent" type="button"><i class="ti ti-paperclip"></i>แนบไฟล์หลังสอบ</button>` : ''}
+          ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" class="plan-btn accent" type="button"><i class="ti ti-paperclip"></i>กรอกผลสอบ</button>` : ''}
           <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
           ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" class="plan-btn accent" type="button"><i class="ti ti-edit"></i>แก้ไข</button>` : '' }
           ${isAdmin ? `<button onclick="deletePlan('${p.id}')" class="plan-btn danger" type="button"><i class="ti ti-trash"></i>ลบ</button>` : ''}
@@ -715,39 +715,208 @@ async function confirmPlan(planId, newStatus) {
   }
 }
 
-// --- Attach cert after calibration ---
-let attachCertPlanId = null;
-function openAttachCertModal(planId) {
-  attachCertPlanId = planId;
-  document.getElementById('attachCertModal').classList.add('open');
-}
-function closeAttachCertModal() {
-  document.getElementById('attachCertModal').classList.remove('open');
-  attachCertPlanId = null;
-  document.getElementById('certAttachFile').value = '';
-}
-async function submitAttachCert() {
-  const file = document.getElementById('certAttachFile').files[0];
-  if (!file) { showToast('กรุณาเลือกไฟล์', 'error'); return; }
-  showLoading('กำลังอัพโหลด...');
+// --- กรอกผลสอบเทียบรายเครื่อง (หลังสอบ) ---
+const CERT_RESULT_FIELDS = [
+  { key: 'serial_no',       label: 'Serial No.' },
+  { key: 'brand',           label: 'ยี่ห้อ' },
+  { key: 'model',           label: 'รุ่น' },
+  { key: 'instrument_name', label: 'ชื่อเครื่องมือ' },
+  { key: 'range_val',       label: 'Range' },
+  { key: 'asset_no',        label: 'Asset No.' },
+  { key: 'machine',         label: 'เครื่องจักร' },
+  { key: 'location',        label: 'สถานที่ใช้งาน' },
+];
+let certResultPlanId = null;
+let certResultItems = [];
+let certResultEditing = null;   // item ที่กำลังกรอก
+let certResultInst = null;      // แถว instruments ปัจจุบันของ item ที่กำลังกรอก
+
+async function openAttachCertModal(planId) {
+  certResultPlanId = planId;
+  showLoading('กำลังโหลดรายการ...');
   try {
-    const ext = file.name.split('.').pop();
-    const fileName = `cert_${attachCertPlanId}_${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from('calibration-plans').upload(fileName, file);
-    if (upErr) throw upErr;
-    const { data: urlData } = sb.storage.from('calibration-plans').getPublicUrl(fileName);
-    const { error } = await sb.from('calibration_plans').update({
-      cert_file_url: urlData?.publicUrl || fileName,
-      status: 'pending_cert'
-    }).eq('id', attachCertPlanId);
+    const { data, error } = await sb.from('calibration_plan_items')
+      .select('*').eq('plan_id', planId).order('id_code');
     if (error) throw error;
+    certResultItems = data || [];
     hideLoading();
-    await logPlanAudit(attachCertPlanId, 'แนบไฟล์สอบ', 'แนบไฟล์หลังสอบเทียบ รอ Admin ยืนยัน');
-    showToast('✅ ส่งไฟล์ให้ Admin ยืนยันแล้ว', 'success');
-    closeAttachCertModal();
+    renderCertResultList();
+    document.getElementById('certResultModal').classList.add('open');
+  } catch (e) {
+    hideLoading();
+    showToast('โหลดรายการไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+function closeCertResultModal() {
+  document.getElementById('certResultModal').classList.remove('open');
+  certResultPlanId = null; certResultItems = []; certResultEditing = null; certResultInst = null;
+}
+
+function certResultChip(st) {
+  if (st === 'filled')  return '<span class="badge badge-green">กรอกแล้ว</span>';
+  if (st === 'skipped') return '<span class="badge badge-amber">ข้าม</span>';
+  if (st === 'applied') return '<span class="badge badge-green">ลงทะเบียนแล้ว</span>';
+  return '<span class="badge badge-red">ยังไม่กรอก</span>';
+}
+
+function renderCertResultList() {
+  document.getElementById('certResultTitle').textContent = 'กรอกผลสอบเทียบรายเครื่อง';
+  const body = document.getElementById('certResultBody');
+  body.innerHTML = `
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">กรอกผลทีละเครื่อง (ไฟล์สแกน + เลข Cert + วันสอบ + แก้ข้อมูลที่ผิด) ครบทุกเครื่องแล้วจึงส่งให้ Admin ยืนยัน — ข้อมูลจะยังไม่ลงทะเบียนจนกว่า Admin จะยืนยัน</p>
+    ${certResultItems.map(it => `
+      <div class="plan-item-row" style="align-items:center">
+        <span class="plan-id">${escapeHtmlText(it.id_code || '–')}</span>
+        <span style="flex:1">${escapeHtmlText(it.instrument_name || '–')}</span>
+        ${certResultChip(it.result_status)}
+        <button class="plan-btn accent" type="button" onclick="openCertResultForm('${escapeJsSingle(it.id)}')">${it.result_status ? 'แก้ไข' : 'กรอกผล'}</button>
+      </div>`).join('')}`;
+  const allDone = certResultItems.length > 0 &&
+    certResultItems.every(it => ['filled', 'skipped', 'applied'].includes(it.result_status));
+  document.getElementById('certResultFooter').innerHTML = `
+    <button onclick="closeCertResultModal()" class="btn-secondary">ปิด</button>
+    <button onclick="submitCertResults()" class="btn-primary" ${allDone ? '' : 'disabled'}>📤 ส่งให้ Admin ยืนยัน</button>`;
+}
+
+async function openCertResultForm(itemId) {
+  const it = certResultItems.find(x => String(x.id) === String(itemId));
+  if (!it) return;
+  showLoading('กำลังโหลดข้อมูลเครื่อง...');
+  try {
+    const { data: inst, error } = await sb.from('instruments')
+      .select('*').eq('id', it.instrument_id).single();
+    if (error || !inst) throw new Error('ไม่พบเครื่องมือในทะเบียน');
+    hideLoading();
+    certResultEditing = it; certResultInst = inst;
+    const pc = it.proposed_changes || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const isSkipped = it.result_status === 'skipped';
+    document.getElementById('certResultTitle').textContent = `ผลสอบ: ${it.id_code || '–'}`;
+    document.getElementById('certResultBody').innerHTML = `
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:13px">
+        <input type="checkbox" id="certResSkip" ${isSkipped ? 'checked' : ''} onchange="toggleCertResultSkip()">
+        ข้ามเครื่องนี้ (ไม่ได้สอบรอบนี้)
+      </label>
+      <div class="form-group" id="certResSkipReasonWrap" style="display:${isSkipped ? 'block' : 'none'}">
+        <label>เหตุผลที่ข้าม</label>
+        <input type="text" id="certResSkipReason" value="${escapeHtmlText(it.skip_reason || '')}" style="width:100%">
+      </div>
+      <div id="certResFormFields" style="display:${isSkipped ? 'none' : 'block'}">
+        <div class="form-group">
+          <label>ไฟล์สแกนใบรับรอง (PDF/JPG/PNG) ${it.result_file_url ? '<span style="color:var(--text3)">— มีไฟล์แล้ว แนบใหม่ = แทนที่</span>' : '<span style="color:var(--red)">*</span>'}</label>
+          <input type="file" id="certResFile" accept=".pdf,.jpg,.jpeg,.png" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;width:100%;font-family:var(--font);font-size:13px">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="form-group" style="flex:1">
+            <label>เลข Cert <span style="color:var(--red)">*</span></label>
+            <input type="text" id="certResCertNo" value="${escapeHtmlText(it.result_cert_no || '')}" style="width:100%">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>วันสอบจริง <span style="color:var(--red)">*</span></label>
+            <input type="date" id="certResCalDate" value="${it.result_cal_date || today}" style="width:100%">
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin:10px 0 6px">ข้อมูลเครื่องมือ — แก้เฉพาะช่องที่ผิด (ค่าเดิมใส่ไว้ให้แล้ว)</div>
+        ${CERT_RESULT_FIELDS.map(f => `
+          <div class="form-group" style="margin-bottom:8px">
+            <label style="font-size:12px">${f.label}</label>
+            <input type="text" id="certResField_${f.key}" value="${escapeHtmlText(pc[f.key]?.to ?? inst[f.key] ?? '')}" style="width:100%">
+          </div>`).join('')}
+      </div>`;
+    document.getElementById('certResultFooter').innerHTML = `
+      <button onclick="renderCertResultList()" class="btn-secondary">← กลับ</button>
+      <button onclick="saveCertResultItem()" class="btn-primary">💾 บันทึกเครื่องนี้</button>`;
+  } catch (e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+function toggleCertResultSkip() {
+  const skip = document.getElementById('certResSkip').checked;
+  document.getElementById('certResSkipReasonWrap').style.display = skip ? 'block' : 'none';
+  document.getElementById('certResFormFields').style.display = skip ? 'none' : 'block';
+}
+
+async function saveCertResultItem() {
+  const it = certResultEditing, inst = certResultInst;
+  if (!it || !inst) return;
+  const skip = document.getElementById('certResSkip').checked;
+  showLoading('กำลังบันทึก...');
+  try {
+    let patch;
+    if (skip) {
+      patch = {
+        result_status: 'skipped',
+        skip_reason: document.getElementById('certResSkipReason').value.trim() || null,
+        result_by: currentUser?.username || null,
+        result_at: new Date().toISOString(),
+      };
+    } else {
+      const certNo = document.getElementById('certResCertNo').value.trim();
+      const calDate = document.getElementById('certResCalDate').value;
+      const file = document.getElementById('certResFile').files[0];
+      if (!certNo) throw new Error('กรุณากรอกเลข Cert');
+      if (!calDate) throw new Error('กรุณาเลือกวันสอบจริง');
+      if (!file && !it.result_file_url) throw new Error('กรุณาแนบไฟล์สแกนใบรับรอง');
+      patch = {
+        result_status: 'filled',
+        result_cert_no: certNo,
+        result_cal_date: calDate,
+        skip_reason: null,
+        result_by: currentUser?.username || null,
+        result_at: new Date().toISOString(),
+      };
+      if (file) {
+        const ext = file.name.split('.').pop();
+        const fileName = `certresult_${certResultPlanId}_${it.id}_${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('calibration-plans').upload(fileName, file);
+        if (upErr) throw upErr;
+        if (it.result_file_name) {
+          try { await sb.storage.from('calibration-plans').remove([it.result_file_name]); } catch (_) {}
+        }
+        const { data: urlData } = sb.storage.from('calibration-plans').getPublicUrl(fileName);
+        patch.result_file_url = urlData?.publicUrl || fileName;
+        patch.result_file_name = fileName;
+      }
+      // diff เทียบค่าปัจจุบันในทะเบียน — เก็บเฉพาะช่องที่ต่าง
+      const changes = {};
+      CERT_RESULT_FIELDS.forEach(f => {
+        const now = String(inst[f.key] ?? '').trim();
+        const val = document.getElementById(`certResField_${f.key}`).value.trim();
+        if (val !== now) changes[f.key] = { from: now, to: val };
+      });
+      patch.proposed_changes = Object.keys(changes).length ? changes : null;
+    }
+    const { error } = await sb.from('calibration_plan_items').update(patch).eq('id', it.id);
+    if (error) throw error;
+    Object.assign(it, patch);
+    hideLoading();
+    showToast('✅ บันทึกแล้ว', 'success');
+    renderCertResultList();
+  } catch (e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+async function submitCertResults() {
+  const filled = certResultItems.filter(it => it.result_status === 'filled').length;
+  const skipped = certResultItems.filter(it => it.result_status === 'skipped').length;
+  if (!confirm(`ส่งผลสอบให้ Admin ยืนยัน?\nกรอกแล้ว ${filled} เครื่อง · ข้าม ${skipped} เครื่อง`)) return;
+  showLoading('กำลังส่ง...');
+  try {
+    const { error } = await sb.from('calibration_plans')
+      .update({ status: 'pending_cert' }).eq('id', certResultPlanId);
+    if (error) throw error;
+    await logPlanAudit(certResultPlanId, 'แนบไฟล์สอบ', `กรอกผลสอบ ${filled} เครื่อง ข้าม ${skipped} เครื่อง รอ Admin ยืนยัน`);
+    hideLoading();
+    showToast('✅ ส่งให้ Admin ยืนยันแล้ว', 'success');
+    closeCertResultModal();
     loadPlanList();
     loadPlanConfirmBadge();
-  } catch(e) {
+  } catch (e) {
     hideLoading();
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
   }
