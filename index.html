@@ -3774,24 +3774,15 @@ body.app-mode textarea:focus {
   </div>
 </div>
 
-<!-- ATTACH CERT MODAL -->
-<div class="modal-overlay" id="attachCertModal">
-  <div class="modal-box" style="max-width:480px">
+<!-- CERT RESULT MODAL (กรอกผลสอบเทียบรายเครื่อง) -->
+<div class="modal-overlay" id="certResultModal">
+  <div class="modal-box" style="max-width:680px">
     <div class="modal-header">
-      <h3>แนบไฟล์หลังสอบเทียบ</h3>
-      <button class="btn-close" onclick="closeAttachCertModal()">×</button>
+      <h3 id="certResultTitle">กรอกผลสอบเทียบ</h3>
+      <button class="btn-close" onclick="closeCertResultModal()">×</button>
     </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">แนบไฟล์แผนที่เซ็นรับรองแล้ว (PDF/JPG/PNG) เพื่อส่งให้ Admin ยืนยันการสอบเทียบ</p>
-      <div class="form-group">
-        <label>ไฟล์แผนที่เซ็นแล้ว <span style="color:var(--red)">*</span></label>
-        <input type="file" id="certAttachFile" accept=".pdf,.jpg,.jpeg,.png" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;width:100%;font-family:var(--font);font-size:13px">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button onclick="closeAttachCertModal()" class="btn-secondary">ยกเลิก</button>
-      <button onclick="submitAttachCert()" class="btn-primary">📤 ส่งให้ Admin ยืนยัน</button>
-    </div>
+    <div class="modal-body" id="certResultBody"></div>
+    <div class="modal-footer" id="certResultFooter"></div>
   </div>
 </div>
 
