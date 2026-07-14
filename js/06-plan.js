@@ -387,7 +387,9 @@ function togglePlanItems(id) {
   const opening = el.style.display !== 'block';
   if (opening && !el.dataset.rendered) {
     const cached = planItemsCache[id] || { items: [], confirm: false };
-    el.innerHTML = `<div class="plan-panel-sub" style="margin-bottom:6px">รายการเครื่องมือ</div>${renderPlanItemRows(cached.items, cached.confirm)}`;
+    const sub = cached.results ? 'ผลสอบเทียบรายเครื่อง' : 'รายการเครื่องมือ';
+    const rows = cached.results ? renderCertResultReview(cached.items) : renderPlanItemRows(cached.items, cached.confirm);
+    el.innerHTML = `<div class="plan-panel-sub" style="margin-bottom:6px">${sub}</div>${rows}`;
     el.dataset.rendered = '1';
   }
   el.style.display = opening ? 'block' : 'none';
@@ -464,6 +466,7 @@ async function loadPlanHistory() {
     'แก้ไขแผน':  { bg:'#FFF8E1', color:'#F57F17', icon:'ti-edit' },
     'อนุมัติแผน': { bg:'#E3F2FD', color:'#1565C0', icon:'ti-check' },
     'ปฏิเสธแผน': { bg:'#FCEBEB', color:'#A32D2D', icon:'ti-x' },
+    'ปฏิเสธผลสอบ': { bg:'#FFF3E0', color:'#E65100', icon:'ti-arrow-back-up' },
     'แนบไฟล์สอบ':{ bg:'#F3E5F5', color:'#6A1B9A', icon:'ti-paperclip' },
     'ยืนยันสอบ':  { bg:'#E0F7FA', color:'#00695C', icon:'ti-certificate' },
     'ลบแผน':     { bg:'#FFEBEE', color:'#B71C1C', icon:'ti-trash' },
@@ -522,14 +525,17 @@ async function submitRejectPlan() {
   if (!reason) { showToast('กรุณาระบุสาเหตุที่ปฏิเสธ', 'error'); return; }
   showLoading('กำลังบันทึก...');
   try {
+    const { data: plan } = await sb.from('calibration_plans').select('status').eq('id', planId).single();
+    // ปฏิเสธผลสอบ (pending_cert) → กลับ planned ให้แก้แล้วส่งใหม่; ปฏิเสธแผน → rejected เหมือนเดิม
+    const backToPlanned = plan?.status === 'pending_cert';
     const { error } = await sb.from('calibration_plans').update({
-      status: 'rejected',
+      status: backToPlanned ? 'planned' : 'rejected',
       reject_reason: reason
     }).eq('id', planId);
     if (error) throw error;
-    await logPlanAudit(planId, 'ปฏิเสธแผน', `สาเหตุ: ${reason}`);
+    await logPlanAudit(planId, backToPlanned ? 'ปฏิเสธผลสอบ' : 'ปฏิเสธแผน', `สาเหตุ: ${reason}`);
     hideLoading();
-    showToast('❌ ปฏิเสธแผนเรียบร้อย', 'success');
+    showToast(backToPlanned ? '↩️ ส่งกลับให้แก้ผลสอบแล้ว' : '❌ ปฏิเสธแผนเรียบร้อย', 'success');
     closeRejectModal();
     loadPlanConfirm();
     loadPlanConfirmBadge();
@@ -599,6 +605,7 @@ async function openAuditPlanModal(planId, planTitle) {
     'สร้างแผน':    '🆕',
     'อนุมัติแผน':  '✅',
     'ปฏิเสธแผน':  '❌',
+    'ปฏิเสธผลสอบ': '↩️',
     'แก้ไขแผน':   '✏️',
     'แนบไฟล์สอบ': '📎',
     'ยืนยันสอบ':  '🏆',
@@ -653,7 +660,7 @@ async function loadPlanConfirm() {
   if (!el) return;
   el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
   const { data, error } = await sb.from('calibration_plans')
-    .select('*, calibration_plan_items(id, id_code, instrument_name, instrument_type, department, instrument_id)')
+    .select('*, calibration_plan_items(*)')
     .in('status', ['pending_plan', 'pending_cert'])
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = '<div class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ</div>'; return; }
@@ -662,7 +669,7 @@ async function loadPlanConfirm() {
   el.innerHTML = data.map(p => {
     const items = p.calibration_plan_items || [];
     const cacheId = 'confirm_items_' + p.id;
-    planItemsCache[cacheId] = { items, confirm: true };
+    planItemsCache[cacheId] = { items, confirm: true, results: p.status === 'pending_cert' };
     const cnt = items.length;
     const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
     const isPendingPlan = p.status === 'pending_plan';
@@ -681,11 +688,11 @@ async function loadPlanConfirm() {
           <div class="plan-card-meta">วันนัดสอบ: ${escapeHtmlText(date)} · ${cnt.toLocaleString()} เครื่องมือ · ส่งโดย: ${escapeHtmlText(p.created_by || '–')}</div>
         </div>
         <div class="plan-card-actions">
-          ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>รายการ (${cnt.toLocaleString()})</button>` : ''}
+          ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>${isPendingCert ? 'ผลสอบ' : 'รายการ'} (${cnt.toLocaleString()})</button>` : ''}
           ${p.plan_file_url ? `<button onclick="window.open('${escapeJsSingle(p.plan_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์แผน</button>` : ''}
           ${p.cert_file_url ? `<button onclick="window.open('${escapeJsSingle(p.cert_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
           ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันแผน</button>` : ''}
-          ${isPendingCert ? `<button onclick="confirmPlan('${p.id}','completed')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันสอบเทียบแล้ว</button>` : ''}
+          ${isPendingCert ? `<button onclick="applyPlanResults('${p.id}')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันสอบเทียบแล้ว</button>` : ''}
           <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" class="plan-btn danger" type="button"><i class="ti ti-x"></i>ปฏิเสธ</button>
           <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
         </div>
@@ -920,6 +927,127 @@ async function submitCertResults() {
     hideLoading();
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
   }
+}
+
+// --- Admin review: ผลสอบรายเครื่อง + diff ---
+function renderCertResultReview(items) {
+  if (!items?.length) return '<div class="no-data" style="padding:14px">ไม่มีรายการ</div>';
+  const labels = {};
+  CERT_RESULT_FIELDS.forEach(f => { labels[f.key] = f.label; });
+  return items.map(it => {
+    const st = it.result_status;
+    const chip = st === 'skipped'
+      ? `<span class="badge badge-amber">ข้าม${it.skip_reason ? ': ' + escapeHtmlText(it.skip_reason) : ''}</span>`
+      : certResultChip(st);
+    const calInfo = (st === 'filled' || st === 'applied')
+      ? `<div style="font-size:12px;color:var(--text2);margin-top:2px">Cert: <b>${escapeHtmlText(it.result_cert_no || '–')}</b> · วันสอบ: ${escapeHtmlText(it.result_cal_date || '–')} · โดย ${escapeHtmlText(it.result_by || '–')}</div>` : '';
+    const diffs = Object.entries(it.proposed_changes || {}).map(([k, v]) =>
+      `<div style="font-size:12px;color:var(--text2)">✏️ ${escapeHtmlText(labels[k] || k)}: <s>${escapeHtmlText(v.from || '–')}</s> → <b style="color:var(--accent)">${escapeHtmlText(v.to || '–')}</b></div>`).join('');
+    const fileBtn = it.result_file_url
+      ? `<button onclick="viewPlanFile('${escapeJsSingle(it.result_file_url)}')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์</button>` : '';
+    return `<div class="plan-item-row confirm" style="flex-wrap:wrap;opacity:${st === 'skipped' ? '.6' : '1'}">
+      <span class="plan-id">${escapeHtmlText(it.id_code || '–')}</span>
+      <span style="flex:1">${escapeHtmlText(it.instrument_name || '–')} ${chip}</span>
+      ${fileBtn}
+      ${(calInfo || diffs) ? `<div style="flex-basis:100%;padding-left:4px">${calInfo}${diffs}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// --- Admin ยืนยัน: ลงทะเบียนผลสอบเข้า instruments/ไฟล์/ประวัติ ---
+async function applyPlanResults(planId) {
+  if (!confirm('ยืนยันผลสอบเทียบ?\nระบบจะอัพเดทข้อมูลเครื่องมือ + ก๊อปปี้ไฟล์เข้าเครื่อง ตามที่กรอกไว้')) return;
+  showLoading('กำลังลงทะเบียนผลสอบ...');
+  const errors = [];
+  try {
+    const { data: items, error } = await sb.from('calibration_plan_items')
+      .select('*').eq('plan_id', planId);
+    if (error) throw error;
+    const targets = (items || []).filter(it => it.result_status === 'filled');
+    for (const it of targets) {
+      try {
+        await applyOneResult(it);
+      } catch (e) {
+        errors.push(`${it.id_code || it.id}: ${e.message}`);
+      }
+    }
+    if (errors.length) {
+      hideLoading();
+      showToast(`⚠️ ลงทะเบียนไม่ครบ (${errors.length} เครื่อง): ${errors.join(' | ')} — เครื่องที่สำเร็จแล้วจะไม่ทำซ้ำ กดยืนยันอีกครั้งเพื่อลองเฉพาะที่ค้าง`, 'error');
+      loadPlanConfirm();
+      return;
+    }
+    await sb.from('calibration_plans')
+      .update({ status: 'completed', cert_confirmed_by: currentUser.username }).eq('id', planId);
+    await logPlanAudit(planId, 'ยืนยันสอบ', `ลงทะเบียนผลสอบ ${targets.length} เครื่อง`);
+    hideLoading();
+    showToast('🏆 ยืนยันสอบเทียบ + อัพเดททะเบียนเรียบร้อย', 'success');
+    loadPlanConfirm();
+    loadPlanConfirmBadge();
+    if (typeof loadData === 'function') loadData(); // รีเฟรชทะเบียนเครื่องมือในหน้า
+  } catch (e) {
+    hideLoading();
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+async function applyOneResult(it) {
+  const { data: inst, error: iErr } = await sb.from('instruments')
+    .select('*').eq('id', it.instrument_id).single();
+  if (iErr || !inst) throw new Error('ไม่พบเครื่องมือในทะเบียน');
+
+  // 1) ก๊อปปี้ไฟล์เข้าโฟลเดอร์เครื่อง (bucket certificates)
+  if (it.result_file_name) {
+    const { data: blob, error: dErr } = await sb.storage.from('calibration-plans').download(it.result_file_name);
+    if (dErr) throw new Error('ดาวน์โหลดไฟล์ไม่สำเร็จ: ' + dErr.message);
+    const ext = it.result_file_name.split('.').pop();
+    const safeCert = String(it.result_cert_no || 'cert').replace(/[^0-9A-Za-z._-]+/g, '_');
+    const folder = `cert_${inst.id}_${inst.id_code}`;
+    let name = `${safeCert}.${ext}`;
+    const { data: existing } = await sb.storage.from('certificates').list(folder);
+    if ((existing || []).some(f => f.name === name)) name = `${safeCert}_${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('certificates')
+      .upload(`${folder}/${name}`, blob, { contentType: blob.type || undefined });
+    if (upErr) throw new Error('อัพโหลดไฟล์เข้าเครื่องมือไม่สำเร็จ: ' + upErr.message);
+  }
+
+  // 2) payload อัพเดททะเบียน: ฟิลด์ที่แก้ + cert/วันสอบ/วันครบกำหนด
+  const payload = {};
+  Object.entries(it.proposed_changes || {}).forEach(([k, v]) => { payload[k] = v.to; });
+  payload.cert_no = it.result_cert_no;
+  payload.cal_date = it.result_cal_date;
+  const due = calcDueDateStr(it.result_cal_date, inst.cal_frequency);
+  if (due) payload.due_date = due;
+
+  // 3) ค่าเดิมลง prev + calibration_history (เฉพาะเมื่อ cert/วันสอบเปลี่ยนจริง)
+  const certChanged = inst.cert_no && inst.cert_no !== payload.cert_no;
+  const dateChanged = inst.cal_date && String(inst.cal_date).slice(0, 10) !== String(payload.cal_date).slice(0, 10);
+  if (certChanged || dateChanged) {
+    payload.prev_cert_no = inst.cert_no || null;
+    payload.prev_cal_date = inst.cal_date || null;
+    await sb.from('calibration_history').insert({
+      instrument_id: inst.id,
+      cert_no: inst.cert_no || null,
+      cal_date: inst.cal_date || null,
+      due_date: inst.due_date || null,
+    });
+  }
+
+  const { error: uErr } = await sb.from('instruments').update(payload).eq('id', inst.id);
+  if (uErr) throw new Error('อัพเดททะเบียนไม่สำเร็จ: ' + uErr.message);
+
+  // 4) audit log รายเครื่อง
+  const changes = {};
+  Object.entries(it.proposed_changes || {}).forEach(([k, v]) => { changes[k] = { from: v.from || '–', to: v.to || '–' }; });
+  changes['CERT.'] = { from: inst.cert_no || '–', to: payload.cert_no };
+  changes['วันสอบเทียบ'] = { from: inst.cal_date || '–', to: payload.cal_date };
+  if (due) changes['วันครบกำหนด'] = { from: inst.due_date || '–', to: due };
+  await logAudit('อัพเดทจากผลสอบเทียบ', inst, changes);
+
+  // 5) กัน apply ซ้ำ
+  const { error: mErr } = await sb.from('calibration_plan_items')
+    .update({ result_status: 'applied', applied_at: new Date().toISOString() }).eq('id', it.id);
+  if (mErr) throw new Error('บันทึกสถานะรายการไม่สำเร็จ: ' + mErr.message);
 }
 
 // --- Badge notification ---
