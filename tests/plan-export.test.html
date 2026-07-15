@@ -74,6 +74,37 @@ async function main() {
   eq('hd section', hd.section, 'Warehouse - Raw Material');
   ok('hd internal', hd.internal === true && hd.external === false);
 
+  // ---- template render (ต้องรันด้วย --allow-file-access-from-files) ----
+  try {
+    const buf = await new Promise((res, rej) => {
+      const x = new XMLHttpRequest();
+      x.open('GET', '../assets/frm-eib04-template.xlsx');
+      x.responseType = 'arraybuffer';
+      x.onload = () => res(x.response); x.onerror = () => rej(new Error('xhr template'));
+      x.send();
+    });
+    const header = { monthNum: 2, year: 2026, group: 'BALANCE', unit: 'General Raw Material:WRM1',
+      section: 'Warehouse - Raw Material', internal: true, external: false, drug: false, cosmetic: true, otherText: '' };
+    const blob = await frmRenderTemplate(buf, header, items); // 11 ชิ้นจาก block ก่อนหน้า
+    const z2 = await JSZip.loadAsync(blob);
+    const sh = await z2.file('xl/worksheets/sheet1.xml').async('string');
+    const dr = await z2.file('xl/drawings/drawing1.xml').async('string');
+    ok('render: rows in sheetData', sh.includes('<c r="A10" s="80"><v>1</v></c>') && sh.includes('<row r="35"'));
+    ok('render: dimension', sh.includes('<dimension ref="A1:AR35"/>'));
+    ok('render: merge added', sh.includes('<mergeCell ref="AK30:AQ30"/>') && sh.includes('<mergeCell ref="AK35:AQ35"/>'));
+    ok('render: merge count', /<mergeCells count="(\d+)">/.exec(sh) && ((sh.match(/<mergeCell /g) || []).length === Number(/<mergeCells count="(\d+)">/.exec(sh)[1])));
+    ok('render: no token left (sheet)', sh.indexOf('{{') < 0);
+    ok('render: no token left (drawing)', dr.indexOf('{{') < 0);
+    ok('render: month/year shapes', dr.includes('<a:t>February</a:t>') && dr.includes('<a:t>2026</a:t>'));
+    ok('render: chk int/ext', dr.includes('☑ สอบเทียบ') && dr.includes('☐ สอบเทียบภายนอก'));
+    ok('render: chk drug/cos', sh.includes('☐ Drug product') && sh.includes('☑ Cosmetic product'));
+    ok('render: other blank', sh.includes('☐ Other ____'));
+    // base64 สำหรับ E2E (Task 5)
+    document.getElementById('b64').textContent = await new Promise(res => {
+      const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob);
+    });
+  } catch (e) { results.push('FAIL render ' + (e && e.message || e)); }
+
   finish();
 }
 main().catch(e => { results.push('FAIL exception ' + e); finish(); });

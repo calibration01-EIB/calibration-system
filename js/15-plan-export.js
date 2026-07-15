@@ -133,6 +133,36 @@ function frmMode(arr) { // ค่าที่พบบ่อยสุด (ข้
   return best;
 }
 
+// เปิด template → เติม token หัวกระดาษ + แถวข้อมูล + merge → Blob .xlsx
+function frmRenderTemplate(templateBuf, header, items) {
+  const chk = v => (v ? '☑' : '☐');
+  return JSZip.loadAsync(templateBuf).then(zip =>
+    Promise.all([zip.file('xl/worksheets/sheet1.xml').async('string'),
+                 zip.file('xl/drawings/drawing1.xml').async('string')])
+      .then(([sheet, drawing]) => {
+        const built = frmBuildSheetRows(items, header.monthNum);
+        sheet = sheet.replace('</sheetData>', built.xml + '</sheetData>');
+        sheet = sheet.replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:AR' + built.lastRow + '"/>');
+        sheet = sheet.replace(/<mergeCells count="(\d+)">/, (m, n) => '<mergeCells count="' + (Number(n) + built.merges.length) + '">');
+        sheet = sheet.replace('</mergeCells>', built.merges.map(r => '<mergeCell ref="' + r + '"/>').join('') + '</mergeCells>');
+        sheet = sheet.replace('{{CHK_DRUG}}', chk(header.drug))
+                     .replace('{{CHK_COS}}', chk(header.cosmetic))
+                     .replace('{{CHK_OTHER}}', chk(!!(header.otherText || '').trim()))
+                     .replace('{{OTHER_TEXT}}', (header.otherText || '').trim() ? frmEscapeXml(header.otherText.trim()) : FRM_OTHER_BLANK);
+        drawing = drawing.replace('{{MONTH}}', frmEscapeXml(frmMonthName(header.monthNum)))
+                         .replace('{{YEAR}}', frmEscapeXml(header.year))
+                         .replace('{{GROUP}}', frmEscapeXml(header.group))
+                         .replace('{{UNIT}}', frmEscapeXml(header.unit))
+                         .replace('{{SECTION}}', frmEscapeXml(header.section))
+                         .replace('{{CHK_INT}}', chk(header.internal))
+                         .replace('{{CHK_EXT}}', chk(header.external));
+        zip.file('xl/worksheets/sheet1.xml', sheet);
+        zip.file('xl/drawings/drawing1.xml', drawing);
+        return zip.generateAsync({ type: 'blob', compression: 'DEFLATE',
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      }));
+}
+
 function frmDefaultHeader(items) {
   const dues = items.map(it => String(it.due_date || '').slice(0, 7)).filter(Boolean);
   const ym = frmMode(dues) || new Date().toISOString().slice(0, 7);
