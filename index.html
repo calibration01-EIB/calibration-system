@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root {
   --bg: #f0f7f6;
@@ -3073,7 +3074,9 @@ body.app-mode textarea:focus {
 
               <!-- เครื่องมือที่เลือก -->
               <div class="plan-selected-box">
-                <div class="plan-panel-sub" style="margin-bottom:8px">เครื่องมือที่เลือก (<span id="planStep2Count">0</span> รายการ)</div>
+                <div class="plan-panel-sub" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>เครื่องมือที่เลือก (<span id="planStep2Count">0</span> รายการ)</span>
+                  <button onclick="openPlanExportModal()" class="plan-btn" type="button" style="margin-left:auto"><i class="ti ti-file-spreadsheet"></i>Export แผน FRM-EIB04 (.xlsx)</button>
+                </div>
                 <div id="planSelectedList" class="plan-selected-pills"></div>
               </div>
 
@@ -3838,6 +3841,21 @@ body.app-mode textarea:focus {
   </div>
 </div>
 
+<!-- Modal Export FRM-EIB04 -->
+<div class="modal-overlay" id="frmExportModal">
+  <div class="modal-box" style="max-width:760px">
+    <div class="modal-header">
+      <h3>📄 Export แผน FRM-EIB04 (.xlsx)</h3>
+      <button class="btn-close" onclick="closeFrmExportModal()">×</button>
+    </div>
+    <div class="modal-body" id="frmExportBody" style="max-height:65vh;overflow:auto"></div>
+    <div class="modal-footer">
+      <button onclick="closeFrmExportModal()" class="btn-secondary">ปิด</button>
+      <button onclick="exportAllPlanFrm()" class="btn-primary">⬇️ ดาวน์โหลดทุกหน่วยงาน</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Audit Trail -->
 <div class="modal-overlay" id="auditPlanModal">
   <div class="modal-box" style="max-width:560px">
@@ -4221,6 +4239,7 @@ body.app-mode textarea:focus {
 <script src="js/12-standard-certs.js?v=20260611-balance-mass-split"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
 <script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
+<script src="js/15-plan-export.js?v=20260715-frm-export"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
