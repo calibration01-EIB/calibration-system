@@ -61,8 +61,22 @@ async function main() {
   eq('lastRow (10 items, sig once)', built10.lastRow, 31);
   eq('merges (10 items)', built10.merges.join(' '), 'AK30:AQ30 AK31:AQ31');
 
-  const g = frmGroupByDept([{ department: 'WRM1' }, { department: 'PMT1' }, { department: '' }]);
-  eq('groups', Object.keys(g).sort().join(','), 'PMT1,WRM1,ไม่ระบุ');
+  // 1 แผน = 1 หน่วยงาน (ID CODE 4 ตัวแรก) + 1 ประเภทเครื่องมือ — WRM1/WRM2 ต้องแยกกัน
+  eq('unitCode WRM1', frmUnitCode({ id_code: 'WRM1BB05-WI01' }), 'WRM1');
+  eq('unitCode PDB4', frmUnitCode({ id_code: 'PDB4CE14' }), 'PDB4');
+  eq('unitCode fallback dept', frmUnitCode({ id_code: '', department: 'PMT1' }), 'PMT1');
+  eq('unitCode none', frmUnitCode({}), 'ไม่ระบุ');
+  const groups = frmBuildGroups([
+    { id_code: 'WRM1BB05-WI01', instrument_type: 'เครื่องชั่ง (Electronic Balance)', due_date: '2026-02-26', department: 'General Raw Material:WRM1', division: 'Warehouse - Raw Material' },
+    { id_code: 'WRM2BB01-WI01', instrument_type: 'เครื่องชั่ง (Electronic Balance)' },
+    { id_code: 'WRM1TM01-WI01', instrument_type: 'เครื่องวัดอุณหภูมิ' },
+    { instrument_type: 'เครื่องชั่ง (Electronic Balance)' }
+  ]);
+  eq('group count (แยก WRM1/WRM2 + แยกประเภท)', groups.length, 4);
+  eq('group units', groups.map(x => x.unitCode).join(','), 'WRM1,WRM1,WRM2,ไม่ระบุ');
+  ok('WRM1 สองประเภทแยกกลุ่ม', groups[0].typeName !== groups[1].typeName);
+  eq('unit header จากทะเบียน', groups.filter(x => x.typeName.indexOf('ชั่ง') >= 0 && x.unitCode === 'WRM1')[0].header.unit, 'General Raw Material:WRM1');
+  eq('unit header fallback = unitCode', groups[2].header.unit, 'WRM2');
   const hd = frmDefaultHeader([
     { due_date: '2026-02-20', instrument_type: 'เครื่องชั่ง (Electronic Balance)', cal_type: 'ภายใน', department: 'WRM1', division: 'Warehouse - Raw Material' },
     { due_date: '2026-02-25', instrument_type: 'เครื่องชั่ง (Electronic Balance)', cal_type: 'ภายใน', department: 'WRM1', division: 'Warehouse - Raw Material' },

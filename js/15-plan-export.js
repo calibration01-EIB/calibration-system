@@ -117,13 +117,31 @@ function frmBuildSheetRows(items, monthNum) {
   return { xml: xml, merges: merges, lastRow: r - 1 };
 }
 
-function frmGroupByDept(items) {
-  const g = {};
+// รหัสหน่วยงาน = ID CODE ช่วงหน้า (ตัวอักษรถึงเลขตัวแรก เช่น WRM1BB05-WI01 → WRM1)
+function frmUnitCode(it) {
+  const idc = String(it.id_code || '').trim().toUpperCase();
+  const m = idc.match(/^[A-Z]+\d/);
+  if (m) return m[0];
+  if (idc) return idc.slice(0, 4);
+  return String(it.department || '').trim() || 'ไม่ระบุ';
+}
+
+// กติกาหน่วยงาน: 1 แผน = 1 หน่วยงาน (รหัส ID CODE) + 1 ประเภทเครื่องมือ — WRM1/WRM2 แยกแผนกันเสมอ
+function frmBuildGroups(items) {
+  const map = {};
   (items || []).forEach(it => {
-    const k = (it.department || '').trim() || 'ไม่ระบุ';
-    (g[k] = g[k] || []).push(it);
+    const unit = frmUnitCode(it);
+    const type = String(it.instrument_type || '').trim() || 'ไม่ระบุประเภท';
+    const key = unit + '|' + type;
+    (map[key] = map[key] || { unitCode: unit, typeName: type, items: [] }).items.push(it);
   });
-  return g;
+  return Object.keys(map).sort().map(k => {
+    const g = map[k];
+    g.items.sort((a, b) => String(a.id_code || '').localeCompare(String(b.id_code || '')));
+    g.header = frmDefaultHeader(g.items);
+    if (!g.header.unit) g.header.unit = g.unitCode;
+    return g;
+  });
 }
 
 function frmMode(arr) { // ค่าที่พบบ่อยสุด (ข้าม falsy)
@@ -195,12 +213,7 @@ function frmGetTemplate() {
 function openPlanExportModal() {
   if (typeof JSZip === 'undefined') { showToast('โหลดไลบรารี JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)', 'error'); return; }
   if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
-  const groups = frmGroupByDept(planSelectedItems);
-  frmExportGroups = Object.keys(groups).sort().map(dept => ({
-    dept: dept,
-    items: groups[dept].slice().sort((a, b) => String(a.id_code || '').localeCompare(String(b.id_code || ''))),
-    header: frmDefaultHeader(groups[dept])
-  }));
+  frmExportGroups = frmBuildGroups(planSelectedItems);
   renderFrmExportBody();
   document.getElementById('frmExportModal').style.display = 'flex';
 }
@@ -218,8 +231,8 @@ function renderFrmExportBody() {
       '<option value="' + (mi + 1) + '"' + (h.monthNum === mi + 1 ? ' selected' : '') + '>' + (mi + 1) + ' - ' + m + '</option>').join('');
     const noDue = g.items.filter(it => !it.due_date).length;
     return '<fieldset style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">' +
-      '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.dept) + ' (' + g.items.length + ' รายการ)</legend>' +
-      (g.dept === 'ไม่ระบุ' ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ เครื่องกลุ่มนี้ไม่มีหน่วยงานในทะเบียน — แก้หน่วยงานในช่องด้านล่างก่อนพิมพ์</div>' : '') +
+      '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.unitCode) + ' — ' + escapeHtmlAttr(g.typeName) + ' (' + g.items.length + ' รายการ)</legend>' +
+      (g.unitCode === 'ไม่ระบุ' ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ เครื่องกลุ่มนี้ไม่มี ID CODE/หน่วยงานในทะเบียน — แก้หน่วยงานในช่องด้านล่างก่อนพิมพ์</div>' : '') +
       (noDue ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ ' + noDue + ' เครื่องไม่มีวันครบกำหนด — จะลงตารางโดยไม่มีแถบสี</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">' +
       '<div><label ' + lbl + '>เดือนที่สอบ</label><select ' + inp + ' onchange="frmSetHeader(' + i + ',\'monthNum\',+this.value)">' + monthOpts + '</select></div>' +
@@ -240,14 +253,15 @@ function renderFrmExportBody() {
 }
 
 function frmFileName(g) {
-  const dept = String(g.dept).replace(/[\\\/:*?"<>|]/g, '-');
-  return 'FRM-EIB04_' + dept + '_' + g.header.year + '-' + String(g.header.monthNum).padStart(2, '0') + '.xlsx';
+  const clean = s => String(s || '').replace(/[\\\/:*?"<>|]/g, '-').trim();
+  const grp = clean(g.header.group);
+  return 'FRM-EIB04_' + clean(g.unitCode) + (grp ? '_' + grp : '') + '_' + g.header.year + '-' + String(g.header.monthNum).padStart(2, '0') + '.xlsx';
 }
 
 async function exportPlanFrmUnit(i) {
   const g = frmExportGroups[i];
   try {
-    showLoading('กำลังสร้างไฟล์ ' + g.dept + '...');
+    showLoading('กำลังสร้างไฟล์ ' + g.unitCode + '...');
     const buf = await frmGetTemplate();
     const blob = await frmRenderTemplate(buf, g.header, g.items);
     const a = document.createElement('a');
