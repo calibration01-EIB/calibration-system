@@ -43,21 +43,25 @@ function frmCellText(col, row, s, text) {
   return '<c r="' + col + row + '" s="' + s + '" t="inlineStr"><is><t xml:space="preserve">' + frmEscapeXml(text) + '</t></is></c>';
 }
 
-// เครื่องละ 2 แถว: แถวบนแถบฟ้า due..31, แถวล่างเลขเดือน+ฟ้า 1..due
+// เครื่องละ 2 แถว: แถวบนแถบฟ้า bar_end..31, แถวล่างเลขเดือน+ฟ้า bar_start..bar_end
+// item รับ override ได้: bar_start/bar_end/month_num (default = วัน 1..วัน due + เดือนของแผน)
 function frmBuildItemRows(item, itemNo, rowNum, monthNum) {
   const S = FRM_STYLE;
   const due = frmDateSerial(item.due_date);
   const dueDay = due ? parseInt(String(item.due_date).slice(8, 10), 10) : 0;
+  const barEnd = item.bar_end != null ? item.bar_end : dueDay;
+  const barStart = item.bar_start != null ? item.bar_start : (barEnd ? 1 : 0);
+  const mNum = item.month_num != null ? item.month_num : monthNum;
   const r1 = rowNum, r2 = rowNum + 1;
   let x = '<row r="' + r1 + '" spans="1:44" ht="21.75" customHeight="1">';
   x += frmCellNum('A', r1, S.topA, itemNo);
-  x += frmCellText('B', r1, S.topB, item.instrument_name || '');
+  x += frmCellText('B', r1, S.topB, item.instrument_name || item.name || '');
   x += frmCellText('C', r1, S.colC, item.id_code || '');
   x += frmCellText('D', r1, S.colD, item.location || '');
   x += due ? frmCellNum('E', r1, S.colE, due) : frmCellEmpty('E', r1, S.colE);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const blue = dueDay > 0 && d >= dueDay;
+    const blue = barEnd > 0 && d >= barEnd;
     const s = d === 1 ? (blue ? S.day1Blue : S.day1) : d === 31 ? (blue ? S.day31Blue : S.day31) : (blue ? S.dayBlue : S.day);
     x += frmCellEmpty(col, r1, s);
   }
@@ -67,9 +71,9 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum) {
   x += frmCellEmpty('A', r2, S.topA) + frmCellEmpty('B', r2, S.botB) + frmCellEmpty('C', r2, S.colC) + frmCellEmpty('D', r2, S.colD) + frmCellEmpty('E', r2, S.colE);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const num = dueDay > 0 && d <= dueDay;
+    const num = barEnd > 0 && d >= barStart && d <= barEnd;
     const s = d === 1 ? (num ? S.botNum1 : S.day1) : d === 31 ? (num ? S.botNum31 : S.day31) : (num ? S.botNum : S.day);
-    x += num ? frmCellNum(col, r2, s, monthNum) : frmCellEmpty(col, r2, s);
+    x += num ? frmCellNum(col, r2, s, mNum) : frmCellEmpty(col, r2, s);
   }
   for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), r2, S.eib[i]);
   x += '</row>';
@@ -195,6 +199,22 @@ function frmDefaultHeader(items) {
     section: frmMode(items.map(it => it.division)) || '',
     internal: !external, external: external, drug: false, cosmetic: false, otherText: ''
   };
+}
+
+// สร้าง item ของแผนจากแถวทะเบียนเครื่องมือ — default แถบ = วัน 1..วัน due
+function frmItemFromInstrument(row, planMonth) {
+  const dueDay = row.due_date ? parseInt(String(row.due_date).slice(8, 10), 10) || 0 : 0;
+  return {
+    instrument_id: row.id, id_code: row.id_code || '', name: row.instrument_name || '',
+    location: row.location || '', due_date: row.due_date || null,
+    bar_start: dueDay ? 1 : 0, bar_end: dueDay, month_num: planMonth
+  };
+}
+
+// สองคลิกกำหนดช่วง: คลิกแรกจำไว้ (pending) คลิกสองปิดช่วง (normalize start<=end)
+function frmClickRange(sel, day) {
+  if (sel.pending == null) return { pending: day };
+  return { start: Math.min(sel.pending, day), end: Math.max(sel.pending, day), pending: null };
 }
 
 // ---------------- UI ----------------

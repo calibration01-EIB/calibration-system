@@ -88,6 +88,26 @@ async function main() {
   eq('hd section', hd.section, 'Warehouse - Raw Material');
   ok('hd internal', hd.internal === true && hd.external === false);
 
+  // override รายเครื่อง (bar_start/bar_end/month_num) + name fallback
+  const xo = frmBuildItemRows({ id_code: 'X', name: 'Y2', location: '', due_date: '2026-02-26', bar_start: 5, bar_end: 12, month_num: 3 }, 3, 14, 2);
+  ok('ovr: name fallback', xo.includes('<t xml:space="preserve">Y2</t>'));
+  ok('ovr: due ยังลง E', xo.includes('<c r="E14" s="89"><v>46079</v></c>'));
+  ok('ovr: day4 bottom plain', xo.includes('<c r="I15" s="14"/>'));
+  ok('ovr: day5 num=3', xo.includes('<c r="J15" s="95"><v>3</v></c>'));
+  ok('ovr: day12 num=3', xo.includes('<c r="Q15" s="95"><v>3</v></c>'));
+  ok('ovr: day13 bottom plain', xo.includes('<c r="R15" s="14"/>'));
+  ok('ovr: top day11 plain', xo.includes('<c r="P14" s="14"/>'));
+  ok('ovr: top day12 blue', xo.includes('<c r="Q14" s="93"/>'));
+  eq('clickRange first', JSON.stringify(frmClickRange({ pending: null }, 12)), '{"pending":12}');
+  eq('clickRange second', JSON.stringify(frmClickRange({ pending: 12 }, 5)), '{"start":5,"end":12,"pending":null}');
+  eq('clickRange same-day', JSON.stringify(frmClickRange({ pending: 7 }, 7)), '{"start":7,"end":7,"pending":null}');
+  const itf = frmItemFromInstrument({ id: 9, id_code: 'WRM1BB05-WI01', instrument_name: 'BALANCE 30 kg', location: 'B.4/2', due_date: '2026-02-26' }, 2);
+  eq('itemFrom: bar', itf.bar_start + '-' + itf.bar_end, '1-26');
+  eq('itemFrom: month', itf.month_num, 2);
+  eq('itemFrom: id', itf.instrument_id, 9);
+  const itn = frmItemFromInstrument({ id: 1, id_code: 'A1X', instrument_name: 'B', location: '', due_date: null }, 2);
+  eq('itemFrom: no due bar', itn.bar_start + '-' + itn.bar_end, '0-0');
+
   // ---- template render (ต้องรันด้วย --allow-file-access-from-files) ----
   try {
     const buf = await new Promise((res, rej) => {
