@@ -300,3 +300,59 @@ async function exportPlanFrmUnit(i) {
 async function exportAllPlanFrm() {
   for (let i = 0; i < frmExportGroups.length; i++) await exportPlanFrmUnit(i);
 }
+
+// ---------------- แท็บลงแผน FRM: รายการแผน ----------------
+let frmPlanRows = [];
+
+function frmPlanFromGroup(g) {
+  const h = g.header;
+  return {
+    id: null, unit_code: g.unitCode, type_name: g.typeName,
+    month_num: h.monthNum, year: h.year,
+    header: { group: h.group, unit: h.unit, section: h.section, internal: h.internal, external: h.external, drug: h.drug, cosmetic: h.cosmetic, otherText: h.otherText },
+    items: g.items.map(it => frmItemFromInstrument(it, h.monthNum)),
+    status: 'draft'
+  };
+}
+
+async function frmLoadPlanList() {
+  const el = document.getElementById('frmPlanList');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px">กำลังโหลด...</div>';
+  const { data, error } = await sb.from('frm_plans').select('*').order('updated_at', { ascending: false });
+  if (error) { el.innerHTML = '<div style="color:var(--red);font-size:13px">โหลดไม่สำเร็จ: ' + escapeHtmlText(error.message) + '</div>'; return; }
+  frmPlanRows = data || [];
+  if (!frmPlanRows.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีแผน — กด "สร้างแผนใหม่" (ติ๊กเลือกเครื่องในแท็บสร้างแผนก่อน จะดึงมาให้อัตโนมัติ หรือเริ่มจากแผนว่างก็ได้)</div>'; return; }
+  el.innerHTML = '<div style="display:grid;gap:8px">' + frmPlanRows.map(p =>
+    '<div onclick="frmOpenPlanById(\'' + p.id + '\')" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer">' +
+    '<b style="font-size:14px">' + escapeHtmlText(p.unit_code || 'ไม่ระบุ') + '</b>' +
+    '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
+    '<span style="font-size:12px">' + frmMonthName(p.month_num) + ' ' + p.year + '</span>' +
+    '<span style="font-size:12px;color:var(--text3)">' + ((p.items || []).length) + ' เครื่อง</span>' +
+    '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:' + (p.status === 'exported' ? '#e6f4ea;color:#137333' : '#fef7e0;color:#b06000') + '">' + (p.status === 'exported' ? 'Export แล้ว' : 'ร่าง') + '</span>' +
+    '<span style="font-size:11px;color:var(--text3);margin-left:auto">' + (p.updated_at || '').slice(0, 16).replace('T', ' ') + '</span>' +
+    '</div>').join('') + '</div>';
+}
+
+function frmOpenPlanById(id) {
+  const p = frmPlanRows.find(x => x.id === id);
+  if (p) frmEditorOpen(JSON.parse(JSON.stringify(p)));
+}
+
+async function frmNewPlanFromSelection() {
+  if (!planSelectedItems.length) {
+    frmEditorOpen({ id: null, unit_code: '', type_name: '', month_num: new Date().getMonth() + 1, year: new Date().getFullYear(), header: { group: '', unit: '', section: '', internal: true, external: false, drug: false, cosmetic: false, otherText: '' }, items: [], status: 'draft' });
+    return;
+  }
+  const groups = frmBuildGroups(planSelectedItems);
+  try {
+    showLoading('กำลังสร้างแผน...');
+    const rows = groups.map(g => { const p = frmPlanFromGroup(g); return { unit_code: p.unit_code, type_name: p.type_name, month_num: p.month_num, year: p.year, header: p.header, items: p.items, status: 'draft', created_by: currentUser?.username || '' }; });
+    const { data, error } = await sb.from('frm_plans').insert(rows).select();
+    if (error) throw error;
+    hideLoading();
+    showToast('✅ สร้างแผน ' + data.length + ' ฉบับ', 'success');
+    await frmLoadPlanList();
+    if (data[0]) frmOpenPlanById(data[0].id);
+  } catch (e) { hideLoading(); showToast('สร้างแผนไม่สำเร็จ: ' + e.message, 'error'); }
+}

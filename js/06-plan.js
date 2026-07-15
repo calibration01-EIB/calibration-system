@@ -16,15 +16,17 @@ function getPlanInstrumentType(row) {
 
 // --- Switch tabs ---
 function switchPlanTab(tab) {
-  ['new','list','confirm','history'].forEach(t => {
+  ['new','frm','list','confirm','history'].forEach(t => {
     const el = document.getElementById('planTab-' + t);
     if (!el) return;
     el.classList.toggle('active', t === tab);
   });
   document.getElementById('planTabNew').style.display = tab === 'new' ? 'block' : 'none';
+  document.getElementById('planTabFrm').style.display = tab === 'frm' ? 'block' : 'none';
   document.getElementById('planTabList').style.display = tab === 'list' ? 'block' : 'none';
   document.getElementById('planTabConfirm').style.display = tab === 'confirm' ? 'block' : 'none';
   document.getElementById('planTabHistory').style.display = tab === 'history' ? 'block' : 'none';
+  if (tab === 'frm') frmLoadPlanList();
   if (tab === 'list') loadPlanList();
   if (tab === 'confirm') loadPlanConfirm();
   if (tab === 'history') loadPlanHistory();
@@ -77,6 +79,10 @@ function initPlanPage() {
   // แสดง tab new เฉพาะ editor/admin
   const newTab = document.getElementById('planTab-new');
   if (newTab) newTab.style.display = (role === 'admin' || role === 'editor') ? 'inline-flex' : 'none';
+
+  // แสดง tab ลงแผน FRM เฉพาะ editor/admin
+  const frmTab = document.getElementById('planTab-frm');
+  if (frmTab) frmTab.style.display = (role === 'admin' || role === 'editor') ? 'inline-flex' : 'none';
 }
 
 // --- Filter เครื่องมือ ---

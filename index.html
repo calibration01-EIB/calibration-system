@@ -2949,6 +2949,7 @@ body.app-mode textarea:focus {
         <div class="plan-workspace">
           <div class="plan-tabs" role="tablist" aria-label="Calibration plan sections">
             <button class="plan-tab active" onclick="switchPlanTab('new')" id="planTab-new" type="button"><i class="ti ti-plus"></i><span>สร้างแผน</span></button>
+            <button class="plan-tab" onclick="switchPlanTab('frm')" id="planTab-frm" type="button" style="display:none"><i class="ti ti-table"></i><span>ลงแผน FRM</span></button>
             <button class="plan-tab" onclick="switchPlanTab('list')" id="planTab-list" type="button"><i class="ti ti-list-details"></i><span>แผนทั้งหมด</span></button>
             <button class="plan-tab" onclick="switchPlanTab('confirm')" id="planTab-confirm" type="button" style="display:none"><i class="ti ti-clipboard-check"></i><span>รอยืนยัน</span><span class="plan-tab-badge" id="planConfirmBadge">0</span></button>
             <button class="plan-tab" onclick="switchPlanTab('history')" id="planTab-history" type="button"><i class="ti ti-history"></i><span>ประวัติ</span></button>
@@ -3103,6 +3104,21 @@ body.app-mode textarea:focus {
               <button onclick="submitPlan()" class="plan-btn primary" type="button"><i class="ti ti-send"></i>ส่งแผนให้ Admin ตรวจสอบ</button>
             </div>
           </div>
+        </div>
+
+        <!-- TAB: ลงแผน FRM-EIB04 -->
+        <div id="planTabFrm" style="display:none">
+          <section class="plan-panel">
+            <div class="plan-panel-head">
+              <div>
+                <div class="plan-panel-title"><i class="ti ti-table"></i><span>ลงแผน FRM-EIB04</span></div>
+                <div class="plan-panel-sub">แผนที่บันทึกไว้ — คลิกเพื่อเปิดแก้/Export</div>
+              </div>
+              <button class="plan-btn primary" type="button" onclick="frmNewPlanFromSelection()"><i class="ti ti-plus"></i>สร้างแผนใหม่</button>
+            </div>
+            <div id="frmPlanList" style="padding:12px"></div>
+          </section>
+          <div id="frmEditorWrap" style="display:none;margin-top:14px"></div>
         </div>
 
         <!-- TAB: แผนทั้งหมด -->
