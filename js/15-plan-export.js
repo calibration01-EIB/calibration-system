@@ -468,6 +468,56 @@ function frmEditorAdd(id) {
   frmEditorRender();
 }
 
+async function frmEditorSave(silent) {
+  const p = frmEditorPlan;
+  if (!p) return false;
+  const row = { unit_code: p.unit_code, type_name: p.type_name, month_num: p.month_num, year: p.year, header: p.header, items: p.items, status: p.status || 'draft', updated_at: new Date().toISOString() };
+  try {
+    if (p.id) {
+      const { error } = await sb.from('frm_plans').update(row).eq('id', p.id);
+      if (error) throw error;
+    } else {
+      row.created_by = currentUser?.username || '';
+      const { data, error } = await sb.from('frm_plans').insert(row).select().single();
+      if (error) throw error;
+      p.id = data.id;
+      frmEditorRender();
+    }
+    if (!silent) showToast('✅ บันทึกแผนแล้ว', 'success');
+    return true;
+  } catch (e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); return false; }
+}
+
+async function frmEditorExport() {
+  const p = frmEditorPlan;
+  if (!p || !p.items.length) { showToast('แผนยังไม่มีเครื่อง', 'error'); return; }
+  try {
+    showLoading('กำลังสร้างไฟล์...');
+    const hdr = Object.assign({}, p.header, { monthNum: p.month_num, year: p.year });
+    const buf = await frmGetTemplate();
+    const blob = await frmRenderTemplate(buf, hdr, p.items);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = frmFileName({ unitCode: p.unit_code, header: hdr });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    p.status = 'exported';
+    await frmEditorSave(true);
+    hideLoading();
+    showToast('✅ Export แล้ว', 'success');
+  } catch (e) { hideLoading(); showToast('Export ไม่สำเร็จ: ' + e.message, 'error'); }
+}
+
+async function frmEditorDelete() {
+  const p = frmEditorPlan;
+  if (!p || !p.id) return;
+  if (!confirm('ลบแผน ' + p.unit_code + ' ' + frmMonthName(p.month_num) + ' ' + p.year + ' ?')) return;
+  const { error } = await sb.from('frm_plans').delete().eq('id', p.id);
+  if (error) { showToast('ลบไม่สำเร็จ: ' + error.message, 'error'); return; }
+  showToast('ลบแผนแล้ว', 'success');
+  frmEditorClose();
+}
+
 async function frmNewPlanFromSelection() {
   if (!planSelectedItems.length) {
     frmEditorOpen({ id: null, unit_code: '', type_name: '', month_num: new Date().getMonth() + 1, year: new Date().getFullYear(), header: { group: '', unit: '', section: '', internal: true, external: false, drug: false, cosmetic: false, otherText: '' }, items: [], status: 'draft' });
