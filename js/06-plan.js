@@ -42,11 +42,17 @@ function setPlanStep(step) {
   });
 }
 
+// ป้ายหน่วยงาน: "รหัส — ชื่อหน่วยงาน" (ชื่อจาก list departments ถ้ามี) — แบบเดียวกับหน้ารายการเครื่องมือ
+function planDeptLabel(code) {
+  const name = (typeof deptUnitName === 'function' && deptUnitName(code)) || '';
+  return name ? `${code} — ${name.length > 42 ? name.slice(0, 40) + '…' : name}` : code;
+}
+
 // --- Init plan page ---
 function initPlanPage() {
   if (!allData.length) { setTimeout(initPlanPage, 500); return; }
 
-  // populate filters (ทำแค่ครั้งแรก)
+  // populate filters
   const types = [...new Set(allData.map(getPlanInstrumentType).filter(Boolean))].sort();
   const depts = [...new Set(allData.map(d => d.department).filter(Boolean))].sort();
   const tSel = document.getElementById('planFilterType');
@@ -54,8 +60,11 @@ function initPlanPage() {
   if (tSel && tSel.options.length <= 1) {
     tSel.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t => `<option value="${escapeHtmlAttr(t)}">${escapeHtmlText(t.split(' (')[0])}</option>`).join('');
   }
-  if (dSel && dSel.options.length <= 1) {
-    dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${escapeHtmlAttr(d)}">${escapeHtmlText(d)}</option>`).join('');
+  if (dSel) {
+    // rebuild ทุกครั้ง (คงค่าที่เลือกไว้) — ชื่อหน่วยงานจาก DEPT_INFO อาจโหลดเสร็จทีหลัง
+    const cur = dSel.value;
+    dSel.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + depts.map(d => `<option value="${escapeHtmlAttr(d)}">${escapeHtmlText(planDeptLabel(d))}</option>`).join('');
+    dSel.value = cur;
   }
 
   // ถ้ามี planSelectedItems รอ pre-select ให้ filter ตาม type ของ item นั้น
@@ -140,7 +149,7 @@ function renderPlanInstrumentTable() {
       <td class="plan-id">${escapeHtmlText(d.id_code || '–')}</td>
       <td class="plan-name">${escapeHtmlText(d.instrument_name || '–')}</td>
       <td class="plan-muted">${escapeHtmlText(typShort)}</td>
-      <td class="plan-muted">${escapeHtmlText(d.department || '–')}</td>
+      <td class="plan-muted" title="${escapeHtmlAttr((typeof deptUnitName === 'function' && deptUnitName(d.department)) || '')}">${escapeHtmlText(d.department || '–')}</td>
       <td class="plan-muted">${escapeHtmlText(due)}</td>
       <td style="text-align:center">${badge}</td>
     </tr>`;

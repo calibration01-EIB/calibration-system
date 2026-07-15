@@ -185,6 +185,14 @@ function frmRenderTemplate(templateBuf, header, items) {
       }));
 }
 
+// ชื่อหน่วยงาน/แผนกเต็มจากรหัส (list departments) — ไม่มีชื่อ → ใช้รหัส/ค่าที่ลงไว้ที่เครื่อง
+function frmDeptFullName(code) {
+  return (code && typeof deptUnitName === 'function' && deptUnitName(code)) || '';
+}
+function frmDeptSectionName(code) {
+  return (code && typeof deptSectionName === 'function' && deptSectionName(code)) || '';
+}
+
 function frmDefaultHeader(items) {
   const dues = items.map(it => String(it.due_date || '').slice(0, 7)).filter(Boolean);
   const ym = frmMode(dues) || new Date().toISOString().slice(0, 7);
@@ -193,10 +201,11 @@ function frmDefaultHeader(items) {
   if (/เครื่องชั่ง|balance/i.test(group)) group = 'BALANCE';
   group = group.replace(/\s*\(.*\)\s*/g, '').trim();
   const external = frmMode(items.map(it => it.cal_type)) === 'ภายนอก';
+  const deptCode = frmMode(items.map(it => it.department)) || '';
   return {
     monthNum: parseInt(ym.slice(5, 7), 10), year: parseInt(ym.slice(0, 4), 10),
-    group: group, unit: frmMode(items.map(it => it.department)) || '',
-    section: frmMode(items.map(it => it.division)) || '',
+    group: group, unit: frmDeptFullName(deptCode) || deptCode,
+    section: frmMode(items.map(it => it.division)) || frmDeptSectionName(deptCode) || '',
     internal: !external, external: external, drug: false, cosmetic: false, otherText: ''
   };
 }
@@ -251,7 +260,7 @@ function renderFrmExportBody() {
       '<option value="' + (mi + 1) + '"' + (h.monthNum === mi + 1 ? ' selected' : '') + '>' + (mi + 1) + ' - ' + m + '</option>').join('');
     const noDue = g.items.filter(it => !it.due_date).length;
     return '<fieldset style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">' +
-      '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.unitCode) + ' — ' + escapeHtmlAttr(g.typeName) + ' (' + g.items.length + ' รายการ)</legend>' +
+      '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.unitCode) + (frmDeptFullName(g.unitCode) ? ' · ' + escapeHtmlAttr(frmDeptFullName(g.unitCode)) : '') + ' — ' + escapeHtmlAttr(g.typeName) + ' (' + g.items.length + ' รายการ)</legend>' +
       (g.unitCode === 'ไม่ระบุ' ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ เครื่องกลุ่มนี้ไม่มี ID CODE/หน่วยงานในทะเบียน — แก้หน่วยงานในช่องด้านล่างก่อนพิมพ์</div>' : '') +
       (noDue ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ ' + noDue + ' เครื่องไม่มีวันครบกำหนด — จะลงตารางโดยไม่มีแถบสี</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">' +
@@ -326,6 +335,7 @@ async function frmLoadPlanList() {
   el.innerHTML = '<div style="display:grid;gap:8px">' + frmPlanRows.map(p =>
     '<div onclick="frmOpenPlanById(\'' + p.id + '\')" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer">' +
     '<b style="font-size:14px">' + escapeHtmlText(p.unit_code || 'ไม่ระบุ') + '</b>' +
+    (frmDeptFullName(p.unit_code) ? '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText(frmDeptFullName(p.unit_code)) + '</span>' : '') +
     '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
     '<span style="font-size:12px">' + frmMonthName(p.month_num) + ' ' + p.year + '</span>' +
     '<span style="font-size:12px;color:var(--text3)">' + ((p.items || []).length) + ' เครื่อง</span>' +
@@ -377,6 +387,7 @@ function frmEditorRender() {
     '<section class="plan-panel" style="padding:14px">' +
     '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">' +
     '<b style="font-size:15px">📝 ' + escapeHtmlText(p.unit_code || 'แผนใหม่') + '</b>' +
+    (frmDeptFullName(p.unit_code) ? '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText(frmDeptFullName(p.unit_code)) + '</span>' : '') +
     '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
     '<span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' +
     '<button class="plan-btn" type="button" onclick="frmEditorClose()">← กลับรายการแผน</button>' +
@@ -461,7 +472,7 @@ function frmEditorAdd(id) {
   const r = (allData || []).find(x => x.id == id);
   if (!r) return;
   const p = frmEditorPlan;
-  if (!p.unit_code) { p.unit_code = frmUnitCode(r); p.type_name = String(r.instrument_type || '').trim(); if (!p.header.unit) p.header.unit = r.department || p.unit_code; if (!p.header.section) p.header.section = r.division || ''; }
+  if (!p.unit_code) { p.unit_code = frmUnitCode(r); p.type_name = String(r.instrument_type || '').trim(); if (!p.header.unit) p.header.unit = frmDeptFullName(r.department) || r.department || p.unit_code; if (!p.header.section) p.header.section = r.division || frmDeptSectionName(r.department) || ''; }
   p.items.push(frmItemFromInstrument(r, p.month_num));
   document.getElementById('frmAddSearch').value = '';
   document.getElementById('frmAddResults').innerHTML = '';
