@@ -290,6 +290,16 @@ tbody tr:hover { background: var(--surface2); }
 /* PLAN PAGE */
 .plan-workspace { display:flex; flex-direction:column; gap:14px; }
 .plan-tabs { display:flex; gap:4px; width:fit-content; max-width:100%; padding:4px; border:1px solid var(--border); border-radius:8px; background:#f7fbfa; overflow-x:auto; scrollbar-width:none; }
+.frm-grid { border-collapse:collapse; font-size:12px; min-width:1150px; }
+.frm-grid th, .frm-grid td { border:1px solid #9aa5b1; padding:2px 4px; text-align:center; }
+.frm-grid th { background:#f1f5f4; font-weight:700; }
+.frm-grid td.frm-day { width:20px; min-width:20px; padding:0; height:22px; cursor:pointer; user-select:none; }
+.frm-grid td.frm-day.on { background:#00B0F0; color:#fff; font-weight:700; }
+.frm-grid td.frm-day.band { background:#00B0F0; }
+.frm-grid td.frm-day.pending { outline:2px dashed #d33f35; outline-offset:-2px; }
+.frm-grid td.frm-day.ro { cursor:default; }
+.frm-grid input, .frm-grid select { border:1px solid var(--border); border-radius:6px; padding:3px 6px; font-family:var(--font); font-size:12px; }
+.frm-grid input.frm-name { width:150px; } .frm-grid input.frm-loc { width:70px; }
 .plan-tabs::-webkit-scrollbar { display:none; }
 .plan-tab { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:7px 14px; border:0; border-radius:6px; background:transparent; color:var(--text2); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,box-shadow .15s; }
 .plan-tab:hover { background:#edf7f5; color:var(--text); }

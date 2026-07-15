@@ -339,6 +339,135 @@ function frmOpenPlanById(id) {
   if (p) frmEditorOpen(JSON.parse(JSON.stringify(p)));
 }
 
+// ---------------- editor ลงแผน ----------------
+let frmEditorPlan = null;
+let frmEditorPending = {};
+
+function frmEditorOpen(plan) {
+  frmEditorPlan = plan; frmEditorPending = {};
+  document.getElementById('frmEditorWrap').style.display = 'block';
+  frmEditorRender();
+  document.getElementById('frmEditorWrap').scrollIntoView({ behavior: 'smooth' });
+}
+function frmEditorClose() {
+  frmEditorPlan = null;
+  document.getElementById('frmEditorWrap').style.display = 'none';
+  document.getElementById('frmEditorWrap').innerHTML = '';
+  frmLoadPlanList();
+}
+function frmEditorMeta(key, val) { frmEditorPlan[key] = val; if (key === 'month_num') frmEditorRenderGrid(); }
+function frmEditorHeader(key, val) { frmEditorPlan.header[key] = val; }
+function frmEditorItem(i, key, val) { frmEditorPlan.items[i][key] = val; if (key === 'due_date') frmEditorRenderGrid(); }
+function frmEditorMonth(i, val) { frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
+function frmEditorDay(i, day) {
+  const st = frmClickRange({ pending: frmEditorPending[i] != null ? frmEditorPending[i] : null }, day);
+  if (st.pending != null) { frmEditorPending[i] = st.pending; }
+  else { delete frmEditorPending[i]; frmEditorPlan.items[i].bar_start = st.start; frmEditorPlan.items[i].bar_end = st.end; }
+  frmEditorRenderGrid();
+}
+function frmEditorClearBar(i) { const it = frmEditorPlan.items[i]; it.bar_start = 0; it.bar_end = 0; delete frmEditorPending[i]; frmEditorRenderGrid(); }
+function frmEditorRemove(i) { frmEditorPlan.items.splice(i, 1); frmEditorPending = {}; frmEditorRenderGrid(); }
+
+function frmEditorRender() {
+  const p = frmEditorPlan;
+  const monthOpts = m => FRM_MONTHS.map((x, i) => '<option value="' + (i + 1) + '"' + (m === i + 1 ? ' selected' : '') + '>' + (i + 1) + ' - ' + x + '</option>').join('');
+  const inp = 'style="padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"';
+  const lbl = 'style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px"';
+  document.getElementById('frmEditorWrap').innerHTML =
+    '<section class="plan-panel" style="padding:14px">' +
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">' +
+    '<b style="font-size:15px">📝 ' + escapeHtmlText(p.unit_code || 'แผนใหม่') + '</b>' +
+    '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
+    '<span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' +
+    '<button class="plan-btn" type="button" onclick="frmEditorClose()">← กลับรายการแผน</button>' +
+    '<button class="plan-btn" type="button" onclick="frmEditorSave()">💾 บันทึก</button>' +
+    '<button class="plan-btn primary" type="button" onclick="frmEditorExport()">⬇️ Export .xlsx</button>' +
+    (p.id ? '<button class="plan-btn" type="button" style="color:var(--red)" onclick="frmEditorDelete()">🗑️</button>' : '') +
+    '</span></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px">' +
+    '<div><label ' + lbl + '>เดือนที่สอบ</label><select ' + inp + ' onchange="frmEditorMeta(\'month_num\',+this.value)">' + monthOpts(p.month_num) + '</select></div>' +
+    '<div><label ' + lbl + '>ปี (ค.ศ.)</label><input type="number" ' + inp + ' value="' + p.year + '" onchange="frmEditorMeta(\'year\',+this.value)"></div>' +
+    '<div><label ' + lbl + '>กลุ่มเครื่องมือ</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(p.header.group || '') + '" oninput="frmEditorHeader(\'group\',this.value)"></div>' +
+    '<div><label ' + lbl + '>หน่วยงาน (Unit)</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(p.header.unit || '') + '" oninput="frmEditorHeader(\'unit\',this.value)"></div>' +
+    '<div><label ' + lbl + '>แผนก (Section)</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(p.header.section || '') + '" oninput="frmEditorHeader(\'section\',this.value)"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:10px">' +
+    '<label><input type="checkbox"' + (p.header.internal ? ' checked' : '') + ' onchange="frmEditorHeader(\'internal\',this.checked)"> สอบเทียบภายใน</label>' +
+    '<label><input type="checkbox"' + (p.header.external ? ' checked' : '') + ' onchange="frmEditorHeader(\'external\',this.checked)"> สอบเทียบภายนอก</label>' +
+    '<label><input type="checkbox"' + (p.header.drug ? ' checked' : '') + ' onchange="frmEditorHeader(\'drug\',this.checked)"> Drug product</label>' +
+    '<label><input type="checkbox"' + (p.header.cosmetic ? ' checked' : '') + ' onchange="frmEditorHeader(\'cosmetic\',this.checked)"> Cosmetic product</label>' +
+    '<label>Other: <input type="text" style="padding:3px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;width:130px" value="' + escapeHtmlAttr(p.header.otherText || '') + '" oninput="frmEditorHeader(\'otherText\',this.value)"></label>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
+    '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
+    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ</span></div>' +
+    '<div id="frmAddResults" style="margin-bottom:8px"></div>' +
+    '<div style="overflow:auto"><table class="frm-grid" id="frmGridTable"></table></div>' +
+    '</section>';
+  frmEditorRenderGrid();
+}
+
+function frmEditorRenderGrid() {
+  const p = frmEditorPlan;
+  if (!p) return;
+  const el = document.getElementById('frmGridTable');
+  if (!el) return;
+  let days = ''; for (let d = 1; d <= 31; d++) days += '<th style="width:20px">' + d + '</th>';
+  let html = '<tr><th>#</th><th>ชื่อเครื่อง</th><th>ID CODE</th><th>Location</th><th>Due Date</th>' + days + '<th>เดือน</th><th></th></tr>';
+  p.items.forEach((it, i) => {
+    const pend = frmEditorPending[i];
+    let top = '', bot = '';
+    for (let d = 1; d <= 31; d++) {
+      const band = it.bar_end > 0 && d >= it.bar_end;
+      top += '<td class="frm-day ro' + (band ? ' band' : '') + '"></td>';
+      const on = it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
+      bot += '<td class="frm-day' + (on ? ' on' : '') + (pend === d ? ' pending' : '') + '" onclick="frmEditorDay(' + i + ',' + d + ')">' + (on ? it.month_num : '') + '</td>';
+    }
+    const mOpts = Array.from({ length: 12 }, (_, m) => '<option value="' + (m + 1) + '"' + (it.month_num === m + 1 ? ' selected' : '') + '>' + (m + 1) + '</option>').join('');
+    html += '<tr>' +
+      '<td rowspan="2">' + (i + 1) + '</td>' +
+      '<td rowspan="2"><input class="frm-name" value="' + escapeHtmlAttr(it.name || '') + '" oninput="frmEditorItem(' + i + ',\'name\',this.value)"></td>' +
+      '<td rowspan="2" style="white-space:nowrap">' + escapeHtmlText(it.id_code || '–') + '</td>' +
+      '<td rowspan="2"><input class="frm-loc" value="' + escapeHtmlAttr(it.location || '') + '" oninput="frmEditorItem(' + i + ',\'location\',this.value)"></td>' +
+      '<td rowspan="2"><input type="date" value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)"></td>' +
+      top +
+      '<td rowspan="2"><select onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
+      ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button></td>' +
+      '<td rowspan="2"><button type="button" title="เอาออกจากแผน" onclick="frmEditorRemove(' + i + ')" style="border:0;background:none;cursor:pointer;color:var(--red)">🗑️</button></td>' +
+      '</tr><tr>' + bot + '</tr>';
+  });
+  if (!p.items.length) html += '<tr><td colspan="38" style="padding:14px;color:var(--text3)">ยังไม่มีเครื่องในแผน — ใช้ช่องค้นหาด้านบนเพื่อเพิ่ม</td></tr>';
+  el.innerHTML = html;
+}
+
+function frmEditorSearch(term) {
+  const el = document.getElementById('frmAddResults');
+  term = String(term || '').trim().toLowerCase();
+  if (term.length < 2) { el.innerHTML = ''; return; }
+  const p = frmEditorPlan;
+  const inPlan = new Set(p.items.map(it => String(it.instrument_id)));
+  const hits = (allData || []).filter(r => {
+    if (inPlan.has(String(r.id))) return false;
+    if (p.unit_code && frmUnitCode(r) !== p.unit_code) return false;
+    if (p.type_name && String(r.instrument_type || '').trim() !== p.type_name) return false;
+    return String(r.id_code || '').toLowerCase().includes(term) || String(r.instrument_name || '').toLowerCase().includes(term);
+  }).slice(0, 12);
+  el.innerHTML = hits.length
+    ? hits.map(r => '<button type="button" class="plan-btn" style="margin:2px" onclick="frmEditorAdd(' + r.id + ')">' + escapeHtmlText(r.id_code || r.instrument_name) + '</button>').join('')
+    : '<span style="font-size:12px;color:var(--text3)">ไม่พบเครื่องในกลุ่ม ' + escapeHtmlText(p.unit_code || '') + ' ที่ยังไม่อยู่ในแผน</span>';
+}
+
+function frmEditorAdd(id) {
+  const r = (allData || []).find(x => x.id == id);
+  if (!r) return;
+  const p = frmEditorPlan;
+  if (!p.unit_code) { p.unit_code = frmUnitCode(r); p.type_name = String(r.instrument_type || '').trim(); if (!p.header.unit) p.header.unit = r.department || p.unit_code; if (!p.header.section) p.header.section = r.division || ''; }
+  p.items.push(frmItemFromInstrument(r, p.month_num));
+  document.getElementById('frmAddSearch').value = '';
+  document.getElementById('frmAddResults').innerHTML = '';
+  frmEditorRender();
+}
+
 async function frmNewPlanFromSelection() {
   if (!planSelectedItems.length) {
     frmEditorOpen({ id: null, unit_code: '', type_name: '', month_num: new Date().getMonth() + 1, year: new Date().getFullYear(), header: { group: '', unit: '', section: '', internal: true, external: false, drug: false, cosmetic: false, otherText: '' }, items: [], status: 'draft' });
