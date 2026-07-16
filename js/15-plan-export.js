@@ -180,23 +180,20 @@ function frmMode(arr) { // ค่าที่พบบ่อยสุด (ข้
   return best;
 }
 
-// เปิด template → เติม token หัวกระดาษ (อยู่ในเซลล์ sheet ทั้งหมด) + แถวข้อมูล + merge → Blob .xlsx
+// เปิด template → เติม token: ☑/☐ อยู่ในเซลล์ sheet, ค่า Month/Year/Group/Unit/Section อยู่ใน TextBox
+// (drawing ทับเส้น ______ ให้เห็นช่องกรอกแบบฟอร์มกระดาษ) + แถวข้อมูล + merge + page break → Blob .xlsx
 function frmRenderTemplate(templateBuf, header, items) {
   const chk = v => (v ? '☑' : '☐');
   return JSZip.loadAsync(templateBuf).then(zip =>
-    zip.file('xl/worksheets/sheet1.xml').async('string')
-      .then(sheet => {
+    Promise.all([zip.file('xl/worksheets/sheet1.xml').async('string'),
+                 zip.file('xl/drawings/drawing1.xml').async('string')])
+      .then(([sheet, drawing]) => {
         const built = frmBuildSheetRows(items, header.monthNum);
         sheet = sheet.replace('</sheetData>', built.xml + '</sheetData>');
         sheet = sheet.replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:AR' + built.lastRow + '"/>');
         sheet = sheet.replace(/<mergeCells count="(\d+)">/, (m, n) => '<mergeCells count="' + (Number(n) + built.merges.length) + '">');
         sheet = sheet.replace('</mergeCells>', built.merges.map(r => '<mergeCell ref="' + r + '"/>').join('') + '</mergeCells>');
-        sheet = sheet.replace('{{MONTH}}', frmEscapeXml(frmMonthName(header.monthNum)))
-                     .replace('{{YEAR}}', frmEscapeXml(header.year))
-                     .replace('{{GROUP}}', frmEscapeXml(header.group))
-                     .replace('{{UNIT}}', frmEscapeXml(header.unit))
-                     .replace('{{SECTION}}', frmEscapeXml(header.section))
-                     .replace('{{CHK_INT}}', chk(header.internal))
+        sheet = sheet.replace('{{CHK_INT}}', chk(header.internal))
                      .replace('{{CHK_EXT}}', chk(header.external))
                      .replace('{{CHK_DRUG}}', chk(header.drug))
                      .replace('{{CHK_COS}}', chk(header.cosmetic))
@@ -207,7 +204,13 @@ function frmRenderTemplate(templateBuf, header, items) {
             built.breaks.map(b => '<brk id="' + b + '" max="16383" man="1"/>').join('') + '</rowBreaks>';
           sheet = sheet.replace('</headerFooter>', '</headerFooter>' + brXml);
         }
+        drawing = drawing.replace('{{MONTH}}', frmEscapeXml(frmMonthName(header.monthNum)))
+                         .replace('{{YEAR}}', frmEscapeXml(header.year))
+                         .replace('{{GROUP}}', frmEscapeXml(header.group))
+                         .replace('{{UNIT}}', frmEscapeXml(header.unit))
+                         .replace('{{SECTION}}', frmEscapeXml(header.section));
         zip.file('xl/worksheets/sheet1.xml', sheet);
+        zip.file('xl/drawings/drawing1.xml', drawing);
         return zip.generateAsync({ type: 'blob', compression: 'DEFLATE',
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       }));

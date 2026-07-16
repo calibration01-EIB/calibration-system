@@ -138,8 +138,10 @@ async function main() {
     ok('render: merge count', /<mergeCells count="(\d+)">/.exec(sh) && ((sh.match(/<mergeCell /g) || []).length === Number(/<mergeCells count="(\d+)">/.exec(sh)[1])));
     ok('render: no token left (sheet)', sh.indexOf('{{') < 0);
     ok('render: no token left (drawing)', dr.indexOf('{{') < 0);
-    ok('render: month/year in cells', sh.includes('February') && sh.includes('Year 2026'));
-    ok('render: unit/section in cells', sh.includes('General Raw Material:WRM1') && sh.includes('Warehouse - Raw Material'));
+    ok('render: month/year textbox', dr.includes('<a:t>February</a:t>') && dr.includes('<a:t>2026</a:t>'));
+    ok('render: unit/section textbox', dr.includes('<a:t>General Raw Material:WRM1</a:t>') && dr.includes('<a:t>Warehouse - Raw Material</a:t>'));
+    const ss = await z2.file('xl/sharedStrings.xml').async('string');
+    ok('render: เส้นใต้ยังอยู่ในเซลล์ (sharedStrings)', ss.includes('Month  ____') && ss.includes('หน่วยงาน (Unit) ____'));
     ok('render: chk int/ext', sh.includes('☑ สอบเทียบภายใน') && sh.includes('☐ สอบเทียบภายนอก'));
     ok('render: chk drug/cos', sh.includes('☐ Drug product') && sh.includes('☑ Cosmetic product'));
     ok('render: other blank', sh.includes('☐ Other ____'));

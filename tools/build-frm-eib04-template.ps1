@@ -35,12 +35,9 @@ function Get-SharedText($idx) {
 # ---------- sheet1.xml ----------
 $sheet = Read-Entry $zip 'xl/worksheets/sheet1.xml'
 
-# 1) เซลล์หัวฟอร์ม -> inlineStr + token (underscore run ที่ i ถูกแทนด้วย token ที่ i; prefix = เติมหน้าข้อความ)
+# 1) เซลล์ checkbox -> inlineStr + token ☑/☐ (เซลล์เส้นใต้ Month/Year/กลุ่ม/หน่วยงาน/แผนก คงเดิม
+#    ค่าไปลง TextBox ใน drawing แทน จะได้เห็นเส้น ______ แบบฟอร์มกระดาษ)
 $headerCells = @(
-  @{ ref = 'F4';  tokens = @('{{MONTH}}', '{{YEAR}}') },
-  @{ ref = 'A5';  tokens = @('{{GROUP}}') },
-  @{ ref = 'AE5'; tokens = @('{{UNIT}}') },
-  @{ ref = 'AN5'; tokens = @('{{SECTION}}') },
   @{ ref = 'B6';  prefix = '{{CHK_INT}} ' },
   @{ ref = 'E6';  prefix = '{{CHK_EXT}} ' },
   @{ ref = 'Z6';  prefix = '{{CHK_DRUG}} ' },
@@ -57,7 +54,7 @@ foreach ($hc in $headerCells) {
   $repl = '<c r="' + $hc.ref + '" s="' + $m.Groups[1].Value + '" t="inlineStr"><is><t xml:space="preserve">' + $esc + '</t></is></c>'
   $sheet = $sheet.Replace($m.Value, $repl)
 }
-foreach ($tok in '{{MONTH}}','{{YEAR}}','{{GROUP}}','{{UNIT}}','{{SECTION}}','{{CHK_INT}}','{{CHK_EXT}}','{{CHK_DRUG}}','{{CHK_COS}}','{{CHK_OTHER}}','{{OTHER_TEXT}}') {
+foreach ($tok in '{{CHK_INT}}','{{CHK_EXT}}','{{CHK_DRUG}}','{{CHK_COS}}','{{CHK_OTHER}}','{{OTHER_TEXT}}') {
   Assert ($sheet.Contains($tok)) "sheet token $tok"
 }
 
@@ -95,7 +92,9 @@ foreach ($bId in 9, 10, 11) {
 $st = $st.Replace('</cellXfs>', $blueXfs + '</cellXfs>')
 Write-Entry $zip 'xl/styles.xml' $st
 
-# ---------- drawing1.xml: ลบกล่องสี่เหลี่ยม checkbox เปล่า (ใช้ ☑/☐ ในเซลล์แทน) โลโก้+หัวบริษัทคงไว้ ----------
+# ---------- drawing1.xml: ลบกล่องสี่เหลี่ยม checkbox เปล่า (ใช้ ☑/☐ ในเซลล์แทน) โลโก้+หัวบริษัทคงไว้
+#            + เพิ่ม TextBox ค่า Month/Year/Group/Unit/Section ทับเส้น ______ (ตำแหน่งจาก WRM1 เดิม + จูน v83:
+#            unit/section anchor ล่างนั่งบนเส้น, unit สูงรับชื่อ 2 บรรทัด, section กว้างถึงคอลัมน์ AR) ----------
 $dr = Read-Entry $zip 'xl/drawings/drawing1.xml'
 $dr = [regex]::Replace($dr, '<xdr:(one|two)CellAnchor[^>]*>.*?</xdr:\1CellAnchor>',
   { param($m) $b = $m.Value
@@ -104,6 +103,30 @@ $dr = [regex]::Replace($dr, '<xdr:(one|two)CellAnchor[^>]*>.*?</xdr:\1CellAnchor
 Assert ($dr -match 'รูปภาพ 20') 'logo still present'
 Assert (-not ($dr -match 'สี่เหลี่ยมผืนผ้า')) 'checkbox rectangles removed'
 Assert ($dr -match 'TextBox 2') 'company header still present'
+
+function New-ValueBox($id, $name, $from, $to, $anchor, $alignCtr, $token) {
+  $algn = if ($alignCtr) { '<a:pPr algn="ctr"/>' } else { '' }
+  '<xdr:twoCellAnchor><xdr:from>' + $from + '</xdr:from><xdr:to>' + $to + '</xdr:to>' +
+  '<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="' + $id + '" name="' + $name + '"/><xdr:cNvSpPr txBox="1"/></xdr:nvSpPr>' +
+  '<xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></xdr:spPr>' +
+  '<xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip" wrap="square" rtlCol="0" anchor="' + $anchor + '"/><a:lstStyle/>' +
+  '<a:p>' + $algn + '<a:r><a:rPr lang="en-US" sz="1100"/><a:t>' + $token + '</a:t></a:r><a:endParaRPr lang="th-TH" sz="1100"/></a:p>' +
+  '</xdr:txBody></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>'
+}
+function Anchor($col, $colOff, $row, $rowOff) {
+  '<xdr:col>' + $col + '</xdr:col><xdr:colOff>' + $colOff + '</xdr:colOff><xdr:row>' + $row + '</xdr:row><xdr:rowOff>' + $rowOff + '</xdr:rowOff>'
+}
+$boxes =
+  (New-ValueBox 3001 'ValueBox Month'   (Anchor 17 130171 3 28576)  (Anchor 22 148163 3 314326) 't' $true  '{{MONTH}}') +
+  (New-ValueBox 3002 'ValueBox Year'    (Anchor 24 114300 3 17992)  (Anchor 29 123825 3 303742) 't' $true  '{{YEAR}}') +
+  (New-ValueBox 3003 'ValueBox Group'   (Anchor 18 104775 4 47625)  (Anchor 26 171450 4 304800) 't' $true  '{{GROUP}}') +
+  (New-ValueBox 3004 'ValueBox Unit'    (Anchor 35 68787  3 150000) (Anchor 39 457200 4 361951) 'b' $false '{{UNIT}}') +
+  (New-ValueBox 3005 'ValueBox Section' (Anchor 40 402167 3 254002) (Anchor 42 582083 4 380999) 'b' $false '{{SECTION}}')
+  # section สิ้นสุดใน AQ (คอลัมน์ 1-based 43) เท่านั้น — ถ้าเลยเข้า AR พื้นที่พิมพ์จะกว้างเกินหน้า เกิดหน้าเปล่าแนวนอน; ชื่อยาว wrap ขึ้น 2 บรรทัด
+$dr = $dr.Replace('</xdr:wsDr>', $boxes + '</xdr:wsDr>')
+foreach ($tok in '{{MONTH}}','{{YEAR}}','{{GROUP}}','{{UNIT}}','{{SECTION}}') {
+  Assert ($dr.Contains($tok)) "drawing token $tok"
+}
 Write-Entry $zip 'xl/drawings/drawing1.xml' $dr
 
 # ---------- workbook.xml + app.xml: ชื่อชีท "FRM-EIB04(TP) " -> "FRM-EIB04" ----------
