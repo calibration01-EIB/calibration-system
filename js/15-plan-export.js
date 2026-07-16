@@ -1,16 +1,19 @@
 // ====================================================
 // FRM-EIB04 PLAN EXPORT (.xlsx) — สร้างจาก template + JSZip
 // template: assets/frm-eib04-template.xlsx (สร้างโดย tools/build-frm-eib04-template.ps1)
-// style id / โครง XML อ้างอิงจาก ตัวอย่าง/WRM1.xlsx — ห้ามแก้โดยไม่เทียบไฟล์จริง
+// style id อ้างอิงจาก ตัวอย่าง/FRM-EIB04 (TP) เเผนสอบเทียบเครื่องมือ.xlsx (แถว 10/12/26/27/28)
+// + 178-180 = แถบฟ้าที่ build script ต่อท้าย styles.xml — ห้ามแก้โดยไม่เทียบไฟล์จริง
 // ====================================================
 
 const FRM_STYLE = {
-  topA: 80, topB: 78, botB: 81, colC: 82, colD: 79, colE: 89,
-  day1: 13, day: 14, day31: 15, day1Blue: 94, dayBlue: 93, day31Blue: 96,
-  botNum1: 94, botNum: 95, botNum31: 96,
-  eib: [13, 16, 14, 15, 15, 14, 17], // AK..AQ
-  sig1: { a: 24, mid: 25, aj: 26, ak: 97, mid2: 98, aq: 99 },
-  sig2: { a: 27, mid: 28, label: 29, aj: 30, ak: 100, mid2: 101, aq: 102 }
+  // ชุด style ต่อคอลัมน์: first = แถวแรกของหน้า (ใต้หัวตาราง), item = แถวรายการทั่วไป, close = แถวปิดตาราง (เส้นล่างหนา)
+  first: { a: 149, b: 21, c: 22, d: 150, e: 151, day1: 152, day: 153, day31: 154, eib: [152, 155, 153, 154, 154, 153, 156] },
+  item:  { a: 157, b: 21, c: 22, d: 164, e: 158, day1: 159, day: 160, day31: 161, eib: [159, 162, 160, 161, 161, 160, 163] },
+  close: { a: 172, day1: 173, day: 174, day31: 175, eib: [173, 176, 174, 175, 175, 174, 177] },
+  day1Blue: 178, dayBlue: 179, day31Blue: 180,
+  botNum1: 178, botNum: 179, botNum31: 180,
+  sig1: { a: 8,  mid: 9,  aj: 10, ak: 89, mid2: 90, aq: 91 },
+  sig2: { a: 11, mid: 12, label: 13, aj: 14, ak: 92, mid2: 93, aq: 94 }
 };
 const FRM_SIG_TEXT = {
   prepared: 'Prepared by :___________(EIB)  Date _____________   Approved by :____________(EIB)  Date ________________ Acknowledge by _____________(Owner) Date _____________',
@@ -19,7 +22,7 @@ const FRM_SIG_TEXT = {
   unit: 'ระดับหน่วยขึ้นไป ( Supervisor level and above)'
 };
 const FRM_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const FRM_ITEMS_PER_BLOCK = 10;
+const FRM_ITEMS_PER_BLOCK = 8; // 8 เครื่อง/หน้า ตามต้นแบบที่ย่อให้พอดี 1 หน้า
 const FRM_OTHER_BLANK = '____________________________';
 
 function frmColLetter(n) {
@@ -45,8 +48,11 @@ function frmCellText(col, row, s, text) {
 
 // เครื่องละ 2 แถว: แถวบนแถบฟ้า bar_end..31, แถวล่างเลขเดือน+ฟ้า bar_start..bar_end
 // item รับ override ได้: bar_start/bar_end/month_num (default = วัน 1..วัน due + เดือนของแผน)
-function frmBuildItemRows(item, itemNo, rowNum, monthNum) {
+// isFirst = แถวแรกใต้หัวตาราง (แถวแรกของแต่ละหน้า/บล็อก) ใช้ชุด style FRM_STYLE.first
+function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   const S = FRM_STYLE;
+  const T = isFirst ? S.first : S.item; // แถวบน
+  const B = S.item;                     // แถวล่างใช้ชุดทั่วไปเสมอ
   const due = frmDateSerial(item.due_date);
   const dueDay = due ? parseInt(String(item.due_date).slice(8, 10), 10) : 0;
   const barEnd = item.bar_end != null ? item.bar_end : dueDay;
@@ -54,30 +60,44 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum) {
   const mNum = item.month_num != null ? item.month_num : monthNum;
   const r1 = rowNum, r2 = rowNum + 1;
   let x = '<row r="' + r1 + '" spans="1:44" ht="21.75" customHeight="1">';
-  x += frmCellNum('A', r1, S.topA, itemNo);
-  x += frmCellText('B', r1, S.topB, item.instrument_name || item.name || '');
-  x += frmCellText('C', r1, S.colC, item.id_code || '');
-  x += frmCellText('D', r1, S.colD, item.location || '');
-  x += due ? frmCellNum('E', r1, S.colE, due) : frmCellEmpty('E', r1, S.colE);
+  x += frmCellNum('A', r1, T.a, itemNo);
+  x += frmCellText('B', r1, T.b, item.instrument_name || item.name || '');
+  x += frmCellText('C', r1, T.c, item.id_code || '');
+  x += frmCellText('D', r1, T.d, item.location || '');
+  x += due ? frmCellNum('E', r1, T.e, due) : frmCellEmpty('E', r1, T.e);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
     const blue = barEnd > 0 && d >= barEnd;
-    const s = d === 1 ? (blue ? S.day1Blue : S.day1) : d === 31 ? (blue ? S.day31Blue : S.day31) : (blue ? S.dayBlue : S.day);
+    const s = d === 1 ? (blue ? S.day1Blue : T.day1) : d === 31 ? (blue ? S.day31Blue : T.day31) : (blue ? S.dayBlue : T.day);
     x += frmCellEmpty(col, r1, s);
   }
-  for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), r1, S.eib[i]);
+  for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), r1, T.eib[i]);
   x += '</row>';
   x += '<row r="' + r2 + '" spans="1:44" ht="21.75" customHeight="1">';
-  x += frmCellEmpty('A', r2, S.topA) + frmCellEmpty('B', r2, S.botB) + frmCellEmpty('C', r2, S.colC) + frmCellEmpty('D', r2, S.colD) + frmCellEmpty('E', r2, S.colE);
+  x += frmCellEmpty('A', r2, B.a) + frmCellEmpty('B', r2, B.b) + frmCellEmpty('C', r2, B.c) + frmCellEmpty('D', r2, B.d) + frmCellEmpty('E', r2, B.e);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
     const num = barEnd > 0 && d >= barStart && d <= barEnd;
-    const s = d === 1 ? (num ? S.botNum1 : S.day1) : d === 31 ? (num ? S.botNum31 : S.day31) : (num ? S.botNum : S.day);
+    const s = d === 1 ? (num ? S.botNum1 : B.day1) : d === 31 ? (num ? S.botNum31 : B.day31) : (num ? S.botNum : B.day);
     x += num ? frmCellNum(col, r2, s, mNum) : frmCellEmpty(col, r2, s);
   }
-  for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), r2, S.eib[i]);
+  for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), r2, B.eib[i]);
   x += '</row>';
   return x;
+}
+
+// แถวปิดตาราง (เส้นล่างหนา) ก่อนแถวลายเซ็นของแต่ละบล็อก — ตามต้นแบบแถว 26
+function frmBuildClosingRow(rowNum) {
+  const S = FRM_STYLE.close;
+  let x = '<row r="' + rowNum + '" spans="1:44" ht="21.75" customHeight="1">';
+  for (let c = 1; c <= 5; c++) x += frmCellEmpty(frmColLetter(c), rowNum, S.a);
+  for (let d = 1; d <= 31; d++) {
+    const col = frmColLetter(5 + d);
+    const s = d === 1 ? S.day1 : d === 31 ? S.day31 : S.day;
+    x += frmCellEmpty(col, rowNum, s);
+  }
+  for (let i = 0; i < 7; i++) x += frmCellEmpty(frmColLetter(37 + i), rowNum, S.eib[i]);
+  return x + '</row>';
 }
 
 function frmBuildSignatureRows(rowNum) {
@@ -107,18 +127,23 @@ function frmBuildSignatureRows(rowNum) {
 function frmBuildSheetRows(items, monthNum) {
   let xml = '', r = 10;
   const merges = [];
+  const blockEnds = []; // แถวสุดท้ายของแต่ละบล็อก (แถวเซ็นล่าง) — ใช้วาง page break
   const addSig = () => {
+    xml += frmBuildClosingRow(r);
+    r += 1;
     xml += frmBuildSignatureRows(r);
     merges.push('AK' + r + ':AQ' + r, 'AK' + (r + 1) + ':AQ' + (r + 1));
     r += 2;
+    blockEnds.push(r - 1);
   };
   items.forEach((it, i) => {
-    xml += frmBuildItemRows(it, i + 1, r, monthNum);
+    xml += frmBuildItemRows(it, i + 1, r, monthNum, i % FRM_ITEMS_PER_BLOCK === 0);
     r += 2;
     if ((i + 1) % FRM_ITEMS_PER_BLOCK === 0) addSig();
   });
   if (items.length % FRM_ITEMS_PER_BLOCK !== 0 || items.length === 0) addSig();
-  return { xml: xml, merges: merges, lastRow: r - 1 };
+  // break ระหว่างบล็อก (บล็อกสุดท้ายไม่ต้อง) — บังคับขึ้นหน้าใหม่ทุก 8 เครื่อง
+  return { xml: xml, merges: merges, lastRow: r - 1, breaks: blockEnds.slice(0, -1) };
 }
 
 // รหัสหน่วยงาน = ID CODE ช่วงหน้า (ตัวอักษรถึงเลขตัวแรก เช่น WRM1BB05-WI01 → WRM1)
@@ -155,31 +180,34 @@ function frmMode(arr) { // ค่าที่พบบ่อยสุด (ข้
   return best;
 }
 
-// เปิด template → เติม token หัวกระดาษ + แถวข้อมูล + merge → Blob .xlsx
+// เปิด template → เติม token หัวกระดาษ (อยู่ในเซลล์ sheet ทั้งหมด) + แถวข้อมูล + merge → Blob .xlsx
 function frmRenderTemplate(templateBuf, header, items) {
   const chk = v => (v ? '☑' : '☐');
   return JSZip.loadAsync(templateBuf).then(zip =>
-    Promise.all([zip.file('xl/worksheets/sheet1.xml').async('string'),
-                 zip.file('xl/drawings/drawing1.xml').async('string')])
-      .then(([sheet, drawing]) => {
+    zip.file('xl/worksheets/sheet1.xml').async('string')
+      .then(sheet => {
         const built = frmBuildSheetRows(items, header.monthNum);
         sheet = sheet.replace('</sheetData>', built.xml + '</sheetData>');
         sheet = sheet.replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:AR' + built.lastRow + '"/>');
         sheet = sheet.replace(/<mergeCells count="(\d+)">/, (m, n) => '<mergeCells count="' + (Number(n) + built.merges.length) + '">');
         sheet = sheet.replace('</mergeCells>', built.merges.map(r => '<mergeCell ref="' + r + '"/>').join('') + '</mergeCells>');
-        sheet = sheet.replace('{{CHK_DRUG}}', chk(header.drug))
+        sheet = sheet.replace('{{MONTH}}', frmEscapeXml(frmMonthName(header.monthNum)))
+                     .replace('{{YEAR}}', frmEscapeXml(header.year))
+                     .replace('{{GROUP}}', frmEscapeXml(header.group))
+                     .replace('{{UNIT}}', frmEscapeXml(header.unit))
+                     .replace('{{SECTION}}', frmEscapeXml(header.section))
+                     .replace('{{CHK_INT}}', chk(header.internal))
+                     .replace('{{CHK_EXT}}', chk(header.external))
+                     .replace('{{CHK_DRUG}}', chk(header.drug))
                      .replace('{{CHK_COS}}', chk(header.cosmetic))
                      .replace('{{CHK_OTHER}}', chk(!!(header.otherText || '').trim()))
                      .replace('{{OTHER_TEXT}}', (header.otherText || '').trim() ? frmEscapeXml(header.otherText.trim()) : FRM_OTHER_BLANK);
-        drawing = drawing.replace('{{MONTH}}', frmEscapeXml(frmMonthName(header.monthNum)))
-                         .replace('{{YEAR}}', frmEscapeXml(header.year))
-                         .replace('{{GROUP}}', frmEscapeXml(header.group))
-                         .replace('{{UNIT}}', frmEscapeXml(header.unit))
-                         .replace('{{SECTION}}', frmEscapeXml(header.section))
-                         .replace('{{CHK_INT}}', chk(header.internal))
-                         .replace('{{CHK_EXT}}', chk(header.external));
+        if (built.breaks.length) {
+          const brXml = '<rowBreaks count="' + built.breaks.length + '" manualBreakCount="' + built.breaks.length + '">' +
+            built.breaks.map(b => '<brk id="' + b + '" max="16383" man="1"/>').join('') + '</rowBreaks>';
+          sheet = sheet.replace('</headerFooter>', '</headerFooter>' + brXml);
+        }
         zip.file('xl/worksheets/sheet1.xml', sheet);
-        zip.file('xl/drawings/drawing1.xml', drawing);
         return zip.generateAsync({ type: 'blob', compression: 'DEFLATE',
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       }));
