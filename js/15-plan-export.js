@@ -529,6 +529,13 @@ async function frmEditorDelete() {
   frmEditorClose();
 }
 
+// ทางลัดจาก step 1 สร้างแผน: เลือกเครื่องเสร็จ → เปิดแท็บลงแผน FRM + สร้าง draft จากที่เลือกทันที
+function goToFrmPlanFromSelection() {
+  if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
+  switchPlanTab('frm');
+  frmNewPlanFromSelection();
+}
+
 async function frmNewPlanFromSelection() {
   if (!planSelectedItems.length) {
     frmEditorOpen({ id: null, unit_code: '', type_name: '', month_num: new Date().getMonth() + 1, year: new Date().getFullYear(), header: { group: '', unit: '', section: '', internal: true, external: false, drug: false, cosmetic: false, otherText: '' }, items: [], status: 'draft' });
