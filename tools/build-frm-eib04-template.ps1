@@ -69,6 +69,45 @@ $dr = $dr.Replace('<a:t>สอบเทียบภายนอก ', '<a:t>{{CH
 foreach ($tok in '{{MONTH}}','{{YEAR}}','{{GROUP}}','{{UNIT}}','{{SECTION}}','{{CHK_INT}}','{{CHK_EXT}}') {
   Assert ($dr.Contains($tok)) "drawing token $tok"
 }
+# 4) จัดกล่องข้อความไม่ให้ชนเส้นตาราง
+# 4.1 label สอบเทียบภายใน/ภายนอก: เดิมคร่อมเส้นแถว 5/6 -> ย้ายลงแถว 6 (แถวเดียวกับ Drug/Cosmetic) + ขยายกว้างกันโดน clip หลังเติม token ☑
+$dr = $dr.Replace('<xdr:from><xdr:col>0</xdr:col><xdr:colOff>179070</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>333375</xdr:rowOff></xdr:from><xdr:ext cx="2131802" cy="341055"/>',
+                  '<xdr:from><xdr:col>0</xdr:col><xdr:colOff>179070</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>9525</xdr:rowOff></xdr:from><xdr:ext cx="2450000" cy="238125"/>')
+$dr = $dr.Replace('<a:off x="179070" y="1647825"/><a:ext cx="2131802" cy="341055"/>',
+                  '<a:off x="179070" y="1704975"/><a:ext cx="2450000" cy="238125"/>')
+$dr = $dr.Replace('<xdr:from><xdr:col>4</xdr:col><xdr:colOff>434340</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>352425</xdr:rowOff></xdr:from><xdr:ext cx="2212722" cy="589777"/>',
+                  '<xdr:from><xdr:col>4</xdr:col><xdr:colOff>434340</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>9525</xdr:rowOff></xdr:from><xdr:ext cx="2500000" cy="238125"/>')
+$dr = $dr.Replace('<a:off x="3063240" y="1666875"/><a:ext cx="2212722" cy="589777"/>',
+                  '<a:off x="3063240" y="1704975"/><a:ext cx="2500000" cy="238125"/>')
+Assert (([regex]::Matches($dr, '<xdr:row>5</xdr:row><xdr:rowOff>9525</xdr:rowOff>')).Count -eq 2) 'chk labels moved to row 6'
+# inset บน/ล่าง = 0 เฉพาะกล่อง CHK (กล่อง header บริษัทใช้ bodyPr หน้าตาเดียวกัน ห้ามโดน) ให้ตัวหนังสือ 14pt พอดีแถว 20.25pt
+foreach ($tok in '{{CHK_INT}}','{{CHK_EXT}}') {
+  $dr = [regex]::Replace($dr,
+    '(<a:bodyPr vertOverflow="clip" horzOverflow="clip" wrap="none") (rtlCol="0" anchor="t">(?:(?!</xdr:sp>).)*?' + [regex]::Escape($tok) + ')',
+    '$1 tIns="0" bIns="0" $2', 'Singleline')
+}
+Assert (([regex]::Matches($dr, 'tIns="0"')).Count -eq 2) 'chk labels insets zeroed'
+# 4.2 ค่า UNIT/SECTION: anchor ล่างให้ตัวหนังสือนั่งบนเส้น (ชื่อยาว wrap ขึ้นบนแทนที่จะลอยทับเส้น)
+foreach ($tok in '{{UNIT}}','{{SECTION}}') {
+  $dr = [regex]::Replace($dr,
+    '(<a:bodyPr vertOverflow="clip" horzOverflow="clip" wrap="square" rtlCol="0" anchor=")t("/>(?:(?!</xdr:sp>).)*?' + [regex]::Escape($tok) + ')',
+    '${1}b$2', 'Singleline')
+}
+Assert (([regex]::Matches($dr, 'anchor="b"')).Count -eq 2) 'unit/section bottom-anchored'
+# 4.3 กล่อง UNIT สูงขึ้น (เผื่อชื่อยาว 2 บรรทัด) + กล่อง SECTION กว้างขึ้นถึงคอลัมน์ AR
+$dr = $dr.Replace('<xdr:row>3</xdr:row><xdr:rowOff>346075</xdr:rowOff>', '<xdr:row>3</xdr:row><xdr:rowOff>150000</xdr:rowOff>')
+$dr = $dr.Replace('<xdr:to><xdr:col>42</xdr:col><xdr:colOff>582083</xdr:colOff>', '<xdr:to><xdr:col>43</xdr:col><xdr:colOff>400000</xdr:colOff>')
 Write-Entry $zip 'xl/drawings/drawing1.xml' $dr
+
+# ---------- workbook.xml + app.xml: ชื่อชีทหลัก WRM1 (2) -> เลขฟอร์ม ----------
+$wb = Read-Entry $zip 'xl/workbook.xml'
+$wb = $wb.Replace('name="WRM1 (2)"', 'name="FRM-EIB04"')
+$wb = $wb.Replace("'WRM1 (2)'!", "'FRM-EIB04'!")
+Assert ($wb.Contains('name="FRM-EIB04"')) 'sheet renamed'
+Assert (-not ($wb -match [regex]::Escape('WRM1 (2)'))) 'no old sheet name left in workbook'
+Write-Entry $zip 'xl/workbook.xml' $wb
+$app = Read-Entry $zip 'docProps/app.xml'
+$app = $app.Replace('WRM1 (2)', 'FRM-EIB04')
+Write-Entry $zip 'docProps/app.xml' $app
 $zip.Dispose()
 Write-Output "OK -> $dst"
