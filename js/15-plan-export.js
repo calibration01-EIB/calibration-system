@@ -1,19 +1,19 @@
 // ====================================================
 // FRM-EIB04 PLAN EXPORT (.xlsx) — สร้างจาก template + JSZip
 // template: assets/frm-eib04-template.xlsx (สร้างโดย tools/build-frm-eib04-template.ps1)
-// style id อ้างอิงจาก ตัวอย่าง/FRM-EIB04 (TP) เเผนสอบเทียบเครื่องมือ.xlsx (แถว 10/12/26/27/28)
+// style id อ้างอิงจาก ตัวอย่าง/FRM-EIB04 (TP) เเผนสอบเทียบเครื่องมือ.xlsx (แถว 10/12/30/31/32 — rev 2026-07-20 มี 10 แถวตัวอย่าง)
 // + 178-180 = แถบฟ้าที่ build script ต่อท้าย styles.xml — ห้ามแก้โดยไม่เทียบไฟล์จริง
 // ====================================================
 
 const FRM_STYLE = {
   // ชุด style ต่อคอลัมน์: first = แถวแรกของหน้า (ใต้หัวตาราง), item = แถวรายการทั่วไป, close = แถวปิดตาราง (เส้นล่างหนา)
-  first: { a: 149, b: 21, c: 22, d: 150, e: 151, day1: 152, day: 153, day31: 154, eib: [152, 155, 153, 154, 154, 153, 156] },
-  item:  { a: 157, b: 21, c: 22, d: 164, e: 158, day1: 159, day: 160, day31: 161, eib: [159, 162, 160, 161, 161, 160, 163] },
-  close: { a: 172, day1: 173, day: 174, day31: 175, eib: [173, 176, 174, 175, 175, 174, 177] },
+  first: { a: 72, b: 21, c: 22, d: 73, e: 74, day1: 75, day: 76, day31: 77, eib: [75, 78, 76, 77, 77, 76, 79] },
+  item:  { a: 80, b: 21, c: 22, d: 73, e: 81, day1: 82, day: 83, day31: 84, eib: [82, 85, 83, 84, 84, 83, 86] },
+  close: { a: 95, day1: 96, day: 97, day31: 98, eib: [96, 99, 97, 98, 98, 97, 100] },
   day1Blue: 178, dayBlue: 179, day31Blue: 180,
   botNum1: 178, botNum: 179, botNum31: 180,
-  sig1: { a: 8,  mid: 9,  aj: 10, ak: 89, mid2: 90, aq: 91 },
-  sig2: { a: 11, mid: 12, label: 13, aj: 14, ak: 92, mid2: 93, aq: 94 }
+  sig1: { a: 8,  mid: 9,  aj: 10, ak: 117, mid2: 118, aq: 119 },
+  sig2: { a: 11, mid: 12, label: 13, aj: 14, ak: 120, mid2: 121, aq: 122 }
 };
 const FRM_SIG_TEXT = {
   prepared: 'Prepared by :___________(EIB)  Date _____________   Approved by :____________(EIB)  Date ________________ Acknowledge by _____________(Owner) Date _____________',

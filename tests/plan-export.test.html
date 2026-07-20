@@ -26,43 +26,43 @@ async function main() {
   const item = { id_code: 'WRM1BB05-WI01', instrument_name: 'BALANCE  30  kg', location: 'B.4/2', due_date: '2026-02-26' };
   const xml = frmBuildItemRows(item, 1, 10, 2, true);
   ok('row attrs', xml.includes('<row r="10" spans="1:44" ht="21.75" customHeight="1">'));
-  ok('item no (first-row style)', xml.includes('<c r="A10" s="149"><v>1</v></c>'));
+  ok('item no (first-row style)', xml.includes('<c r="A10" s="72"><v>1</v></c>'));
   ok('name inline', xml.includes('<c r="B10" s="21" t="inlineStr"><is><t xml:space="preserve">BALANCE  30  kg</t></is></c>'));
   ok('id code', xml.includes('<c r="C10" s="22" t="inlineStr"><is><t xml:space="preserve">WRM1BB05-WI01</t></is></c>'));
-  ok('due serial', xml.includes('<c r="E10" s="151"><v>46079</v></c>'));
-  ok('top day25 plain (s=153)', xml.includes('<c r="AD10" s="153"/>'));
+  ok('due serial', xml.includes('<c r="E10" s="74"><v>46079</v></c>'));
+  ok('top day25 plain (s=76)', xml.includes('<c r="AD10" s="76"/>'));
   ok('top day26 blue (s=179)', xml.includes('<c r="AE10" s="179"/>'));
   ok('top day31 blue (s=180)', xml.includes('<c r="AJ10" s="180"/>'));
   ok('bottom day1 num (s=178)', xml.includes('<c r="F11" s="178"><v>2</v></c>'));
   ok('bottom day26 num (s=179)', xml.includes('<c r="AE11" s="179"><v>2</v></c>'));
-  ok('bottom day27 plain (s=160)', xml.includes('<c r="AF11" s="160"/>'));
-  ok('bottom day31 plain (s=161)', xml.includes('<c r="AJ11" s="161"/>'));
-  ok('eib cols first row', xml.includes('<c r="AK10" s="152"/><c r="AL10" s="155"/><c r="AM10" s="153"/><c r="AN10" s="154"/><c r="AO10" s="154"/><c r="AP10" s="153"/><c r="AQ10" s="156"/>'));
-  ok('eib cols bottom row (generic)', xml.includes('<c r="AK11" s="159"/><c r="AL11" s="162"/><c r="AM11" s="160"/><c r="AN11" s="161"/><c r="AO11" s="161"/><c r="AP11" s="160"/><c r="AQ11" s="163"/>'));
+  ok('bottom day27 plain (s=83)', xml.includes('<c r="AF11" s="83"/>'));
+  ok('bottom day31 plain (s=84)', xml.includes('<c r="AJ11" s="84"/>'));
+  ok('eib cols first row', xml.includes('<c r="AK10" s="75"/><c r="AL10" s="78"/><c r="AM10" s="76"/><c r="AN10" s="77"/><c r="AO10" s="77"/><c r="AP10" s="76"/><c r="AQ10" s="79"/>'));
+  ok('eib cols bottom row (generic)', xml.includes('<c r="AK11" s="82"/><c r="AL11" s="85"/><c r="AM11" s="83"/><c r="AN11" s="84"/><c r="AO11" s="84"/><c r="AP11" s="83"/><c r="AQ11" s="86"/>'));
 
   const xml2 = frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null }, 2, 12, 2, false);
-  ok('no-due: E empty (generic style)', xml2.includes('<c r="E12" s="158"/>'));
+  ok('no-due: E empty (generic style)', xml2.includes('<c r="E12" s="81"/>'));
   ok('no-due: no blue', xml2.indexOf('s="178"') < 0 && xml2.indexOf('s="179"') < 0 && xml2.indexOf('s="180"') < 0);
-  ok('no-due: top day1 plain (s=159)', xml2.includes('<c r="F12" s="159"/>'));
-  ok('no-due: bottom day1 plain (s=159)', xml2.includes('<c r="F13" s="159"/>'));
+  ok('no-due: top day1 plain (s=82)', xml2.includes('<c r="F12" s="82"/>'));
+  ok('no-due: bottom day1 plain (s=82)', xml2.includes('<c r="F13" s="82"/>'));
 
   const sig = frmBuildSignatureRows(30);
   ok('sig row1 attrs', sig.includes('<row r="30" spans="1:43" ht="33" customHeight="1">'));
   ok('sig row2 attrs', sig.includes('<row r="31" spans="1:43" ht="19.5" customHeight="1" thickBot="1">'));
   ok('sig prepared text', sig.includes('Prepared by :___________(EIB)'));
   ok('sig owner text', sig.includes('The owner accepts the work by'));
-  ok('sig styles', sig.includes('<c r="A30" s="8"') && sig.includes('<c r="AQ31" s="94"/>'));
+  ok('sig styles', sig.includes('<c r="A30" s="8"') && sig.includes('<c r="AQ31" s="122"/>'));
 
   const closing = frmBuildClosingRow(26);
   ok('closing row attrs', closing.includes('<row r="26" spans="1:44" ht="21.75" customHeight="1">'));
-  ok('closing styles', closing.includes('<c r="A26" s="172"/>') && closing.includes('<c r="F26" s="173"/>') && closing.includes('<c r="AJ26" s="175"/>') && closing.includes('<c r="AQ26" s="177"/>'));
+  ok('closing styles', closing.includes('<c r="A26" s="95"/>') && closing.includes('<c r="F26" s="96"/>') && closing.includes('<c r="AJ26" s="98"/>') && closing.includes('<c r="AQ26" s="100"/>'));
 
   // 8 เครื่อง/บล็อก: 11 เครื่อง = บล็อกแรก 8 (แถว 10-25) + ปิด 26 + เซ็น 27-28, ที่เหลือ 3 (29-34) + ปิด 35 + เซ็น 36-37
   const items = []; for (let i = 0; i < 11; i++) items.push(item);
   const built = frmBuildSheetRows(items, 2);
   eq('lastRow (11 items)', built.lastRow, 37);
   ok('sig after 8th', built.xml.includes('<row r="27" spans="1:43"'));
-  ok('item9 at r29 (first-row style ของหน้า 2)', built.xml.includes('<c r="A29" s="149"><v>9</v></c>'));
+  ok('item9 at r29 (first-row style ของหน้า 2)', built.xml.includes('<c r="A29" s="72"><v>9</v></c>'));
   eq('merges', built.merges.join(' '), 'AK27:AQ27 AK28:AQ28 AK36:AQ36 AK37:AQ37');
   eq('breaks (11 items) หลังบล็อกแรก', built.breaks.join(' '), '28');
   const built8 = frmBuildSheetRows(items.slice(0, 8), 2);
@@ -100,12 +100,12 @@ async function main() {
   // override รายเครื่อง (bar_start/bar_end/month_num) + name fallback
   const xo = frmBuildItemRows({ id_code: 'X', name: 'Y2', location: '', due_date: '2026-02-26', bar_start: 5, bar_end: 12, month_num: 3 }, 3, 14, 2, false);
   ok('ovr: name fallback', xo.includes('<t xml:space="preserve">Y2</t>'));
-  ok('ovr: due ยังลง E', xo.includes('<c r="E14" s="158"><v>46079</v></c>'));
-  ok('ovr: day4 bottom plain', xo.includes('<c r="I15" s="160"/>'));
+  ok('ovr: due ยังลง E', xo.includes('<c r="E14" s="81"><v>46079</v></c>'));
+  ok('ovr: day4 bottom plain', xo.includes('<c r="I15" s="83"/>'));
   ok('ovr: day5 num=3', xo.includes('<c r="J15" s="179"><v>3</v></c>'));
   ok('ovr: day12 num=3', xo.includes('<c r="Q15" s="179"><v>3</v></c>'));
-  ok('ovr: day13 bottom plain', xo.includes('<c r="R15" s="160"/>'));
-  ok('ovr: top day11 plain', xo.includes('<c r="P14" s="160"/>'));
+  ok('ovr: day13 bottom plain', xo.includes('<c r="R15" s="83"/>'));
+  ok('ovr: top day11 plain', xo.includes('<c r="P14" s="83"/>'));
   ok('ovr: top day12 blue', xo.includes('<c r="Q14" s="179"/>'));
   eq('clickRange first', JSON.stringify(frmClickRange({ pending: null }, 12)), '{"pending":12}');
   eq('clickRange second', JSON.stringify(frmClickRange({ pending: 12 }, 5)), '{"start":5,"end":12,"pending":null}');
@@ -132,7 +132,7 @@ async function main() {
     const z2 = await JSZip.loadAsync(blob);
     const sh = await z2.file('xl/worksheets/sheet1.xml').async('string');
     const dr = await z2.file('xl/drawings/drawing1.xml').async('string');
-    ok('render: rows in sheetData', sh.includes('<c r="A10" s="149"><v>1</v></c>') && sh.includes('<row r="37"'));
+    ok('render: rows in sheetData', sh.includes('<c r="A10" s="72"><v>1</v></c>') && sh.includes('<row r="37"'));
     ok('render: dimension', sh.includes('<dimension ref="A1:AR37"/>'));
     ok('render: merge added', sh.includes('<mergeCell ref="AK27:AQ27"/>') && sh.includes('<mergeCell ref="AK37:AQ37"/>'));
     ok('render: merge count', /<mergeCells count="(\d+)">/.exec(sh) && ((sh.match(/<mergeCell /g) || []).length === Number(/<mergeCells count="(\d+)">/.exec(sh)[1])));
