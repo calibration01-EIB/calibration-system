@@ -72,12 +72,11 @@ $sheet = [regex]::Replace($sheet, '<mergeCells count="\d+">', "<mergeCells count
 # 4) dimension
 $sheet = $sheet -replace '<dimension ref="[^"]*"/>', '<dimension ref="A1:AR9"/>'
 
-# 5) scale ลดจาก 77 (ต้นแบบ, ปรับสำหรับ 8 เครื่อง/หน้า) เป็น 73 ให้ 11 เครื่อง/หน้าพอดี 1 หน้ากระดาษ
-#    (วัดจริงด้วย Excel COM: 77/76/75 ล้น 1 แถวสุดท้ายไปหน้า 2 เสมอ, 74 พอดีพอดี, 73 มี margin กันพลาดข้ามเครื่องพิมพ์)
+# 5) scale ต้นแบบ 77% ใช้ตรงๆ ได้ — วัดจริงด้วย Excel COM แล้วว่า 10 เครื่อง/หน้า (FRM_ITEMS_PER_BLOCK)
+#    พอดี 1 หน้ากระดาษที่ scale 77 เป๊ะ ไม่ต้องลดขนาด (เคยลองลดเป็น 73 ตอน 11 เครื่อง/หน้าแล้วดูเล็กไม่เต็มหน้า จึงตัดกลับมาเป็น 10 เครื่อง/หน้าที่ 77 แทน)
 $scaleM = [regex]::Match($sheet, '<pageSetup [^>]*scale="(\d+)"')
 Assert $scaleM.Success 'pageSetup scale attribute'
-$sheet = $sheet.Replace($scaleM.Value, $scaleM.Value.Replace('scale="' + $scaleM.Groups[1].Value + '"', 'scale="73"'))
-Assert ($sheet -match '<pageSetup [^>]*scale="73"') 'scale patched to 73'
+Assert ($scaleM.Groups[1].Value -eq '77') "ต้นแบบ scale ควรเป็น 77 (got $($scaleM.Groups[1].Value)) — ถ้าเปลี่ยน ต้องวัดใหม่ด้วย Excel COM ว่า FRM_ITEMS_PER_BLOCK ยังพอดี 1 หน้าไหม"
 Write-Entry $zip 'xl/worksheets/sheet1.xml' $sheet
 
 # ---------- styles.xml: เพิ่มชุดแถบฟ้า (ต้นแบบไม่มีตัวอย่างแถบสี) ----------
