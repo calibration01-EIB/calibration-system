@@ -1175,14 +1175,15 @@ function renderCertBar() {
   const m = STATE_META[CAL_STATE];
   let a = '';
   if (CAL_STATE === 'draft')        a = `<button class="cbtn primary" onclick="issueCert()"><i class="ti ti-checks"></i> สอบเสร็จ → บันทึก + ออกเลข Cert</button>`;
-  else if (CAL_STATE === 'issued')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นเอกสาร</button><button class="cbtn" onclick="saveEdits()"><i class="ti ti-device-floppy"></i> บันทึกการแก้ไข</button><span style="font-size:12px;color:#7a8a87;align-self:center;margin-left:8px">แก้ข้อมูลได้จนกว่าจะเซ็น (แก้แล้วกด "บันทึกการแก้ไข") · ปริ้นไปเซ็น → แนบสแกน + ทำให้สมบูรณ์ ที่หน้าประวัติเครื่อง</span>`;
+  else if (CAL_STATE === 'issued')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นเอกสาร</button><button class="cbtn" onclick="saveEdits()"><i class="ti ti-device-floppy"></i> บันทึกการแก้ไข</button><span style="font-size:12px;color:#7a8a87;align-self:center;margin-left:8px">แก้ข้อมูล/เลข Cert (ช่องซ้าย) ได้จนกว่าจะเซ็น — แก้แล้วกด "บันทึกการแก้ไข" · ปริ้นไปเซ็น → แนบสแกน + ทำให้สมบูรณ์ ที่หน้าประวัติเครื่อง</span>`;
   else if (CAL_STATE === 'signed')  a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้น</button>`;
   else if (CAL_STATE === 'approved')a = `<button class="cbtn" onclick="printCert()"><i class="ti ti-printer"></i> ปริ้นซ้ำ</button><button class="cbtn" onclick="reviseCert()"><i class="ti ti-versions"></i> ออก revision</button>`;
   if (CAL_STATE === 'issued' || CAL_STATE === 'signed' || CAL_STATE === 'approved')
     a += `<button class="cbtn danger" onclick="voidCert()"><i class="ti ti-ban"></i> ยกเลิกใบ</button>`;
   // draft: ช่องใส่เลขเองตรงแถบเลย (ช่วงเปลี่ยนผ่าน เลขเดิมยังลงไม่ครบ) · ว่าง = รันอัตโนมัติ · sync กับ fCertNo
-  const certPart = CAL_STATE === 'draft'
-    ? `<input class="cbarCertIn" value="${String(val('fCertNo') || '').replace(/"/g, '&quot;')}" placeholder="ใส่เลขเอง เช่น 26B412 · ว่าง = รันอัตโนมัติ" oninput="syncCertNoInput(this)" style="padding:6px 10px;border:1.5px solid #cdddd9;border-radius:8px;font:inherit;font-size:12.5px;width:230px;max-width:100%">`
+  // issued: แก้เลขได้จนกว่าจะเซ็น (สอบเสร็จก่อน แล้วมารันเลขจริงจากสมุดทีหลัง) — แก้แล้วกด "บันทึกการแก้ไข"
+  const certPart = (CAL_STATE === 'draft' || CAL_STATE === 'issued')
+    ? `<input class="cbarCertIn" value="${String(val('fCertNo') || CERT_NO || '').replace(/"/g, '&quot;')}" placeholder="${CAL_STATE === 'draft' ? 'ใส่เลขเอง เช่น 26B412 · ว่าง = รันอัตโนมัติ' : 'แก้เลขแล้วกด บันทึกการแก้ไข'}" oninput="syncCertNoInput(this)" style="padding:6px 10px;border:1.5px solid #cdddd9;border-radius:8px;font:inherit;font-size:12.5px;width:230px;max-width:100%">`
     : `<b>${CERT_NO || '— ยังไม่ออกเลข —'}</b>`;
   const html = `<div class="cbar-info"><span class="cbar-no">เลขที่ Cert: ${certPart}</span><span class="cbadge ${m.cls}">${m.label}</span></div>`
     + `<div class="cbar-actions">${a}</div>`;
@@ -1349,23 +1350,56 @@ async function setRecStatus(status) {
   const db = sbx(); if (!db) return;
   try { await db.from('calibration_records').update({ status, revision: CERT_REV, cert_no: CERT_NO, updated_at: new Date().toISOString() }).eq('id', CAL_REC_ID); } catch (e) {}
 }
-// บันทึกการแก้ไขหลังออกเลข (เฉพาะ issued = ยังไม่เซ็น) — เขียนค่าบนจอทับ record เดิม เลขใบเดิม ไม่เพิ่ม revision
+// บันทึกการแก้ไขหลังออกเลข (เฉพาะ issued = ยังไม่เซ็น) — เขียนค่าบนจอทับ record เดิม ไม่เพิ่ม revision
+// เปลี่ยนเลข Cert ได้ด้วย (แก้ช่องเลขแล้วกดบันทึก) — รองรับ workflow สอบเสร็จก่อน แล้วมารันเลขจริงจากสมุดทีหลัง
 let SAVING_EDITS = false;
 async function saveEdits() {
   if (CAL_STATE !== 'issued' || SAVING_EDITS) return;
   if (!CAL_REC_ID) { alert('ไม่พบ record ของใบนี้ในระบบ — บันทึกการแก้ไขไม่ได้'); return; }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — บันทึกไม่ได้'); return; }
-  if (!confirm('บันทึกการแก้ไขทับข้อมูลใบ ' + CERT_NO + ' ?\n(เลขใบเดิม ไม่เพิ่ม revision — ใช้แก้ก่อนปริ้นไปเซ็นเท่านั้น)')) return;
+  // เลขใหม่จากช่อง Cert No. (สอบเสร็จก่อน แล้วมารันเลขจริงจากสมุดทีหลัง) — ว่าง/เท่าเดิม = คงเลขเดิม
+  const defYY = new Date((val('iDate') || localTodayISO()) + 'T00:00:00').getFullYear() % 100;
+  const manual = parseManualCertNo(val('fCertNo'), defYY);
+  if (manual && manual.err) { alert('⛔ ' + manual.err); return; }
+  const newNo = manual ? ('' + manual.yy + CERT_TC + String(manual.base).padStart(3, '0') + '-' + manual.rev) : CERT_NO;
+  const changingNo = newNo !== CERT_NO;
+  if (!confirm('บันทึกการแก้ไขทับข้อมูลใบ ' + CERT_NO + ' ?'
+    + (changingNo ? '\n\n⚠ เปลี่ยนเลขใบเป็น ' + newNo + ' (เลขเดิม ' + CERT_NO + ' จะไม่ถูกใช้กับใบนี้อีก)' : '')
+    + '\n(ไม่เพิ่ม revision — ใช้แก้ก่อนปริ้นไปเซ็นเท่านั้น)')) return;
   SAVING_EDITS = true;
   const _btns = [...document.querySelectorAll('.cbtn')];
   _btns.forEach(b => { b.disabled = true; });
-  // เลข Cert/งาน ต้องเป็นของใบนี้เสมอ (กันข้อ 1 ถูกแก้ช่องเลขแล้ว data ไม่ตรงกับ column)
-  if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
-  if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
+  const _old = { no: CERT_NO, yy: CERT_YY, base: CERT_BASE, rev: CERT_REV };
+  let seqId = null, prevLast = null;   // สำหรับคืนตัวรันถ้าบันทึกไม่สำเร็จ
   const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };
   try {
+    if (changingNo) {
+      // กันเลขซ้ำกับใบอื่น (ยกเว้นใบนี้เอง)
+      const { data: dup, error: dupErr } = await db.from('calibration_records').select('id').eq('cert_no', newNo).neq('id', CAL_REC_ID).limit(1);
+      if (dupErr) throw dupErr;
+      if (dup && dup.length) throw new Error('เลข Cert ' + newNo + ' มีในระบบแล้ว — ตรวจเลขที่ใส่อีกครั้ง');
+      // เลื่อนตัวรันอัตโนมัติให้วิ่งต่อจากเลขนี้ (ถ้าสูงกว่าลำดับปัจจุบัน) — เลขต่ำกว่า (ลงย้อนหลัง) ไม่แตะตัวรัน
+      const { data: seq, error: selErr } = await db.from('cert_sequences')
+        .select('id,last_number').eq('year_code', manual.yy).eq('type_code', CERT_TC).maybeSingle();
+      if (selErr) throw selErr;
+      if (!seq) {
+        const { data: ins, error } = await db.from('cert_sequences')
+          .insert({ year_code: manual.yy, type_code: CERT_TC, last_number: manual.base }).select('id').single();
+        if (error) throw error;
+        seqId = ins.id;   // แถวใหม่ — ไม่มีค่าเดิมให้คืน
+      } else if (seq.last_number < manual.base) {
+        seqId = seq.id; prevLast = seq.last_number;
+        const { error } = await db.from('cert_sequences').update({ last_number: manual.base, updated_at: new Date().toISOString() }).eq('id', seqId);
+        if (error) throw error;
+      }
+      CERT_YY = manual.yy; CERT_BASE = manual.base; CERT_REV = manual.rev; CERT_NO = newNo;
+    }
+    // เลข Cert/งาน ต้องเป็นของใบนี้เสมอ (กันข้อ 1 ถูกแก้ช่องเลขแล้ว data ไม่ตรงกับ column)
+    if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+    if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
     const upd = {
+      cert_no: CERT_NO, job_no: jobNoStr(), revision: CERT_REV,
       request_no: val('fReqNo') || null,
       cal_date: val('iDate') || localTodayISO(), date_recv: val('iDateRecv') || null, due_date: val('iDateNext') || null,
       calibrated_by: val('fCalBy') || null, location: val('cLocation') || null, procedure: val('fProcedure') || null,
@@ -1382,8 +1416,9 @@ async function saveEdits() {
     if (CAL_INST_ID) {
       try {
         const { data: cur } = await db.from('instruments').select('cert_no').eq('id', CAL_INST_ID).single();
-        if (cur && cur.cert_no === CERT_NO) {
+        if (cur && (cur.cert_no === _old.no || cur.cert_no === CERT_NO)) {
           const { error: iErr } = await db.from('instruments').update({
+            cert_no: CERT_NO,
             cal_date: upd.cal_date, due_date: upd.due_date, job_no: jobNoStr(), request_no: upd.request_no,
             brand: val('eMfr') || null, model: val('eModel') || null, serial_no: val('eSerial') || null,
             id_code: val('eId') || null, range_val: val('eUserRange') || null,
@@ -1394,9 +1429,18 @@ async function saveEdits() {
         }
       } catch (e) { instNote = '\n⚠ อัปเดตทะเบียนเครื่องไม่ได้: ' + (e && e.message); }
     }
-    alert('✅ บันทึกการแก้ไขใบ ' + CERT_NO + ' แล้ว' + instNote);
+    alert('✅ บันทึกการแก้ไขใบ ' + CERT_NO + ' แล้ว' + (changingNo ? '\n(เปลี่ยนเลขจาก ' + _old.no + ' → ' + CERT_NO + ')' : '') + instNote);
+    renderCertBar();        // แถบเลขแสดงเลขใหม่
     switchMode('review');   // ล็อกข้อ 2–5 กลับ ให้ตรวจอีกรอบก่อนปริ้น
   } catch (e) {
+    // คืนสถานะเลขเดิม + คืนตัวรัน (เฉพาะที่เราแก้ไป) เมื่อบันทึกไม่สำเร็จ
+    if (changingNo) {
+      CERT_NO = _old.no; CERT_YY = _old.yy; CERT_BASE = _old.base; CERT_REV = _old.rev;
+      if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
+      if (seqId != null && prevLast != null) {
+        try { await db.from('cert_sequences').update({ last_number: prevLast }).eq('id', seqId); } catch (_) {}
+      }
+    }
     alert('บันทึกการแก้ไขไม่สำเร็จ: ' + (e && e.message ? e.message : e));
   } finally {
     SAVING_EDITS = false;
