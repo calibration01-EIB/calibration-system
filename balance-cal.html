@@ -585,11 +585,13 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
         <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="eccDetail" class="calc">–</span></div></div>
       </div>
       <div>
-        <div class="section-sub">3.5 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g</div>
+        <div class="section-sub">3.5 Effect of tare — tare ที่ <input id="tareWt" type="number" value="1000" style="width:70px;min-height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--input-edit)"> g
+          <button type="button" class="mbtn" style="min-height:28px;font-size:11.5px;padding:0 10px;margin-left:6px" onclick="suggestTare()" title="ตุ้มตรวจสอบ ~25% และ ~50% ของพิกัด (ปัดลงเป็นตุ้ม 1-2-5) · tare = ค่า ~50%"><i class="ti ti-wand"></i> ตั้งตามพิกัด 25/50%</button></div>
         <table class="tbl">
-          <thead><tr><th class="num">ตุ้มตรวจสอบ (g)</th><th>อ่านได้ (g)</th><th class="num">ผลต่าง (g)</th></tr></thead>
+          <thead><tr><th>ตุ้มตรวจสอบ (g)</th><th>อ่านได้ (g)</th><th class="num">ผลต่าง (g)</th></tr></thead>
           <tbody id="tareRows"></tbody>
         </table>
+        <div class="note" style="margin-top:8px"><i class="ti ti-info-circle"></i><div>ตาม WI: ตุ้ม tare ~25–50% ของพิกัด · ตุ้มตรวจสอบที่ ~25% และ ~50% ของพิกัด · ตุ้ม tare + ตุ้มตรวจสอบ รวมกันต้องไม่เกินพิกัดเครื่องชั่ง</div></div>
         <div class="note" style="margin-top:8px"><i class="ti ti-square-root-2"></i><div>วิธีคำนวณ: <span id="tareDetail" class="calc">–</span></div></div>
         <div class="note" style="margin-top:8px"><i class="ti ti-adjustments"></i><div>Sensitivity test: ไม่ใช้กับงานนี้ (เปิด/ปิดได้ต่อเครื่อง)</div></div>
       </div>
@@ -654,7 +656,7 @@ SAMUTPRAKAN PROVINCE, 10540, THAILAND</textarea></div>
   </section>
 </main>
 
-<script src="js/balance-cal.js?v=20260709-calc-detail"></script>
+<script src="js/balance-cal.js?v=20260720-tare-editable"></script>
 <!-- ============ สลับ "เต็มจอย่อ": ให้มือถือเรนเดอร์เลย์เอาต์แท็บเล็ต (viewport 980) แล้วย่อพอดีจอ ============ -->
 <script>
 (function () {

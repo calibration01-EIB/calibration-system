@@ -7,7 +7,7 @@ const READS = { 1:[1,1,1], 10:[10,10,10], 20:[20,20,20], 50:[50,50,50], 100:[100
 const REP_READS = [2000,2000,2000,2000,2000,2000,2000,2000,2000,2000];
 const PL_READS = [2999.99, 2999.99, 2999.99];
 const ECC = [['Middle (1)',1000],['Front left (2)',1000],['Back left (3)',1000.01],['Back right (4)',999.99],['Front right (5)',999.99]];
-const TARE = [[500,500],[2000,2000]];
+let TARE = [[500,500],[2000,2000]];   // [ตุ้มตรวจสอบ, ค่าอ่าน] — ตุ้มแก้ได้ในตาราง · WI 5.2.13: ตรวจที่ ~25% และ ~50% ของพิกัด
 let TOLS = [   // tolerance bands (เกณฑ์ผ่าน/ไม่ผ่าน) — tol ในหน่วย unit · from/to เป็น g
   { from: 0, to: 300, tol: 0.05, unit: 'g' },
   { from: 300, to: 1000, tol: 0.10, unit: 'g' },
@@ -228,13 +228,40 @@ function buildStatic() {
     <td class="num calc" id="eccD${i}">–</td>
   </tr>`).join('');
 
+  renderTareRows();
+
+  renderPointRows();
+}
+// 3.5 Effect of tare — ตุ้มตรวจสอบเป็นช่องกรอก (ไม่ฟิก) · WI 5.2.13.2: ~25% และ ~50% ของพิกัด
+function renderTareRows() {
   byId('tareRows').innerHTML = TARE.map((t,i) => `<tr>
-    <td class="num">${t[0]}</td>
+    <td><input type="number" step="any" class="tareNom" value="${t[0]}" placeholder="g" oninput="recalc()"></td>
     <td><input type="number" step="any" class="tareIn" value="${t[1]}" placeholder="g" oninput="recalc()"></td>
     <td class="num calc" id="tareD${i}">–</td>
   </tr>`).join('');
-
-  renderPointRows();
+}
+// ปัดลงเป็นค่าตุ้มเดี่ยวชุด 1-2-5 (525 → 500, 1050 → 1000) — ตามตัวอย่างใน WI
+function niceWeight(g) {
+  if (!Number.isFinite(g) || g <= 0) return '';
+  const p = Math.pow(10, Math.floor(Math.log10(g)));
+  const m = g / p;
+  return (m >= 5 ? 5 : m >= 2 ? 2 : 1) * p;
+}
+// ตั้งดีฟอลต์ข้อ 3.5 จากพิกัด: ตุ้มตรวจสอบ ~25% / ~50% · tare = ค่า ~50% (อยู่ในช่วง 25-50% ตาม WI 5.2.13.1
+// และ tare + ตุ้มตรวจสอบ ไม่เกินพิกัดเสมอ เพราะปัดลงทั้งคู่) · blankReads=true → ล้างค่าอ่านให้กรอกใหม่
+function applyTareDefaults(cap, blankReads) {
+  if (!Number.isFinite(cap) || cap <= 0) return false;
+  const c25 = niceWeight(cap * 0.25), c50 = niceWeight(cap * 0.5);
+  const reads = blankReads ? ['', ''] : [...document.querySelectorAll('.tareIn')].map(el => el.value);
+  TARE = [[c25, reads[0] != null ? reads[0] : ''], [c50, reads[1] != null ? reads[1] : '']];
+  const tw = byId('tareWt'); if (tw) tw.value = c50;
+  renderTareRows();
+  return true;
+}
+function suggestTare() {
+  const cap = parseFloat(val('iCap'));
+  if (!applyTareDefaults(cap, true)) { alert('กรุณาระบุพิกัด Max ของเครื่องชั่งก่อน'); return; }
+  recalc();
 }
 // ตารางผลดิบ (st3) — สร้างจาก POINTS · fresh=true → รีเซ็ตค่าอ่านเป็นดีฟอลต์ · ไม่งั้นคงค่าที่กรอก
 function renderErrRows(fresh) {
@@ -296,7 +323,8 @@ function captureRangeData() {
     repPoint: val('repPoint'), repReads: [...document.querySelectorAll('.repIn')].map(el => el.value),
     plPoint: val('plPoint'), plReads: [...document.querySelectorAll('.plIn')].map(el => el.value),
     eccWt: val('eccWt'), eccPan: val('eccPan'), eccReads: [...document.querySelectorAll('.eccIn')].map(el => el.value),
-    tareWt: val('tareWt'), tareChecks: TARE.map((t, i) => { const els = [...document.querySelectorAll('.tareIn')]; return [t[0], els[i] ? els[i].value : '']; }),
+    tareWt: val('tareWt'), tareChecks: (() => { const reads = [...document.querySelectorAll('.tareIn')];
+      return [...document.querySelectorAll('.tareNom')].map((n, i) => [n.value, reads[i] ? reads[i].value : '']); })(),
   };
 }
 // แปลง range object ที่โหลดมา (record/instrument) → รูปแบบมาตรฐาน
@@ -322,6 +350,7 @@ function applyRangeData(r) {
   if (Array.isArray(r.tols)) TOLS = r.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: (t.tol != null && t.tol !== '' ? Number(t.tol) : ''), unit: t.unit || 'g' }));
   if (Array.isArray(r.dsegs)) DSEGS = r.dsegs.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) })).filter(s => Number.isFinite(s.to));
   if (Array.isArray(r.points) && r.points.length) POINTS = r.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
+  if (Array.isArray(r.tareChecks) && r.tareChecks.length) TARE = r.tareChecks.map(c => [c[0], c[1] != null ? c[1] : '']);
   buildStatic();
   if (r.eccPan != null) setv('eccPan', r.eccPan);
   const setInputs = (cls, arr) => { const els = [...document.querySelectorAll(cls)]; (arr || []).forEach((v, i) => { if (els[i] && v != null && v !== '') els[i].value = v; }); };
@@ -502,10 +531,12 @@ function recalc() {
     ? `ต่างจากกลาง = อ่านได้ − ตำแหน่ง 1 (กลาง) · สูงสุดที่ตำแหน่ง ${eccMaxIdx + 1}: ${fmt(eccVals[eccMaxIdx],4)} − ${fmt(eccVals[0],4)} = ${fmt(eccMax,4)} g`
     : '–';
   const tareParts = [];
+  const tareNomEls = [...document.querySelectorAll('.tareNom')];
   [...document.querySelectorAll('.tareIn')].forEach((el, i) => {
-    const tDiff = TARE[i][0] - parseFloat(el.value);
+    const nom = parseFloat(tareNomEls[i] ? tareNomEls[i].value : '');
+    const tDiff = nom - parseFloat(el.value);
     byId('tareD'+i).textContent = fmt(tDiff, 4);
-    if (Number.isFinite(tDiff)) tareParts.push(`${TARE[i][0]} − ${fmt(parseFloat(el.value),4)} = ${fmt(tDiff,4)}`);
+    if (Number.isFinite(tDiff)) tareParts.push(`${nom} − ${fmt(parseFloat(el.value),4)} = ${fmt(tDiff,4)}`);
   });
   if (byId('tareDetail')) byId('tareDetail').textContent = tareParts.length
     ? `ผลต่าง = ตุ้มตรวจสอบ − อ่านได้ : ${tareParts.join(' · ')} g`
@@ -644,6 +675,7 @@ function buildCALSingle() {
   const plReads = [...document.querySelectorAll('.plIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
   const eccReads = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
   const tareEls  = [...document.querySelectorAll('.tareIn')];
+  const tareNomEls = [...document.querySelectorAll('.tareNom')];
   const dateCal = val('iDate') || val('iDateRecv');
 
   const points = rows.map((p, i) => {
@@ -688,7 +720,7 @@ function buildCALSingle() {
     repeat: { point: num('repPoint', 0), reads: reps },
     points,
     ecc:  { wt: num('eccWt', 0), positions: ECC.map(e => e[0]), reads: eccReads, pan: parseInt(val('eccPan'), 10) || 0 },
-    tare: { wt: num('tareWt', 0), checks: TARE.map((t, i) => [t[0], parseFloat(tareEls[i].value)]) },
+    tare: { wt: num('tareWt', 0), checks: tareNomEls.map((n, i) => [parseFloat(n.value), tareEls[i] ? parseFloat(tareEls[i].value) : NaN]) },
     signers: { tech_mgr: val('sTechMgr'), approver_pos: val('sApproverPos') },
     tols: TOLS.map(t => ({ from: t.from, to: t.to, tol: t.tol, unit: t.unit || 'g' })),   // tolerance bands (มีหน่วย) → คืนค่าตอนเปิดดู (#rec=)
     dsegs: DSEGS.map(s => ({ to: s.to, d: s.d })),                                          // d-segments (multi-interval)
@@ -1015,7 +1047,8 @@ function applyIncomingInst(inst) {
         max: max, res: (s.d != null && s.d !== '' ? Number(s.d) : ''), userRange: s.userRange || '',
         tols: [{ from: 0, to: max, tol: (s.tol != null && s.tol !== '' ? Number(s.tol) : ''), unit: s.unit || 'g' }],
         dsegs: [], points: [],
-        repPoint: '', repReads: [], plPoint: '', plReads: [], eccWt: '', eccPan: 0, eccReads: [], tareWt: '', tareChecks: [],
+        repPoint: '', repReads: [], plPoint: '', plReads: [], eccWt: '', eccPan: 0, eccReads: [],
+        tareWt: niceWeight(max * 0.5), tareChecks: [[niceWeight(max * 0.25), ''], [niceWeight(max * 0.5), '']],
       });
     });
     ACTIVE_RANGE = 0; applyRangeData(RANGES[0]);
@@ -1498,11 +1531,12 @@ function fillFromCAL(cal) {
   if (Array.isArray(cal.tols) && cal.tols.length) TOLS = cal.tols.map(t => ({ from: Number(t.from), to: Number(t.to), tol: (t.tol != null && t.tol !== '' ? Number(t.tol) : ''), unit: t.unit || 'g' }));
   if (Array.isArray(cal.dsegs)) DSEGS = cal.dsegs.map(s => ({ to: Number(s.to), d: (s.d != null && s.d !== '' ? Number(s.d) : undefined) })).filter(s => Number.isFinite(s.to));
   if (Array.isArray(cal.points) && cal.points.length) POINTS = cal.points.map(p => ({ nominal: Number(p.nominal), corr: 0, U: 0 }));
-  // REP_READS/PL_READS/ECC/TARE เป็น const (โครงสร้าง default) — ค่าจริงอยู่ใน input · เขียนทับ input หลัง buildStatic
+  // REP_READS/PL_READS/ECC เป็น const (โครงสร้าง default) — ค่าจริงอยู่ใน input · เขียนทับ input หลัง buildStatic
   setv('repPoint', cal.repeat && cal.repeat.point);
   setv('plPoint', cal.preload && cal.preload.point);
   setv('eccWt', cal.ecc && cal.ecc.wt);
   setv('tareWt', cal.tare && cal.tare.wt);
+  if (cal.tare && Array.isArray(cal.tare.checks) && cal.tare.checks.length) TARE = cal.tare.checks.map(c => [c[0], c[1] != null ? c[1] : '']);
   buildStatic();   // render ตารางตามโครงสร้าง (ค่าอ่าน default) → แล้วเขียนทับด้วยค่าจาก record
   if (cal.ecc && cal.ecc.pan != null) setv('eccPan', cal.ecc.pan);
   const setInputs = (cls, arr) => { const els = [...document.querySelectorAll(cls)]; (arr || []).forEach((v, i) => { if (els[i] && v != null) els[i].value = v; }); };
@@ -1746,7 +1780,8 @@ async function loadFromDB() {
     } else {
       await loadLastCalForPrefill();
       // ไม่ auto ใส่พรีเซ็ท/ตุ้มให้เครื่องที่ไม่เคยสอบ — ล้างจุด/ตุ้ม mock ให้ section ว่าง ผู้ใช้เลือกพรีเซ็ทเอง
-      if (INCOMING_INST && !PREFILL_REC) { POINTS = []; SELECTED_SETS = []; deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); recalc(); }
+      // ยกเว้นข้อ 3.5: ตุ้มตรวจสอบ tare ตั้งตาม WI (~25%/~50% ของพิกัด) ให้เลย ค่าอ่านเว้นว่าง
+      if (INCOMING_INST && !PREFILL_REC) { POINTS = []; SELECTED_SETS = []; deriveStds(); rebuildAvail(); assignWeights(); rebuildPoints(true); renderStdTable(); renderWeightPicker(); applyTareDefaults(parseFloat(val('iCap')), true); recalc(); }
     }
   } catch (e) { console.warn('loadFromDB:', e && e.message); }   // ผิดพลาด → คงค่า mock
 }
