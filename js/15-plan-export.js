@@ -22,7 +22,7 @@ const FRM_SIG_TEXT = {
   unit: 'ระดับหน่วยขึ้นไป ( Supervisor level and above)'
 };
 const FRM_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const FRM_ITEMS_PER_BLOCK = 8; // 8 เครื่อง/หน้า ตามต้นแบบที่ย่อให้พอดี 1 หน้า
+const FRM_ITEMS_PER_BLOCK = 11; // 11 เครื่อง/หน้า ตามต้นแบบที่ย่อให้พอดี 1 หน้า
 const FRM_OTHER_BLANK = '____________________________';
 
 function frmColLetter(n) {

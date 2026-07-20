@@ -57,18 +57,18 @@ async function main() {
   ok('closing row attrs', closing.includes('<row r="26" spans="1:44" ht="21.75" customHeight="1">'));
   ok('closing styles', closing.includes('<c r="A26" s="95"/>') && closing.includes('<c r="F26" s="96"/>') && closing.includes('<c r="AJ26" s="98"/>') && closing.includes('<c r="AQ26" s="100"/>'));
 
-  // 8 เครื่อง/บล็อก: 11 เครื่อง = บล็อกแรก 8 (แถว 10-25) + ปิด 26 + เซ็น 27-28, ที่เหลือ 3 (29-34) + ปิด 35 + เซ็น 36-37
-  const items = []; for (let i = 0; i < 11; i++) items.push(item);
+  // 11 เครื่อง/บล็อก (scale=73 พอดี 1 หน้า วัดจริงด้วย Excel COM 2026-07-20): 14 เครื่อง = บล็อกแรก 11 (แถว 10-31) + ปิด 32 + เซ็น 33-34, ที่เหลือ 3 (35-40) + ปิด 41 + เซ็น 42-43
+  const items = []; for (let i = 0; i < 14; i++) items.push(item);
   const built = frmBuildSheetRows(items, 2);
-  eq('lastRow (11 items)', built.lastRow, 37);
-  ok('sig after 8th', built.xml.includes('<row r="27" spans="1:43"'));
-  ok('item9 at r29 (first-row style ของหน้า 2)', built.xml.includes('<c r="A29" s="72"><v>9</v></c>'));
-  eq('merges', built.merges.join(' '), 'AK27:AQ27 AK28:AQ28 AK36:AQ36 AK37:AQ37');
-  eq('breaks (11 items) หลังบล็อกแรก', built.breaks.join(' '), '28');
-  const built8 = frmBuildSheetRows(items.slice(0, 8), 2);
-  eq('lastRow (8 items, sig once)', built8.lastRow, 28);
-  eq('merges (8 items)', built8.merges.join(' '), 'AK27:AQ27 AK28:AQ28');
-  eq('breaks (8 items) ไม่มี', built8.breaks.length, 0);
+  eq('lastRow (14 items)', built.lastRow, 43);
+  ok('sig after 11th', built.xml.includes('<row r="33" spans="1:43"'));
+  ok('item12 at r35 (first-row style ของหน้า 2)', built.xml.includes('<c r="A35" s="72"><v>12</v></c>'));
+  eq('merges', built.merges.join(' '), 'AK33:AQ33 AK34:AQ34 AK42:AQ42 AK43:AQ43');
+  eq('breaks (14 items) หลังบล็อกแรก', built.breaks.join(' '), '34');
+  const built11 = frmBuildSheetRows(items.slice(0, 11), 2);
+  eq('lastRow (11 items, sig once)', built11.lastRow, 34);
+  eq('merges (11 items)', built11.merges.join(' '), 'AK33:AQ33 AK34:AQ34');
+  eq('breaks (11 items) ไม่มี', built11.breaks.length, 0);
 
   // 1 แผน = 1 หน่วยงาน (ID CODE 4 ตัวแรก) + 1 ประเภทเครื่องมือ — WRM1/WRM2 ต้องแยกกัน
   eq('unitCode WRM1', frmUnitCode({ id_code: 'WRM1BB05-WI01' }), 'WRM1');
@@ -128,13 +128,13 @@ async function main() {
     });
     const header = { monthNum: 2, year: 2026, group: 'BALANCE', unit: 'General Raw Material:WRM1',
       section: 'Warehouse - Raw Material', internal: true, external: false, drug: false, cosmetic: true, otherText: '' };
-    const blob = await frmRenderTemplate(buf, header, items); // 11 ชิ้นจาก block ก่อนหน้า
+    const blob = await frmRenderTemplate(buf, header, items); // 14 ชิ้นจาก block ก่อนหน้า
     const z2 = await JSZip.loadAsync(blob);
     const sh = await z2.file('xl/worksheets/sheet1.xml').async('string');
     const dr = await z2.file('xl/drawings/drawing1.xml').async('string');
-    ok('render: rows in sheetData', sh.includes('<c r="A10" s="72"><v>1</v></c>') && sh.includes('<row r="37"'));
-    ok('render: dimension', sh.includes('<dimension ref="A1:AR37"/>'));
-    ok('render: merge added', sh.includes('<mergeCell ref="AK27:AQ27"/>') && sh.includes('<mergeCell ref="AK37:AQ37"/>'));
+    ok('render: rows in sheetData', sh.includes('<c r="A10" s="72"><v>1</v></c>') && sh.includes('<row r="43"'));
+    ok('render: dimension', sh.includes('<dimension ref="A1:AR43"/>'));
+    ok('render: merge added', sh.includes('<mergeCell ref="AK33:AQ33"/>') && sh.includes('<mergeCell ref="AK43:AQ43"/>'));
     ok('render: merge count', /<mergeCells count="(\d+)">/.exec(sh) && ((sh.match(/<mergeCell /g) || []).length === Number(/<mergeCells count="(\d+)">/.exec(sh)[1])));
     ok('render: no token left (sheet)', sh.indexOf('{{') < 0);
     ok('render: no token left (drawing)', dr.indexOf('{{') < 0);
@@ -145,7 +145,7 @@ async function main() {
     ok('render: chk int/ext', sh.includes('☑ สอบเทียบภายใน') && sh.includes('☐ สอบเทียบภายนอก'));
     ok('render: chk drug/cos', sh.includes('☐ Drug product') && sh.includes('☑ Cosmetic product'));
     ok('render: other blank', sh.includes('☐ Other ____'));
-    ok('render: row break หลังบล็อกแรก', sh.includes('<rowBreaks count="1" manualBreakCount="1"><brk id="28" max="16383" man="1"/></rowBreaks>'));
+    ok('render: row break หลังบล็อกแรก', sh.includes('<rowBreaks count="1" manualBreakCount="1"><brk id="34" max="16383" man="1"/></rowBreaks>'));
     // base64 สำหรับ E2E (Task 5)
     document.getElementById('b64').textContent = await new Promise(res => {
       const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob);
