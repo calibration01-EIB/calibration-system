@@ -308,8 +308,8 @@ function budget(nominal_g, U_std_mg, ds_mg, dPt) {
   const k = kFromVeff(veff);
   const U = uc * k;
   const cmc = cmcFor(nominal_g);
-  // floor เป็น CMC ถ้า U ≤ CMC · ไม่งั้นปัด: นน. ≥ 1000 g เต็มหน่วย mg, < 1000 g เป็น 2 เลขนัยสำคัญ
-  const Ufinal = (cmc > 0 && U <= cmc) ? cmc : (nominal_g >= 1000 ? Math.ceil(U - 1e-9) : roundUp2sf(U));
+  // floor เป็น CMC ถ้า U ≤ CMC · ไม่งั้นปัดขึ้น 2 เลขนัยสำคัญทุกจุด
+  const Ufinal = (cmc > 0 && U <= cmc) ? cmc : roundUp2sf(U);
   return { uWS, uDS, dsUse, udo, ud, ab, uAb, uR, uc, veff, k, U, cmc, Ufinal, dmg };
 }
 // แถว ZERO + ทุกจุด

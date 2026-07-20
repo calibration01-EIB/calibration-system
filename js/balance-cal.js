@@ -107,9 +107,9 @@ function roundUp2sf(v) {
   return Math.ceil(v / factor - 1e-9) * factor;
 }
 
-// ปัดเศษ U สำหรับรายงาน: นน. ≥ 1000 g → ปัดขึ้นเต็มหน่วย mg · < 1000 g → ปัดขึ้น 2 เลขนัยสำคัญ
-function roundRepU(U_mg, nominal_g) {
-  return nominal_g >= 1000 ? Math.ceil(U_mg - 1e-9) : roundUp2sf(U_mg);
+// ปัดเศษ U สำหรับรายงาน: ปัดขึ้น 2 เลขนัยสำคัญทุกจุด (UKAS M3003)
+function roundRepU(U_mg) {
+  return roundUp2sf(U_mg);
 }
 // แสดง U รายงาน: > 100 mg → หน่วย g · มิฉะนั้น mg
 function fmtRepU(mg) {
@@ -566,7 +566,7 @@ function recalc() {
     // CMC floor: ถ้า U คำนวณ ≤ CMC ที่เครมไว้ → รายงานเป็น CMC แทน
     const cmc = cmcFor(p.nominal);
     const usedCMC = cmc > 0 && Uk <= cmc;
-    const Urep = usedCMC ? cmc : (roundUp ? roundRepU(Uk, p.nominal) : Uk);
+    const Urep = usedCMC ? cmc : (roundUp ? roundRepU(Uk) : Uk);
     p.Ufinal_mg = Urep; p.k = k; p.veff = veff;
     return `<tr onclick="showUncDetail(${i})" style="cursor:pointer">
       <td><strong>${p.nominal}</strong></td>
