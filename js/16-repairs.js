@@ -303,6 +303,9 @@ function renderRepairOrderView(orderId) {
         <input type="file" id="repairFileInput" multiple accept="application/pdf,image/*" style="display:none" onchange="uploadRepairFiles('${o.id}', this)">
         ${canEdit ? `<button onclick="document.getElementById('repairFileInput').click()" style="margin-top:6px;background:none;border:1px dashed var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:var(--font);font-size:12px">+ แนบไฟล์ (รูป/PDF)</button>` : ''}</div>
       ${actions}
+      ${canEdit && o.status === 'unrepairable' && d && !(typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d))
+        ? `<button onclick="cancelInstrumentUse(${o.instrument_id}, '${escapeJsSingle(fmtRepairDate(o.completed_date))}').then(ok=>{showToast(ok?'ยกเลิกใช้งานเครื่องแล้ว':'ยังไม่สำเร็จ', ok?'success':'error');renderRepairOrderView('${o.id}')})"
+            style="background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;font-family:var(--font)">⚠️ เครื่องยังไม่ถูกยกเลิกใช้งาน — กดเพื่อลองใหม่</button>` : ''}
       ${cancelBtn}
     </div>`;
   if (typeof loadRepairFiles === 'function') loadRepairFiles(o.id);
@@ -342,8 +345,44 @@ async function repairCancelOrder(orderId) {
     renderRepairOrderView(orderId);
 }
 
-// Task 5 แทนที่ — stub กัน onclick พัง
-async function repairUnrepairable(orderId) {}
+// Task 5 — ตั้งสถานะเครื่อง "ยกเลิกสอบเทียบ" ผ่าน remark marker
+async function cancelInstrumentUse(instrumentId, refDateText) {
+  const d = repairInstrument(instrumentId);
+  if (!d) return false;
+  const clean = typeof window.stripCalibrationCancelMarker === 'function'
+    ? window.stripCalibrationCancelMarker(d.remark) : (d.remark || '');
+  const note = `ยกเลิกใช้งาน — ซ่อมไม่ได้ (อ้างอิงงานซ่อมวันที่ ${refDateText})`;
+  const remark = ['ยกเลิกสอบเทียบ', note, clean].filter(Boolean).join('\n');
+  const { error } = await sb.from('instruments').update({ remark }).eq('id', instrumentId);
+  if (error) return false;
+  logAudit('ยกเลิกใช้งานเครื่อง (ซ่อมไม่ได้)', d, { note });
+  try { localStorage.removeItem(getInstrumentCachePrefix() + '_time'); } catch (e) {}
+  loadData(true);   // refresh ทะเบียน → badge ยกเลิกสอบเทียบขึ้นทันที
+  return true;
+}
+
+async function repairUnrepairable(orderId) {
+  const o = repairOrders.find(x => x.id === orderId);
+  if (!o) return;
+  if (!confirm('ยืนยันปิดงานเป็น "ซ่อมไม่ได้" — เครื่องนี้จะถูกยกเลิกใช้งาน (ยกเลิกสอบเทียบ) ทันที?')) return;
+  const patch = {
+    status: 'unrepairable',
+    cause: document.getElementById('repCause')?.value.trim() || null,
+    action_taken: document.getElementById('repAction')?.value.trim() || null,
+    cost: document.getElementById('repCost')?.value ? Number(document.getElementById('repCost').value) : null,
+    completed_date: document.getElementById('repDone')?.value || new Date().toISOString().slice(0, 10),
+    need_recal: false,
+  };
+  if (!(await updateRepairOrder(orderId, patch, 'ปิดงานซ่อม (ซ่อมไม่ได้)'))) return;
+  const ok = await cancelInstrumentUse(o.instrument_id, fmtRepairDate(patch.completed_date));
+  if (!ok) {
+    showToast('ปิดงานแล้ว แต่ตั้งสถานะยกเลิกใช้งานเครื่องไม่สำเร็จ — กดปุ่มลองใหม่ในใบงาน', 'error');
+    // ปุ่มลองใหม่: render view จะเห็นสถานะ unrepairable — เพิ่มปุ่ม retry ด้านล่าง
+  } else {
+    showToast('ปิดงานและยกเลิกใช้งานเครื่องแล้ว', 'success');
+  }
+  renderRepairOrderView(orderId);
+}
 // Task 6 แทนที่
 async function uploadRepairFiles(orderId, input) {}
 async function loadRepairFiles(orderId) {}
