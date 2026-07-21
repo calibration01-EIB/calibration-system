@@ -237,7 +237,117 @@ async function saveRepairReport() {
   openRepairModal(data.id);   // เปิดต่อเป็นโหมดดูงาน
 }
 
-function renderRepairOrderView(orderId) {}
+async function updateRepairOrder(orderId, patch, auditAction, auditChanges) {
+  const o = repairOrders.find(x => x.id === orderId);
+  const { error } = await sb.from('repair_orders').update({
+    ...patch, updated_at: new Date().toISOString(), updated_by: currentUser?.name || 'Unknown',
+  }).eq('id', orderId);
+  if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return false; }
+  if (auditAction) logAudit(auditAction, repairInstrument(o?.instrument_id), auditChanges || patch);
+  await loadRepairData();
+  renderRepairSummary(); renderRepairsTable();
+  return true;
+}
+
+function repairField(label, inputHtml) {
+  return `<div><label style="font-size:12px;font-weight:600">${label}</label>${inputHtml}</div>`;
+}
+const REP_INPUT_STYLE = 'width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)';
+
+function renderRepairOrderView(orderId) {
+  const o = repairOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const d = repairInstrument(o.instrument_id);
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  document.getElementById('repairModalTitle').innerHTML = `🔧 งานซ่อม ${repairStatusBadge(o.status)}`;
+  document.getElementById('repairModalSub').textContent =
+    `${d?.id_code || '?'} · ${d?.instrument_name || ''} · แจ้ง ${fmtRepairDate(o.reported_date)} โดย ${o.reported_by || '–'}`;
+
+  const info = `
+    <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+      <div><strong>อาการเสีย:</strong> ${escapeHtmlText(o.symptom || '–')}</div>
+      ${o.repair_type ? `<div><strong>ผู้ซ่อม:</strong> ${o.repair_type === 'external' ? 'ภายนอก — ' + escapeHtmlText(o.vendor_name || '–') : 'ภายใน'}</div>` : ''}
+      ${o.cause ? `<div><strong>สาเหตุ:</strong> ${escapeHtmlText(o.cause)}</div>` : ''}
+      ${o.action_taken ? `<div><strong>การแก้ไข:</strong> ${escapeHtmlText(o.action_taken)}</div>` : ''}
+      ${o.cost != null ? `<div><strong>ค่าใช้จ่าย:</strong> ${fmtBaht(o.cost)} บาท</div>` : ''}
+      ${o.completed_date ? `<div><strong>วันที่ปิดงาน:</strong> ${fmtRepairDate(o.completed_date)}${o.status === 'completed' ? (o.need_recal ? ' · ต้องสอบเทียบใหม่' : ' · ไม่ต้องสอบเทียบใหม่') : ''}</div>` : ''}
+    </div>`;
+
+  let actions = '';
+  if (canEdit && o.status === 'reported') actions = `
+    <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-weight:600;font-size:13px">▶ เริ่มซ่อม</div>
+      ${repairField('ซ่อมโดย', `<select id="repType" style="${REP_INPUT_STYLE}" onchange="document.getElementById('repVendorWrap').style.display=this.value==='external'?'':'none'">
+        <option value="internal">ภายใน (ซ่อมเอง)</option><option value="external">ภายนอก (ส่งซ่อม)</option></select>`)}
+      <div id="repVendorWrap" style="display:none">${repairField('ชื่อผู้ซ่อม / บริษัท', `<input id="repVendor" style="${REP_INPUT_STYLE}">`)}</div>
+      <button onclick="repairStart('${o.id}')" style="background:#b91c1c;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;font-family:var(--font)">เริ่มซ่อม / ส่งซ่อม</button>
+    </div>`;
+  if (canEdit && o.status === 'in_progress') actions = `
+    <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-weight:600;font-size:13px">✅ ปิดงานซ่อม</div>
+      ${repairField('สาเหตุ', `<textarea id="repCause" rows="2" style="${REP_INPUT_STYLE}"></textarea>`)}
+      ${repairField('การแก้ไข', `<textarea id="repAction" rows="2" style="${REP_INPUT_STYLE}"></textarea>`)}
+      ${repairField('ค่าใช้จ่าย (บาท)', `<input id="repCost" type="number" min="0" step="0.01" style="${REP_INPUT_STYLE}">`)}
+      ${repairField('วันที่ซ่อมเสร็จ', `<input id="repDone" type="date" value="${new Date().toISOString().slice(0,10)}" style="${REP_INPUT_STYLE}">`)}
+      <label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="repRecal" checked> ต้องสอบเทียบใหม่หลังซ่อม</label>
+      <button onclick="repairComplete('${o.id}')" style="background:#0b7a44;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;font-family:var(--font)">ปิดงาน — ซ่อมเสร็จ</button>
+      <button onclick="repairUnrepairable('${o.id}')" style="background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;font-family:var(--font)">ปิดงาน — ซ่อมไม่ได้ (ยกเลิกใช้งานเครื่อง)</button>
+    </div>`;
+  const cancelBtn = canEdit && (o.status === 'reported' || o.status === 'in_progress')
+    ? `<button onclick="repairCancelOrder('${o.id}')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:12px">ยกเลิกใบแจ้งนี้ (แจ้งผิด/ซ้ำ)</button>` : '';
+
+  document.getElementById('repairModalBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${info}
+      <div><div style="font-weight:600;font-size:13px;margin-bottom:6px">📎 ไฟล์แนบ</div><div id="repairFilesList" class="reg-empty">…</div>
+        <input type="file" id="repairFileInput" multiple accept="application/pdf,image/*" style="display:none" onchange="uploadRepairFiles('${o.id}', this)">
+        ${canEdit ? `<button onclick="document.getElementById('repairFileInput').click()" style="margin-top:6px;background:none;border:1px dashed var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:var(--font);font-size:12px">+ แนบไฟล์ (รูป/PDF)</button>` : ''}</div>
+      ${actions}
+      ${cancelBtn}
+    </div>`;
+  if (typeof loadRepairFiles === 'function') loadRepairFiles(o.id);
+}
+
+async function repairStart(orderId) {
+  const type = document.getElementById('repType')?.value || 'internal';
+  const vendor = document.getElementById('repVendor')?.value.trim() || null;
+  if (type === 'external' && !vendor) { showToast('กรุณากรอกชื่อผู้ซ่อม/บริษัท', 'error'); return; }
+  if (await updateRepairOrder(orderId, { status: 'in_progress', repair_type: type, vendor_name: vendor }, 'เริ่มซ่อมเครื่องมือ'))
+    renderRepairOrderView(orderId);
+}
+
+async function repairComplete(orderId) {
+  const patch = {
+    status: 'completed',
+    cause: document.getElementById('repCause')?.value.trim() || null,
+    action_taken: document.getElementById('repAction')?.value.trim() || null,
+    cost: document.getElementById('repCost')?.value ? Number(document.getElementById('repCost').value) : null,
+    completed_date: document.getElementById('repDone')?.value || new Date().toISOString().slice(0, 10),
+    need_recal: !!document.getElementById('repRecal')?.checked,
+  };
+  if (!patch.action_taken) { showToast('กรุณากรอกการแก้ไข', 'error'); return; }
+  const o = repairOrders.find(x => x.id === orderId);
+  if (!(await updateRepairOrder(orderId, patch, 'ปิดงานซ่อม (ซ่อมเสร็จ)'))) return;
+  renderRepairOrderView(orderId);
+  if (patch.need_recal && confirm('ซ่อมเสร็จแล้ว — ส่งเครื่องนี้เข้าแผนสอบเทียบเลยหรือไม่?')) {
+    closeRepairModal();
+    goToPlanWithItem(o.instrument_id);
+  }
+}
+
+async function repairCancelOrder(orderId) {
+  const reason = prompt('เหตุผลที่ยกเลิกใบแจ้งนี้ (จำเป็น):');
+  if (!reason || !reason.trim()) return;
+  if (await updateRepairOrder(orderId, { status: 'cancelled', action_taken: 'ยกเลิกใบแจ้ง: ' + reason.trim() }, 'ยกเลิกใบแจ้งซ่อม', { reason }))
+    renderRepairOrderView(orderId);
+}
+
+// Task 5 แทนที่ — stub กัน onclick พัง
+async function repairUnrepairable(orderId) {}
+// Task 6 แทนที่
+async function uploadRepairFiles(orderId, input) {}
+async function loadRepairFiles(orderId) {}
+
 function closeRepairModal() {
   document.getElementById('repairModal')?.classList.remove('open');
 }
