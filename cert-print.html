@@ -339,6 +339,15 @@ eccDiffs.forEach(dv => { if (Math.abs(dv) >= Math.abs(eccMax) && dv !== 0) eccMa
 
 // ====== format helpers ======
 const f = (v,d) => { const s = v.toFixed(d); return parseFloat(s) === 0 ? (0).toFixed(d) : s; };
+// จำนวนทศนิยมของ resolution เครื่องชั่ง (10→0, 0.01→2, 0.0001→4) — ใช้รายงาน DISPLAYED VALUE ตามหน้าจอเครื่องจริง
+function resDecimals(d) {
+  if (!Number.isFinite(d) || d <= 0) return 2;
+  const s = (Math.round(d * 1e6) / 1e6).toString();
+  const dot = s.indexOf('.');
+  return dot === -1 ? 0 : s.length - dot - 1;
+}
+// resolution ต่อจุด (multi-interval/range ใช้ p.d ถ้ามี, จุด ZERO/รวมใช้ resolution เครื่อง)
+const rowRes = r => (Number.isFinite(r.d) && r.d > 0 ? r.d : CAL.resolution);
 function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่าเป็น g · จำนวนเต็มไม่โชว์ทศนิยม · ไม่งั้น 2 เลขนัยสำคัญ
   if (!isFinite(u) || u <= 0) return '0';
   if (u > 100) { const g = u / 1000; return Number.isInteger(g) ? String(g) : String(+g.toFixed(4)); }
@@ -504,7 +513,7 @@ function secDeparture() {
       </thead>
       <tbody>${ROWS.map(r => `<tr>
         <td>${r.zero ? 'UNLOAD' : r.nominal}</td>
-        <td>${f(r.conv,3)}</td><td>${f(r.avg,2)}</td><td>${f(r.corr,3)}</td><td>${fmtU(r.bud.Ufinal)}${r.bud.Ufinal > 100 ? ' g' : ''}</td>
+        <td>${f(r.conv,3)}</td><td>${f(r.avg,resDecimals(rowRes(r)))}</td><td>${f(r.corr,resDecimals(rowRes(r))+1)}</td><td>${fmtU(r.bud.Ufinal)}${r.bud.Ufinal > 100 ? ' g' : ''}</td>
       </tr>`).join('')}</tbody>
     </table>`;
 }
@@ -703,9 +712,9 @@ function pageWs2(pageNo) {
         <td class="ctr">${r.zero ? 'ZERO' : r.nominal}</td>
         <td class="ctr"><span class="dwt" style="display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;vertical-align:bottom">${r.zero ? '0.00' : esc(r.desc)}</span></td>
         <td class="ctr fill">${f(r.conv,7)}</td>
-        ${r.reads.map(v=>`<td class="ctr fill">${f(v,2)}</td>`).join('')}
-        <td class="ctr fill">${f(r.avg,2)}</td>
-        <td class="ctr fill">${f(r.corr,5)}</td>
+        ${r.reads.map(v=>`<td class="ctr fill">${f(v,resDecimals(rowRes(r)))}</td>`).join('')}
+        <td class="ctr fill">${f(r.avg,resDecimals(rowRes(r)))}</td>
+        <td class="ctr fill">${f(r.corr,resDecimals(rowRes(r))+1)}</td>
         <td class="ctr fill">${f(r.sd,0)}</td>
       </tr>`).join('')}</tbody>
     </table>
