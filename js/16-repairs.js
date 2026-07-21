@@ -181,7 +181,63 @@ function openRepairsForInstrument(instrumentId) {
 }
 
 // Task 3 เติม body — วางไว้ก่อนกัน onclick พัง
-function openRepairModal(orderId, instrumentId) {}
+function openRepairModal(orderId, instrumentId) {
+  const body = document.getElementById('repairModalBody');
+  const title = document.getElementById('repairModalTitle');
+  const sub = document.getElementById('repairModalSub');
+  if (!body) return;
+  if (orderId) { renderRepairOrderView(orderId); }
+  else {
+    title.textContent = '🔧 แจ้งซ่อมเครื่องมือ';
+    sub.textContent = '';
+    const preset = instrumentId ? repairInstrument(instrumentId) : null;
+    const options = (allData || [])
+      .filter(d => d.id_code)
+      .map(d => `<option value="${escapeHtmlAttr(d.id_code)}">${escapeHtmlText(d.instrument_name || '')} · ${escapeHtmlText(d.department || '')}</option>`)
+      .join('');
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><label style="font-size:12px;font-weight:600">เครื่องมือ (พิมพ์รหัส ID)</label>
+          <input id="repNewInst" list="repInstList" value="${escapeHtmlAttr(preset?.id_code || '')}" ${preset ? 'readonly' : ''}
+            placeholder="เช่น PMT1-001" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--mono)">
+          <datalist id="repInstList">${options}</datalist>
+          <div id="repNewInstName" style="font-size:12px;color:var(--text2);margin-top:4px">${preset ? escapeHtmlText(preset.instrument_name || '') : ''}</div></div>
+        <div><label style="font-size:12px;font-weight:600">วันที่แจ้ง</label>
+          <input id="repNewDate" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px"></div>
+        <div><label style="font-size:12px;font-weight:600">อาการเสีย</label>
+          <textarea id="repNewSymptom" rows="3" placeholder="อธิบายอาการ เช่น จอไม่ติด ค่าลอย ฯลฯ" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)"></textarea></div>
+        <button onclick="saveRepairReport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;font-family:var(--font)">บันทึกใบแจ้งซ่อม</button>
+      </div>`;
+    const inp = document.getElementById('repNewInst');
+    inp.addEventListener('input', () => {
+      const d = (allData || []).find(x => x.id_code === inp.value);
+      document.getElementById('repNewInstName').textContent = d ? (d.instrument_name || '') + ' · ' + (d.department || '') : '';
+    });
+  }
+  document.getElementById('repairModal').classList.add('open');
+}
+
+async function saveRepairReport() {
+  const idCode = document.getElementById('repNewInst')?.value.trim();
+  const d = (allData || []).find(x => x.id_code === idCode);
+  const symptom = document.getElementById('repNewSymptom')?.value.trim();
+  const date = document.getElementById('repNewDate')?.value;
+  if (!d) { showToast('ไม่พบเครื่องมือรหัสนี้ในทะเบียน', 'error'); return; }
+  if (!symptom) { showToast('กรุณากรอกอาการเสีย', 'error'); return; }
+  if (getOpenRepair(d.id)) { showToast('เครื่องนี้มีงานซ่อมค้างอยู่แล้ว', 'error'); return; }
+  const { data, error } = await sb.from('repair_orders').insert({
+    instrument_id: d.id, status: 'reported', reported_date: date,
+    reported_by: currentUser?.name || 'Unknown', symptom,
+  }).select().single();
+  if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return; }
+  logAudit('แจ้งซ่อมเครื่องมือ', d, { symptom });
+  showToast('บันทึกใบแจ้งซ่อมแล้ว', 'success');
+  await loadRepairData();
+  renderRepairSummary(); renderRepairsTable();
+  openRepairModal(data.id);   // เปิดต่อเป็นโหมดดูงาน
+}
+
+function renderRepairOrderView(orderId) {}
 function closeRepairModal() {
   document.getElementById('repairModal')?.classList.remove('open');
 }
