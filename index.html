@@ -2825,6 +2825,28 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
+        <!-- งานซ่อมเครื่องมือ -->
+        <div class="dsh-card" style="margin-bottom:16px">
+          <div class="dsh-ct">
+            <span>งานซ่อมเครื่องมือ<small>สถานะ ค่าใช้จ่าย และแนวโน้มการซ่อม</small></span>
+            <button class="dsh-pill-link" onclick="showPage('repairs')">ทั้งหมด →</button>
+          </div>
+          <div id="repairKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px"></div>
+          <div id="repairRecalStrip"></div>
+          <div class="dsh-row2" style="margin-bottom:0">
+            <div>
+              <div style="font-weight:600;font-size:13px;margin:8px 0">งานซ่อมค้าง</div>
+              <div id="repairPendingList"></div>
+              <div style="font-weight:600;font-size:13px;margin:14px 0 8px">เครื่องซ่อมบ่อย Top 5</div>
+              <div id="repairTopList"></div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:13px;margin:8px 0">แนวโน้ม 12 เดือน (จำนวน + ค่าใช้จ่าย)</div>
+              <div style="height:240px;position:relative"><canvas id="repairTrendChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Hidden: JS-required elements not shown in new layout -->
         <div style="display:none">
           <div id="dashMiniList"></div>

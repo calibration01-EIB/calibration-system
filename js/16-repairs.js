@@ -480,3 +480,95 @@ function computeRecalWaiting(orders, rows, planMap) {
     return true;
   });
 }
+
+// ===== Dashboard section งานซ่อมเครื่องมือ =====
+let _repairTrendChart = null;
+function renderRepairDashboard() {
+  const kpis = document.getElementById('repairKpis');
+  if (!kpis) return;
+  const now = new Date();
+  const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const open = repairOrders.filter(o => o.status === 'reported' || o.status === 'in_progress');
+  const nRep = open.filter(o => o.status === 'reported').length;
+  const nProg = open.filter(o => o.status === 'in_progress').length;
+  const doneMonth = repairOrders.filter(o => o.status === 'completed' && (o.completed_date || '').startsWith(ym));
+  const costMonth = repairOrders.filter(o => o.status !== 'cancelled' && (o.completed_date || '').startsWith(ym))
+    .reduce((s, o) => s + (Number(o.cost) || 0), 0);
+  const kpi = (val, label, fg, bg, act) => `
+    <div onclick="${act}" style="background:${bg};border-radius:12px;padding:12px 16px;cursor:pointer">
+      <div style="font-size:22px;font-weight:700;color:${fg}">${val}</div>
+      <div style="font-size:12px;color:${fg}">${label}</div>
+    </div>`;
+  const go = st => `showPage('repairs');document.getElementById('repairStatusFilter').value='${st}';filterRepairs()`;
+  kpis.innerHTML =
+    kpi(nRep, 'แจ้งซ่อมค้าง', '#b45309', '#fdf3dd', go('reported')) +
+    kpi(nProg, 'กำลังซ่อม', '#b91c1c', '#fde8e8', go('in_progress')) +
+    kpi(doneMonth.length, 'ซ่อมเสร็จเดือนนี้', '#0b7a44', '#e5f6ec', go('completed')) +
+    kpi(fmtBaht(costMonth) === '–' ? '0' : fmtBaht(costMonth), 'ค่าใช้จ่ายเดือนนี้ (บาท)', '#185FA5', '#E6F1FB', go(''));
+
+  // แถบเตือน ซ่อมเสร็จ รอสอบเทียบใหม่
+  const strip = document.getElementById('repairRecalStrip');
+  const waiting = computeRecalWaiting(repairOrders, allData || [], typeof planStatusMap !== 'undefined' ? planStatusMap : {});
+  if (strip) strip.innerHTML = waiting.length ? `
+    <div style="background:#fdf3dd;border:1px solid #f0d9a8;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px">
+      ⚠️ <strong>ซ่อมเสร็จ รอสอบเทียบใหม่ ${waiting.length} เครื่อง:</strong>
+      ${waiting.slice(0, 5).map(o => { const d = repairInstrument(o.instrument_id); return `<a href="javascript:void(0)" onclick="goToPlanWithItem(${o.instrument_id})" style="color:#b45309;font-weight:600;margin-left:6px">${escapeHtmlText(d?.id_code || '?')}</a>`; }).join('')}
+      <span style="color:var(--text3)">— คลิกรหัสเพื่อส่งเข้าแผน</span>
+    </div>` : '';
+
+  // ลิสต์งานค้าง 5 รายการ (แจ้งเก่าสุดก่อน)
+  const pend = document.getElementById('repairPendingList');
+  if (pend) {
+    const rows = [...open].sort((a, b) => (a.reported_date || '').localeCompare(b.reported_date || '')).slice(0, 5);
+    pend.innerHTML = rows.length ? rows.map(o => { const d = repairInstrument(o.instrument_id); return `
+      <div onclick="showPage('repairs');openRepairModal('${o.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:12.5px">
+        <div style="flex:1;min-width:0"><strong>${escapeHtmlText(d?.id_code || '?')}</strong> <span style="color:var(--text3)">${escapeHtmlText((d?.instrument_name || '').slice(0, 28))}</span>
+          <div style="color:var(--text3);font-size:11px">แจ้ง ${fmtRepairDate(o.reported_date)}</div></div>
+        ${repairStatusBadge(o.status)}
+      </div>`; }).join('')
+      : '<div class="dsh-empty">ไม่มีงานซ่อมค้าง 🎉</div>';
+  }
+
+  // Top 5 ซ่อมบ่อย
+  const topHost = document.getElementById('repairTopList');
+  if (topHost) {
+    const top = computeTopRepairs(repairOrders, allData || [], 5);
+    topHost.innerHTML = top.length ? top.map((t, i) => `
+      <div onclick="openRepairsForInstrument(${t.instrument_id})" style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--border)">
+        <span style="width:18px;color:var(--text3)">${i + 1}.</span>
+        <div style="flex:1;min-width:0"><strong>${escapeHtmlText(t.id_code)}</strong> <span style="color:var(--text3)">${escapeHtmlText(t.name.slice(0, 26))}</span></div>
+        <span style="font-weight:600">${t.count} ครั้ง</span>
+        <span style="color:var(--text3);min-width:70px;text-align:right">${fmtBaht(t.totalCost)} ฿</span>
+      </div>`).join('')
+      : '<div class="dsh-empty">ยังไม่มีข้อมูล</div>';
+  }
+
+  // กราฟแนวโน้ม — แท่งจำนวน + เส้นค่าใช้จ่าย (แกนขวา)
+  const canvas = document.getElementById('repairTrendChart');
+  if (canvas && typeof Chart !== 'undefined') {
+    const a = aggregateRepairMonthly(repairOrders, now);
+    if (_repairTrendChart) _repairTrendChart.destroy();
+    _repairTrendChart = new Chart(canvas, {
+      data: {
+        labels: a.labels,
+        datasets: [
+          { type: 'bar', label: 'จำนวนงานซ่อม', data: a.counts, backgroundColor: 'rgba(0,137,123,.82)', borderRadius: 3, yAxisID: 'y' },
+          { type: 'line', label: 'ค่าใช้จ่าย (บาท)', data: a.costs, borderColor: '#b45309', backgroundColor: '#b45309', tension: .3, pointRadius: 2.5, yAxisID: 'y1' },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        hover: { mode: 'index', intersect: false, animationDuration: 0 },
+        plugins: {
+          legend: { position: 'top', align: 'end', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 8, padding: 12 } },
+          tooltip: { mode: 'index', intersect: false, animation: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: 'rgba(0,0,0,.05)' } },
+          y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
