@@ -147,7 +147,7 @@ function renderPlanInstrumentTable() {
     return `<tr class="${isSelected ? 'is-selected' : ''}" id="planRow_${i}">
       <td class="plan-check"><input type="checkbox" ${checked} onchange="togglePlanItem(${i}, this)"></td>
       <td class="plan-id">${escapeHtmlText(d.id_code || '–')}</td>
-      <td class="plan-name">${escapeHtmlText(d.instrument_name || '–')}</td>
+      <td class="plan-name">${escapeHtmlText(d.instrument_name || '–')}${typeof getOpenRepair === 'function' && getOpenRepair(d.id) ? ' <span title="เครื่องอยู่ระหว่างซ่อม — อาจไม่พร้อมสอบเทียบ" style="cursor:help">🔧</span>' : ''}</td>
       <td class="plan-muted">${escapeHtmlText(typShort)}</td>
       <td class="plan-muted" title="${escapeHtmlAttr((typeof deptUnitName === 'function' && deptUnitName(d.department)) || '')}">${escapeHtmlText(d.department || '–')}</td>
       <td class="plan-muted">${escapeHtmlText(due)}</td>

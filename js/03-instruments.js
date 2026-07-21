@@ -349,6 +349,7 @@ function openInstrumentDetail(id) {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span class="reg-name" style="font-size:15px">${escapeHtmlText(d.instrument_name || '–')}</span>
             ${statusBadge}
+            ${typeof repairBadgeHtml === 'function' ? repairBadgeHtml(d.id) : ''}
           </div>
           <div class="reg-sub" style="margin-top:2px">
             <span class="reg-chip" style="background:${color};width:30px;min-height:20px;font-size:11px">${escapeHtmlText(letter)}</span>
@@ -361,6 +362,8 @@ function openInstrumentDetail(id) {
         ${canEdit ? `<button class="btn-view" onclick="closeInstrumentDetail();openInstrumentModal(${Number(d.id)||0})">✏️ แก้ไข</button>` : ''}
         <button class="btn-view" onclick="closeInstrumentDetail();${openCertCall}">📎 ไฟล์</button>
         <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติ</button>
+        <button class="btn-view" onclick="closeInstrumentDetail();openRepairsForInstrument(${Number(d.id)||0})">🔧 ประวัติซ่อม</button>
+        ${canEdit && typeof getOpenRepair === 'function' && !getOpenRepair(d.id) ? `<button class="btn-view" style="color:#b45309;border-color:#b45309" onclick="closeInstrumentDetail();showPage('repairs');openRepairModal(null, ${Number(d.id)||0})">🔧 แจ้งซ่อม</button>` : ''}
       </div>
     </div>
 

@@ -120,6 +120,7 @@ function renderMobileCards() {
           '<div class="mobile-card-title-row">' +
             '<div class="mobile-card-title">' + title + '</div>' +
             '<span class="mobile-badge ' + badgeClass + '">' + escapeHtmlText(badgeText) + '</span>' +
+            (typeof repairBadgeHtml === 'function' ? repairBadgeHtml(d.id) : '') +
           '</div>' +
           '<div class="mobile-card-sub">' + idCertLine + '</div>' +
           '<div class="mobile-card-kicker">' + typeText + ' · ' + brandDept + '</div>' +
@@ -1066,7 +1067,7 @@ function renderTable() {
       <td><strong>${escapeHtmlText(d.department || '–')}</strong><br><span class="reg-sub">${machineLoc}</span></td>
       <td>${formatDate(d.cal_date)}<br><span class="reg-sub">${escapeHtmlText(d.cal_type || '–')}</span></td>
       <td><strong>${cancelled ? '–' : formatDate(d.due_date)}</strong><br><span class="reg-sub" style="color:${daysColor}">${daysText}</span></td>
-      <td>${statusBadge}</td>
+      <td>${statusBadge}${typeof repairBadgeHtml === 'function' && repairBadgeHtml(d.id) ? '<br>' + repairBadgeHtml(d.id) : ''}</td>
       <td>${(()=>{
         if (cancelled) return '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
         const ps = planStatusMap[d.id];
