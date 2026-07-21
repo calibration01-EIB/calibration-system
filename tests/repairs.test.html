@@ -1,0 +1,44 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>repairs helpers test</title></head><body>
+<div id="out"></div>
+<script src="../js/16-repairs.js"></script>
+<script>
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
+
+const NOW = new Date(2026, 6, 21); // ก.ค. 2026
+const rows = [
+  { id: 1, id_code: 'A-01', instrument_name: 'Balance A', cal_date: '2026-07-10' },
+  { id: 2, id_code: 'B-02', instrument_name: 'Balance B', cal_date: '2026-01-01' },
+];
+const orders = [
+  { id: 'r1', instrument_id: 1, status: 'completed', reported_date: '2026-07-01', completed_date: '2026-07-05', need_recal: true, cost: 500 },
+  { id: 'r2', instrument_id: 2, status: 'completed', reported_date: '2026-06-15', completed_date: '2026-06-20', need_recal: true, cost: '1200' },
+  { id: 'r3', instrument_id: 2, status: 'cancelled', reported_date: '2026-07-02', cost: 999 },
+  { id: 'r4', instrument_id: 2, status: 'in_progress', reported_date: '2025-06-30', cost: null },
+];
+
+t('aggregateRepairMonthly นับ 12 เดือน ไม่รวม cancelled/นอกช่วง', () => {
+  const a = aggregateRepairMonthly(orders, NOW);
+  eq(a.labels.length, 12); eq(a.counts.length, 12);
+  eq(a.counts[11], 1, 'ก.ค.26'); eq(a.counts[10], 1, 'มิ.ย.26');
+  eq(a.costs[11], 500); eq(a.costs[10], 1200, 'cost string ต้องถูกแปลง');
+  eq(a.counts.reduce((s, x) => s + x, 0), 2, 'cancelled + เก่าเกิน 12 เดือนต้องไม่นับ');
+});
+t('computeTopRepairs เรียงตามจำนวน ไม่นับ cancelled', () => {
+  const top = computeTopRepairs(orders, rows, 5);
+  eq(top.length, 2);
+  eq(top[0].instrument_id, 2); eq(top[0].count, 2); eq(top[0].totalCost, 1200);
+  eq(top[1].id_code, 'A-01'); eq(top[1].totalCost, 500);
+});
+t('computeRecalWaiting — สอบแล้ว/ลงแผนแล้ว ไม่ขึ้นเตือน', () => {
+  // r1: cal_date 10 ก.ค. > completed 5 ก.ค. → ไม่เตือน · r2: ยังไม่สอบ ไม่มีแผน → เตือน
+  eq(computeRecalWaiting(orders, rows, {}).map(o => o.id), ['r2']);
+  // มีแผน planned_date หลังปิดงาน → หยุดเตือน
+  eq(computeRecalWaiting(orders, rows, { 2: { planned_date: '2026-07-01' } }).length, 0);
+  // แผนเก่ากว่าวันปิดงาน → ยังเตือน
+  eq(computeRecalWaiting(orders, rows, { 2: { planned_date: '2026-05-01' } }).map(o => o.id), ['r2']);
+});
+document.getElementById('out').textContent = results.join('\n');
+document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+</script></body></html>

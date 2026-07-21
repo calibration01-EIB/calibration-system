@@ -429,3 +429,54 @@ async function deleteRepairFile(orderId, name) {
 function closeRepairModal() {
   document.getElementById('repairModal')?.classList.remove('open');
 }
+
+// ===== สถิติสำหรับ Dashboard (pure functions — มี browser test ใน tests/repairs.test.html) =====
+function aggregateRepairMonthly(orders, now = new Date()) {
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ y: d.getFullYear(), m: d.getMonth() });
+  }
+  const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const labels = months.map(x => TH[x.m] + ' ' + String((x.y + 543) % 100).padStart(2, '0'));
+  const counts = months.map(() => 0), costs = months.map(() => 0);
+  (orders || []).forEach(o => {
+    if (o.status === 'cancelled' || !o.reported_date) return;
+    const d = new Date(o.reported_date);
+    const idx = months.findIndex(x => x.y === d.getFullYear() && x.m === d.getMonth());
+    if (idx < 0) return;
+    counts[idx]++;
+    costs[idx] += Number(o.cost) || 0;
+  });
+  return { labels, counts, costs };
+}
+
+function computeTopRepairs(orders, rows, n = 5) {
+  const byId = {};
+  (rows || []).forEach(r => { byId[r.id] = r; });
+  const agg = {};
+  (orders || []).forEach(o => {
+    if (o.status === 'cancelled') return;
+    const a = agg[o.instrument_id] || (agg[o.instrument_id] = { instrument_id: o.instrument_id, count: 0, totalCost: 0 });
+    a.count++; a.totalCost += Number(o.cost) || 0;
+  });
+  return Object.values(agg)
+    .sort((a, b) => b.count - a.count || b.totalCost - a.totalCost)
+    .slice(0, n)
+    .map(a => ({ ...a, id_code: byId[a.instrument_id]?.id_code || '?', name: byId[a.instrument_id]?.instrument_name || '–' }));
+}
+
+// งานปิดแล้วติ๊ก need_recal แต่เครื่องยังไม่ถูกสอบ/ลงแผนหลังวันปิดงาน
+function computeRecalWaiting(orders, rows, planMap) {
+  const byId = {};
+  (rows || []).forEach(r => { byId[r.id] = r; });
+  return (orders || []).filter(o => {
+    if (o.status !== 'completed' || !o.need_recal || !o.completed_date) return false;
+    const d = byId[o.instrument_id];
+    if (!d) return false;
+    if (d.cal_date && d.cal_date >= o.completed_date) return false;
+    const ps = planMap && planMap[o.instrument_id];
+    if (ps && ps.planned_date && ps.planned_date >= o.completed_date) return false;
+    return true;
+  });
+}
