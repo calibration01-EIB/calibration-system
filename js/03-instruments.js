@@ -315,7 +315,7 @@ function openBalanceCal(id) {
     capacity: (d.capacity_unit ? '' : d.capacity) ?? reg.capacity ?? '', resolution: d.resolution ?? reg.resolution ?? '', accuracy_class: d.accuracy_class || '',
     user_range: d.range_val || '', cal_type: d.cal_type || '', tolerance: d.tolerance || '', range_profile: d.range_profile || reg.range_profile || null, tolerance_bands: d.tolerance_bands || null,
     balance_type: d.balance_type || null,   // single | range | interval — ใบบันทึกเปิดมาถูกประเภทเลย
-    section: d.department || '', unit_dept: d.department || '', location: d.location || '',
+    section: d.division || '', unit_dept: d.department || '', location: d.location || '',
     date_recv: '',
   };
   window.open('balance-cal.html#inst=' + encodeURIComponent(JSON.stringify(inst)), '_blank');

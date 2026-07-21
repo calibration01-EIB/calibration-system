@@ -683,7 +683,7 @@ function buildCALSingle() {
     return { nominal: p.nominal, desc: pointDesc(p), conv: calRound(p.conv, 7), U: p.U, ds: calRound(p.ds, 6), d: dForNominal(p.nominal, num('iRes', 0.01)), reads };
   });
 
-  const tolText = TOLS.map((t, i) => `±  ${t.tol} ${t.unit || 'g'} (${i === 0 ? '0' : '>' + t.from}-${t.to})`);
+  const tolText = TOLS.map((t, i) => `±  ${t.tol} ${t.unit || 'g'} (${i === 0 ? '0' : '>' + t.from}-${t.to} g)`);
 
   return {
     cert_no: val('fCertNo'), job_no: val('fJobNo'), request_no: val('fReqNo'),

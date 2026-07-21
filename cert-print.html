@@ -597,9 +597,14 @@ function pageEIB55(pageNo, total) {
   // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) แบนด์ละบรรทัดตีเส้นใต้
   // แบนด์แรกอยู่บรรทัด label Tolerance (แถว Range) แบนด์ที่เหลือลงแถว Section ให้บรรทัดตรงกัน
   const tolLine = v => `<span class="eib-tolln">${v || '&nbsp;'}</span>`;
-  const tolList = (Array.isArray(CAL.tolerances) && CAL.tolerances.length) ? CAL.tolerances : [''];
+  // เติมหน่วย g ให้ช่วงในวงเล็บของ Tolerance เก่าที่บันทึกไว้แบบไม่มีหน่วย เช่น "± 30 g (0-60000)" → "(0-60000 g)"
+  const tolWithUnit = s => String(s || '').replace(/\((\s*[>\d.,\s-]+?)\s*\)/, '($1 g)');
+  const tolList = ((Array.isArray(CAL.tolerances) && CAL.tolerances.length) ? CAL.tolerances : ['']).map(tolWithUnit);
   const tolFirst = tolLine(esc(tolList[0]));
   const tolRest = tolList.slice(1).map(t => tolLine(esc(t))).join('');
+  // User range: เติมหน่วย g ถ้าเป็นตัวเลขล้วน (เช่น "1 - 2000" → "1 - 2000 g")
+  const userRangeTxt = (CAL.user_range && /\d/.test(CAL.user_range) && !/[a-zA-Zก-๙]/.test(CAL.user_range))
+    ? CAL.user_range + ' g' : CAL.user_range;
   return `<section class="sheet eib">
     <div class="eib-head">
       <div class="eib-brand">
@@ -614,7 +619,7 @@ function pageEIB55(pageNo, total) {
     </div>
     <table class="eib-grid">
       <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
-      <tr><td class="eib-lbl top">Range</td><td class="eib-val top">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl top">User range</td><td class="eib-val top">${tolLine(esc(CAL.user_range))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolFirst}</td></tr>
+      <tr><td class="eib-lbl top">Range</td><td class="eib-val top">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl top">User range</td><td class="eib-val top">${tolLine(esc(userRangeTxt))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolFirst}</td></tr>
       <tr><td class="eib-lbl top">Section</td><td class="eib-val top">${tolLine(esc(CAL.section))}</td><td class="eib-lbl top">Unit</td><td class="eib-val top">${tolLine(esc(CAL.unit_dept))}</td><td></td><td class="eib-val top">${tolRest}</td></tr>
     </table>
     <table class="bx eib-tbl">
