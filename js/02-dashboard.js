@@ -581,6 +581,7 @@ async function loadData(forceRefresh = false) {
     renderDashboardAuditLog();
     renderPendingCertWidget();
     loadPlanStatusMap();
+    if (typeof loadRepairData === 'function') loadRepairData();
     updateNotificationBell();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();
   };

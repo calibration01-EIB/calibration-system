@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -23,6 +23,7 @@ function showPage(page) {
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
     calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
+    repairs: ['🔧 งานซ่อม','แจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมเครื่องมือ'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -45,6 +46,13 @@ function showPage(page) {
     const waitAndLoad = (attempt) => {
       if (allData && allData.length > 0) { loadCertPage(); return; }
       if (attempt > 20) { loadCertPage(); return; }
+      setTimeout(() => waitAndLoad(attempt + 1), 200);
+    };
+    waitAndLoad(0);
+  }
+  if (page === 'repairs') {
+    const waitAndLoad = (attempt) => {
+      if ((allData && allData.length > 0) || attempt > 20) { loadRepairsPage(); return; }
       setTimeout(() => waitAndLoad(attempt + 1), 200);
     };
     waitAndLoad(0);

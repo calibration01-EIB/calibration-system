@@ -2722,6 +2722,7 @@ body.app-mode textarea:focus {
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
         <div class="nav-item" onclick="showPage('calrecs')" id="nav-calrecs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📋</span> ติดตามผลสอบเทียบ</span><span id="navCalrecsBadge" style="display:none;background:#f0a500;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
+        <div class="nav-item" onclick="showPage('repairs')" id="nav-repairs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">🔧</span> งานซ่อม</span><span id="navRepairBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">📜</span> ใบ Cert Reference</div>
       </nav>
       <div class="sidebar-user">
@@ -3292,6 +3293,33 @@ body.app-mode textarea:focus {
         </div>
       </div>
 
+      <!-- หน้า งานซ่อม -->
+      <div id="pageRepairs" class="page-content" style="display:none">
+        <div id="repairSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px"></div>
+        <div class="controls-bar">
+          <input type="text" id="repairSearch" placeholder="🔍 ค้นหา รหัส, ชื่อเครื่อง, ผู้ซ่อม..." oninput="filterRepairs()">
+          <select id="repairStatusFilter" onchange="filterRepairs()">
+            <option value="">ทุกสถานะ</option>
+            <option value="open">ยังไม่ปิดงาน</option>
+            <option value="reported">แจ้งซ่อม</option>
+            <option value="in_progress">กำลังซ่อม</option>
+            <option value="completed">ซ่อมเสร็จ</option>
+            <option value="unrepairable">ซ่อมไม่ได้</option>
+            <option value="cancelled">ยกเลิกใบแจ้ง</option>
+          </select>
+          <select id="repairDeptFilter" onchange="filterRepairs()"><option value="">ทุกหน่วยงาน</option></select>
+          <input type="date" id="repairFromFilter" onchange="filterRepairs()" title="วันที่แจ้ง ตั้งแต่">
+          <input type="date" id="repairToFilter" onchange="filterRepairs()" title="วันที่แจ้ง ถึง">
+          <button id="repairNewBtn" onclick="openRepairModal(null)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap">+ แจ้งซ่อม</button>
+        </div>
+        <div class="table-wrap" style="overflow:auto">
+          <table>
+            <thead><tr><th>#</th><th>เครื่องมือ</th><th>หน่วยงาน</th><th>วันที่แจ้ง</th><th>อาการ</th><th>สถานะ</th><th>ผู้ซ่อม</th><th style="text-align:right">ค่าใช้จ่าย</th></tr></thead>
+            <tbody id="repairTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div id="pageWeights" class="page-content" style="display:none">
 
         <!-- TABS: ใบ Cert Reference / ลูกตุ้มรายลูก -->
@@ -3700,6 +3728,10 @@ body.app-mode textarea:focus {
     <div style="font-size:22px">📋</div>
     <div style="font-size:10px;color:#888">ติดตามผล</div>
   </div>
+  <div class="mobile-nav-item" data-page="repairs" onclick="showPage('repairs')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;position:relative">
+    <div style="font-size:18px">🔧</div><div style="font-size:10px">งานซ่อม</div>
+    <span id="bnavRepairBadge" style="display:none;position:absolute;top:2px;right:18%;background:#E53935;color:#fff;font-size:9px;font-weight:600;padding:0 5px;border-radius:20px">0</span>
+  </div>
   <div class="mobile-nav-item" data-page="weights" onclick="showPage('weights')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
     <div style="font-size:22px">📜</div>
     <div style="font-size:10px;color:#888">Cert Ref</div>
@@ -3801,6 +3833,19 @@ body.app-mode textarea:focus {
       <button class="btn-close" onclick="closeCalHistoryModal()">×</button>
     </div>
     <div class="modal-body" id="calHistoryBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="repairModal">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-header">
+      <div>
+        <h3 id="repairModalTitle">🔧 แจ้งซ่อมเครื่องมือ</h3>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;font-family:var(--mono)" id="repairModalSub"></div>
+      </div>
+      <button class="btn-close" onclick="closeRepairModal()">×</button>
+    </div>
+    <div class="modal-body" id="repairModalBody"></div>
   </div>
 </div>
 
@@ -4267,6 +4312,7 @@ body.app-mode textarea:focus {
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
 <script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
 <script src="js/15-plan-export.js?v=20260716-underline-box"></script>
+<script src="js/16-repairs.js?v=20260721-repairs"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
