@@ -355,6 +355,7 @@ async function cancelInstrumentUse(instrumentId, refDateText) {
   const remark = ['ยกเลิกสอบเทียบ', note, clean].filter(Boolean).join('\n');
   const { error } = await sb.from('instruments').update({ remark }).eq('id', instrumentId);
   if (error) return false;
+  d.remark = remark;   // อัปเดต local ทันที — กันปุ่ม retry โผล่ระหว่างรอ loadData
   logAudit('ยกเลิกใช้งานเครื่อง (ซ่อมไม่ได้)', d, { note });
   try { localStorage.removeItem(getInstrumentCachePrefix() + '_time'); } catch (e) {}
   loadData(true);   // refresh ทะเบียน → badge ยกเลิกสอบเทียบขึ้นทันที
