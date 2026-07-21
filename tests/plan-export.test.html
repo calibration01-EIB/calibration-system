@@ -40,11 +40,19 @@ async function main() {
   ok('eib cols first row', xml.includes('<c r="AK10" s="75"/><c r="AL10" s="78"/><c r="AM10" s="76"/><c r="AN10" s="77"/><c r="AO10" s="77"/><c r="AP10" s="76"/><c r="AQ10" s="79"/>'));
   ok('eib cols bottom row (generic)', xml.includes('<c r="AK11" s="82"/><c r="AL11" s="85"/><c r="AM11" s="83"/><c r="AN11" s="84"/><c r="AO11" s="84"/><c r="AP11" s="83"/><c r="AQ11" s="86"/>'));
 
+  // เครื่องใหม่: ไม่มี due (และไม่ได้สั่ง is_new:false) → Due Date = "New"
   const xml2 = frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null }, 2, 12, 2, false);
-  ok('no-due: E empty (generic style)', xml2.includes('<c r="E12" s="81"/>'));
-  ok('no-due: no blue', xml2.indexOf('s="178"') < 0 && xml2.indexOf('s="179"') < 0 && xml2.indexOf('s="180"') < 0);
-  ok('no-due: top day1 plain (s=82)', xml2.includes('<c r="F12" s="82"/>'));
-  ok('no-due: bottom day1 plain (s=82)', xml2.includes('<c r="F13" s="82"/>'));
+  ok('new: E = "New"', xml2.includes('<c r="E12" s="81" t="inlineStr"><is><t xml:space="preserve">New</t></is></c>'));
+  ok('new: no blue (ยังไม่มาร์กวัน)', xml2.indexOf('s="178"') < 0 && xml2.indexOf('s="179"') < 0 && xml2.indexOf('s="180"') < 0);
+  ok('new: top day1 plain (s=82)', xml2.includes('<c r="F12" s="82"/>'));
+  ok('new: bottom day1 plain (s=82)', xml2.includes('<c r="F13" s="82"/>'));
+  // เครื่องใหม่มาร์กวันเดียว (ตามตัวอย่าง BALANCE-01): ช่องฟ้าเฉพาะวันนั้นบนแถวบน ไม่มีเลขเดือนแถวล่าง
+  const xn = frmBuildItemRows({ id_code: 'N1', instrument_name: 'NB', location: '', due_date: null, bar_start: 5, bar_end: 5 }, 4, 16, 1, false);
+  ok('new-bar: top day5 blue', xn.includes('<c r="J16" s="179"/>'));
+  ok('new-bar: top day4/6 plain', xn.includes('<c r="I16" s="83"/>') && xn.includes('<c r="K16" s="83"/>'));
+  ok('new-bar: top day31 plain (ไม่ลากถึงสิ้นเดือน)', xn.includes('<c r="AJ16" s="84"/>'));
+  ok('new-bar: bottom day5 ไม่มีเลขเดือน', xn.includes('<c r="J17" s="83"/>'));
+  ok('new-off: is_new=false + no due → E ว่าง', frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null, is_new: false }, 5, 18, 1, false).includes('<c r="E18" s="81"/>'));
 
   const sig = frmBuildSignatureRows(30);
   ok('sig row1 attrs', sig.includes('<row r="30" spans="1:43" ht="33" customHeight="1">'));
@@ -116,6 +124,8 @@ async function main() {
   eq('itemFrom: id', itf.instrument_id, 9);
   const itn = frmItemFromInstrument({ id: 1, id_code: 'A1X', instrument_name: 'B', location: '', due_date: null }, 2);
   eq('itemFrom: no due bar', itn.bar_start + '-' + itn.bar_end, '0-0');
+  eq('itemFrom: no due → is_new', itn.is_new, true);
+  eq('itemFrom: มี due → ไม่ new', frmItemFromInstrument({ id: 2, due_date: '2026-02-26' }, 2).is_new, false);
 
   // ---- template render (ต้องรันด้วย --allow-file-access-from-files) ----
   try {

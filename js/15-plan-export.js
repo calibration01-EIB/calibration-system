@@ -48,12 +48,14 @@ function frmCellText(col, row, s, text) {
 
 // เครื่องละ 2 แถว: แถวบนแถบฟ้า bar_end..31, แถวล่างเลขเดือน+ฟ้า bar_start..bar_end
 // item รับ override ได้: bar_start/bar_end/month_num (default = วัน 1..วัน due + เดือนของแผน)
+// เครื่องใหม่ (is_new / ไม่มี due): Due Date = "New" + ช่องฟ้าเฉพาะวันที่วางแผน (แถวบน) ไม่มีเลขเดือน
 // isFirst = แถวแรกใต้หัวตาราง (แถวแรกของแต่ละหน้า/บล็อก) ใช้ชุด style FRM_STYLE.first
 function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   const S = FRM_STYLE;
   const T = isFirst ? S.first : S.item; // แถวบน
   const B = S.item;                     // แถวล่างใช้ชุดทั่วไปเสมอ
   const due = frmDateSerial(item.due_date);
+  const isNew = item.is_new != null ? !!item.is_new : !due;
   const dueDay = due ? parseInt(String(item.due_date).slice(8, 10), 10) : 0;
   const barEnd = item.bar_end != null ? item.bar_end : dueDay;
   const barStart = item.bar_start != null ? item.bar_start : (barEnd ? 1 : 0);
@@ -64,10 +66,10 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   x += frmCellText('B', r1, T.b, item.instrument_name || item.name || '');
   x += frmCellText('C', r1, T.c, item.id_code || '');
   x += frmCellText('D', r1, T.d, item.location || '');
-  x += due ? frmCellNum('E', r1, T.e, due) : frmCellEmpty('E', r1, T.e);
+  x += due ? frmCellNum('E', r1, T.e, due) : (isNew ? frmCellText('E', r1, T.e, 'New') : frmCellEmpty('E', r1, T.e));
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const blue = barEnd > 0 && d >= barEnd;
+    const blue = barEnd > 0 && (isNew ? (d >= barStart && d <= barEnd) : d >= barEnd);
     const s = d === 1 ? (blue ? S.day1Blue : T.day1) : d === 31 ? (blue ? S.day31Blue : T.day31) : (blue ? S.dayBlue : T.day);
     x += frmCellEmpty(col, r1, s);
   }
@@ -77,7 +79,7 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   x += frmCellEmpty('A', r2, B.a) + frmCellEmpty('B', r2, B.b) + frmCellEmpty('C', r2, B.c) + frmCellEmpty('D', r2, B.d) + frmCellEmpty('E', r2, B.e);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const num = barEnd > 0 && d >= barStart && d <= barEnd;
+    const num = !isNew && barEnd > 0 && d >= barStart && d <= barEnd;
     const s = d === 1 ? (num ? S.botNum1 : B.day1) : d === 31 ? (num ? S.botNum31 : B.day31) : (num ? S.botNum : B.day);
     x += num ? frmCellNum(col, r2, s, mNum) : frmCellEmpty(col, r2, s);
   }
@@ -242,11 +244,12 @@ function frmDefaultHeader(items) {
 }
 
 // สร้าง item ของแผนจากแถวทะเบียนเครื่องมือ — default แถบ = วัน 1..วัน due
+// เครื่องที่ไม่มีวันครบกำหนด = เครื่องใหม่ (is_new) — Due Date จะออกเป็น "New" ใน FRM
 function frmItemFromInstrument(row, planMonth) {
   const dueDay = row.due_date ? parseInt(String(row.due_date).slice(8, 10), 10) || 0 : 0;
   return {
     instrument_id: row.id, id_code: row.id_code || '', name: row.instrument_name || '',
-    location: row.location || '', due_date: row.due_date || null,
+    location: row.location || '', due_date: row.due_date || null, is_new: !row.due_date,
     bar_start: dueDay ? 1 : 0, bar_end: dueDay, month_num: planMonth
   };
 }
@@ -293,7 +296,7 @@ function renderFrmExportBody() {
     return '<fieldset style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">' +
       '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.unitCode) + (frmDeptFullName(g.unitCode) ? ' · ' + escapeHtmlAttr(frmDeptFullName(g.unitCode)) : '') + ' — ' + escapeHtmlAttr(g.typeName) + ' (' + g.items.length + ' รายการ)</legend>' +
       (g.unitCode === 'ไม่ระบุ' ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ เครื่องกลุ่มนี้ไม่มี ID CODE/หน่วยงานในทะเบียน — แก้หน่วยงานในช่องด้านล่างก่อนพิมพ์</div>' : '') +
-      (noDue ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ ' + noDue + ' เครื่องไม่มีวันครบกำหนด — จะลงตารางโดยไม่มีแถบสี</div>' : '') +
+      (noDue ? '<div style="font-size:12px;color:var(--amber,#b06000);margin-bottom:8px">🆕 ' + noDue + ' เครื่องใหม่ (ไม่มีวันครบกำหนด) — Due Date จะแสดง "New" มาร์กวันที่วางแผนได้ในแท็บ "ลงแผน FRM"</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">' +
       '<div><label ' + lbl + '>เดือนที่สอบ</label><select ' + inp + ' onchange="frmSetHeader(' + i + ',\'monthNum\',+this.value)">' + monthOpts + '</select></div>' +
       '<div><label ' + lbl + '>ปี (ค.ศ.)</label><input type="number" ' + inp + ' value="' + h.year + '" onchange="frmSetHeader(' + i + ',\'year\',+this.value)"></div>' +
@@ -398,7 +401,11 @@ function frmEditorClose() {
 }
 function frmEditorMeta(key, val) { frmEditorPlan[key] = val; if (key === 'month_num') frmEditorRenderGrid(); }
 function frmEditorHeader(key, val) { frmEditorPlan.header[key] = val; }
-function frmEditorItem(i, key, val) { frmEditorPlan.items[i][key] = val; if (key === 'due_date') frmEditorRenderGrid(); }
+function frmEditorItem(i, key, val) {
+  frmEditorPlan.items[i][key] = val;
+  if (key === 'due_date' && val) frmEditorPlan.items[i].is_new = false;
+  if (key === 'due_date' || key === 'is_new') frmEditorRenderGrid();
+}
 function frmEditorMonth(i, val) { frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
 function frmEditorDay(i, day) {
   const st = frmClickRange({ pending: frmEditorPending[i] != null ? frmEditorPending[i] : null }, day);
@@ -442,7 +449,7 @@ function frmEditorRender() {
     '</div>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
     '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
-    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ</span></div>' +
+    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ · เครื่องใหม่ (New): คลิกวันเดียวกัน 2 ครั้ง = ช่องฟ้าวันเดียว</span></div>' +
     '<div id="frmAddResults" style="margin-bottom:8px"></div>' +
     '<div style="overflow:auto"><table class="frm-grid" id="frmGridTable"></table></div>' +
     '</section>';
@@ -458,11 +465,12 @@ function frmEditorRenderGrid() {
   let html = '<tr><th>#</th><th>ชื่อเครื่อง</th><th>ID CODE</th><th>Location</th><th>Due Date</th>' + days + '<th>เดือน</th><th></th></tr>';
   p.items.forEach((it, i) => {
     const pend = frmEditorPending[i];
+    const isNew = it.is_new != null ? !!it.is_new : !it.due_date;
     let top = '', bot = '';
     for (let d = 1; d <= 31; d++) {
-      const band = it.bar_end > 0 && d >= it.bar_end;
+      const band = it.bar_end > 0 && (isNew ? (d >= it.bar_start && d <= it.bar_end) : d >= it.bar_end);
       top += '<td class="frm-day ro' + (band ? ' band' : '') + '"></td>';
-      const on = it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
+      const on = !isNew && it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
       bot += '<td class="frm-day' + (on ? ' on' : '') + (pend === d ? ' pending' : '') + '" onclick="frmEditorDay(' + i + ',' + d + ')">' + (on ? it.month_num : '') + '</td>';
     }
     const mOpts = Array.from({ length: 12 }, (_, m) => '<option value="' + (m + 1) + '"' + (it.month_num === m + 1 ? ' selected' : '') + '>' + (m + 1) + '</option>').join('');
@@ -471,7 +479,8 @@ function frmEditorRenderGrid() {
       '<td rowspan="2"><input class="frm-name" value="' + escapeHtmlAttr(it.name || '') + '" oninput="frmEditorItem(' + i + ',\'name\',this.value)"></td>' +
       '<td rowspan="2" style="white-space:nowrap">' + escapeHtmlText(it.id_code || '–') + '</td>' +
       '<td rowspan="2"><input class="frm-loc" value="' + escapeHtmlAttr(it.location || '') + '" oninput="frmEditorItem(' + i + ',\'location\',this.value)"></td>' +
-      '<td rowspan="2"><input type="date" value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)"></td>' +
+      '<td rowspan="2"><input type="date" value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)">' +
+      '<label style="display:block;font-size:10px;margin-top:2px;cursor:pointer;color:var(--text2)"><input type="checkbox"' + (isNew ? ' checked' : '') + ' onchange="frmEditorItem(' + i + ',\'is_new\',this.checked)"> 🆕 New (เครื่องใหม่)</label></td>' +
       top +
       '<td rowspan="2"><select onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
       ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button></td>' +
