@@ -348,6 +348,17 @@ function resDecimals(d) {
 }
 // resolution ต่อจุด (multi-interval/range ใช้ p.d ถ้ามี, จุด ZERO/รวมใช้ resolution เครื่อง)
 const rowRes = r => (Number.isFinite(r.d) && r.d > 0 ? r.d : CAL.resolution);
+// resolution ตามโหลด (สำหรับ repeat/preload/ecc/tare ที่ไม่ใช่จุดทดสอบ Error) — หา d จาก dsegs ของ multi-interval
+function resForLoad(g) {
+  const segs = (Array.isArray(CAL.dsegs) ? CAL.dsegs : [])
+    .filter(s => Number.isFinite(s.to) && s.to > 0 && Number.isFinite(s.d) && s.d > 0)
+    .sort((a, b) => a.to - b.to);
+  const seg = segs.find(s => Number(g) <= s.to) || segs[segs.length - 1];
+  return seg ? seg.d : CAL.resolution;
+}
+const repDec = resDecimals(resForLoad(CAL.repeat.point));    // ทศนิยมค่าอ่าน repeatability
+const preDec = resDecimals(resForLoad(CAL.preload.point));   // ทศนิยมค่าอ่าน preload
+const eccDec = resDecimals(resForLoad(CAL.ecc.wt));          // ทศนิยมค่าอ่าน eccentric
 function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่าเป็น g · จำนวนเต็มไม่โชว์ทศนิยม · ไม่งั้น 2 เลขนัยสำคัญ
   if (!isFinite(u) || u <= 0) return '0';
   if (u > 100) { const g = u / 1000; return Number.isInteger(g) ? String(g) : String(+g.toFixed(4)); }
@@ -492,7 +503,7 @@ function secRepeatability() {
   return `<h4>REPEATABILITY</h4>
     <table class="bx dep" style="margin:0 auto;width:84%">
       <thead><tr><th>NOMINAL VALUE<br>( g )</th><th>STANDARD DEVIATION<br>OF READING ( g )</th><th>MAXIMUM DIFFERENCE BETWEEN<br>SUCCESSIVE READINGS ( g )</th></tr></thead>
-      <tbody><tr><td>${CAL.repeat.point}</td><td>${f(repStd,2)}</td><td>${f(repMaxDiff,2)}</td></tr></tbody>
+      <tbody><tr><td>${CAL.repeat.point}</td><td>${f(repStd,repDec)}</td><td>${f(repMaxDiff,repDec)}</td></tr></tbody>
     </table>`;
 }
 function secTare() {
@@ -501,7 +512,7 @@ function secTare() {
     <table class="bx dep" style="margin:0 auto;width:84%">
       <tbody>
         <tr><td style="text-align:left">NOMINAL VALUE ( g )</td>${CAL.tare.checks.map(c => `<td>${c[0]}</td>`).join('')}</tr>
-        <tr><td style="text-align:left">DISPLAYED VALUE ( g )</td>${CAL.tare.checks.map(c => `<td>${f(c[1],2)}</td>`).join('')}</tr>
+        <tr><td style="text-align:left">DISPLAYED VALUE ( g )</td>${CAL.tare.checks.map(c => `<td>${f(c[1],resDecimals(resForLoad(c[0])))}</td>`).join('')}</tr>
       </tbody>
     </table>`;
 }
@@ -527,7 +538,7 @@ function secEccentric() {
       </div>
       <table class="bx dep" style="flex:1">
         <thead><tr>${[1,2,3,4,5].map(n=>`<th>${n}<br>( g )</th>`).join('')}<th>MAXIMUM DIFFERENCE<br>( g )</th></tr></thead>
-        <tbody><tr>${CAL.ecc.reads.map(v=>`<td>${f(v,2)}</td>`).join('')}<td>${f(eccMax,2)}</td></tr></tbody>
+        <tbody><tr>${CAL.ecc.reads.map(v=>`<td>${f(v,eccDec)}</td>`).join('')}<td>${f(eccMax,eccDec)}</td></tr></tbody>
       </table>
     </div>`;
 }
@@ -679,7 +690,7 @@ function pageWs1(pageNo, instMax, instResText, instTols) {
         <div class="row"><span>ขนาดตุ้มน้ำหนักที่ใช้พิกัด</span>${fv(CAL.preload.point,70)}<span>( g )</span></div>
         <table class="bx pre" style="width:72%;margin:4px auto">
           <thead><tr><th style="width:60px">ครั้งที่</th><th>น้ำหนักที่อ่านได้<br>( g )</th></tr></thead>
-          <tbody>${CAL.preload.reads.map((v,i)=>`<tr><td class="ctr it b">${i+1}</td><td class="ctr fill">${f(v,2)}</td></tr>`).join('')}</tbody>
+          <tbody>${CAL.preload.reads.map((v,i)=>`<tr><td class="ctr it b">${i+1}</td><td class="ctr fill">${f(v,preDec)}</td></tr>`).join('')}</tbody>
         </table>
       </div>
       <div>
@@ -688,9 +699,9 @@ function pageWs1(pageNo, instMax, instResText, instTols) {
         <table class="bx rep" style="width:96%;margin:4px auto">
           <thead><tr><th>ครั้งที่ ( i )</th><th>ค่าน้ำหนักที่อ่านได้ ( W<sub>i</sub> )<br>( g )</th></tr></thead>
           <tbody>
-            ${CAL.repeat.reads.map((v,i)=>`<tr><td class="ctr it b">${i+1}</td><td class="ctr fill">${f(v,2)}</td></tr>`).join('')}
-            <tr><td class="b it">Average&nbsp; <span class="xbar">x̄</span></td><td class="ctr fill">${f(repAvg,2)}</td></tr>
-            <tr><td class="b it" style="white-space:nowrap">Standard Deviaton S(W<sub>R</sub>)</td><td class="ctr fill">${f(repStd,3)}</td></tr>
+            ${CAL.repeat.reads.map((v,i)=>`<tr><td class="ctr it b">${i+1}</td><td class="ctr fill">${f(v,repDec)}</td></tr>`).join('')}
+            <tr><td class="b it">Average&nbsp; <span class="xbar">x̄</span></td><td class="ctr fill">${f(repAvg,repDec)}</td></tr>
+            <tr><td class="b it" style="white-space:nowrap">Standard Deviaton S(W<sub>R</sub>)</td><td class="ctr fill">${f(repStd,repDec+1)}</td></tr>
           </tbody>
         </table>
       </div>
@@ -715,12 +726,12 @@ function pageWs2(pageNo) {
       </thead>
       <tbody>${ROWS.map(r => `<tr class="ctr">
         <td class="ctr">${r.zero ? 'ZERO' : r.nominal}</td>
-        <td class="ctr"><span class="dwt" style="display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;vertical-align:bottom">${r.zero ? '0.00' : esc(r.desc)}</span></td>
+        <td class="ctr"><span class="dwt" style="display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;vertical-align:bottom">${r.zero ? f(0,resDecimals(rowRes(r))) : esc(r.desc)}</span></td>
         <td class="ctr fill">${f(r.conv,7)}</td>
         ${r.reads.map(v=>`<td class="ctr fill">${f(v,resDecimals(rowRes(r)))}</td>`).join('')}
         <td class="ctr fill">${f(r.avg,resDecimals(rowRes(r)))}</td>
         <td class="ctr fill">${f(r.corr,resDecimals(rowRes(r))+1)}</td>
-        <td class="ctr fill">${f(r.sd,0)}</td>
+        <td class="ctr fill">${f(r.sd,resDecimals(rowRes(r))+1)}</td>
       </tr>`).join('')}</tbody>
     </table>
     <div style="display:grid;grid-template-columns:1.22fr 1fr;gap:14px;margin-top:5px">
@@ -729,8 +740,8 @@ function pageWs2(pageNo) {
         <table class="bx" style="width:126mm;margin-top:3px">
           <thead><tr><th style="width:92px">ตำแหน่ง</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความคลาดเคลื่อนที่เกิด<br>จากการไม่วางตรงกลางจาน<br>( g )</th></tr></thead>
           <tbody>
-            ${CAL.ecc.positions.map((pos,i)=>`<tr><td style="white-space:nowrap">${esc(pos)}</td><td class="ctr fill">${f(CAL.ecc.reads[i],2)}</td><td class="ctr fill">${f(eccDiffs[i],2)}</td></tr>`).join('')}
-            <tr><td colspan="2">ความคลาดเคลื่อนสูงสุดที่เกิดจากการวางไม่ตรงกลางจาน</td><td class="ctr fill b">${f(eccMax,2)}</td></tr>
+            ${CAL.ecc.positions.map((pos,i)=>`<tr><td style="white-space:nowrap">${esc(pos)}</td><td class="ctr fill">${f(CAL.ecc.reads[i],eccDec)}</td><td class="ctr fill">${f(eccDiffs[i],eccDec)}</td></tr>`).join('')}
+            <tr><td colspan="2">ความคลาดเคลื่อนสูงสุดที่เกิดจากการวางไม่ตรงกลางจาน</td><td class="ctr fill b">${f(eccMax,eccDec)}</td></tr>
           </tbody>
         </table>
         <div class="row panrow" style="margin-top:4px;align-items:center"><span class="b">ลักษณะของจานชั่ง</span>
@@ -746,7 +757,7 @@ function pageWs2(pageNo) {
         <div class="row" style="margin-top:14px"><span class="sec" style="margin:0">5.การตรวจสอบค่า Effect of tare</span><span>( พิกัดตุ้มน้ำหนักที่ใช้ในการ tare</span><span class="fv fill">${CAL.tare.wt} g</span><span>)</span></div>
         <table class="bx" style="width:105mm;margin-top:3px">
           <thead><tr><th>พิกัดตุ้มน้ำหนักที่ตรวจสอบ<br>( g )</th><th>ค่าที่อ่านได้<br>( g )</th><th>ค่าความแตกต่างที่อ่านได้<br>( g )</th></tr></thead>
-          <tbody>${CAL.tare.checks.map(c=>`<tr><td class="ctr">${c[0]}</td><td class="ctr fill">${f(c[1],2)}</td><td class="ctr fill">${f(c[0]-c[1],2)}</td></tr>`).join('')}</tbody>
+          <tbody>${CAL.tare.checks.map(c=>`<tr><td class="ctr">${c[0]}</td><td class="ctr fill">${f(c[1],resDecimals(resForLoad(c[0])))}</td><td class="ctr fill">${f(c[0]-c[1],resDecimals(resForLoad(c[0])))}</td></tr>`).join('')}</tbody>
         </table>
       </div>
     </div>
