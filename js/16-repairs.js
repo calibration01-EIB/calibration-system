@@ -383,9 +383,48 @@ async function repairUnrepairable(orderId) {
   }
   renderRepairOrderView(orderId);
 }
-// Task 6 แทนที่
-async function uploadRepairFiles(orderId, input) {}
-async function loadRepairFiles(orderId) {}
+// Task 6 — ไฟล์แนบ upload/list/open/delete ผ่าน bucket repair-docs
+async function uploadRepairFiles(orderId, input) {
+  const files = [...(input?.files || [])];
+  if (!files.length) return;
+  for (const f of files) {
+    if (f.size > 10 * 1024 * 1024) { showToast(`${f.name}: ใหญ่เกิน 10MB`, 'error'); continue; }
+    const { error } = await sb.storage.from('repair-docs').upload(orderId + '/' + f.name, f, { upsert: true });
+    if (error) showToast(`${f.name}: อัปโหลดไม่สำเร็จ — ${error.message}`, 'error');
+  }
+  input.value = '';
+  loadRepairFiles(orderId);
+}
+
+async function loadRepairFiles(orderId) {
+  const host = document.getElementById('repairFilesList');
+  if (!host) return;
+  const { data, error } = await sb.storage.from('repair-docs').list(orderId);
+  if (error) { host.innerHTML = '<span style="font-size:12px;color:var(--text3)">โหลดไฟล์ไม่สำเร็จ</span>'; return; }
+  const files = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  host.innerHTML = files.length ? files.map(f => `
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px">
+      <a href="javascript:void(0)" onclick="openRepairFile('${escapeJsSingle(orderId + '/' + f.name)}')" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis">📄 ${escapeHtmlText(f.name)}</a>
+      ${canEdit ? `<a href="javascript:void(0)" onclick="deleteRepairFile('${escapeJsSingle(orderId)}','${escapeJsSingle(f.name)}')" style="color:var(--red);font-size:11px">ลบ</a>` : ''}
+    </div>`).join('')
+    : '<span style="font-size:12px;color:var(--text3)">ยังไม่มีไฟล์แนบ</span>';
+}
+
+async function openRepairFile(path) {
+  try {
+    const { data, error } = await sb.storage.from('repair-docs').createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) throw (error || new Error('no url'));
+    window.open(data.signedUrl, '_blank');
+  } catch (e) { showToast('เปิดไฟล์ไม่สำเร็จ', 'error'); }
+}
+
+async function deleteRepairFile(orderId, name) {
+  if (!confirm('ลบไฟล์ ' + name + ' ?')) return;
+  const { error } = await sb.storage.from('repair-docs').remove([orderId + '/' + name]);
+  if (error) { showToast('ลบไม่สำเร็จ: ' + error.message, 'error'); return; }
+  loadRepairFiles(orderId);
+}
 
 function closeRepairModal() {
   document.getElementById('repairModal')?.classList.remove('open');
