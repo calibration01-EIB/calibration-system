@@ -53,6 +53,17 @@ async function main() {
   ok('new-bar: top day31 plain (ไม่ลากถึงสิ้นเดือน)', xn.includes('<c r="AJ16" s="84"/>'));
   ok('new-bar: bottom day5 ไม่มีเลขเดือน', xn.includes('<c r="J17" s="83"/>'));
   ok('new-off: is_new=false + no due → E ว่าง', frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null, is_new: false }, 5, 18, 1, false).includes('<c r="E18" s="81"/>'));
+  // bar_mode ติ๊กเองได้ทั้งใหม่/เก่า: เครื่องเก่า (มี due) เลือก 'day' → ฟ้าเฉพาะช่วง ไม่มีเลขเดือน, due ยังลงเป็นวันที่
+  const xd = frmBuildItemRows({ id_code: 'O1', instrument_name: 'OB', location: '', due_date: '2026-02-26', bar_mode: 'day', bar_start: 5, bar_end: 7 }, 6, 20, 2, false);
+  ok('mode-day(old): due ยังเป็นวันที่', xd.includes('<c r="E20" s="81"><v>46079</v></c>'));
+  ok('mode-day(old): top day5-7 blue', xd.includes('<c r="J20" s="179"/>') && xd.includes('<c r="L20" s="179"/>'));
+  ok('mode-day(old): top day8/26/31 plain', xd.includes('<c r="M20" s="83"/>') && xd.includes('<c r="AE20" s="83"/>') && xd.includes('<c r="AJ20" s="84"/>'));
+  ok('mode-day(old): bottom ไม่มีเลขเดือน', xd.indexOf('<v>2</v></c>', xd.indexOf('<row r="21"')) < 0);
+  // เครื่องใหม่เลือก 'due' → กลับไปแบบแถบยาว (เลขเดือน + ฟ้าถึงสิ้นเดือน) แต่ E ยัง "New"
+  const xnd = frmBuildItemRows({ id_code: 'N2', instrument_name: 'NB2', location: '', due_date: null, bar_mode: 'due', bar_start: 1, bar_end: 5 }, 7, 22, 1, false);
+  ok('mode-due(new): E = New', xnd.includes('<c r="E22" s="81" t="inlineStr"><is><t xml:space="preserve">New</t></is></c>'));
+  ok('mode-due(new): bottom day1-5 num', xnd.includes('<c r="F23" s="178"><v>1</v></c>') && xnd.includes('<c r="J23" s="179"><v>1</v></c>'));
+  ok('mode-due(new): top day5..31 blue', xnd.includes('<c r="J22" s="179"/>') && xnd.includes('<c r="AJ22" s="180"/>'));
 
   const sig = frmBuildSignatureRows(30);
   ok('sig row1 attrs', sig.includes('<row r="30" spans="1:43" ht="33" customHeight="1">'));
@@ -125,7 +136,9 @@ async function main() {
   const itn = frmItemFromInstrument({ id: 1, id_code: 'A1X', instrument_name: 'B', location: '', due_date: null }, 2);
   eq('itemFrom: no due bar', itn.bar_start + '-' + itn.bar_end, '0-0');
   eq('itemFrom: no due → is_new', itn.is_new, true);
+  eq('itemFrom: no due → bar_mode day', itn.bar_mode, 'day');
   eq('itemFrom: มี due → ไม่ new', frmItemFromInstrument({ id: 2, due_date: '2026-02-26' }, 2).is_new, false);
+  eq('itemFrom: มี due → bar_mode due', frmItemFromInstrument({ id: 2, due_date: '2026-02-26' }, 2).bar_mode, 'due');
 
   // ---- template render (ต้องรันด้วย --allow-file-access-from-files) ----
   try {

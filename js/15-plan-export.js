@@ -48,7 +48,10 @@ function frmCellText(col, row, s, text) {
 
 // เครื่องละ 2 แถว: แถวบนแถบฟ้า bar_end..31, แถวล่างเลขเดือน+ฟ้า bar_start..bar_end
 // item รับ override ได้: bar_start/bar_end/month_num (default = วัน 1..วัน due + เดือนของแผน)
-// เครื่องใหม่ (is_new / ไม่มี due): Due Date = "New" + ช่องฟ้าเฉพาะวันที่วางแผน (แถวบน) ไม่มีเลขเดือน
+// เครื่องใหม่ (is_new / ไม่มี due): Due Date = "New"
+// bar_mode เลือกรูปแบบแถบต่อเครื่อง (ติ๊กเองได้ทั้งเครื่องใหม่/เก่า):
+//   'due' = แบบยาวมาตรฐาน (เลขเดือน bar_start..bar_end แถวล่าง + ฟ้า bar_end..31 แถวบน)
+//   'day' = ช่องฟ้าเฉพาะ bar_start..bar_end บนแถวบน ไม่มีเลขเดือน (default ของเครื่องใหม่)
 // isFirst = แถวแรกใต้หัวตาราง (แถวแรกของแต่ละหน้า/บล็อก) ใช้ชุด style FRM_STYLE.first
 function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   const S = FRM_STYLE;
@@ -56,6 +59,7 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   const B = S.item;                     // แถวล่างใช้ชุดทั่วไปเสมอ
   const due = frmDateSerial(item.due_date);
   const isNew = item.is_new != null ? !!item.is_new : !due;
+  const barMode = item.bar_mode === 'day' || item.bar_mode === 'due' ? item.bar_mode : (isNew ? 'day' : 'due');
   const dueDay = due ? parseInt(String(item.due_date).slice(8, 10), 10) : 0;
   const barEnd = item.bar_end != null ? item.bar_end : dueDay;
   const barStart = item.bar_start != null ? item.bar_start : (barEnd ? 1 : 0);
@@ -69,7 +73,7 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   x += due ? frmCellNum('E', r1, T.e, due) : (isNew ? frmCellText('E', r1, T.e, 'New') : frmCellEmpty('E', r1, T.e));
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const blue = barEnd > 0 && (isNew ? (d >= barStart && d <= barEnd) : d >= barEnd);
+    const blue = barEnd > 0 && (barMode === 'day' ? (d >= barStart && d <= barEnd) : d >= barEnd);
     const s = d === 1 ? (blue ? S.day1Blue : T.day1) : d === 31 ? (blue ? S.day31Blue : T.day31) : (blue ? S.dayBlue : T.day);
     x += frmCellEmpty(col, r1, s);
   }
@@ -79,7 +83,7 @@ function frmBuildItemRows(item, itemNo, rowNum, monthNum, isFirst) {
   x += frmCellEmpty('A', r2, B.a) + frmCellEmpty('B', r2, B.b) + frmCellEmpty('C', r2, B.c) + frmCellEmpty('D', r2, B.d) + frmCellEmpty('E', r2, B.e);
   for (let d = 1; d <= 31; d++) {
     const col = frmColLetter(5 + d);
-    const num = !isNew && barEnd > 0 && d >= barStart && d <= barEnd;
+    const num = barMode !== 'day' && barEnd > 0 && d >= barStart && d <= barEnd;
     const s = d === 1 ? (num ? S.botNum1 : B.day1) : d === 31 ? (num ? S.botNum31 : B.day31) : (num ? S.botNum : B.day);
     x += num ? frmCellNum(col, r2, s, mNum) : frmCellEmpty(col, r2, s);
   }
@@ -250,6 +254,7 @@ function frmItemFromInstrument(row, planMonth) {
   return {
     instrument_id: row.id, id_code: row.id_code || '', name: row.instrument_name || '',
     location: row.location || '', due_date: row.due_date || null, is_new: !row.due_date,
+    bar_mode: row.due_date ? 'due' : 'day',
     bar_start: dueDay ? 1 : 0, bar_end: dueDay, month_num: planMonth
   };
 }
@@ -404,7 +409,7 @@ function frmEditorHeader(key, val) { frmEditorPlan.header[key] = val; }
 function frmEditorItem(i, key, val) {
   frmEditorPlan.items[i][key] = val;
   if (key === 'due_date' && val) frmEditorPlan.items[i].is_new = false;
-  if (key === 'due_date' || key === 'is_new') frmEditorRenderGrid();
+  if (key === 'due_date' || key === 'is_new' || key === 'bar_mode') frmEditorRenderGrid();
 }
 function frmEditorMonth(i, val) { frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
 function frmEditorDay(i, day) {
@@ -449,7 +454,7 @@ function frmEditorRender() {
     '</div>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
     '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
-    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ · เครื่องใหม่ (New): คลิกวันเดียวกัน 2 ครั้ง = ช่องฟ้าวันเดียว</span></div>' +
+    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ (คลิกวันเดิม 2 ครั้ง = วันเดียว) · เลือกรูปแบบแถบต่อเครื่องได้ในคอลัมน์ท้าย: แถบยาวตาม Due / ฟ้าเฉพาะวันที่เลือก</span></div>' +
     '<div id="frmAddResults" style="margin-bottom:8px"></div>' +
     '<div style="overflow:auto"><table class="frm-grid" id="frmGridTable"></table></div>' +
     '</section>';
@@ -466,11 +471,12 @@ function frmEditorRenderGrid() {
   p.items.forEach((it, i) => {
     const pend = frmEditorPending[i];
     const isNew = it.is_new != null ? !!it.is_new : !it.due_date;
+    const barMode = it.bar_mode === 'day' || it.bar_mode === 'due' ? it.bar_mode : (isNew ? 'day' : 'due');
     let top = '', bot = '';
     for (let d = 1; d <= 31; d++) {
-      const band = it.bar_end > 0 && (isNew ? (d >= it.bar_start && d <= it.bar_end) : d >= it.bar_end);
+      const band = it.bar_end > 0 && (barMode === 'day' ? (d >= it.bar_start && d <= it.bar_end) : d >= it.bar_end);
       top += '<td class="frm-day ro' + (band ? ' band' : '') + '"></td>';
-      const on = !isNew && it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
+      const on = barMode !== 'day' && it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
       bot += '<td class="frm-day' + (on ? ' on' : '') + (pend === d ? ' pending' : '') + '" onclick="frmEditorDay(' + i + ',' + d + ')">' + (on ? it.month_num : '') + '</td>';
     }
     const mOpts = Array.from({ length: 12 }, (_, m) => '<option value="' + (m + 1) + '"' + (it.month_num === m + 1 ? ' selected' : '') + '>' + (m + 1) + '</option>').join('');
@@ -483,7 +489,10 @@ function frmEditorRenderGrid() {
       '<label style="display:block;font-size:10px;margin-top:2px;cursor:pointer;color:var(--text2)"><input type="checkbox"' + (isNew ? ' checked' : '') + ' onchange="frmEditorItem(' + i + ',\'is_new\',this.checked)"> 🆕 New (เครื่องใหม่)</label></td>' +
       top +
       '<td rowspan="2"><select onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
-      ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button></td>' +
+      ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button>' +
+      '<select title="รูปแบบแถบ" style="display:block;margin-top:3px;font-size:10px;max-width:110px" onchange="frmEditorItem(' + i + ',\'bar_mode\',this.value)">' +
+      '<option value="due"' + (barMode === 'due' ? ' selected' : '') + '>แถบยาวตาม Due</option>' +
+      '<option value="day"' + (barMode === 'day' ? ' selected' : '') + '>ฟ้าเฉพาะวันที่เลือก</option></select></td>' +
       '<td rowspan="2"><button type="button" title="เอาออกจากแผน" onclick="frmEditorRemove(' + i + ')" style="border:0;background:none;cursor:pointer;color:var(--red)">🗑️</button></td>' +
       '</tr><tr>' + bot + '</tr>';
   });
