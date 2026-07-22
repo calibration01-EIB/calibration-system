@@ -1301,7 +1301,7 @@ async function issueCert() {
     // เติมเลข Cert/Job/วันที่ออก ลงฟอร์ม "ก่อน" buildCAL → data.cert_no/job_no/date_issue ไม่ว่าง (ใช้ตอนปริ้น/ปริ้นย้อนหลัง)
     if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
     if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
-    if (byId('fDateIssue')) byId('fDateIssue').value = localTodayISO();
+    if (byId('fDateIssue') && !byId('fDateIssue').value) byId('fDateIssue').value = localTodayISO();   // ว่าง = วันนี้ · ผู้ใช้กรอกเองไว้แล้วเคารพค่านั้น
     // 2) บันทึกผลดิบ + CAL object ลง calibration_records
     const rec = {
       instrument_id: (INCOMING_INST && INCOMING_INST.instrument_id) || null,
@@ -1469,16 +1469,26 @@ async function reviseCert() {
 async function printCert() {
   if (CAL_STATE === 'draft') { alert('ต้องกด "สอบเสร็จ → ออกเลข Cert" ก่อนจึงจะปริ้นได้'); return; }
   switchMode('review');
+  // DATE OF ISSUE = วันที่ออกใบจริง (ไม่ผูกกับวันสอบเทียบ) — ใช้ค่าในช่อง ถ้าว่างเติมวันนี้ตอนปริ้น
+  const issueDate = (byId('fDateIssue') && byId('fDateIssue').value) || localTodayISO();
+  if (byId('fDateIssue')) byId('fDateIssue').value = issueDate;
   // ปริ้นจากข้อมูลที่บันทึกไว้ใน DB เสมอ (ใบที่ปริ้น = ข้อมูลที่บันทึก) — แก้บนจอแล้วไม่กด "บันทึกการแก้ไข" จะไม่ติดไปในใบ
   const db = CAL_REC_ID ? sbx() : null;
   if (!db) { openCert(); return; }
   const w = window.open('', '_blank');   // เปิดหน้าต่างก่อน await — กัน popup blocker
-  let json = null;
+  let data = null;
   try {
     const { data: rec, error } = await db.from('calibration_records').select('data').eq('id', CAL_REC_ID).single();
-    if (!error && rec && rec.data) json = JSON.stringify(rec.data);
+    if (!error && rec && rec.data) data = rec.data;
   } catch (e) { console.warn('printCert: โหลดจาก DB ไม่ได้ ใช้ค่าบนจอแทน', e && e.message); }
-  if (!json) { try { json = JSON.stringify(buildCAL()); } catch (e) { if (w) w.close(); alert('สร้างใบรับรองไม่สำเร็จ: ' + e.message); return; } }
+  if (!data) { try { data = buildCAL(); } catch (e) { if (w) w.close(); alert('สร้างใบรับรองไม่สำเร็จ: ' + e.message); return; } }
+  // อัปเดตวันที่ออกใบให้เป็นค่าที่เลือก แล้วบันทึกกลับ record ให้ตรงกับใบที่ปริ้น — เฉพาะสถานะ issued ที่ยังแก้ได้
+  if (data.date_issue !== issueDate && CAL_STATE === 'issued') {
+    data.date_issue = issueDate;
+    try { await db.from('calibration_records').update({ data }).eq('id', CAL_REC_ID); }
+    catch (e) { console.warn('printCert: อัปเดตวันที่ออกใบไม่ได้', e && e.message); }
+  }
+  const json = JSON.stringify(data);
   try { localStorage.setItem('calData', json); } catch (e) {}
   const url = 'cert-print.html#data=' + encodeURIComponent(json);
   if (w) w.location = url; else window.open(url, '_blank');
