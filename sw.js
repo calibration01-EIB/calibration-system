@@ -37,6 +37,7 @@ const APP_SHELL = [
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',
+  './js/17-frm-cross-month.js',
   './assets/frm-eib04-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];

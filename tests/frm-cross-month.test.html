@@ -1,0 +1,57 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
+<pre id="out"></pre>
+<script src="../js/17-frm-cross-month.js"></script>
+<script>
+const results = [];
+function eq(name, got, want) { results.push((String(got) === String(want) ? 'PASS ' : 'FAIL ') + name + ' | got=' + got + ' want=' + want); }
+function ok(name, cond) { results.push((cond ? 'PASS ' : 'FAIL ') + name); }
+function finish() {
+  const fails = results.filter(r => r.indexOf('FAIL') === 0).length;
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = fails ? ('FAIL ' + fails) : 'ALLPASS';
+}
+
+eq('nextMonth mid-year', JSON.stringify(frmNextMonthOf(2, 2026)), '{"month_num":3,"year":2026}');
+eq('nextMonth Dec rollover', JSON.stringify(frmNextMonthOf(12, 2026)), '{"month_num":1,"year":2027}');
+eq('prevMonth mid-year', JSON.stringify(frmPrevMonthOf(3, 2026)), '{"month_num":2,"year":2026}');
+eq('prevMonth Jan rollover', JSON.stringify(frmPrevMonthOf(1, 2027)), '{"month_num":12,"year":2026}');
+
+eq('marksToggle first tick', JSON.stringify(frmMarksToggle([], 12)), '[12]');
+eq('marksToggle second tick', JSON.stringify(frmMarksToggle([12], 5)), '[12,5]');
+eq('marksToggle same day twice commits 1-day range', JSON.stringify(frmMarksToggle([7], 7)), '[7,7]');
+eq('marksToggle third tick resets pair', JSON.stringify(frmMarksToggle([5, 12], 20)), '[20]');
+
+eq('siblingName plain', frmSiblingName('BALANCE 30kg'), 'BALANCE 30kg (ต่อจากเดือนก่อน)');
+eq('siblingName idempotent', frmSiblingName('BALANCE 30kg (ต่อจากเดือนก่อน)'), 'BALANCE 30kg (ต่อจากเดือนก่อน)');
+
+const src = { instrument_id: 9, id_code: 'WRM1BB05-WI01', name: 'BALANCE 30kg', location: 'B.4/2' };
+const sib = frmBuildCrossSiblingItem(src, 3, 4, 'cx-1');
+eq('sibling instrument_id', sib.instrument_id, 9);
+eq('sibling name suffix', sib.name, 'BALANCE 30kg (ต่อจากเดือนก่อน)');
+eq('sibling bar', sib.bar_start + '-' + sib.bar_end, '1-4');
+eq('sibling month_num', sib.month_num, 3);
+eq('sibling cross_id', sib.cross_id, 'cx-1');
+ok('sibling crosses_from_prev', sib.crosses_from_prev === true);
+ok('sibling due_date null', sib.due_date === null);
+
+const items = [{ instrument_id: 1, id_code: 'A' }, { instrument_id: 2, id_code: 'B', crosses_from_prev: true }];
+ok('findDuplicate finds normal row', frmFindDuplicateInstrument(items, 1) === items[0]);
+ok('findDuplicate ignores sibling row', frmFindDuplicateInstrument(items, 2) === undefined);
+ok('findDuplicate no match', frmFindDuplicateInstrument(items, 99) === undefined);
+
+const withCross = [{ cross_id: 'cx-1', id_code: 'A' }, { cross_id: 'cx-2', id_code: 'B' }];
+eq('upsertByCrossId replaces existing', JSON.stringify(frmUpsertByCrossId(withCross, 'cx-1', { cross_id: 'cx-1', id_code: 'A2' })), '[{"cross_id":"cx-1","id_code":"A2"},{"cross_id":"cx-2","id_code":"B"}]');
+eq('upsertByCrossId appends new', frmUpsertByCrossId(withCross, 'cx-3', { cross_id: 'cx-3', id_code: 'C' }).length, 3);
+eq('removeByCrossId filters', frmRemoveByCrossId(withCross, 'cx-1').length, 1);
+
+const crossOrigin = { bar_start: 20, bar_end: 31, cross_id: 'cx-1', crosses_to_next: true, cross_end_day: 4 };
+const decoupled = frmDecoupleCrossItem(crossOrigin);
+ok('decouple removes cross_id', decoupled.cross_id === undefined);
+ok('decouple removes crosses_to_next', decoupled.crosses_to_next === undefined);
+ok('decouple removes cross_end_day', decoupled.cross_end_day === undefined);
+eq('decouple keeps bar_start', decoupled.bar_start, 20);
+eq('decouple caps bar_end at 31', decoupled.bar_end, 31);
+ok('decouple does not mutate original', crossOrigin.cross_id === 'cx-1');
+
+finish();
+</script></body></html>
