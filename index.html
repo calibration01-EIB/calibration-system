@@ -300,6 +300,10 @@ tbody tr:hover { background: var(--surface2); }
 .frm-grid td.frm-day.ro { cursor:default; }
 .frm-grid input, .frm-grid select { border:1px solid var(--border); border-radius:6px; padding:3px 6px; font-family:var(--font); font-size:12px; }
 .frm-grid input.frm-name { width:150px; } .frm-grid input.frm-loc { width:70px; }
+.frm-grid th.frm-next-divider, .frm-grid td.frm-next-divider { border-left:3px solid #d33f35; }
+.frm-grid td.frm-day-next { background:#f6f6f6; }
+.frm-grid td.frm-day input[type=checkbox], .frm-grid td.frm-day-next input[type=checkbox] { margin:0; cursor:pointer; }
+.frm-grid tr.frm-sibling-row { opacity:.65; background:#fafafa; }
 .plan-tabs::-webkit-scrollbar { display:none; }
 .plan-tab { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:7px 14px; border:0; border-radius:6px; background:transparent; color:var(--text2); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,box-shadow .15s; }
 .plan-tab:hover { background:#edf7f5; color:var(--text); }

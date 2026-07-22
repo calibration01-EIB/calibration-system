@@ -492,31 +492,95 @@ function frmEditorRender() {
       ? '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">🔒 แผนถูกล็อกหลังส่งขออนุมัติ — แก้ไขได้เมื่อถูกตีกลับเป็นร่าง</div>'
       : '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
         '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
-        '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ (คลิกวันเดิม 2 ครั้ง = วันเดียว) · เลือกรูปแบบแถบต่อเครื่องได้ในคอลัมน์ท้าย: แถบยาวตาม Due / ฟ้าเฉพาะวันที่เลือก</span></div>') +
+        '<span style="font-size:11px;color:var(--text3)">ติ๊กวันเริ่ม + ติ๊กวันจบในโหมด "ฟ้าเฉพาะวันที่เลือก" (ติ๊กวันเดิมซ้ำ = ช่วง 1 วัน, ติ๊กจุดที่ 3 = เริ่มช่วงใหม่) · โหมด "แถบยาวตาม Due" คำนวณอัตโนมัติจากวันครบกำหนด ไม่มีให้ติ๊ก</span></div>') +
     '<div id="frmAddResults" style="margin-bottom:8px"></div>' +
+    '<div id="frmGridToolbar" style="margin-bottom:6px"></div>' +
     '<div style="overflow:auto"><table class="frm-grid" id="frmGridTable"></table></div>' +
     '</section>';
   frmEditorRenderGrid();
 }
 
+let frmShowNextMonthZone = false;
+function frmToggleNextMonthZone() { frmShowNextMonthZone = !frmShowNextMonthZone; frmEditorRenderGrid(); }
+
 function frmEditorRenderGrid() {
   const p = frmEditorPlan;
   if (!p) return;
   const el = document.getElementById('frmGridTable');
+  const toolbarEl = document.getElementById('frmGridToolbar');
   if (!el) return;
   const dis = frmEditorLocked() ? ' disabled' : '';
+  const zoneOpen = frmShowNextMonthZone;
+  const nextInfo = frmNextMonthOf(p.month_num, p.year);
+  const nextLabel = frmMonthName(nextInfo.month_num) + ' ' + nextInfo.year;
+
+  if (toolbarEl) {
+    toolbarEl.innerHTML = '<button type="button" class="plan-btn" onclick="frmToggleNextMonthZone()">' +
+      (zoneOpen ? '▼ ซ่อนวันเดือนถัดไป' : '▶ แสดงวันเดือนถัดไป (' + escapeHtmlText(nextLabel) + ')') + '</button>';
+  }
+
   let days = ''; for (let d = 1; d <= 31; d++) days += '<th style="width:20px">' + d + '</th>';
-  let html = '<tr><th>#</th><th>ชื่อเครื่อง</th><th>ID CODE</th><th>Location</th><th>Due Date</th>' + days + '<th>เดือน</th><th></th></tr>';
+  let nextDays = '';
+  if (zoneOpen) {
+    for (let d = 1; d <= 10; d++) {
+      nextDays += '<th class="' + (d === 1 ? 'frm-next-divider' : '') + '" title="' + escapeHtmlAttr(nextLabel) + '" style="width:20px">' + d + '</th>';
+    }
+  }
+  let html = '<tr><th>#</th><th>ชื่อเครื่อง</th><th>ID CODE</th><th>Location</th><th>Due Date</th>' + days + nextDays + '<th>เดือน</th><th></th></tr>';
+
   p.items.forEach((it, i) => {
-    const pend = frmEditorPending[i];
+    if (it.crosses_from_prev) {
+      // แถวคู่แฝด: อ่านอย่างเดียวเสมอ ต้องย้อนไปแก้ที่แผนต้นทาง
+      let top = '', bot = '';
+      for (let d = 1; d <= 31; d++) {
+        const band = it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
+        top += '<td class="frm-day ro' + (band ? ' band' : '') + '"></td>';
+        bot += '<td class="frm-day ro"></td>';
+      }
+      const zoneTop = zoneOpen ? Array(10).fill('<td class="frm-day-next ro"></td>').join('') : '';
+      const zoneBot = zoneOpen ? Array(10).fill('<td class="frm-day-next ro"></td>').join('') : '';
+      html += '<tr class="frm-sibling-row">' +
+        '<td rowspan="2">' + (i + 1) + '</td>' +
+        '<td rowspan="2">' + escapeHtmlText(it.name || '') + '<div style="font-size:10px;color:var(--text3)">← ต่อจากแผนเดือนก่อนหน้า</div></td>' +
+        '<td rowspan="2" style="white-space:nowrap">' + escapeHtmlText(it.id_code || '–') + '</td>' +
+        '<td rowspan="2">' + escapeHtmlText(it.location || '') + '</td>' +
+        '<td rowspan="2">–</td>' +
+        top + zoneTop +
+        '<td rowspan="2">' + it.month_num + '</td>' +
+        '<td rowspan="2"></td>' +
+        '</tr><tr>' + bot + zoneBot + '</tr>';
+      return;
+    }
+
+    const pendMarks = frmEditorPending[i] || [];
     const isNew = it.is_new != null ? !!it.is_new : !it.due_date;
     const barMode = it.bar_mode === 'day' || it.bar_mode === 'due' ? it.bar_mode : (isNew ? 'day' : 'due');
-    let top = '', bot = '';
+    const canTick = barMode === 'day' && !frmEditorLocked();
+    let top = '', bot = '', zoneTop = '', zoneBot = '';
     for (let d = 1; d <= 31; d++) {
       const band = it.bar_end > 0 && (barMode === 'day' ? (d >= it.bar_start && d <= it.bar_end) : d >= it.bar_end);
       top += '<td class="frm-day ro' + (band ? ' band' : '') + '"></td>';
-      const on = barMode !== 'day' && it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
-      bot += '<td class="frm-day' + (on ? ' on' : '') + (pend === d ? ' pending' : '') + '" onclick="frmEditorDay(' + i + ',' + d + ')">' + (on ? it.month_num : '') + '</td>';
+      if (barMode === 'day') {
+        const checked = pendMarks.includes(d) || (pendMarks.length === 0 && it.bar_end > 0 && (d === it.bar_start || d === it.bar_end));
+        bot += '<td class="frm-day' + (checked ? ' on' : '') + '"><input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="frmEditorDayToggle(' + i + ',' + d + ')"></td>';
+      } else {
+        const on = it.bar_end > 0 && d >= it.bar_start && d <= it.bar_end;
+        bot += '<td class="frm-day ro' + (on ? ' on' : '') + '">' + (on ? it.month_num : '') + '</td>';
+      }
+    }
+    if (zoneOpen) {
+      for (let nd = 1; nd <= 10; nd++) {
+        const d = 31 + nd;
+        const divider = nd === 1 ? ' frm-next-divider' : '';
+        if (canTick) {
+          const checked = pendMarks.includes(d) || (pendMarks.length === 0 && it.crosses_to_next && it.cross_end_day === nd);
+          zoneTop += '<td class="frm-day-next' + divider + '"></td>';
+          zoneBot += '<td class="frm-day-next' + divider + '"><input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="frmEditorDayToggle(' + i + ',' + d + ')"></td>';
+        } else {
+          zoneTop += '<td class="frm-day-next ro' + divider + '"></td>';
+          zoneBot += '<td class="frm-day-next ro' + divider + '"></td>';
+        }
+      }
     }
     const mOpts = Array.from({ length: 12 }, (_, m) => '<option value="' + (m + 1) + '"' + (it.month_num === m + 1 ? ' selected' : '') + '>' + (m + 1) + '</option>').join('');
     html += '<tr>' +
@@ -526,16 +590,16 @@ function frmEditorRenderGrid() {
       '<td rowspan="2"><input class="frm-loc"' + dis + ' value="' + escapeHtmlAttr(it.location || '') + '" oninput="frmEditorItem(' + i + ',\'location\',this.value)"></td>' +
       '<td rowspan="2"><input type="date"' + dis + ' value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)">' +
       '<label style="display:block;font-size:10px;margin-top:2px;cursor:pointer;color:var(--text2)"><input type="checkbox"' + (isNew ? ' checked' : '') + dis + ' onchange="frmEditorItem(' + i + ',\'is_new\',this.checked)"> 🆕 New (เครื่องใหม่)</label></td>' +
-      top +
+      top + zoneTop +
       '<td rowspan="2"><select' + dis + ' onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
       (dis ? '' : ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button>') +
       '<select title="รูปแบบแถบ"' + dis + ' style="display:block;margin-top:3px;font-size:10px;max-width:110px" onchange="frmEditorItem(' + i + ',\'bar_mode\',this.value)">' +
       '<option value="due"' + (barMode === 'due' ? ' selected' : '') + '>แถบยาวตาม Due</option>' +
       '<option value="day"' + (barMode === 'day' ? ' selected' : '') + '>ฟ้าเฉพาะวันที่เลือก</option></select></td>' +
       '<td rowspan="2">' + (dis ? '' : '<button type="button" title="เอาออกจากแผน" onclick="frmEditorRemove(' + i + ')" style="border:0;background:none;cursor:pointer;color:var(--red)">🗑️</button>') + '</td>' +
-      '</tr><tr>' + bot + '</tr>';
+      '</tr><tr>' + bot + zoneBot + '</tr>';
   });
-  if (!p.items.length) html += '<tr><td colspan="38" style="padding:14px;color:var(--text3)">ยังไม่มีเครื่องในแผน — ใช้ช่องค้นหาด้านบนเพื่อเพิ่ม</td></tr>';
+  if (!p.items.length) html += '<tr><td colspan="' + (zoneOpen ? 48 : 38) + '" style="padding:14px;color:var(--text3)">ยังไม่มีเครื่องในแผน — ใช้ช่องค้นหาด้านบนเพื่อเพิ่ม</td></tr>';
   el.innerHTML = html;
 }
 
