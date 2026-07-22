@@ -391,17 +391,10 @@ async function frmLoadPlanList() {
   const { data, error } = await sb.from('frm_plans').select('*').order('updated_at', { ascending: false });
   if (error) { el.innerHTML = '<div style="color:var(--red);font-size:13px">โหลดไม่สำเร็จ: ' + escapeHtmlText(error.message) + '</div>'; return; }
   frmPlanRows = data || [];
-  if (!frmPlanRows.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีแผน — กด "สร้างแผนใหม่" (ติ๊กเลือกเครื่องในแท็บสร้างแผนก่อน จะดึงมาให้อัตโนมัติ หรือเริ่มจากแผนว่างก็ได้)</div>'; return; }
-  el.innerHTML = '<div style="display:grid;gap:8px">' + frmPlanRows.map(p =>
-    '<div onclick="frmOpenPlanById(\'' + p.id + '\')" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer">' +
-    '<b style="font-size:14px">' + escapeHtmlText(p.unit_code || 'ไม่ระบุ') + '</b>' +
-    (frmDeptFullName(p.unit_code) ? '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText(frmDeptFullName(p.unit_code)) + '</span>' : '') +
-    '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
-    '<span style="font-size:12px">' + frmMonthName(p.month_num) + ' ' + p.year + '</span>' +
-    '<span style="font-size:12px;color:var(--text3)">' + ((p.items || []).length) + ' เครื่อง</span>' +
-    '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:' + (p.status === 'exported' ? '#e6f4ea;color:#137333' : '#fef7e0;color:#b06000') + '">' + (p.status === 'exported' ? 'Export แล้ว' : 'ร่าง') + '</span>' +
-    '<span style="font-size:11px;color:var(--text3);margin-left:auto">' + (p.updated_at || '').slice(0, 16).replace('T', ' ') + '</span>' +
-    '</div>').join('') + '</div>';
+  // owner เห็นเฉพาะแผนหน่วยงานตัวเอง
+  if (currentUser?.role === 'owner') frmPlanRows = frmPlanRows.filter(p => p.unit_code === (currentUser?.department || ''));
+  if (!frmPlanRows.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px">ยังไม่มีแผน — กด "สร้างแผนใหม่" (ติ๊กเลือกเครื่องในแท็บเลือกเครื่องก่อน จะดึงมาให้อัตโนมัติ หรือเริ่มจากแผนว่างก็ได้)</div>'; return; }
+  el.innerHTML = '<div style="display:grid;gap:8px">' + frmPlanRows.map(p => frmPlanCard(p)).join('') + '</div>';
 }
 
 function frmOpenPlanById(id) {

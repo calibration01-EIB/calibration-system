@@ -2981,23 +2981,15 @@ body.app-mode textarea:focus {
       <div id="pagePlan" class="page-content" style="display:none">
         <div class="plan-workspace">
           <div class="plan-tabs" role="tablist" aria-label="Calibration plan sections">
-            <button class="plan-tab active" onclick="switchPlanTab('new')" id="planTab-new" type="button"><i class="ti ti-plus"></i><span>สร้างแผน</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('frm')" id="planTab-frm" type="button" style="display:none"><i class="ti ti-table"></i><span>ลงแผน FRM</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('list')" id="planTab-list" type="button"><i class="ti ti-list-details"></i><span>แผนทั้งหมด</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('confirm')" id="planTab-confirm" type="button" style="display:none"><i class="ti ti-clipboard-check"></i><span>รอยืนยัน</span><span class="plan-tab-badge" id="planConfirmBadge">0</span></button>
+            <button class="plan-tab active" onclick="switchPlanTab('new')" id="planTab-new" type="button"><i class="ti ti-plus"></i><span>เลือกเครื่อง</span></button>
+            <button class="plan-tab" onclick="switchPlanTab('frm')" id="planTab-frm" type="button" style="display:none"><i class="ti ti-table"></i><span>แผน FRM</span></button>
+            <button class="plan-tab" onclick="switchPlanTab('confirm')" id="planTab-confirm" type="button" style="display:none"><i class="ti ti-clipboard-check"></i><span>รอดำเนินการ</span><span class="plan-tab-badge" id="planConfirmBadge">0</span></button>
+            <button class="plan-tab" onclick="switchPlanTab('list')" id="planTab-list" type="button"><i class="ti ti-archive"></i><span>ระบบเก่า</span></button>
             <button class="plan-tab" onclick="switchPlanTab('history')" id="planTab-history" type="button"><i class="ti ti-history"></i><span>ประวัติ</span></button>
           </div>
 
         <!-- TAB: สร้างแผนใหม่ -->
         <div id="planTabNew">
-          <div class="plan-flow" aria-label="Plan progress">
-            <div class="plan-step active" id="planStepMark1"><div class="plan-step-dot" id="stepBadge1">1</div><span>เลือกเครื่องมือ</span></div>
-            <div class="plan-line"></div>
-            <div class="plan-step" id="planStepMark2"><div class="plan-step-dot" id="stepBadge2">2</div><span id="stepLabel2">แนบไฟล์แผน</span></div>
-            <div class="plan-line"></div>
-            <div class="plan-step" id="planStepMark3"><div class="plan-step-dot" id="stepBadge3">3</div><span id="stepLabel3">ส่งให้ Admin</span></div>
-          </div>
-
           <!-- STEP 1: เลือกเครื่องมือ -->
           <div id="planStep1">
             <section class="plan-panel">
@@ -3082,60 +3074,7 @@ body.app-mode textarea:focus {
             </section>
 
             <div class="plan-footer-actions">
-              <button onclick="goToFrmPlanFromSelection()" class="plan-btn" type="button"><i class="ti ti-table"></i> ลงแผน FRM จากที่เลือก</button>
-              <button onclick="goToPlanStep2()" class="plan-btn primary" type="button">ถัดไป: แนบไฟล์แผน <i class="ti ti-arrow-right"></i></button>
-            </div>
-          </div>
-
-          <!-- STEP 2: แนบไฟล์แผน -->
-          <div id="planStep2" style="display:none">
-            <section class="plan-panel">
-              <div class="plan-panel-head">
-                <div>
-                  <div class="plan-panel-title"><i class="ti ti-clipboard-text"></i><span>รายละเอียดแผน</span></div>
-                  <div class="plan-panel-sub">กำหนดชื่อ วันที่นัดสอบ และแนบไฟล์แผน</div>
-                </div>
-              </div>
-              <div class="plan-detail-grid">
-                <div class="plan-field">
-                  <label for="planTitle">ชื่อแผน <span style="color:var(--red)">*</span></label>
-                  <input type="text" id="planTitle" placeholder="เช่น แผนสอบเทียบ พ.ค. 2569 - PFC3">
-                </div>
-                <div class="plan-field">
-                  <label for="planDate">วันที่นัดสอบ <span style="color:var(--red)">*</span></label>
-                  <input type="date" id="planDate">
-                </div>
-              </div>
-
-              <!-- เครื่องมือที่เลือก -->
-              <div class="plan-selected-box">
-                <div class="plan-panel-sub" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>เครื่องมือที่เลือก (<span id="planStep2Count">0</span> รายการ)</span>
-                  <button onclick="openPlanExportModal()" class="plan-btn" type="button" style="margin-left:auto"><i class="ti ti-file-spreadsheet"></i>Export แผน FRM-EIB04 (.xlsx)</button>
-                </div>
-                <div id="planSelectedList" class="plan-selected-pills"></div>
-              </div>
-
-              <!-- Upload ไฟล์ -->
-              <div>
-                <div class="plan-field"><label>แนบไฟล์แผน (PDF/JPG/PNG) <span style="color:var(--red)">*</span></label></div>
-                <div id="planDropZone" onclick="document.getElementById('planFileInput').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handlePlanDrop(event)"
-                  class="plan-upload">
-                  <i class="ti ti-paperclip"></i>
-                  <div class="plan-upload-title">คลิกหรือลากไฟล์มาวางที่นี่</div>
-                  <div class="plan-upload-sub">รองรับ PDF, JPG, PNG (สูงสุด 50MB)</div>
-                  <input type="file" id="planFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handlePlanFileSelect(this)">
-                </div>
-                <div id="planFilePreview" class="plan-file-preview">
-                  <i class="ti ti-file-check"></i>
-                  <span id="planFileName"></span>
-                  <button onclick="clearPlanFile()" type="button" aria-label="ลบไฟล์">×</button>
-                </div>
-              </div>
-            </section>
-
-            <div class="plan-footer-actions" style="justify-content:space-between">
-              <button onclick="backToPlanStep1()" class="plan-btn" type="button"><i class="ti ti-arrow-left"></i>ย้อนกลับ</button>
-              <button onclick="submitPlan()" class="plan-btn primary" type="button"><i class="ti ti-send"></i>ส่งแผนให้ Admin ตรวจสอบ</button>
+              <button onclick="goToFrmPlanFromSelection()" class="plan-btn primary" type="button"><i class="ti ti-table"></i> ลงแผน FRM จากที่เลือก <i class="ti ti-arrow-right"></i></button>
             </div>
           </div>
         </div>
@@ -3170,12 +3109,18 @@ body.app-mode textarea:focus {
               <div class="plan-field">
                 <select id="historyFilterAction" onchange="loadPlanHistory()">
                   <option value="">ทุกประเภท</option>
-                  <option value="สร้างแผน">สร้างแผน</option>
-                  <option value="แก้ไขแผน">แก้ไขแผน</option>
+                  <option value="ส่งขออนุมัติ">ส่งขออนุมัติ</option>
                   <option value="อนุมัติแผน">อนุมัติแผน</option>
-                  <option value="ปฏิเสธแผน">ปฏิเสธแผน</option>
-                  <option value="แนบไฟล์สอบ">แนบไฟล์สอบ</option>
-                  <option value="ยืนยันสอบ">ยืนยันสอบ</option>
+                  <option value="หน่วยงานรับทราบ">หน่วยงานรับทราบ</option>
+                  <option value="ตีกลับแผน">ตีกลับแผน</option>
+                  <option value="Export FRM">Export FRM</option>
+                  <option value="ส่งผลสอบ">ส่งผลสอบ</option>
+                  <option value="ยืนยันผลสอบ">ยืนยันผลสอบ</option>
+                  <option value="สร้างแผน">สร้างแผน (เก่า)</option>
+                  <option value="แก้ไขแผน">แก้ไขแผน (เก่า)</option>
+                  <option value="ปฏิเสธแผน">ปฏิเสธแผน (เก่า)</option>
+                  <option value="แนบไฟล์สอบ">แนบไฟล์สอบ (เก่า)</option>
+                  <option value="ยืนยันสอบ">ยืนยันสอบ (เก่า)</option>
                   <option value="ลบแผน">ลบแผน</option>
                 </select>
               </div>

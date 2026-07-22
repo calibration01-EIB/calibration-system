@@ -3,7 +3,6 @@
 // ====================================================
 let planSelectedItems = []; // เครื่องมือที่เลือก
 let planFilteredItems = []; // เครื่องมือที่กรองแล้ว
-let planFileObj = null;     // ไฟล์ที่แนบ
 const PLAN_RENDER_BATCH = 80;
 let planRenderLimit = PLAN_RENDER_BATCH;
 let planItemsCache = {};
@@ -27,19 +26,9 @@ function switchPlanTab(tab) {
   document.getElementById('planTabConfirm').style.display = tab === 'confirm' ? 'block' : 'none';
   document.getElementById('planTabHistory').style.display = tab === 'history' ? 'block' : 'none';
   if (tab === 'frm') frmLoadPlanList();
-  if (tab === 'list') loadPlanList();
-  if (tab === 'confirm') loadPlanConfirm();
+  if (tab === 'list') loadLegacyPlans();
+  if (tab === 'confirm') loadPlanPending();
   if (tab === 'history') loadPlanHistory();
-}
-
-function setPlanStep(step) {
-  const marks = [1, 2, 3].map(n => document.getElementById('planStepMark' + n));
-  marks.forEach((el, idx) => {
-    if (!el) return;
-    const n = idx + 1;
-    el.classList.toggle('active', n === step);
-    el.classList.toggle('done', n < step);
-  });
 }
 
 // ป้ายหน่วยงาน: "รหัส — ชื่อหน่วยงาน" (ชื่อจาก list departments ถ้ามี) — แบบเดียวกับหน้ารายการเครื่องมือ
@@ -77,21 +66,19 @@ function initPlanPage() {
 
   // โหลดข้อมูลทันที ไม่ reset planSelectedItems
   filterPlanInstruments();
-  setPlanStep(document.getElementById('planStep2')?.style.display === 'block' ? 2 : 1);
 
-  // แสดง tab confirm เฉพาะ admin
+  // สิทธิ์แท็บตาม role: staff เห็นเลือกเครื่อง+แผน FRM+รอดำเนินการ, owner เห็นแผน FRM+รอดำเนินการ (เริ่มที่คิวตัวเอง), viewer เห็นแผน FRM อ่านอย่างเดียว
   const role = currentUser?.role;
-  const confirmTab = document.getElementById('planTab-confirm');
-  if (confirmTab) confirmTab.style.display = role === 'admin' ? 'inline-flex' : 'none';
-  if (role === 'admin') loadPlanConfirmBadge();
-
-  // แสดง tab new เฉพาะ editor/admin
+  const isStaff = role === 'admin' || role === 'editor';
   const newTab = document.getElementById('planTab-new');
-  if (newTab) newTab.style.display = (role === 'admin' || role === 'editor') ? 'inline-flex' : 'none';
-
-  // แสดง tab ลงแผน FRM เฉพาะ editor/admin
+  if (newTab) newTab.style.display = isStaff ? 'inline-flex' : 'none';
   const frmTab = document.getElementById('planTab-frm');
-  if (frmTab) frmTab.style.display = (role === 'admin' || role === 'editor') ? 'inline-flex' : 'none';
+  if (frmTab) frmTab.style.display = 'inline-flex';
+  const confirmTab = document.getElementById('planTab-confirm');
+  if (confirmTab) confirmTab.style.display = (isStaff || role === 'owner') ? 'inline-flex' : 'none';
+  if (role !== 'viewer') loadPlanConfirmBadge();
+  if (role === 'owner' && document.getElementById('planTab-new')?.classList.contains('active')) switchPlanTab('confirm');
+  if (role === 'viewer' && document.getElementById('planTab-new')?.classList.contains('active')) switchPlanTab('frm');
 }
 
 // --- Filter เครื่องมือ ---
@@ -231,115 +218,8 @@ function updatePlanMetrics() {
   set('planMetricWarning', warning);
 }
 
-// --- Step 2 ---
-function goToPlanStep2() {
-  if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
-  document.getElementById('planStep1').style.display = 'none';
-  document.getElementById('planStep2').style.display = 'block';
-  setPlanStep(2);
-  // แสดงรายการเครื่องมือที่เลือก
-  document.getElementById('planStep2Count').textContent = planSelectedItems.length;
-  document.getElementById('planSelectedList').innerHTML = planSelectedItems.map(d =>
-    `<span class="plan-pill" title="${escapeHtmlAttr(d.instrument_name || '')}">${escapeHtmlText(d.id_code || d.instrument_name || '–')}</span>`
-  ).join('');
-}
-
-function backToPlanStep1() {
-  document.getElementById('planStep2').style.display = 'none';
-  document.getElementById('planStep1').style.display = 'block';
-  setPlanStep(1);
-}
-
-// --- File handling ---
-function handlePlanFileSelect(input) {
-  if (input.files[0]) setPlanFile(input.files[0]);
-}
-
-function handlePlanDrop(e) {
-  e.preventDefault();
-  document.getElementById('planDropZone')?.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) setPlanFile(e.dataTransfer.files[0]);
-}
-
-function setPlanFile(file) {
-  planFileObj = file;
-  document.getElementById('planDropZone').style.display = 'none';
-  const prev = document.getElementById('planFilePreview');
-  prev.style.display = 'flex';
-  document.getElementById('planFileName').textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
-}
-
-function clearPlanFile() {
-  planFileObj = null;
-  document.getElementById('planDropZone').style.display = 'block';
-  document.getElementById('planFilePreview').style.display = 'none';
-  document.getElementById('planFileInput').value = '';
-}
-
-// --- Submit plan ---
-async function submitPlan() {
-  const title = document.getElementById('planTitle').value.trim();
-  const date = document.getElementById('planDate').value;
-  if (!title) { showToast('กรุณากรอกชื่อแผน', 'error'); return; }
-  if (!date) { showToast('กรุณาเลือกวันที่นัดสอบ', 'error'); return; }
-  if (!planFileObj) { showToast('กรุณาแนบไฟล์แผน', 'error'); return; }
-
-  showLoading('กำลังอัพโหลดไฟล์...');
-  try {
-    // upload file
-    const ext = planFileObj.name.split('.').pop();
-    const fileName = `plan_${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from('calibration-plans').upload(fileName, planFileObj);
-    if (upErr) throw upErr;
-
-    const { data: urlData } = sb.storage.from('calibration-plans').getPublicUrl(fileName);
-
-    // create plan record
-    const { data: plan, error: pErr } = await sb.from('calibration_plans').insert({
-      title, planned_date: date,
-      created_by: currentUser.username,
-      plan_file_url: urlData?.publicUrl || fileName,
-      status: 'pending_plan'
-    }).select().single();
-    if (pErr) throw pErr;
-
-    // create plan items
-    const items = planSelectedItems.map(d => ({
-      plan_id: plan.id,
-      instrument_id: d.id,
-      instrument_type: getPlanInstrumentType(d),
-      department: d.department,
-      instrument_name: d.instrument_name,
-      id_code: d.id_code
-    }));
-    const { error: iErr } = await sb.from('calibration_plan_items').insert(items);
-    if (iErr) throw iErr;
-
-    hideLoading();
-    await logPlanAudit(plan.id, 'สร้างแผน', `สร้างแผน "${title}" วันนัดสอบ ${date}`);
-    showToast('✅ ส่งแผนให้ Admin เรียบร้อยแล้ว', 'success');
-
-    // reset
-    planSelectedItems = [];
-    planFileObj = null;
-    document.getElementById('planTitle').value = '';
-    document.getElementById('planDate').value = '';
-    clearPlanFile();
-    backToPlanStep1();
-    setPlanStep(1);
-    filterPlanInstruments();
-
-    // update badge
-    loadPlanConfirmBadge();
-
-  } catch(e) {
-    hideLoading();
-    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
-  }
-}
-
-// --- Load plan list ---
-async function loadPlanList() {
+// --- Load plan list (ระบบเก่า — อ่านย้อนหลัง + เดินแผนค้างต่อจนจบ) ---
+async function loadLegacyPlans() {
   const el = document.getElementById('planListContainer');
   if (!el) return;
   el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
@@ -386,6 +266,9 @@ async function loadPlanList() {
           ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>รายการ (${cnt.toLocaleString()})</button>` : ''}
           ${p.cert_file_url ? `<button onclick="viewPlanFile('${escapeJsSingle(p.cert_file_url)}')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
           ${canAttachCert ? `<button onclick="openAttachCertModal('${p.id}')" class="plan-btn accent" type="button"><i class="ti ti-paperclip"></i>กรอกผลสอบ</button>` : ''}
+          ${isAdmin && p.status === 'pending_plan' ? `<button onclick="confirmPlan('${p.id}','planned')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันแผน</button>` : ''}
+          ${isAdmin && p.status === 'pending_cert' ? `<button onclick="applyPlanResults('${p.id}')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันสอบ</button>` : ''}
+          ${isAdmin && (p.status === 'pending_plan' || p.status === 'pending_cert') ? `<button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" class="plan-btn danger" type="button"><i class="ti ti-x"></i>ปฏิเสธ</button>` : ''}
           <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
           ${ (isAdmin || currentUser?.role === 'editor') && p.status !== 'completed' ? `<button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" data-plan-date="${p.planned_date||''}" onclick="openEditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle), this.dataset.planDate)" class="plan-btn accent" type="button"><i class="ti ti-edit"></i>แก้ไข</button>` : '' }
           ${isAdmin ? `<button onclick="deletePlan('${p.id}')" class="plan-btn danger" type="button"><i class="ti ti-trash"></i>ลบ</button>` : ''}
@@ -458,6 +341,8 @@ async function loadPlanHistory() {
   const { data: plansData } = await sb.from('calibration_plans').select('id, title');
   const planMap = {};
   (plansData || []).forEach(p => { planMap[p.id] = p.title; });
+  const { data: frmPlansData } = await sb.from('frm_plans').select('id, unit_code, month_num, year');
+  (frmPlansData || []).forEach(p => { planMap[p.id] = 'FRM ' + (p.unit_code || '?') + ' ' + p.month_num + '/' + p.year; });
 
   let query = sb.from('plan_audit_log')
     .select('id, plan_id, action, action_by, action_at, note')
@@ -532,12 +417,28 @@ function openRejectModal(planId) {
 
 function closeRejectModal() {
   document.getElementById('rejectPlanModal').style.display = 'none';
+  frmRejectPlanId = null;
 }
 
 async function submitRejectPlan() {
   const planId = document.getElementById('rejectPlanId').value;
   const reason = document.getElementById('rejectReason').value.trim();
   if (!reason) { showToast('กรุณาระบุสาเหตุที่ปฏิเสธ', 'error'); return; }
+  // ตีกลับแผน FRM → ผ่าน RPC (กลับเป็นร่าง + ล้างลายเซ็น)
+  if (frmRejectPlanId) {
+    showLoading('กำลังตีกลับแผน...');
+    try {
+      const { error } = await sb.rpc('frm_plan_reject', { p_token: currentUser?.token, p_plan_id: frmRejectPlanId, p_reason: reason });
+      if (error) throw error;
+      hideLoading();
+      showToast('↩️ ตีกลับแผนแล้ว — กลับเป็นร่างให้แก้ไข', 'success');
+      closeRejectModal();
+      if (typeof frmLoadPlanList === 'function') frmLoadPlanList();
+      loadPlanPending();
+      loadPlanConfirmBadge();
+    } catch (e) { hideLoading(); showToast('เกิดข้อผิดพลาด: ' + e.message, 'error'); }
+    return;
+  }
   showLoading('กำลังบันทึก...');
   try {
     const { data: plan } = await sb.from('calibration_plans').select('status').eq('id', planId).single();
@@ -552,7 +453,7 @@ async function submitRejectPlan() {
     hideLoading();
     showToast(backToPlanned ? '↩️ ส่งกลับให้แก้ผลสอบแล้ว' : '❌ ปฏิเสธแผนเรียบร้อย', 'success');
     closeRejectModal();
-    loadPlanConfirm();
+    loadLegacyPlans();
     loadPlanConfirmBadge();
   } catch(e) {
     hideLoading();
@@ -591,7 +492,7 @@ async function submitEditPlan() {
     hideLoading();
     showToast('✅ แก้ไขแผนเรียบร้อย', 'success');
     closeEditPlanModal();
-    loadPlanList();
+    loadLegacyPlans();
   } catch(e) {
     hideLoading();
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
@@ -661,7 +562,7 @@ async function deletePlan(planId) {
     hideLoading();
     // ไม่ log หลังลบเพราะ record ถูกลบแล้ว
     showToast('✅ ลบแผนเรียบร้อย', 'success');
-    loadPlanList();
+    loadLegacyPlans();
     loadPlanConfirmBadge();
   } catch(e) {
     hideLoading();
@@ -669,52 +570,109 @@ async function deletePlan(planId) {
   }
 }
 
-// --- Load confirm list (Admin) ---
-async function loadPlanConfirm() {
+// ═══ แผน FRM: สถานะ + การ์ด + อนุมัติออนไลน์ 3 ขั้น ═══════════════════════════
+const FRM_STATUS_MAP = {
+  draft:           { lbl: '📝 ร่าง',                    color: '#555',    bg: '#EFEFEF' },
+  pending_approve: { lbl: '🟡 รออนุมัติ (EIB)',          color: '#854F0B', bg: '#FAEEDA' },
+  approved:        { lbl: '🟠 รอหน่วยงานรับทราบ',        color: '#9A3412', bg: '#FFEDD5' },
+  acknowledged:    { lbl: '✅ อนุมัติครบ — Export ได้',   color: '#3B6D11', bg: '#EAF3DE' },
+  pending_cert:    { lbl: '🔵 รอยืนยันผลสอบ',            color: '#185FA5', bg: '#E6F1FB' },
+  completed:       { lbl: '🏆 เสร็จสิ้น',                color: '#0F6E56', bg: '#E1F5EE' },
+};
+
+function frmPlanCardActions(p) {
+  const role = currentUser?.role;
+  const isStaff = role === 'admin' || role === 'editor';
+  const isOwnerOfPlan = role === 'owner' && currentUser?.department === p.unit_code;
+  const b = [];
+  if (p.status === 'draft' && isStaff)
+    b.push(`<button class="plan-btn primary" type="button" onclick="event.stopPropagation();frmPlanAction('${p.id}','submit')"><i class="ti ti-send"></i>ส่งขออนุมัติ</button>`);
+  if (p.status === 'pending_approve' && role === 'admin')
+    b.push(`<button class="plan-btn primary" type="button" onclick="event.stopPropagation();frmPlanAction('${p.id}','approve')"><i class="ti ti-check"></i>อนุมัติ</button>`);
+  if (p.status === 'approved' && isOwnerOfPlan)
+    b.push(`<button class="plan-btn primary" type="button" onclick="event.stopPropagation();frmPlanAction('${p.id}','acknowledge')"><i class="ti ti-eye-check"></i>รับทราบ</button>`);
+  if (['pending_approve','approved','acknowledged','pending_cert'].includes(p.status) && (role === 'admin' || (p.status === 'approved' && isOwnerOfPlan)))
+    b.push(`<button class="plan-btn danger" type="button" onclick="event.stopPropagation();openFrmRejectModal('${p.id}')"><i class="ti ti-x"></i>ตีกลับ</button>`);
+  if (typeof frmCanExport === 'function' && frmCanExport(p))
+    b.push(`<button class="plan-btn" type="button" onclick="event.stopPropagation();frmExportPlanById('${p.id}')"><i class="ti ti-download"></i>Export</button>`);
+  if (p.status === 'acknowledged' && isStaff)
+    b.push(`<button class="plan-btn accent" type="button" onclick="event.stopPropagation();openAttachCertModal('${p.id}','frm_plan_id')"><i class="ti ti-paperclip"></i>กรอกผลสอบ</button>`);
+  if (p.status === 'pending_cert' && role === 'admin')
+    b.push(`<button class="plan-btn primary" type="button" onclick="event.stopPropagation();applyPlanResults('${p.id}','frm_plan_id')"><i class="ti ti-check"></i>ยืนยันลงทะเบียน</button>`);
+  b.push(`<button class="plan-btn" type="button" onclick="event.stopPropagation();openAuditPlanModal('${p.id}','แผน ${escapeJsSingle(p.unit_code || '')} ${p.month_num}/${p.year}')"><i class="ti ti-history"></i>ประวัติ</button>`);
+  return b.join('');
+}
+
+async function frmPlanAction(planId, action) {
+  const map = {
+    submit:      { rpc: 'frm_plan_submit',      msg: 'ส่งแผนขออนุมัติ?\nหลังส่งจะแก้ไขแผนไม่ได้จนกว่าจะถูกตีกลับ' },
+    approve:     { rpc: 'frm_plan_approve',     msg: 'อนุมัติแผนนี้?\nชื่อคุณจะถูกบันทึกลงช่อง Approved by' },
+    acknowledge: { rpc: 'frm_plan_acknowledge', msg: 'รับทราบแผนนี้?\nชื่อคุณจะถูกบันทึกลงช่อง Acknowledge by' },
+  }[action];
+  if (!map || !confirm(map.msg)) return;
+  showLoading('กำลังอัพเดทสถานะ...');
+  try {
+    const { error } = await sb.rpc(map.rpc, { p_token: currentUser?.token, p_plan_id: planId });
+    if (error) throw error;
+    hideLoading();
+    showToast('✅ เรียบร้อย', 'success');
+    if (typeof frmEditorPlan !== 'undefined' && frmEditorPlan && frmEditorPlan.id === planId) frmEditorClose();
+    if (typeof frmLoadPlanList === 'function') frmLoadPlanList();
+    loadPlanPending();
+    loadPlanConfirmBadge();
+  } catch (e) { hideLoading(); showToast('เกิดข้อผิดพลาด: ' + e.message, 'error'); }
+}
+
+let frmRejectPlanId = null;
+function openFrmRejectModal(planId) {
+  frmRejectPlanId = planId;
+  document.getElementById('rejectPlanId').value = '';
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectPlanModal').style.display = 'flex';
+}
+
+function frmPlanCard(p) {
+  const s = FRM_STATUS_MAP[p.status] || { lbl: p.status || '–', color: '#888', bg: '#f5f5f5' };
+  const cnt = (p.items || []).length;
+  const dept = (typeof frmDeptFullName === 'function' && frmDeptFullName(p.unit_code)) || '';
+  const sigLine = [
+    p.prepared_by ? `จัดทำ: ${escapeHtmlText(p.prepared_by)}` : '',
+    p.approved_by ? `อนุมัติ: ${escapeHtmlText(p.approved_by)}` : '',
+    p.acknowledged_by ? `รับทราบ: ${escapeHtmlText(p.acknowledged_by)}` : '',
+  ].filter(Boolean).join(' · ');
+  return `<div class="plan-card" onclick="frmOpenPlanById('${p.id}')" style="cursor:pointer">
+    <div class="plan-card-main">
+      <div style="flex:1;min-width:0">
+        <div class="plan-card-title">
+          <span>${escapeHtmlText(p.unit_code || 'ไม่ระบุ')} — ${escapeHtmlText(frmMonthName(p.month_num))} ${p.year}</span>
+          <span class="badge" style="background:${s.bg};color:${s.color}">${s.lbl}</span>
+        </div>
+        <div class="plan-card-meta">${dept ? escapeHtmlText(dept) + ' · ' : ''}${escapeHtmlText((p.type_name || '').split(' (')[0])} · ${cnt.toLocaleString()} เครื่อง${sigLine ? ' · ' + sigLine : ''}</div>
+        ${p.status === 'draft' && p.reject_reason ? `<div class="badge badge-red" style="margin-top:6px">ถูกตีกลับ: ${escapeHtmlText(p.reject_reason)}</div>` : ''}
+      </div>
+      <div class="plan-card-actions">${frmPlanCardActions(p)}</div>
+    </div>
+  </div>`;
+}
+
+// --- คิวรอดำเนินการของคนที่ล็อกอิน (admin: รออนุมัติ+รอยืนยันผล, owner: รอรับทราบของหน่วยตัวเอง, editor: โดนตีกลับ) ---
+async function loadPlanPending() {
   const el = document.getElementById('planConfirmContainer');
   if (!el) return;
   el.innerHTML = '<div class="no-data">กำลังโหลด...</div>';
-  const { data, error } = await sb.from('calibration_plans')
-    .select('*, calibration_plan_items(*)')
-    .in('status', ['pending_plan', 'pending_cert'])
-    .order('created_at', { ascending: false });
+  const role = currentUser?.role;
+  let q = sb.from('frm_plans').select('*').order('updated_at', { ascending: false });
+  if (role === 'admin') q = q.in('status', ['pending_approve', 'pending_cert']);
+  else if (role === 'owner') q = q.eq('status', 'approved').eq('unit_code', currentUser?.department || '');
+  else q = q.eq('status', 'draft').not('reject_reason', 'is', null);
+  const { data, error } = await q;
   if (error) { el.innerHTML = '<div class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ</div>'; return; }
-  if (!data?.length) { el.innerHTML = '<div class="no-data">ไม่มีรายการรอยืนยัน</div>'; return; }
-
-  el.innerHTML = data.map(p => {
-    const items = p.calibration_plan_items || [];
-    const cacheId = 'confirm_items_' + p.id;
-    planItemsCache[cacheId] = { items, confirm: true, results: p.status === 'pending_cert' };
-    const cnt = items.length;
-    const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
-    const isPendingPlan = p.status === 'pending_plan';
-    const isPendingCert = p.status === 'pending_cert';
-    const badgeLbl = isPendingPlan ? '🟡 รอยืนยันแผน' : '🔵 รอยืนยันสอบ';
-    const badgeBg = isPendingPlan ? '#fff8e1' : '#e3f2fd';
-    const badgeColor = isPendingPlan ? '#F57F17' : '#1565C0';
-
-    return `<div class="plan-card" style="border-color:${isPendingPlan ? '#ffe082' : '#90caf9'}">
-      <div class="plan-card-main">
-        <div style="flex:1;min-width:0">
-          <div class="plan-card-title">
-            <span>${escapeHtmlText(p.title || '–')}</span>
-            <span class="badge" style="background:${badgeBg};color:${badgeColor}">${badgeLbl}</span>
-          </div>
-          <div class="plan-card-meta">วันนัดสอบ: ${escapeHtmlText(date)} · ${cnt.toLocaleString()} เครื่องมือ · ส่งโดย: ${escapeHtmlText(p.created_by || '–')}</div>
-        </div>
-        <div class="plan-card-actions">
-          ${cnt > 0 ? `<button onclick="togglePlanItems('${cacheId}')" class="plan-btn" type="button"><i class="ti ti-list"></i>${isPendingCert ? 'ผลสอบ' : 'รายการ'} (${cnt.toLocaleString()})</button>` : ''}
-          ${p.plan_file_url ? `<button onclick="window.open('${escapeJsSingle(p.plan_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-file-text"></i>ไฟล์แผน</button>` : ''}
-          ${p.cert_file_url ? `<button onclick="window.open('${escapeJsSingle(p.cert_file_url)}','_blank')" class="plan-btn" type="button"><i class="ti ti-certificate"></i>ไฟล์ Cert</button>` : ''}
-          ${isPendingPlan ? `<button onclick="confirmPlan('${p.id}','planned')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันแผน</button>` : ''}
-          ${isPendingCert ? `<button onclick="applyPlanResults('${p.id}')" class="plan-btn primary" type="button"><i class="ti ti-check"></i>ยืนยันสอบเทียบแล้ว</button>` : ''}
-          <button data-plan-id="${p.id}" onclick="openRejectModal(this.dataset.planId)" class="plan-btn danger" type="button"><i class="ti ti-x"></i>ปฏิเสธ</button>
-          <button data-plan-id="${p.id}" data-plan-title="${encodeURIComponent(p.title||'')}" onclick="openAuditPlanModal(this.dataset.planId, decodeURIComponent(this.dataset.planTitle))" class="plan-btn" type="button"><i class="ti ti-history"></i>ประวัติ</button>
-        </div>
-      </div>
-      ${cnt > 0 ? `<div id="${cacheId}" class="plan-items-panel"></div>` : ''}
-    </div>`;
-  }).join('');
+  if (!data?.length) { el.innerHTML = '<div class="no-data">ไม่มีรายการรอดำเนินการ 🎉</div>'; return; }
+  if (typeof frmPlanRows !== 'undefined') {
+    // ให้คลิกการ์ดจากคิวเปิด editor ได้ (frmOpenPlanById หาใน frmPlanRows)
+    data.forEach(p => { if (!frmPlanRows.some(x => x.id === p.id)) frmPlanRows.push(p); });
+  }
+  el.innerHTML = data.map(p => frmPlanCard(p)).join('');
 }
 
 // --- Confirm plan ---
@@ -729,7 +687,7 @@ async function confirmPlan(planId, newStatus) {
     hideLoading();
     await logPlanAudit(planId, newStatus === 'planned' ? 'อนุมัติแผน' : newStatus === 'completed' ? 'ยืนยันสอบ' : 'ปฏิเสธแผน', `เปลี่ยนสถานะเป็น ${newStatus}`);
     showToast('✅ อัพเดทสถานะเรียบร้อย', 'success');
-    loadPlanConfirm();
+    loadLegacyPlans();
     loadPlanConfirmBadge();
   } catch(e) {
     hideLoading();
@@ -936,7 +894,7 @@ async function submitCertResults() {
     hideLoading();
     showToast('✅ ส่งให้ Admin ยืนยันแล้ว', 'success');
     closeCertResultModal();
-    loadPlanList();
+    loadLegacyPlans();
     loadPlanConfirmBadge();
   } catch (e) {
     hideLoading();
@@ -989,7 +947,7 @@ async function applyPlanResults(planId) {
     if (errors.length) {
       hideLoading();
       showToast(`⚠️ ลงทะเบียนไม่ครบ (${errors.length} เครื่อง): ${errors.join(' | ')} — เครื่องที่สำเร็จแล้วจะไม่ทำซ้ำ กดยืนยันอีกครั้งเพื่อลองเฉพาะที่ค้าง`, 'error');
-      loadPlanConfirm();
+      loadLegacyPlans();
       return;
     }
     await sb.from('calibration_plans')
@@ -997,7 +955,7 @@ async function applyPlanResults(planId) {
     await logPlanAudit(planId, 'ยืนยันสอบ', `ลงทะเบียนผลสอบ ${targets.length} เครื่อง`);
     hideLoading();
     showToast('🏆 ยืนยันสอบเทียบ + อัพเดททะเบียนเรียบร้อย', 'success');
-    loadPlanConfirm();
+    loadLegacyPlans();
     loadPlanConfirmBadge();
     if (typeof loadData === 'function') loadData(); // รีเฟรชทะเบียนเครื่องมือในหน้า
   } catch (e) {
@@ -1067,14 +1025,25 @@ async function applyOneResult(it) {
 
 // --- Badge notification ---
 async function loadPlanConfirmBadge() {
-  if (currentUser?.role !== 'admin') return;
-  const { count } = await sb.from('calibration_plans')
-    .select('id', { count: 'exact', head: true })
-    .in('status', ['pending_plan', 'pending_cert']);
+  const role = currentUser?.role;
+  let count = 0;
+  try {
+    if (role === 'admin') {
+      const { count: c1 } = await sb.from('frm_plans').select('id', { count: 'exact', head: true }).in('status', ['pending_approve', 'pending_cert']);
+      const { count: c2 } = await sb.from('calibration_plans').select('id', { count: 'exact', head: true }).in('status', ['pending_plan', 'pending_cert']);
+      count = (c1 || 0) + (c2 || 0);
+    } else if (role === 'owner') {
+      const { count: c } = await sb.from('frm_plans').select('id', { count: 'exact', head: true }).eq('status', 'approved').eq('unit_code', currentUser?.department || '');
+      count = c || 0;
+    } else if (role === 'editor') {
+      const { count: c } = await sb.from('frm_plans').select('id', { count: 'exact', head: true }).eq('status', 'draft').not('reject_reason', 'is', null);
+      count = c || 0;
+    } else return;
+  } catch (e) { return; }
   const badge = document.getElementById('planConfirmBadge');
   const navBadge = document.getElementById('navPlanBadge');
-  if (badge) { badge.textContent = count || 0; badge.style.display = count > 0 ? 'inline' : 'none'; }
-  if (navBadge) { navBadge.textContent = count || 0; navBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'inline' : 'none'; }
+  if (navBadge) { navBadge.textContent = count; navBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
 }
 
 
