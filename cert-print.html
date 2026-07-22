@@ -103,7 +103,7 @@ table { border-collapse: collapse; }
    NAME OF CLIENT / EQUIPMENT 16pt หนา, CALIBRATED/APPROVED BY 14pt หนา,
    DATE OF APPROVAL CordiaUPC 16pt หนา, หัวเรื่อง Angsana New 40pt หนา
    (เครื่องที่ไม่มีฟอนต์ตระกูล Cordia จะสลับเป็น Arial ขนาดเทียบเท่าอัตโนมัติ) */
-.sheet.cover { padding: 5mm 8.3mm 7mm; font-family: "Cordia New", "CordiaUPC", Arial, sans-serif; font-size: 14pt; }
+.sheet.cover { padding: 10mm 8.3mm 7mm; font-family: "Cordia New", "CordiaUPC", Arial, sans-serif; font-size: 14pt; }
 .no-cordia .sheet.cover { font-family: Arial, sans-serif; font-size: 12.5px; }
 .cv-title { border: 2.5px solid #111; height: 37.2mm; padding: 5mm 8mm 1.5mm; display: flex; flex-direction: column; }
 .cv-title h1 { margin: 0; flex: 1; text-align: center; white-space: nowrap; font-size: 30pt; font-weight: 700; letter-spacing: 1px; font-family: "Constantia", "Times New Roman", serif; }
@@ -115,7 +115,7 @@ table { border-collapse: collapse; }
 .cv-issued { position: absolute; top: 42.8mm; left: 8.3mm; width: 50mm; }
 .cv-issued > div { position: absolute; top: 0; left: 0; } /* ป้าย ISSUED BY: ไม่ดันโลโก้ลง */
 .cv-issued .cv-circ { display: block; margin: 6mm auto 0; }
-.cv-nac { position: absolute; top: 42mm; right: 22mm; width: 32mm; } /* เยื้องลงมาเหนือ DATE OF ISSUE */
+.cv-nac { position: absolute; top: 47mm; right: 22mm; width: 32mm; } /* เยื้องลงมาเหนือ DATE OF ISSUE (ตาม padding บนปก +5mm) */
 .cv-lab { padding-right: 28mm; }
 .cv-lab div, .cv-issue-line { line-height: 7.4mm; }
 .cv-issue-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; white-space: nowrap; }
@@ -135,7 +135,7 @@ table { border-collapse: collapse; }
 .cv-foot { border-top: 2px solid #111; padding-top: 1.2mm; position: absolute; top: 257.5mm; left: 8.3mm; right: 8.3mm; line-height: 1.4; } /* ข้อความเต็มความกว้างถึงเส้นขอบขวา ตัดบรรทัดที่ ...OF THE */
 .no-cordia .cv-foot { font-size: 12px; } /* ย่อเล็กน้อยให้บรรทัดแรกพอดีในโหมด Arial (เครื่องไม่มี CordiaUPC) */
 .cv-foot .conf { position: absolute; right: 14mm; bottom: 0.3mm; font-size: .85em; padding: 1.5px 9px; line-height: 1.2; } /* อยู่ระดับบรรทัด ISSUING LABORATORY. ไม่ทับบรรทัดบน ตาม FRM-CAL54-01 */
-.cover .footrow { left: 8.3mm; right: 8.3mm; bottom: 7mm; display: grid; grid-template-columns: 63mm 76.6mm auto; padding-left: 11mm; font-size: 14pt; }
+.cover .footrow { left: 8.3mm; right: 8.3mm; bottom: 12mm; display: grid; grid-template-columns: 63mm 76.6mm auto; padding-left: 11mm; font-size: 14pt; }
 .no-cordia .cover .footrow { font-size: 11.5px; }
 /* ===== cert continuation (หน้า 2-3) — ฟอนต์/ขนาดตาม Book1.xlsx: CordiaUPC 14 ทั้งหน้า ===== */
 .ct { font-family: var(--ffl); --fd: 14.5pt; --fl: 16.5pt; line-height: 1.12; }                                                        /* ทั้งหน้า CordiaUPC 14 */
