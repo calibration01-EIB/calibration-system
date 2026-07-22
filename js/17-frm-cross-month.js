@@ -154,6 +154,9 @@ async function frmCleanupPlanCrossSiblings(plan) {
       try { originPlan = await frmFetchPlanByMonth(plan.unit_code, plan.type_name, prev.month_num, prev.year); }
       catch (e) { return { ok: false, message: 'ค้นหาแผนต้นทางไม่สำเร็จ: ' + e.message }; }
       if (!originPlan) continue; // ต้นทางถูกลบไปแล้ว ไม่มีอะไรต้อง decouple
+      if (originPlan.status !== 'draft') {
+        return { ok: false, message: 'แผนต้นทางถูกส่งขออนุมัติแล้ว ไม่สามารถอัพเดตอัตโนมัติได้ — ต้องตีกลับแผนนั้นเป็นร่างก่อน' };
+      }
       const idx = (originPlan.items || []).findIndex(it => it.cross_id === item.cross_id);
       if (idx < 0) continue;
       const newItems = originPlan.items.slice();
