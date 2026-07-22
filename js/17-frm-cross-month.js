@@ -65,3 +65,102 @@ function frmDecoupleCrossItem(item) {
   if (copy.bar_end > 31) copy.bar_end = 31;
   return copy;
 }
+
+// ---------------- orchestration (แตะ sb) ----------------
+
+async function frmFetchPlanByMonth(unitCode, typeName, monthNum, year) {
+  const { data, error } = await sb.from('frm_plans').select('*')
+    .eq('unit_code', unitCode).eq('type_name', typeName)
+    .eq('month_num', monthNum).eq('year', year).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function frmSavePlanItems(planId, items) {
+  const { error } = await sb.from('frm_plans')
+    .update({ items, updated_at: new Date().toISOString() }).eq('id', planId);
+  if (error) throw error;
+}
+
+// หาแผนเดือนถัดไป (หน่วย+ประเภทเดียวกัน) — ไม่พบก็สร้าง draft ใหม่ให้อัตโนมัติ
+async function frmFindOrCreateNextMonthPlan(plan) {
+  const next = frmNextMonthOf(plan.month_num, plan.year);
+  const found = await frmFetchPlanByMonth(plan.unit_code, plan.type_name, next.month_num, next.year);
+  if (found) return found;
+  const row = {
+    unit_code: plan.unit_code, type_name: plan.type_name,
+    month_num: next.month_num, year: next.year,
+    header: Object.assign({}, plan.header), items: [], status: 'draft',
+    created_by: currentUser?.username || ''
+  };
+  const { data, error } = await sb.from('frm_plans').insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// ผูกแถวข้ามเดือน: หา/สร้างแผนเดือนถัดไป, กันซ้ำ, ตรวจล็อก, แทรก/อัพเดตแถวคู่แฝด
+async function frmLinkCrossMonth(plan, item, nextEndDay) {
+  let nextPlan;
+  try { nextPlan = await frmFindOrCreateNextMonthPlan(plan); }
+  catch (e) { return { ok: false, message: 'หาแผนเดือนถัดไปไม่สำเร็จ: ' + e.message }; }
+
+  if (nextPlan.status !== 'draft') {
+    return { ok: false, message: 'แผนเดือนถัดไปของหน่วยนี้ถูกส่งขออนุมัติแล้ว ลากข้ามเดือนไม่ได้ — ต้องตีกลับแผนนั้นเป็นร่างก่อน' };
+  }
+
+  const dup = frmFindDuplicateInstrument(nextPlan.items, item.instrument_id);
+  if (dup) {
+    return { ok: false, message: 'เครื่อง ' + (item.id_code || item.name || '') + ' มีอยู่ในแผนเดือนถัดไปแล้ว (แถวปกติ) — กรุณาลบ/รวมแถวเดิมก่อน' };
+  }
+
+  const crossId = item.cross_id || crypto.randomUUID();
+  const siblingItem = frmBuildCrossSiblingItem(item, nextPlan.month_num, nextEndDay, crossId);
+  const newItems = frmUpsertByCrossId(nextPlan.items, crossId, siblingItem);
+
+  try { await frmSavePlanItems(nextPlan.id, newItems); }
+  catch (e) { return { ok: false, message: 'บันทึกแผนเดือนถัดไปไม่สำเร็จ: ' + e.message }; }
+
+  return { ok: true, crossId };
+}
+
+// ลบแถวคู่แฝดออกจากแผนเดือนถัดไป (ใช้ตอนแก้ช่วงจนไม่ข้ามเดือนแล้ว หรือลบแถวต้นทาง)
+async function frmRemoveCrossSibling(plan, item) {
+  if (!item.cross_id) return { ok: true };
+  const next = frmNextMonthOf(plan.month_num, plan.year);
+  let nextPlan;
+  try { nextPlan = await frmFetchPlanByMonth(plan.unit_code, plan.type_name, next.month_num, next.year); }
+  catch (e) { return { ok: false, message: 'ค้นหาแผนเดือนถัดไปไม่สำเร็จ: ' + e.message }; }
+  if (!nextPlan) return { ok: true }; // ถูกลบไปแล้วทั้งใบ ไม่มีอะไรต้องลบซ้ำ
+  if (nextPlan.status !== 'draft') {
+    return { ok: false, message: 'แผนเดือนถัดไปถูกส่งขออนุมัติแล้ว ไม่สามารถลบแถวคู่แฝดอัตโนมัติได้ — ต้องตีกลับแผนนั้นเป็นร่างก่อน' };
+  }
+  const filtered = frmRemoveByCrossId(nextPlan.items, item.cross_id);
+  if (filtered.length === (nextPlan.items || []).length) return { ok: true }; // ไม่มีแถวคู่แฝดอยู่แล้ว
+  try { await frmSavePlanItems(nextPlan.id, filtered); }
+  catch (e) { return { ok: false, message: 'ลบแถวคู่แฝดไม่สำเร็จ: ' + e.message }; }
+  return { ok: true };
+}
+
+// เก็บกวาดก่อนลบแผนทั้งใบ: ลูกที่แผนนี้สร้างไว้ในเดือนถัดไป (crosses_to_next) + พ่อแม่ที่แผนนี้พึ่งพาอยู่ (crosses_from_prev)
+async function frmCleanupPlanCrossSiblings(plan) {
+  for (const item of (plan.items || [])) {
+    if (item.crosses_to_next) {
+      const res = await frmRemoveCrossSibling(plan, item);
+      if (!res.ok) return res;
+    }
+    if (item.crosses_from_prev && item.cross_id) {
+      const prev = frmPrevMonthOf(plan.month_num, plan.year);
+      let originPlan;
+      try { originPlan = await frmFetchPlanByMonth(plan.unit_code, plan.type_name, prev.month_num, prev.year); }
+      catch (e) { return { ok: false, message: 'ค้นหาแผนต้นทางไม่สำเร็จ: ' + e.message }; }
+      if (!originPlan) continue; // ต้นทางถูกลบไปแล้ว ไม่มีอะไรต้อง decouple
+      const idx = (originPlan.items || []).findIndex(it => it.cross_id === item.cross_id);
+      if (idx < 0) continue;
+      const newItems = originPlan.items.slice();
+      newItems[idx] = frmDecoupleCrossItem(newItems[idx]);
+      try { await frmSavePlanItems(originPlan.id, newItems); }
+      catch (e) { return { ok: false, message: 'อัพเดตแผนต้นทางไม่สำเร็จ: ' + e.message }; }
+    }
+  }
+  return { ok: true };
+}
