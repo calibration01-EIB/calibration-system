@@ -21,6 +21,27 @@ const FRM_SIG_TEXT = {
   section: '  ระดับแผนกขึ้นไป ( Section manager level and above)',
   unit: 'ระดับหน่วยขึ้นไป ( Supervisor level and above)'
 };
+// ---- ลายเซ็นออนไลน์: ชื่อพิมพ์ + วันที่อนุมัติ ลงแถวเซ็นแทนขีดว่าง (ไม่ส่ง sig = ขีดว่างแบบเดิม) ----
+function frmSigDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+function frmSigLine(sig) {
+  const s = sig || {};
+  const nm = (v, blank) => (v ? ' ' + v + ' ' : blank);
+  const dt = (v, blank) => (v ? frmSigDate(v) : blank);
+  return 'Prepared by :' + nm(s.prepared_by, '___________') + '(EIB)  Date ' + dt(s.prepared_at, '_____________') +
+    '   Approved by :' + nm(s.approved_by, '____________') + '(EIB)  Date ' + dt(s.approved_at, '________________') +
+    ' Acknowledge by ' + (s.acknowledged_by ? s.acknowledged_by + ' ' : '_____________') + '(Owner) Date ' + dt(s.acknowledged_at, '_____________');
+}
+function frmPlanSig(p) {
+  return { prepared_by: p.prepared_by, prepared_at: p.prepared_at, approved_by: p.approved_by,
+           approved_at: p.approved_at, acknowledged_by: p.acknowledged_by, acknowledged_at: p.acknowledged_at };
+}
+function frmCanExport(p) { return ['acknowledged', 'pending_cert', 'completed'].includes(p && p.status); }
+
 const FRM_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const FRM_ITEMS_PER_BLOCK = 10; // 10 เครื่อง/หน้า พอดี 1 หน้าที่ scale เดิม 77% (วัดจริงด้วย Excel COM)
 const FRM_OTHER_BLANK = '____________________________';
@@ -106,11 +127,11 @@ function frmBuildClosingRow(rowNum) {
   return x + '</row>';
 }
 
-function frmBuildSignatureRows(rowNum) {
+function frmBuildSignatureRows(rowNum, sig) {
   const S1 = FRM_STYLE.sig1, S2 = FRM_STYLE.sig2, T = FRM_SIG_TEXT;
   const r1 = rowNum, r2 = rowNum + 1;
   let x = '<row r="' + r1 + '" spans="1:43" ht="33" customHeight="1">';
-  x += frmCellText('A', r1, S1.a, T.prepared);
+  x += frmCellText('A', r1, S1.a, frmSigLine(sig));
   for (let c = 2; c <= 35; c++) x += frmCellEmpty(frmColLetter(c), r1, S1.mid);   // B..AI
   x += frmCellEmpty('AJ', r1, S1.aj);
   x += frmCellText('AK', r1, S1.ak, T.owner);
@@ -130,14 +151,14 @@ function frmBuildSignatureRows(rowNum) {
   return x;
 }
 
-function frmBuildSheetRows(items, monthNum) {
+function frmBuildSheetRows(items, monthNum, sig) {
   let xml = '', r = 10;
   const merges = [];
   const blockEnds = []; // แถวสุดท้ายของแต่ละบล็อก (แถวเซ็นล่าง) — ใช้วาง page break
   const addSig = () => {
     xml += frmBuildClosingRow(r);
     r += 1;
-    xml += frmBuildSignatureRows(r);
+    xml += frmBuildSignatureRows(r, sig);
     merges.push('AK' + r + ':AQ' + r, 'AK' + (r + 1) + ':AQ' + (r + 1));
     r += 2;
     blockEnds.push(r - 1);
@@ -188,13 +209,13 @@ function frmMode(arr) { // ค่าที่พบบ่อยสุด (ข้
 
 // เปิด template → เติม token: ☑/☐ อยู่ในเซลล์ sheet, ค่า Month/Year/Group/Unit/Section อยู่ใน TextBox
 // (drawing ทับเส้น ______ ให้เห็นช่องกรอกแบบฟอร์มกระดาษ) + แถวข้อมูล + merge + page break → Blob .xlsx
-function frmRenderTemplate(templateBuf, header, items) {
+function frmRenderTemplate(templateBuf, header, items, sig) {
   const chk = v => (v ? '☑' : '☐');
   return JSZip.loadAsync(templateBuf).then(zip =>
     Promise.all([zip.file('xl/worksheets/sheet1.xml').async('string'),
                  zip.file('xl/drawings/drawing1.xml').async('string')])
       .then(([sheet, drawing]) => {
-        const built = frmBuildSheetRows(items, header.monthNum);
+        const built = frmBuildSheetRows(items, header.monthNum, sig);
         sheet = sheet.replace('</sheetData>', built.xml + '</sheetData>');
         sheet = sheet.replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:AR' + built.lastRow + '"/>');
         sheet = sheet.replace(/<mergeCells count="(\d+)">/, (m, n) => '<mergeCells count="' + (Number(n) + built.merges.length) + '">');
@@ -548,24 +569,31 @@ async function frmEditorSave(silent) {
   } catch (e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); return false; }
 }
 
-async function frmEditorExport() {
-  const p = frmEditorPlan;
+async function frmExportPlan(p) {
   if (!p || !p.items.length) { showToast('แผนยังไม่มีเครื่อง', 'error'); return; }
+  if (!frmCanExport(p)) { showToast('ต้องอนุมัติครบ 3 ขั้น (จัดทำ→อนุมัติ→รับทราบ) ก่อนจึงจะ Export ได้', 'error'); return; }
   try {
     showLoading('กำลังสร้างไฟล์...');
     const hdr = Object.assign({}, p.header, { monthNum: p.month_num, year: p.year });
     const buf = await frmGetTemplate();
-    const blob = await frmRenderTemplate(buf, hdr, p.items);
+    const blob = await frmRenderTemplate(buf, hdr, p.items, frmPlanSig(p));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = frmFileName({ unitCode: p.unit_code, header: hdr });
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    p.status = 'exported';
-    await frmEditorSave(true);
+    const { data, error } = await sb.rpc('frm_plan_mark_exported', { p_token: currentUser?.token, p_plan_id: p.id });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) p.exported_at = row.exported_at;
     hideLoading();
     showToast('✅ Export แล้ว', 'success');
   } catch (e) { hideLoading(); showToast('Export ไม่สำเร็จ: ' + e.message, 'error'); }
+}
+async function frmEditorExport() { return frmExportPlan(frmEditorPlan); }
+async function frmExportPlanById(id) {
+  const p = frmPlanRows.find(x => x.id === id);
+  if (p) return frmExportPlan(p);
 }
 
 async function frmEditorDelete() {

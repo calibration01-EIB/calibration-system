@@ -72,6 +72,22 @@ async function main() {
   ok('sig owner text', sig.includes('The owner accepts the work by'));
   ok('sig styles', sig.includes('<c r="A30" s="8"') && sig.includes('<c r="AQ31" s="122"/>'));
 
+  // ---- แถวเซ็นออนไลน์: ชื่อพิมพ์ + วันที่อนุมัติ (อนุมัติครบแล้วจึง Export ได้) ----
+  eq('sigdate', frmSigDate('2026-07-15T12:00:00Z'), '15/07/2026');
+  eq('sigdate null', frmSigDate(null), '');
+  eq('sigline blank = ของเดิม', frmSigLine(null), FRM_SIG_TEXT.prepared);
+  const osig = { prepared_by: 'สมชาย ใจดี', prepared_at: '2026-07-15T12:00:00Z',
+                 approved_by: 'สมหญิง หัวหน้า', approved_at: '2026-07-16T12:00:00Z',
+                 acknowledged_by: 'สมปอง เจ้าของ', acknowledged_at: '2026-07-17T12:00:00Z' };
+  const sline = frmSigLine(osig);
+  ok('sig prepared', sline.includes('Prepared by : สมชาย ใจดี (EIB)  Date 15/07/2026'));
+  ok('sig approved', sline.includes('Approved by : สมหญิง หัวหน้า (EIB)  Date 16/07/2026'));
+  ok('sig ack', sline.includes('Acknowledge by สมปอง เจ้าของ (Owner) Date 17/07/2026'));
+  ok('sig row has names', frmBuildSignatureRows(30, osig).includes('สมชาย ใจดี'));
+  ok('sig row blank เมื่อไม่ส่ง sig', frmBuildSignatureRows(30).includes('___________(EIB)'));
+  ok('canExport gate', !frmCanExport({ status: 'draft' }) && !frmCanExport({ status: 'approved' })
+     && frmCanExport({ status: 'acknowledged' }) && frmCanExport({ status: 'pending_cert' }) && frmCanExport({ status: 'completed' }));
+
   const closing = frmBuildClosingRow(26);
   ok('closing row attrs', closing.includes('<row r="26" spans="1:44" ht="21.75" customHeight="1">'));
   ok('closing styles', closing.includes('<c r="A26" s="95"/>') && closing.includes('<c r="F26" s="96"/>') && closing.includes('<c r="AJ26" s="98"/>') && closing.includes('<c r="AQ26" s="100"/>'));
