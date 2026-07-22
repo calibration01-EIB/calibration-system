@@ -78,9 +78,15 @@ table { border-collapse: collapse; }
 /* label+ค่า (คอลัมน์ 1–4): baseline → ตัวอักษร label กับค่าที่ถูกย่อฟอนต์นั่งเส้นเดียวกันเสมอ ไม่ลอยสูง */
 .eib-grid td.bl { vertical-align: baseline; }
 .eib-grid td.top.eib-val, .eib-grid td.bl.eib-val { border-bottom: none; }
-/* ค่าเชิงพรรณนา (Section/Unit) ยาว → ตัดขึ้นบรรทัดได้ที่ฟอนต์เต็มขนาด + เส้นประใต้ทุกบรรทัด (แทนการย่อจนจิ๋ว) */
-.eib-grid td.eib-wrapv { white-space: normal; overflow: visible; text-align: center; line-height: 1.55;
-  text-decoration: underline dotted #777; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+/* แถว Section/Unit: รวมช่องซ้าย–กลางเป็นแถบเดียว (flex เต็มความกว้าง) ค่ายืดเต็มพื้นที่ที่ว่าง → บรรทัดเดียวฟอนต์ใหญ่
+   คอลัมน์ Tolerance (col6) แยกไว้เหมือนเดิมเพื่อเรียงหลายแบนด์ */
+.eib-grid td.eib-su { vertical-align: top; padding: 3px 4px; }
+.eib-su-flex { display: flex; align-items: baseline; gap: 8px; }
+.eib-su-flex .eib-lbl { flex: none; }
+.eib-su-u { margin-left: 12px; }
+.eib-suv { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; border-bottom: 1px dotted #777; }
+.eib-suv-sec { flex: 1.5 1 0; }
+.eib-suv-unit { flex: 1 1 0; }
 .eib-tolln { display: block; border-bottom: 1px dotted #777; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-align: center; }
 .eib-tolln:last-child { margin-bottom: 0; }
 .eib-tbl { width: 100%; }
@@ -636,10 +642,10 @@ function pageEIB55(pageNo, total) {
       <span class="rt b">Cert. No. <span class="eib-val">${esc(CAL.cert_no)}</span></span>
     </div>
     <table class="eib-grid">
-      <colgroup><col style="width:12.5%"><col style="width:30%"><col style="width:9.5%"><col style="width:20.5%"><col style="width:8.5%"><col style="width:19%"></colgroup>
+      <colgroup><col style="width:12.5%"><col style="width:28%"><col style="width:9.5%"><col style="width:22%"><col style="width:9%"><col style="width:19%"></colgroup>
       <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
       <tr><td class="eib-lbl bl">Range</td><td class="eib-val bl">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl bl">User range</td><td class="eib-val bl">${tolLine(esc(userRangeTxt))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolFirst}</td></tr>
-      <tr><td class="eib-lbl top">Section</td><td class="eib-val top eib-wrapv">${esc(CAL.section)}</td><td class="eib-lbl top">Unit</td><td class="eib-val top eib-wrapv">${esc(CAL.unit_dept)}</td><td></td><td class="eib-val top">${tolRest}</td></tr>
+      <tr><td class="eib-su" colspan="5"><div class="eib-su-flex"><span class="eib-lbl">Section</span><span class="eib-suv eib-suv-sec">${esc(CAL.section)}</span><span class="eib-lbl eib-su-u">Unit</span><span class="eib-suv eib-suv-unit">${esc(CAL.unit_dept)}</span></div></td><td class="eib-val top">${tolRest}</td></tr>
     </table>
     <table class="bx eib-tbl">
       <thead><tr>
@@ -933,7 +939,7 @@ function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.poi
     // ย่อรายละเอียดตุ้มน้ำหนัก (คอลัมน์ desc) ถ้ายาวเกินช่อง เช่น 40000(20000+20000)
     document.querySelectorAll('.errtbl .dwt').forEach(function(el){ shrink(el, 7); });
     // ย่อค่าหัวใบประเมิน (EIB55): ID.No/Tolerance/Section ฯลฯ ยาวเกินช่อง → ย่อให้อยู่บรรทัดเดียว ไม่ตัดขึ้นบรรทัดใหม่
-    document.querySelectorAll('.eib-grid td.eib-val:not(.eib-wrapv), .eib-grid .eib-tolln').forEach(function(el){ shrink(el, 9.5); });
+    document.querySelectorAll('.eib-grid td.eib-val, .eib-grid .eib-tolln, .eib-grid .eib-suv').forEach(function(el){ shrink(el, 11); });
   }
   if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fitIdCode); }
   window.addEventListener('load', fitIdCode);
