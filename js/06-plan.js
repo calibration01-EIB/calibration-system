@@ -707,16 +707,18 @@ const CERT_RESULT_FIELDS = [
   { key: 'location',        label: 'สถานที่ใช้งาน' },
 ];
 let certResultPlanId = null;
+let certResultPlanCol = 'plan_id'; // 'plan_id' = ระบบเก่า, 'frm_plan_id' = แผน FRM
 let certResultItems = [];
 let certResultEditing = null;   // item ที่กำลังกรอก
 let certResultInst = null;      // แถว instruments ปัจจุบันของ item ที่กำลังกรอก
 
-async function openAttachCertModal(planId) {
+async function openAttachCertModal(planId, col) {
   certResultPlanId = planId;
+  certResultPlanCol = col === 'frm_plan_id' ? 'frm_plan_id' : 'plan_id';
   showLoading('กำลังโหลดรายการ...');
   try {
     const { data, error } = await sb.from('calibration_plan_items')
-      .select('*').eq('plan_id', planId).order('id_code');
+      .select('*').eq(certResultPlanCol, planId).order('id_code');
     if (error) throw error;
     certResultItems = data || [];
     hideLoading();
@@ -887,14 +889,22 @@ async function submitCertResults() {
   if (!confirm(`ส่งผลสอบให้ Admin ยืนยัน?\nกรอกแล้ว ${filled} เครื่อง · ข้าม ${skipped} เครื่อง`)) return;
   showLoading('กำลังส่ง...');
   try {
-    const { error } = await sb.from('calibration_plans')
-      .update({ status: 'pending_cert' }).eq('id', certResultPlanId);
-    if (error) throw error;
-    await logPlanAudit(certResultPlanId, 'แนบไฟล์สอบ', `กรอกผลสอบ ${filled} เครื่อง ข้าม ${skipped} เครื่อง รอ Admin ยืนยัน`);
+    if (certResultPlanCol === 'frm_plan_id') {
+      // แผน FRM → เปลี่ยนสถานะผ่าน RPC (log ฝั่งเซิร์ฟเวอร์)
+      const { error } = await sb.rpc('frm_plan_submit_results', { p_token: currentUser?.token, p_plan_id: certResultPlanId });
+      if (error) throw error;
+      if (typeof frmLoadPlanList === 'function') frmLoadPlanList();
+      loadPlanPending();
+    } else {
+      const { error } = await sb.from('calibration_plans')
+        .update({ status: 'pending_cert' }).eq('id', certResultPlanId);
+      if (error) throw error;
+      await logPlanAudit(certResultPlanId, 'แนบไฟล์สอบ', `กรอกผลสอบ ${filled} เครื่อง ข้าม ${skipped} เครื่อง รอ Admin ยืนยัน`);
+      loadLegacyPlans();
+    }
     hideLoading();
     showToast('✅ ส่งให้ Admin ยืนยันแล้ว', 'success');
     closeCertResultModal();
-    loadLegacyPlans();
     loadPlanConfirmBadge();
   } catch (e) {
     hideLoading();
@@ -928,13 +938,14 @@ function renderCertResultReview(items) {
 }
 
 // --- Admin ยืนยัน: ลงทะเบียนผลสอบเข้า instruments/ไฟล์/ประวัติ ---
-async function applyPlanResults(planId) {
+async function applyPlanResults(planId, col) {
+  const useFrm = col === 'frm_plan_id';
   if (!confirm('ยืนยันผลสอบเทียบ?\nระบบจะอัพเดทข้อมูลเครื่องมือ + ก๊อปปี้ไฟล์เข้าเครื่อง ตามที่กรอกไว้')) return;
   showLoading('กำลังลงทะเบียนผลสอบ...');
   const errors = [];
   try {
     const { data: items, error } = await sb.from('calibration_plan_items')
-      .select('*').eq('plan_id', planId);
+      .select('*').eq(useFrm ? 'frm_plan_id' : 'plan_id', planId);
     if (error) throw error;
     const targets = (items || []).filter(it => it.result_status === 'filled');
     for (const it of targets) {
@@ -947,15 +958,23 @@ async function applyPlanResults(planId) {
     if (errors.length) {
       hideLoading();
       showToast(`⚠️ ลงทะเบียนไม่ครบ (${errors.length} เครื่อง): ${errors.join(' | ')} — เครื่องที่สำเร็จแล้วจะไม่ทำซ้ำ กดยืนยันอีกครั้งเพื่อลองเฉพาะที่ค้าง`, 'error');
-      loadLegacyPlans();
+      if (useFrm) { if (typeof frmLoadPlanList === 'function') frmLoadPlanList(); loadPlanPending(); } else loadLegacyPlans();
       return;
     }
-    await sb.from('calibration_plans')
-      .update({ status: 'completed', cert_confirmed_by: currentUser.username }).eq('id', planId);
-    await logPlanAudit(planId, 'ยืนยันสอบ', `ลงทะเบียนผลสอบ ${targets.length} เครื่อง`);
+    if (useFrm) {
+      // แผน FRM → ยืนยันผ่าน RPC (log ฝั่งเซิร์ฟเวอร์)
+      const { error: rpcErr } = await sb.rpc('frm_plan_confirm_results', { p_token: currentUser?.token, p_plan_id: planId });
+      if (rpcErr) throw rpcErr;
+      if (typeof frmLoadPlanList === 'function') frmLoadPlanList();
+      loadPlanPending();
+    } else {
+      await sb.from('calibration_plans')
+        .update({ status: 'completed', cert_confirmed_by: currentUser.username }).eq('id', planId);
+      await logPlanAudit(planId, 'ยืนยันสอบ', `ลงทะเบียนผลสอบ ${targets.length} เครื่อง`);
+      loadLegacyPlans();
+    }
     hideLoading();
     showToast('🏆 ยืนยันสอบเทียบ + อัพเดททะเบียนเรียบร้อย', 'success');
-    loadLegacyPlans();
     loadPlanConfirmBadge();
     if (typeof loadData === 'function') loadData(); // รีเฟรชทะเบียนเครื่องมือในหน้า
   } catch (e) {
