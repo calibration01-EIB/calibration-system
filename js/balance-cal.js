@@ -701,6 +701,7 @@ function buildCALSingle() {
     date_next: val('iDateNext') || nextYearOf(dateCal), date_issue: val('fDateIssue'),
     calibrated_by: val('fCalBy'), procedure: val('fProcedure'),
     tolerances: tolText,
+    traceability: (byId('cTraceable') ? byId('cTraceable').value : '').split('\n').map(s => s.trim()).filter(Boolean),
     ab_ppm: parseFloat(byId('abMaterial').value) || 1,
     cmc: cmcRowsActive().map(c => ({ from: c.from_g, to: c.to_g, cmc: c.cmc_mg })),
     cmc_set_id: CMC_SET_SEL || null,
@@ -833,7 +834,7 @@ function deriveCertStds() {
       model = base ? `${base} ( ${rangeTxt} )` : `( ${rangeTxt} )`;
     }
     const auto = {
-      name: 'STANDARD WEIGHT', model,
+      name: g.full ? 'STANDARD WEIGHT SET' : 'STANDARD WEIGHT', model,   // ครบชุด (ช่วงพิกัด) = ชุดตุ้ม → "SET"
       cls: composeStdCls(g.weights, classG),
       serial,
       id_code: g.full ? reg.id_code : ids.join(','),
@@ -1566,6 +1567,7 @@ function fillFromCAL(cal) {
   setv('eId', cal.id_no); setv('eAsset', cal.asset); setv('eClass', cal.accuracy_class);
   setv('eCondition', cal.condition); setv('eAdjusted', cal.adjusted); setv('eUserRange', cal.user_range); setv('eCalType', cal.cal_type);
   setv('cLocation', cal.location); setv('cSection', cal.section); setv('cUnitDept', cal.unit_dept);
+  if (byId('cTraceable') && Array.isArray(cal.traceability)) byId('cTraceable').value = cal.traceability.join('\n');
   setv('iDateRecv', cal.date_receive); setv('iDate', cal.date_cal); setv('iDateNext', cal.date_next);
   setv('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);
   setv('fCertNo', cal.cert_no); setv('fJobNo', cal.job_no); setv('fReqNo', cal.request_no);

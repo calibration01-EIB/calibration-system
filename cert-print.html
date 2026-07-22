@@ -229,6 +229,8 @@ const CAL_DEFAULT = {
   date_receive: '2026-04-24', date_cal: '2026-04-24', date_next: '2027-04-24', date_issue: '2026-05-05',
   calibrated_by: 'WUTTIPONG  ATTAWAN',
   procedure: 'SWI-CAL-705',
+  // ข้อ 5 การสอบกลับได้ (Cert continuation) — รองรับหลายแห่ง (1 บรรทัด/แห่ง); ว่าง = ใช้ NIM (Thailand) ตามค่าเริ่มต้น
+  traceability: ['NATIONAL INSTITUTE OF METROLOGY ( THAILAND )'],
   user_range: '1 - 2000',
   tolerances: ['±  0.05 g (0-300)', '±  0.1 g (>300-1000) g', '±  0.15 g (>1000+3100) g'],
   standards: [
@@ -510,7 +512,7 @@ function secCondition() {
     <p style="margin-top:12px">4. THIS RESULT OF CALIBRATION WAS FOUND ACCURATE AS SHOWN ON DATE, PLACE OF CALIBRATION AND THIS</p>
     <p style="padding-left:12px">EQUIPMENT ONLY.</p>
     <p>5. THIS CERTIFICATION IS TRACEABLE TO THE INTERNATIONAL SYSTEM OF UNIT ( SI UNIT ) ACCORDING TO</p>
-    <p style="padding-left:12px">- NATIONAL INSTITUTE OF METROLOGY ( THAILAND )</p>`;
+    ${((Array.isArray(CAL.traceability) && CAL.traceability.length) ? CAL.traceability : ['NATIONAL INSTITUTE OF METROLOGY ( THAILAND )']).map(t => `<p style="padding-left:12px">- ${esc(t)}</p>`).join('')}`;
 }
 function secRepeatability() {
   return `<h4>REPEATABILITY</h4>
