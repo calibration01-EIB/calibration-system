@@ -68,9 +68,9 @@ table { border-collapse: collapse; }
 .eib-grid { width: 100%; border-collapse: collapse; margin: 5px 0 10px; table-layout: fixed; } /* fixed = ความกว้างคอลัมน์ตาม colgroup ค่ายาวไม่ดันคอลัมน์อื่น */
 .eib-grid td { padding: 3px 4px; vertical-align: bottom; }
 .eib-lbl { white-space: nowrap; font-weight: 700; }
-.eib-val { border-bottom: 1px dotted #777; padding: 0 6px; }
-/* ค่าในตารางหัวใบประเมิน: บรรทัดเดียวเสมอ ค่ายาวใช้ shrink-to-fit (JS ท้ายไฟล์) แบบเดียวกับใบบันทึกผล */
-.eib-grid td.eib-val { white-space: nowrap; overflow: hidden; }
+.eib-val { border-bottom: 1px dotted #777; padding: 0 3px; }
+/* ค่าในตารางหัวใบประเมิน: บรรทัดเดียวเสมอ + จัดกึ่งกลางเส้น ค่ายาวใช้ shrink-to-fit (JS ท้ายไฟล์) แบบเดียวกับใบบันทึกผล */
+.eib-grid td.eib-val { white-space: nowrap; overflow: hidden; text-align: center; }
 /* แถว Tolerance หลายแบนด์: ทุกช่องชิดบน + เส้นใต้รายบรรทัด (แบบเดียวกับใบบันทึกผล ws1)
    แบนด์แรกอยู่แถว Range แบนด์ที่เหลือวางในแถว Section (คอลัมน์ Tolerance) → บรรทัดตรงกับ Section พอดี
    margin 6px ระหว่างแบนด์ = padding บน+ล่างของ td (3+3) ให้จังหวะบรรทัดตรงกัน */
@@ -78,7 +78,7 @@ table { border-collapse: collapse; }
 /* label+ค่า (คอลัมน์ 1–4): baseline → ตัวอักษร label กับค่าที่ถูกย่อฟอนต์นั่งเส้นเดียวกันเสมอ ไม่ลอยสูง */
 .eib-grid td.bl { vertical-align: baseline; }
 .eib-grid td.top.eib-val, .eib-grid td.bl.eib-val { border-bottom: none; }
-.eib-tolln { display: block; border-bottom: 1px dotted #777; margin-bottom: 6px; white-space: nowrap; overflow: hidden; }
+.eib-tolln { display: block; border-bottom: 1px dotted #777; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-align: center; }
 .eib-tolln:last-child { margin-bottom: 0; }
 .eib-tbl { width: 100%; }
 .eib-tbl th, .eib-tbl td { border: 1px solid #111; padding: 3px 6px; text-align: center; }
