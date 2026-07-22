@@ -399,12 +399,26 @@ async function frmLoadPlanList() {
 
 function frmOpenPlanById(id) {
   const p = frmPlanRows.find(x => x.id === id);
-  if (p) frmEditorOpen(JSON.parse(JSON.stringify(p)));
+  if (!p) return;
+  // เปิดจากแท็บอื่น (เช่น รอดำเนินการ) → สลับมาแท็บแผน FRM ก่อน editor ถึงจะมองเห็น
+  if (typeof switchPlanTab === 'function' && document.getElementById('planTabFrm')?.style.display === 'none') switchPlanTab('frm');
+  frmEditorOpen(JSON.parse(JSON.stringify(p)));
 }
 
 // ---------------- editor ลงแผน ----------------
 let frmEditorPlan = null;
 let frmEditorPending = {};
+
+// แผนที่พ้นร่างแล้วล็อกแก้ไข (แก้ได้เมื่อถูกตีกลับมาเป็น draft)
+function frmEditorLocked() { return !!(frmEditorPlan && frmEditorPlan.status && frmEditorPlan.status !== 'draft'); }
+
+// เซฟร่างแล้วส่งขออนุมัติ (Prepared by = คนกด, ลงชื่อฝั่งเซิร์ฟเวอร์)
+async function frmEditorSubmit() {
+  if (!frmEditorPlan || !frmEditorPlan.id) return;
+  const okSave = await frmEditorSave(true);
+  if (!okSave) return;
+  frmPlanAction(frmEditorPlan.id, 'submit');
+}
 
 function frmEditorOpen(plan) {
   frmEditorPlan = plan; frmEditorPending = {};
@@ -418,27 +432,30 @@ function frmEditorClose() {
   document.getElementById('frmEditorWrap').innerHTML = '';
   frmLoadPlanList();
 }
-function frmEditorMeta(key, val) { frmEditorPlan[key] = val; if (key === 'month_num') frmEditorRenderGrid(); }
-function frmEditorHeader(key, val) { frmEditorPlan.header[key] = val; }
+function frmEditorMeta(key, val) { if (frmEditorLocked()) return; frmEditorPlan[key] = val; if (key === 'month_num') frmEditorRenderGrid(); }
+function frmEditorHeader(key, val) { if (frmEditorLocked()) return; frmEditorPlan.header[key] = val; }
 function frmEditorItem(i, key, val) {
+  if (frmEditorLocked()) return;
   frmEditorPlan.items[i][key] = val;
   if (key === 'due_date' && val) frmEditorPlan.items[i].is_new = false;
   if (key === 'due_date' || key === 'is_new' || key === 'bar_mode') frmEditorRenderGrid();
 }
-function frmEditorMonth(i, val) { frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
+function frmEditorMonth(i, val) { if (frmEditorLocked()) return; frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
 function frmEditorDay(i, day) {
+  if (frmEditorLocked()) return;
   const st = frmClickRange({ pending: frmEditorPending[i] != null ? frmEditorPending[i] : null }, day);
   if (st.pending != null) { frmEditorPending[i] = st.pending; }
   else { delete frmEditorPending[i]; frmEditorPlan.items[i].bar_start = st.start; frmEditorPlan.items[i].bar_end = st.end; }
   frmEditorRenderGrid();
 }
-function frmEditorClearBar(i) { const it = frmEditorPlan.items[i]; it.bar_start = 0; it.bar_end = 0; delete frmEditorPending[i]; frmEditorRenderGrid(); }
-function frmEditorRemove(i) { frmEditorPlan.items.splice(i, 1); frmEditorPending = {}; frmEditorRenderGrid(); }
+function frmEditorClearBar(i) { if (frmEditorLocked()) return; const it = frmEditorPlan.items[i]; it.bar_start = 0; it.bar_end = 0; delete frmEditorPending[i]; frmEditorRenderGrid(); }
+function frmEditorRemove(i) { if (frmEditorLocked()) return; frmEditorPlan.items.splice(i, 1); frmEditorPending = {}; frmEditorRenderGrid(); }
 
 function frmEditorRender() {
   const p = frmEditorPlan;
+  const dis = frmEditorLocked() ? ' disabled' : '';
   const monthOpts = m => FRM_MONTHS.map((x, i) => '<option value="' + (i + 1) + '"' + (m === i + 1 ? ' selected' : '') + '>' + (i + 1) + ' - ' + x + '</option>').join('');
-  const inp = 'style="padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"';
+  const inp = 'style="padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px"' + dis;
   const lbl = 'style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px"';
   document.getElementById('frmEditorWrap').innerHTML =
     '<section class="plan-panel" style="padding:14px">' +
@@ -446,11 +463,16 @@ function frmEditorRender() {
     '<b style="font-size:15px">📝 ' + escapeHtmlText(p.unit_code || 'แผนใหม่') + '</b>' +
     (frmDeptFullName(p.unit_code) ? '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText(frmDeptFullName(p.unit_code)) + '</span>' : '') +
     '<span style="font-size:12px;color:var(--text2)">' + escapeHtmlText((p.type_name || '').split(' (')[0]) + '</span>' +
-    '<span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' +
+    (typeof FRM_STATUS_MAP !== 'undefined' && FRM_STATUS_MAP[p.status]
+      ? '<span class="badge" style="background:' + FRM_STATUS_MAP[p.status].bg + ';color:' + FRM_STATUS_MAP[p.status].color + '">' + FRM_STATUS_MAP[p.status].lbl + '</span>' : '') +
+    (p.status === 'draft' && p.reject_reason ? '<span class="badge badge-red">ถูกตีกลับ: ' + escapeHtmlText(p.reject_reason) + '</span>' : '') +
+    '<span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
     '<button class="plan-btn" type="button" onclick="frmEditorClose()">← กลับรายการแผน</button>' +
-    '<button class="plan-btn" type="button" onclick="frmEditorSave()">💾 บันทึก</button>' +
-    '<button class="plan-btn primary" type="button" onclick="frmEditorExport()">⬇️ Export .xlsx</button>' +
-    (p.id ? '<button class="plan-btn" type="button" style="color:var(--red)" onclick="frmEditorDelete()">🗑️</button>' : '') +
+    (!frmEditorLocked()
+      ? '<button class="plan-btn" type="button" onclick="frmEditorSave()">💾 บันทึก</button>' +
+        (p.id ? '<button class="plan-btn primary" type="button" onclick="frmEditorSubmit()">📤 ส่งขออนุมัติ</button>' : '') +
+        (p.id ? '<button class="plan-btn" type="button" style="color:var(--red)" onclick="frmEditorDelete()">🗑️</button>' : '')
+      : (typeof frmPlanCardActions === 'function' ? frmPlanCardActions(p) : '')) +
     '</span></div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px">' +
     '<div><label ' + lbl + '>เดือนที่สอบ</label><select ' + inp + ' onchange="frmEditorMeta(\'month_num\',+this.value)">' + monthOpts(p.month_num) + '</select></div>' +
@@ -460,15 +482,17 @@ function frmEditorRender() {
     '<div><label ' + lbl + '>แผนก (Section)</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(p.header.section || '') + '" oninput="frmEditorHeader(\'section\',this.value)"></div>' +
     '</div>' +
     '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:10px">' +
-    '<label><input type="checkbox"' + (p.header.internal ? ' checked' : '') + ' onchange="frmEditorHeader(\'internal\',this.checked)"> สอบเทียบภายใน</label>' +
-    '<label><input type="checkbox"' + (p.header.external ? ' checked' : '') + ' onchange="frmEditorHeader(\'external\',this.checked)"> สอบเทียบภายนอก</label>' +
-    '<label><input type="checkbox"' + (p.header.drug ? ' checked' : '') + ' onchange="frmEditorHeader(\'drug\',this.checked)"> Drug product</label>' +
-    '<label><input type="checkbox"' + (p.header.cosmetic ? ' checked' : '') + ' onchange="frmEditorHeader(\'cosmetic\',this.checked)"> Cosmetic product</label>' +
-    '<label>Other: <input type="text" style="padding:3px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;width:130px" value="' + escapeHtmlAttr(p.header.otherText || '') + '" oninput="frmEditorHeader(\'otherText\',this.value)"></label>' +
+    '<label><input type="checkbox"' + (p.header.internal ? ' checked' : '') + dis + ' onchange="frmEditorHeader(\'internal\',this.checked)"> สอบเทียบภายใน</label>' +
+    '<label><input type="checkbox"' + (p.header.external ? ' checked' : '') + dis + ' onchange="frmEditorHeader(\'external\',this.checked)"> สอบเทียบภายนอก</label>' +
+    '<label><input type="checkbox"' + (p.header.drug ? ' checked' : '') + dis + ' onchange="frmEditorHeader(\'drug\',this.checked)"> Drug product</label>' +
+    '<label><input type="checkbox"' + (p.header.cosmetic ? ' checked' : '') + dis + ' onchange="frmEditorHeader(\'cosmetic\',this.checked)"> Cosmetic product</label>' +
+    '<label>Other: <input type="text" style="padding:3px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;width:130px"' + dis + ' value="' + escapeHtmlAttr(p.header.otherText || '') + '" oninput="frmEditorHeader(\'otherText\',this.value)"></label>' +
     '</div>' +
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
-    '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
-    '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ (คลิกวันเดิม 2 ครั้ง = วันเดียว) · เลือกรูปแบบแถบต่อเครื่องได้ในคอลัมน์ท้าย: แถบยาวตาม Due / ฟ้าเฉพาะวันที่เลือก</span></div>' +
+    (frmEditorLocked()
+      ? '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">🔒 แผนถูกล็อกหลังส่งขออนุมัติ — แก้ไขได้เมื่อถูกตีกลับเป็นร่าง</div>'
+      : '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">' +
+        '<input type="text" id="frmAddSearch" placeholder="🔍 เพิ่มเครื่อง: พิมพ์ ID CODE / ชื่อ" style="flex:1;max-width:340px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px" oninput="frmEditorSearch(this.value)">' +
+        '<span style="font-size:11px;color:var(--text3)">คลิกช่องวัน = จุดเริ่ม แล้วคลิกอีกครั้ง = จุดจบ (คลิกวันเดิม 2 ครั้ง = วันเดียว) · เลือกรูปแบบแถบต่อเครื่องได้ในคอลัมน์ท้าย: แถบยาวตาม Due / ฟ้าเฉพาะวันที่เลือก</span></div>') +
     '<div id="frmAddResults" style="margin-bottom:8px"></div>' +
     '<div style="overflow:auto"><table class="frm-grid" id="frmGridTable"></table></div>' +
     '</section>';
@@ -480,6 +504,7 @@ function frmEditorRenderGrid() {
   if (!p) return;
   const el = document.getElementById('frmGridTable');
   if (!el) return;
+  const dis = frmEditorLocked() ? ' disabled' : '';
   let days = ''; for (let d = 1; d <= 31; d++) days += '<th style="width:20px">' + d + '</th>';
   let html = '<tr><th>#</th><th>ชื่อเครื่อง</th><th>ID CODE</th><th>Location</th><th>Due Date</th>' + days + '<th>เดือน</th><th></th></tr>';
   p.items.forEach((it, i) => {
@@ -496,18 +521,18 @@ function frmEditorRenderGrid() {
     const mOpts = Array.from({ length: 12 }, (_, m) => '<option value="' + (m + 1) + '"' + (it.month_num === m + 1 ? ' selected' : '') + '>' + (m + 1) + '</option>').join('');
     html += '<tr>' +
       '<td rowspan="2">' + (i + 1) + '</td>' +
-      '<td rowspan="2"><input class="frm-name" value="' + escapeHtmlAttr(it.name || '') + '" oninput="frmEditorItem(' + i + ',\'name\',this.value)"></td>' +
+      '<td rowspan="2"><input class="frm-name"' + dis + ' value="' + escapeHtmlAttr(it.name || '') + '" oninput="frmEditorItem(' + i + ',\'name\',this.value)"></td>' +
       '<td rowspan="2" style="white-space:nowrap">' + escapeHtmlText(it.id_code || '–') + '</td>' +
-      '<td rowspan="2"><input class="frm-loc" value="' + escapeHtmlAttr(it.location || '') + '" oninput="frmEditorItem(' + i + ',\'location\',this.value)"></td>' +
-      '<td rowspan="2"><input type="date" value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)">' +
-      '<label style="display:block;font-size:10px;margin-top:2px;cursor:pointer;color:var(--text2)"><input type="checkbox"' + (isNew ? ' checked' : '') + ' onchange="frmEditorItem(' + i + ',\'is_new\',this.checked)"> 🆕 New (เครื่องใหม่)</label></td>' +
+      '<td rowspan="2"><input class="frm-loc"' + dis + ' value="' + escapeHtmlAttr(it.location || '') + '" oninput="frmEditorItem(' + i + ',\'location\',this.value)"></td>' +
+      '<td rowspan="2"><input type="date"' + dis + ' value="' + escapeHtmlAttr(it.due_date || '') + '" onchange="frmEditorItem(' + i + ',\'due_date\',this.value)">' +
+      '<label style="display:block;font-size:10px;margin-top:2px;cursor:pointer;color:var(--text2)"><input type="checkbox"' + (isNew ? ' checked' : '') + dis + ' onchange="frmEditorItem(' + i + ',\'is_new\',this.checked)"> 🆕 New (เครื่องใหม่)</label></td>' +
       top +
-      '<td rowspan="2"><select onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
-      ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button>' +
-      '<select title="รูปแบบแถบ" style="display:block;margin-top:3px;font-size:10px;max-width:110px" onchange="frmEditorItem(' + i + ',\'bar_mode\',this.value)">' +
+      '<td rowspan="2"><select' + dis + ' onchange="frmEditorMonth(' + i + ',this.value)">' + mOpts + '</select>' +
+      (dis ? '' : ' <button type="button" title="ล้างแถบ" onclick="frmEditorClearBar(' + i + ')" style="border:0;background:none;cursor:pointer">✕</button>') +
+      '<select title="รูปแบบแถบ"' + dis + ' style="display:block;margin-top:3px;font-size:10px;max-width:110px" onchange="frmEditorItem(' + i + ',\'bar_mode\',this.value)">' +
       '<option value="due"' + (barMode === 'due' ? ' selected' : '') + '>แถบยาวตาม Due</option>' +
       '<option value="day"' + (barMode === 'day' ? ' selected' : '') + '>ฟ้าเฉพาะวันที่เลือก</option></select></td>' +
-      '<td rowspan="2"><button type="button" title="เอาออกจากแผน" onclick="frmEditorRemove(' + i + ')" style="border:0;background:none;cursor:pointer;color:var(--red)">🗑️</button></td>' +
+      '<td rowspan="2">' + (dis ? '' : '<button type="button" title="เอาออกจากแผน" onclick="frmEditorRemove(' + i + ')" style="border:0;background:none;cursor:pointer;color:var(--red)">🗑️</button>') + '</td>' +
       '</tr><tr>' + bot + '</tr>';
   });
   if (!p.items.length) html += '<tr><td colspan="38" style="padding:14px;color:var(--text3)">ยังไม่มีเครื่องในแผน — ใช้ช่องค้นหาด้านบนเพื่อเพิ่ม</td></tr>';
@@ -532,6 +557,7 @@ function frmEditorSearch(term) {
 }
 
 function frmEditorAdd(id) {
+  if (frmEditorLocked()) return;
   const r = (allData || []).find(x => x.id == id);
   if (!r) return;
   const p = frmEditorPlan;
@@ -545,6 +571,7 @@ function frmEditorAdd(id) {
 async function frmEditorSave(silent) {
   const p = frmEditorPlan;
   if (!p) return false;
+  if (frmEditorLocked()) { showToast('แผนถูกล็อกหลังส่งขออนุมัติ', 'error'); return false; }
   const row = { unit_code: p.unit_code, type_name: p.type_name, month_num: p.month_num, year: p.year, header: p.header, items: p.items, status: p.status || 'draft', updated_at: new Date().toISOString() };
   try {
     if (p.id) {
@@ -592,6 +619,7 @@ async function frmExportPlanById(id) {
 async function frmEditorDelete() {
   const p = frmEditorPlan;
   if (!p || !p.id) return;
+  if (frmEditorLocked()) { showToast('แผนถูกล็อกหลังส่งขออนุมัติ — ต้องตีกลับเป็นร่างก่อนจึงลบได้', 'error'); return; }
   if (!confirm('ลบแผน ' + p.unit_code + ' ' + frmMonthName(p.month_num) + ' ' + p.year + ' ?')) return;
   const { error } = await sb.from('frm_plans').delete().eq('id', p.id);
   if (error) { showToast('ลบไม่สำเร็จ: ' + error.message, 'error'); return; }
@@ -607,6 +635,7 @@ function goToFrmPlanFromSelection() {
 }
 
 async function frmNewPlanFromSelection() {
+  if (!['admin', 'editor'].includes(currentUser?.role)) { showToast('เฉพาะ Editor/Admin เท่านั้นที่สร้างแผนได้', 'error'); return; }
   if (!planSelectedItems.length) {
     frmEditorOpen({ id: null, unit_code: '', type_name: '', month_num: new Date().getMonth() + 1, year: new Date().getFullYear(), header: { group: '', unit: '', section: '', internal: true, external: false, drug: false, cosmetic: false, otherText: '' }, items: [], status: 'draft' });
     return;
