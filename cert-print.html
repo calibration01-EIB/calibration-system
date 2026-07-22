@@ -532,14 +532,23 @@ function secTare() {
     </table>`;
 }
 function secDeparture() {
+  // หน่วยคอลัมน์ UNCERTAINTY = หน่วยเดียวทั้งตาราง (บนหัวตาราง) ตามค่าที่มากสุด: >100mg → รายงานเป็น g, ไม่งั้น mg
+  const maxU = Math.max(0, ...ROWS.map(r => (isFinite(r.bud.Ufinal) && r.bud.Ufinal > 0) ? r.bud.Ufinal : 0));
+  const uInG = maxU > 100;
+  const uHeadUnit = uInG ? 'g' : 'mg';
+  const fmtUcell = u => {                                    // แสดงเลขล้วน (ไม่มีหน่วยต่อท้าย) ตามหน่วยหัวตาราง
+    if (!isFinite(u) || u <= 0) return '0';
+    if (uInG) { const g = u / 1000; return Number.isInteger(g) ? String(g) : String(+g.toFixed(4)); }
+    return fmtU(u);
+  };
   return `<h4>DEPARTURE OF INDICATION FROM NOMINAL VALUE</h4>
     <table class="bx dep" style="margin:0 auto;width:92%">
       <thead>
-        <tr><th>NOMINAL VALUE<br>( g )</th><th>CONVENTIONAL MASS<br>( g )</th><th>DISPLAYED VALUE<br>( g )</th><th>CORRECTION<br>( g )</th><th>UNCERTAINTY<br>± ( mg )</th></tr>
+        <tr><th>NOMINAL VALUE<br>( g )</th><th>CONVENTIONAL MASS<br>( g )</th><th>DISPLAYED VALUE<br>( g )</th><th>CORRECTION<br>( g )</th><th>UNCERTAINTY<br>± ( ${uHeadUnit} )</th></tr>
       </thead>
       <tbody>${ROWS.map(r => `<tr>
         <td>${r.zero ? 'UNLOAD' : r.nominal}</td>
-        <td>${f(r.conv,3)}</td><td>${f(r.avg,resDecimals(rowRes(r)))}</td><td>${f(r.corr,resDecimals(rowRes(r))+1)}</td><td>${fmtU(r.bud.Ufinal)}${r.bud.Ufinal > 100 ? ' g' : ''}</td>
+        <td>${f(r.conv,3)}</td><td>${f(r.avg,resDecimals(rowRes(r)))}</td><td>${f(r.corr,resDecimals(rowRes(r))+1)}</td><td>${fmtUcell(r.bud.Ufinal)}</td>
       </tr>`).join('')}</tbody>
     </table>`;
 }
