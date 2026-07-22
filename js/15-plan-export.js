@@ -280,12 +280,6 @@ function frmItemFromInstrument(row, planMonth) {
   };
 }
 
-// สองคลิกกำหนดช่วง: คลิกแรกจำไว้ (pending) คลิกสองปิดช่วง (normalize start<=end)
-function frmClickRange(sel, day) {
-  if (sel.pending == null) return { pending: day };
-  return { start: Math.min(sel.pending, day), end: Math.max(sel.pending, day), pending: null };
-}
-
 // ---------------- UI ----------------
 let frmExportGroups = [];
 let frmTemplateBufPromise = null;
@@ -441,15 +435,83 @@ function frmEditorItem(i, key, val) {
   if (key === 'due_date' || key === 'is_new' || key === 'bar_mode') frmEditorRenderGrid();
 }
 function frmEditorMonth(i, val) { if (frmEditorLocked()) return; frmEditorPlan.items[i].month_num = +val; frmEditorRenderGrid(); }
-function frmEditorDay(i, day) {
+// ติ๊กวัน (1-31 ในเดือนนี้ หรือ 32-41 = วัน 1-10 เดือนถัดไป ถ้าเปิดโซน) — ครบ 2 จุดแล้ว commit ช่วง
+async function frmEditorDayToggle(i, day) {
   if (frmEditorLocked()) return;
-  const st = frmClickRange({ pending: frmEditorPending[i] != null ? frmEditorPending[i] : null }, day);
-  if (st.pending != null) { frmEditorPending[i] = st.pending; }
-  else { delete frmEditorPending[i]; frmEditorPlan.items[i].bar_start = st.start; frmEditorPlan.items[i].bar_end = st.end; }
+  const it = frmEditorPlan.items[i];
+  if (!it || it.crosses_from_prev) return; // แถวคู่แฝดอ่านอย่างเดียว กันคลิกหลุด
+  const marks = frmMarksToggle(frmEditorPending[i] || [], day);
+  if (marks.length < 2) {
+    frmEditorPending[i] = marks;
+    frmEditorRenderGrid();
+    return;
+  }
+  delete frmEditorPending[i];
+  const start = Math.min(marks[0], marks[1]);
+  const end = Math.max(marks[0], marks[1]);
+  await frmEditorCommitRange(i, start, end);
+}
+
+// commit ช่วงที่ติ๊กครบ 2 จุดแล้ว: ในเดือนเดียว = บันทึกตรง, ข้ามเดือน = เรียก orchestration ผูก/สร้างแผนเดือนถัดไป
+async function frmEditorCommitRange(i, start, end) {
+  const p = frmEditorPlan;
+  const it = p.items[i];
+  const hadCross = !!it.cross_id;
+
+  if (end <= 31) {
+    if (hadCross) {
+      showLoading('กำลังอัพเดต...');
+      const res = await frmRemoveCrossSibling(p, it);
+      hideLoading();
+      if (!res.ok) { showToast(res.message, 'error'); frmEditorRenderGrid(); return; }
+    }
+    it.bar_start = start; it.bar_end = end; it.bar_mode = 'day';
+    delete it.cross_id; delete it.crosses_to_next; delete it.cross_end_day;
+    frmEditorRenderGrid();
+    return;
+  }
+
+  const nextEndDay = end - 31;
+  showLoading('กำลังผูกแผนเดือนถัดไป...');
+  const res = await frmLinkCrossMonth(p, it, nextEndDay);
+  hideLoading();
+  if (!res.ok) { showToast(res.message, 'error'); frmEditorRenderGrid(); return; }
+
+  it.bar_start = start; it.bar_end = 31; it.bar_mode = 'day';
+  it.cross_id = res.crossId; it.crosses_to_next = true; it.cross_end_day = nextEndDay;
+  frmEditorRenderGrid();
+  showToast('✅ ผูกกับแผนเดือนถัดไปแล้ว', 'success');
+}
+
+async function frmEditorClearBar(i) {
+  if (frmEditorLocked()) return;
+  const it = frmEditorPlan.items[i];
+  if (it.cross_id) {
+    showLoading('กำลังอัพเดต...');
+    const res = await frmRemoveCrossSibling(frmEditorPlan, it);
+    hideLoading();
+    if (!res.ok) { showToast(res.message, 'error'); return; }
+  }
+  it.bar_start = 0; it.bar_end = 0;
+  delete it.cross_id; delete it.crosses_to_next; delete it.cross_end_day;
+  delete frmEditorPending[i];
   frmEditorRenderGrid();
 }
-function frmEditorClearBar(i) { if (frmEditorLocked()) return; const it = frmEditorPlan.items[i]; it.bar_start = 0; it.bar_end = 0; delete frmEditorPending[i]; frmEditorRenderGrid(); }
-function frmEditorRemove(i) { if (frmEditorLocked()) return; frmEditorPlan.items.splice(i, 1); frmEditorPending = {}; frmEditorRenderGrid(); }
+
+async function frmEditorRemove(i) {
+  if (frmEditorLocked()) return;
+  const it = frmEditorPlan.items[i];
+  if (it.crosses_from_prev) return; // แถวคู่แฝดลบไม่ได้ตรงนี้ ต้องย้อนไปแก้ที่ต้นทาง (ปุ่มลบไม่ render อยู่แล้ว แต่กันไว้)
+  if (it.cross_id) {
+    showLoading('กำลังลบ...');
+    const res = await frmRemoveCrossSibling(frmEditorPlan, it);
+    hideLoading();
+    if (!res.ok) { showToast(res.message, 'error'); return; }
+  }
+  frmEditorPlan.items.splice(i, 1);
+  frmEditorPending = {};
+  frmEditorRenderGrid();
+}
 
 function frmEditorRender() {
   const p = frmEditorPlan;
@@ -685,7 +747,11 @@ async function frmEditorDelete() {
   if (!p || !p.id) return;
   if (frmEditorLocked()) { showToast('แผนถูกล็อกหลังส่งขออนุมัติ — ต้องตีกลับเป็นร่างก่อนจึงลบได้', 'error'); return; }
   if (!confirm('ลบแผน ' + p.unit_code + ' ' + frmMonthName(p.month_num) + ' ' + p.year + ' ?')) return;
+  showLoading('กำลังตรวจสอบแถวคู่แฝด...');
+  const cleanup = await frmCleanupPlanCrossSiblings(p);
+  if (!cleanup.ok) { hideLoading(); showToast(cleanup.message, 'error'); return; }
   const { error } = await sb.from('frm_plans').delete().eq('id', p.id);
+  hideLoading();
   if (error) { showToast('ลบไม่สำเร็จ: ' + error.message, 'error'); return; }
   showToast('ลบแผนแล้ว', 'success');
   frmEditorClose();
