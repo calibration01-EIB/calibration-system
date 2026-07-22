@@ -467,6 +467,7 @@ async function frmEditorCommitRange(i, start, end) {
     }
     it.bar_start = start; it.bar_end = end; it.bar_mode = 'day';
     delete it.cross_id; delete it.crosses_to_next; delete it.cross_end_day;
+    if (hadCross) await frmEditorSave(true);
     frmEditorRenderGrid();
     return;
   }
@@ -479,6 +480,7 @@ async function frmEditorCommitRange(i, start, end) {
 
   it.bar_start = start; it.bar_end = 31; it.bar_mode = 'day';
   it.cross_id = res.crossId; it.crosses_to_next = true; it.cross_end_day = nextEndDay;
+  await frmEditorSave(true);
   frmEditorRenderGrid();
   showToast('✅ ผูกกับแผนเดือนถัดไปแล้ว', 'success');
 }
@@ -486,7 +488,8 @@ async function frmEditorCommitRange(i, start, end) {
 async function frmEditorClearBar(i) {
   if (frmEditorLocked()) return;
   const it = frmEditorPlan.items[i];
-  if (it.cross_id) {
+  const hadCross = !!it.cross_id;
+  if (hadCross) {
     showLoading('กำลังอัพเดต...');
     const res = await frmRemoveCrossSibling(frmEditorPlan, it);
     hideLoading();
@@ -495,6 +498,7 @@ async function frmEditorClearBar(i) {
   it.bar_start = 0; it.bar_end = 0;
   delete it.cross_id; delete it.crosses_to_next; delete it.cross_end_day;
   delete frmEditorPending[i];
+  if (hadCross) await frmEditorSave(true);
   frmEditorRenderGrid();
 }
 
@@ -502,7 +506,8 @@ async function frmEditorRemove(i) {
   if (frmEditorLocked()) return;
   const it = frmEditorPlan.items[i];
   if (it.crosses_from_prev) return; // แถวคู่แฝดลบไม่ได้ตรงนี้ ต้องย้อนไปแก้ที่ต้นทาง (ปุ่มลบไม่ render อยู่แล้ว แต่กันไว้)
-  if (it.cross_id) {
+  const hadCross = !!it.cross_id;
+  if (hadCross) {
     showLoading('กำลังลบ...');
     const res = await frmRemoveCrossSibling(frmEditorPlan, it);
     hideLoading();
@@ -510,6 +515,7 @@ async function frmEditorRemove(i) {
   }
   frmEditorPlan.items.splice(i, 1);
   frmEditorPending = {};
+  if (hadCross) await frmEditorSave(true);
   frmEditorRenderGrid();
 }
 
