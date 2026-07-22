@@ -460,12 +460,20 @@ function fmtDMY(iso) {
   const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
 }
-function updateDateHints() {
-  [['iDate', 'iDateHint'], ['iDateRecv', 'iDateRecvHint'], ['iDateNext', 'iDateNextHint']].forEach(([i, h]) => {
-    const a = byId(i), b = byId(h);
-    if (a && b) b.textContent = a.value ? '= ' + fmtDMY(a.value) + ' (วัน/เดือน/ปี)' : '';
-  });
+// ===== ช่องวันที่แสดง dd/mm/yyyy เสมอทุกเครื่อง/locale (text ไม่ใช่ native date) — ภายในอ่าน/เขียนเป็น ISO ผ่าน helper =====
+function dISO(id) {   // ISO (yyyy-mm-dd) จากช่อง dd/mm/yyyy · ว่าง/ผิดรูป = ''
+  const el = byId(id); if (!el) return '';
+  const v = String(el.value || '').trim();
+  return parseDMY(v) || (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '');
 }
+function dSet(id, iso) { const el = byId(id); if (el) el.value = iso ? fmtDMY(iso) : ''; }   // เขียนช่องจาก ISO → แสดง dd/mm/yyyy
+function dateMask(el) {   // ใส่ / อัตโนมัติตอนพิมพ์ → dd/mm/yyyy (แทน native picker ที่ตัดออก)
+  let s = String(el.value || '').replace(/\D/g, '').slice(0, 8);
+  if (s.length >= 5) s = s.slice(0, 2) + '/' + s.slice(2, 4) + '/' + s.slice(4);
+  else if (s.length >= 3) s = s.slice(0, 2) + '/' + s.slice(2);
+  el.value = s;
+}
+function updateDateHints() {}   // เลิกใช้ hint แล้ว (ช่องเป็น dd/mm/yyyy ในตัว) — คงฟังก์ชันไว้กัน caller เดิมพัง
 
 // ===== คำนวณทั้งหน้า =====
 // d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
@@ -478,8 +486,7 @@ function dForNominal(nom, globalD) {
 }
 function recalc() {
   const d = parseFloat(byId('iRes').value) || 0.01;
-  byId('iDateNext').value = nextYearOf(byId('iDate').value);
-  updateDateHints();   // hint วัน/เดือน/ปี ใต้ช่องวันที่ (รับเครื่อง/สอบเทียบ/ครบกำหนด)
+  dSet('iDateNext', nextYearOf(dISO('iDate')));   // ครบกำหนด = +1 ปี (แสดง dd/mm/yyyy)
 
   // 3.1 repeatability
   const reps = [...document.querySelectorAll('.repIn')].map(el => parseFloat(el.value)).filter(Number.isFinite);
@@ -676,7 +683,7 @@ function buildCALSingle() {
   const eccReads = [...document.querySelectorAll('.eccIn')].map(el => parseFloat(el.value));
   const tareEls  = [...document.querySelectorAll('.tareIn')];
   const tareNomEls = [...document.querySelectorAll('.tareNom')];
-  const dateCal = val('iDate') || val('iDateRecv');
+  const dateCal = dISO('iDate') || dISO('iDateRecv');
 
   const points = rows.map((p, i) => {
     const reads = [0,1,2].map(j => parseFloat(document.querySelector(`.errIn[data-p="${i}"][data-r="${j}"]`).value));
@@ -697,8 +704,8 @@ function buildCALSingle() {
     condition: val('eCondition'), adjusted: val('eAdjusted'), user_range: val('eUserRange'), cal_type: val('eCalType'),
     temp: temps, rh: rhs, warmup: warm, cal_time: ctime,
     location: val('cLocation'), section: val('cSection'), unit_dept: val('cUnitDept'),
-    date_receive: val('iDateRecv'), date_cal: dateCal,
-    date_next: val('iDateNext') || nextYearOf(dateCal), date_issue: val('fDateIssue'),
+    date_receive: dISO('iDateRecv'), date_cal: dateCal,
+    date_next: dISO('iDateNext') || nextYearOf(dateCal), date_issue: dISO('fDateIssue'),
     calibrated_by: val('fCalBy'), procedure: val('fProcedure'),
     tolerances: tolText,
     traceability: (byId('cTraceable') ? byId('cTraceable').value : '').split('\n').map(s => s.trim()).filter(Boolean),
@@ -1031,7 +1038,7 @@ function applyIncomingInst(inst) {
   setv('eAsset', inst.asset); setv('eMfr', inst.manufacturer); setv('eModel', inst.model);
   setv('eSerial', inst.serial); setv('iCap', inst.capacity); setv('iRes', inst.resolution);
   setv('eClass', inst.accuracy_class); setv('cClientName', inst.client); setv('cLocation', inst.location);
-  setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); setv('iDateRecv', inst.date_recv);
+  setv('cSection', inst.section); setv('cUnitDept', inst.unit_dept); if (inst.date_recv) dSet('iDateRecv', inst.date_recv);
   setv('eCalType', inst.cal_type);
   // d-segments จาก range_profile (multi-interval) → DSEGS · tolerance จาก tolerance_bands ถ้ามี ไม่งั้น tol ใน range_profile / tolerance เดี่ยว
   const prof = Array.isArray(inst.range_profile) ? inst.range_profile.filter(s => s && Number.isFinite(Number(s.to)) && Number(s.to) > 0) : null;
@@ -1233,7 +1240,7 @@ async function issueCert() {
   }
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — ออกเลขไม่ได้'); return; }
-  const calDate = val('iDate') || localTodayISO();
+  const calDate = dISO('iDate') || localTodayISO();
   const defYY = new Date(calDate + 'T00:00:00').getFullYear() % 100;
   // เลขใส่เอง (ช่วงเปลี่ยนผ่าน — เลข Cert เดิมยังลงระบบไม่ครบ): พิมพ์ในช่อง Cert No. · เว้นว่าง = รันอัตโนมัติ
   const manual = parseManualCertNo(val('fCertNo'), defYY);
@@ -1301,13 +1308,13 @@ async function issueCert() {
     // เติมเลข Cert/Job/วันที่ออก ลงฟอร์ม "ก่อน" buildCAL → data.cert_no/job_no/date_issue ไม่ว่าง (ใช้ตอนปริ้น/ปริ้นย้อนหลัง)
     if (byId('fCertNo')) byId('fCertNo').value = CERT_NO;
     if (byId('fJobNo')) byId('fJobNo').value = jobNoStr();
-    if (byId('fDateIssue') && !byId('fDateIssue').value) byId('fDateIssue').value = localTodayISO();   // ว่าง = วันนี้ · ผู้ใช้กรอกเองไว้แล้วเคารพค่านั้น
+    if (!dISO('fDateIssue')) dSet('fDateIssue', localTodayISO());   // ว่าง = วันนี้ · ผู้ใช้กรอกเองไว้แล้วเคารพค่านั้น
     // 2) บันทึกผลดิบ + CAL object ลง calibration_records
     const rec = {
       instrument_id: (INCOMING_INST && INCOMING_INST.instrument_id) || null,
       cert_no: CERT_NO, job_no: jobNoStr(), request_no: val('fReqNo') || null,
       status: 'issued', revision: CERT_REV,
-      cal_date: calDate, date_recv: val('iDateRecv') || null, due_date: val('iDateNext') || null,
+      cal_date: calDate, date_recv: dISO('iDateRecv') || null, due_date: dISO('iDateNext') || null,
       calibrated_by: val('fCalBy') || null, location: val('cLocation') || null, procedure: val('fProcedure') || null,
       capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
       adjusted: val('eAdjusted') || null, condition: val('eCondition') || null,
@@ -1325,7 +1332,7 @@ async function issueCert() {
         const { data: cur } = await db.from('instruments').select('cert_no,cal_date,due_date,job_no,request_no,brand,model,serial_no,id_code,range_val,capacity,resolution,accuracy_class,asset_no,cal_type').eq('id', INCOMING_INST.instrument_id).single();
         INST_PREV = cur || null;
         const { error: iErr } = await db.from('instruments').update({
-          cert_no: CERT_NO, cal_date: calDate, due_date: val('iDateNext') || null,
+          cert_no: CERT_NO, cal_date: calDate, due_date: dISO('iDateNext') || null,
           job_no: jobNoStr(), request_no: val('fReqNo') || null,
           // sync ข้อมูลเครื่องที่อาจแก้หน้างาน → ทะเบียนเครื่องหลักตรงกับใบ cert ล่าสุด
           brand: val('eMfr') || null, model: val('eModel') || null, serial_no: val('eSerial') || null,
@@ -1360,7 +1367,7 @@ async function saveEdits() {
   const db = sbx();
   if (!db) { alert('เชื่อมต่อระบบไม่ได้ (Supabase) — บันทึกไม่ได้'); return; }
   // เลขใหม่จากช่อง Cert No. (สอบเสร็จก่อน แล้วมารันเลขจริงจากสมุดทีหลัง) — ว่าง/เท่าเดิม = คงเลขเดิม
-  const defYY = new Date((val('iDate') || localTodayISO()) + 'T00:00:00').getFullYear() % 100;
+  const defYY = new Date((dISO('iDate') || localTodayISO()) + 'T00:00:00').getFullYear() % 100;
   const manual = parseManualCertNo(val('fCertNo'), defYY);
   if (manual && manual.err) { alert('⛔ ' + manual.err); return; }
   const newNo = manual ? ('' + manual.yy + CERT_TC + String(manual.base).padStart(3, '0') + '-' + manual.rev) : CERT_NO;
@@ -1402,7 +1409,7 @@ async function saveEdits() {
     const upd = {
       cert_no: CERT_NO, job_no: jobNoStr(), revision: CERT_REV,
       request_no: val('fReqNo') || null,
-      cal_date: val('iDate') || localTodayISO(), date_recv: val('iDateRecv') || null, due_date: val('iDateNext') || null,
+      cal_date: dISO('iDate') || localTodayISO(), date_recv: dISO('iDateRecv') || null, due_date: dISO('iDateNext') || null,
       calibrated_by: val('fCalBy') || null, location: val('cLocation') || null, procedure: val('fProcedure') || null,
       capacity: numf('iCap'), resolution: numf('iRes'), accuracy_class: val('eClass') || null,
       adjusted: val('eAdjusted') || null, condition: val('eCondition') || null,
@@ -1470,8 +1477,8 @@ async function printCert() {
   if (CAL_STATE === 'draft') { alert('ต้องกด "สอบเสร็จ → ออกเลข Cert" ก่อนจึงจะปริ้นได้'); return; }
   switchMode('review');
   // DATE OF ISSUE = วันที่ออกใบจริง (ไม่ผูกกับวันสอบเทียบ) — ใช้ค่าในช่อง ถ้าว่างเติมวันนี้ตอนปริ้น
-  const issueDate = (byId('fDateIssue') && byId('fDateIssue').value) || localTodayISO();
-  if (byId('fDateIssue')) byId('fDateIssue').value = issueDate;
+  const issueDate = dISO('fDateIssue') || localTodayISO();
+  dSet('fDateIssue', issueDate);
   // ปริ้นจากข้อมูลที่บันทึกไว้ใน DB เสมอ (ใบที่ปริ้น = ข้อมูลที่บันทึก) — แก้บนจอแล้วไม่กด "บันทึกการแก้ไข" จะไม่ติดไปในใบ
   const db = CAL_REC_ID ? sbx() : null;
   if (!db) { openCert(); return; }
@@ -1578,8 +1585,8 @@ function fillFromCAL(cal) {
   setv('eCondition', cal.condition); setv('eAdjusted', cal.adjusted); setv('eUserRange', cal.user_range); setv('eCalType', cal.cal_type);
   setv('cLocation', cal.location); setv('cSection', cal.section); setv('cUnitDept', cal.unit_dept);
   if (byId('cTraceable') && Array.isArray(cal.traceability)) byId('cTraceable').value = cal.traceability.join('\n');
-  setv('iDateRecv', cal.date_receive); setv('iDate', cal.date_cal); setv('iDateNext', cal.date_next);
-  setv('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);
+  if (cal.date_receive) dSet('iDateRecv', cal.date_receive); if (cal.date_cal) dSet('iDate', cal.date_cal); if (cal.date_next) dSet('iDateNext', cal.date_next);
+  if (cal.date_issue) dSet('fDateIssue', cal.date_issue); setv('fCalBy', cal.calibrated_by); setv('fProcedure', cal.procedure);
   setv('fCertNo', cal.cert_no); setv('fJobNo', cal.job_no); setv('fReqNo', cal.request_no);
   if (cal.ab_ppm != null) setv('abMaterial', cal.ab_ppm);
   if (cal.signers) { setv('sTechMgr', cal.signers.tech_mgr); setv('sApproverPos', cal.signers.approver_pos); }
@@ -1748,7 +1755,7 @@ deriveStds();
 rebuildAvail();
 assignWeights();
 // วันที่รับ/สอบเทียบ default = วันนี้ (ใบเปิดดูย้อนหลัง fillFromCAL จะทับด้วยวันจริงของใบนั้น)
-['iDate', 'iDateRecv'].forEach(id => { const el = byId(id); if (el && !el.value) el.value = localTodayISO(); });
+['iDate', 'iDateRecv'].forEach(id => { const el = byId(id); if (el && !el.value) dSet(id, localTodayISO()); });
 buildStatic();                    // renders STDS (renderStdTable) + points (renderPointRows)
 applyIncomingInst(INCOMING_INST);
 // เปิดจากรายการ: ไม่ auto สร้างจุด/เลือกตุ้ม — ผู้ใช้เลือกพรีเซ็ท หรือกด "สร้างจุดอัตโนมัติ" เอง

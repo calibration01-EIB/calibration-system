@@ -399,8 +399,8 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
       <div class="field"><div class="lbl-row"><label>Cert No.</label><span class="tag-edit">ใส่เองได้ · เว้นว่าง = รันอัตโนมัติ</span></div><input id="fCertNo" value="" placeholder="เช่น 26B412-0 (ว่าง = รันเลขให้)" oninput="syncCertNoInput(this)"></div>
       <div class="field auto"><div class="lbl-row"><label>Job No.</label><span class="tag-auto">ออกโดยระบบ</span></div><input id="fJobNo" value="" placeholder="—" readonly></div>
       <div class="field"><label>Request No.</label><input id="fReqNo" value="-"></div>
-      <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" readonly><div class="date-dmy" id="iDateNextHint"></div></div>
-      <div class="field"><div class="lbl-row"><label>วันที่ออกใบ (DATE OF ISSUE)</label><span class="tag-edit">แก้ได้ · ว่าง = วันนี้ตอนปริ้น</span></div><input id="fDateIssue" type="date" value=""></div>
+      <div class="field auto"><div class="lbl-row"><label>ครบกำหนดถัดไป</label><span class="tag-auto">คำนวณ +1 ปี</span></div><input id="iDateNext" placeholder="dd/mm/yyyy" readonly></div>
+      <div class="field"><div class="lbl-row"><label>วันที่ออกใบ (DATE OF ISSUE)</label><span class="tag-edit">แก้ได้ · ว่าง = วันนี้ตอนปริ้น</span></div><input id="fDateIssue" placeholder="dd/mm/yyyy" inputmode="numeric" oninput="dateMask(this)" value=""></div>
     </div>
 
     <div class="subhead"><i class="ti ti-scale"></i> เครื่องชั่งที่สอบเทียบ</div>
@@ -446,8 +446,8 @@ input[type=number], input[type=text], input:not([type]) { font-size: 16px; }   /
 
     <div class="subhead"><i class="ti ti-clipboard-text"></i> ข้อมูลการสอบเทียบ (หัวใบบันทึกข้อมูลดิบ)</div>
     <div class="grid4">
-      <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" type="date" value="" onchange="updateDateHints()"><div class="date-dmy" id="iDateRecvHint"></div></div>
-      <div class="field"><label>วันที่สอบเทียบ</label><input id="iDate" type="date" value="" onchange="updateDateHints()"><div class="date-dmy" id="iDateHint"></div></div>
+      <div class="field"><label>วันที่รับเครื่อง</label><input id="iDateRecv" placeholder="dd/mm/yyyy" inputmode="numeric" oninput="dateMask(this)" value=""></div>
+      <div class="field"><label>วันที่สอบเทียบ</label><input id="iDate" placeholder="dd/mm/yyyy" inputmode="numeric" oninput="dateMask(this)" value=""></div>
       <div class="field"><label>ผู้สอบเทียบ</label><input id="fCalBy" value="WUTTIPONG  ATTAWAN"></div>
       <div class="field"><label>สถานที่ติดตั้ง (Location)</label><input id="cLocation" value="B.3/3"></div>
       <div class="field"><label>วิธีสอบเทียบ (Procedure)</label><input id="fProcedure" value="SWI-CAL-705"></div>
