@@ -504,7 +504,7 @@ async function loadUsers() {
 
 function renderUsersTable() {
   const tbody = document.getElementById('usersTable');
-  const roleMap = { admin: ['badge-purple','Admin'], editor: ['badge-blue','Editor'], viewer: ['badge-gray','Viewer'] };
+  const roleMap = { admin: ['badge-purple','Admin'], editor: ['badge-blue','Editor'], viewer: ['badge-gray','Viewer'], owner: ['badge-amber','Owner'] };
   tbody.innerHTML = usersData.map(u => {
     const [cls, label] = roleMap[u.role] || ['badge-gray', u.role];
     const activeBadge = u.active ? '<span class="badge badge-green">เปิด</span>' : '<span class="badge badge-red">ปิด</span>';
@@ -516,7 +516,7 @@ function renderUsersTable() {
     return `<tr>
       <td><strong>${u.name}</strong></td>
       <td style="font-family:var(--mono);font-size:20px">${u.username}</td>
-      <td><span class="badge ${cls}">${label}</span></td>
+      <td><span class="badge ${cls}">${label}</span>${u.department ? ` <span style="font-size:11px;color:var(--text3)">${u.department}</span>` : ''}</td>
       <td>${activeBadge}</td>
       <td style="font-size:13px;max-width:220px;white-space:normal;line-height:1.5">${typesList}</td>
       <td>${date}</td>
@@ -570,6 +570,7 @@ function openUserModal(userId) {
     document.getElementById('uPasswordLabel').textContent = 'รหัสผ่านใหม่';
     document.getElementById('uRole').value = u.role;
     document.getElementById('uActive').value = String(u.active);
+    document.getElementById('uDepartment').value = u.department || '';
   } else {
     document.getElementById('uName').value = '';
     document.getElementById('uUsername').value = '';
@@ -577,7 +578,15 @@ function openUserModal(userId) {
     document.getElementById('uPasswordHint').textContent = '';
     document.getElementById('uPasswordLabel').textContent = 'รหัสผ่าน';
     document.getElementById('uRole').value = 'viewer';
+    document.getElementById('uDepartment').value = '';
   }
+  // ช่องรหัสหน่วยงานโชว์เฉพาะ role owner
+  const syncDeptVisible = () => {
+    document.getElementById('uDeptGroup').style.display =
+      document.getElementById('uRole').value === 'owner' ? 'block' : 'none';
+  };
+  document.getElementById('uRole').onchange = syncDeptVisible;
+  syncDeptVisible();
   document.getElementById('userModal').classList.add('open');
   // โหลด checkboxes ประเภทเครื่องมือ
   const selectedTypes = userId ? (usersData.find(x => x.id === userId)?.instrument_types || []) : [];
@@ -592,10 +601,12 @@ async function saveUser() {
   const password = document.getElementById('uPassword').value;
   const role = document.getElementById('uRole').value;
   const active = document.getElementById('uActive').value === 'true';
+  const department = document.getElementById('uDepartment').value.trim().toUpperCase();
 
   if (!name || !username) { showToast('กรุณากรอกชื่อและ username', 'error'); return; }
   if (!editingUserId && !password) { showToast('กรุณากรอกรหัสผ่าน', 'error'); return; }
   if (password && password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัว', 'error'); return; }
+  if (role === 'owner' && !department) { showToast('กรุณากรอกรหัสหน่วยงานของ Owner (เช่น WRM1)', 'error'); return; }
 
   const btn = document.getElementById('saveUserBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
@@ -613,7 +624,8 @@ async function saveUser() {
       p_role: role,
       p_active: editingUserId ? active : true,
       p_instrument_types: checkedTypes.length > 0 ? checkedTypes : null,
-      p_password_hash: passwordHash
+      p_password_hash: passwordHash,
+      p_department: role === 'owner' ? department : null
     });
     if (error) throw error;
     await loadUsers();

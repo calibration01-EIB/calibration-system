@@ -75,7 +75,7 @@ function enterApp(user) {
     const ba = document.getElementById('bnav-admin'); if (ba) ba.style.display = 'flex';
     const bau = document.getElementById('bnav-audit'); if (bau) bau.style.display = 'flex';
   }
-  if (user.role === 'viewer') document.getElementById('uploadSection').style.display = 'none';
+  if (user.role === 'viewer' || user.role === 'owner') document.getElementById('uploadSection').style.display = 'none';
   if (user.role === 'admin' || user.role === 'editor') toggleManageColumns(true);
   // show bottom nav on mobile/tablet
   if (window.innerWidth <= 768) {

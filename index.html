@@ -4299,7 +4299,12 @@ body.app-mode textarea:focus {
           <option value="viewer">Viewer — ดูข้อมูลอย่างเดียว</option>
           <option value="editor">Editor — แก้ไขข้อมูล + อัพโหลด cert</option>
           <option value="admin">Admin — จัดการทุกอย่าง</option>
+          <option value="owner">Owner — หน่วยงานเจ้าของเครื่อง (กดรับทราบแผน)</option>
         </select>
+      </div>
+      <div class="form-group" id="uDeptGroup" style="display:none">
+        <label>รหัสหน่วยงาน (Owner) <span style="font-size:12px;color:var(--text3)">เช่น WRM1 — ต้องตรงกับรหัสหน่วยในแผน FRM</span></label>
+        <input type="text" id="uDepartment" placeholder="เช่น WRM1" style="text-transform:uppercase">
       </div>
       <div class="form-group" id="uActiveGroup" style="display:none">
         <label>สถานะ</label>
