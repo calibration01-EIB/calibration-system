@@ -103,3 +103,109 @@ function assetOutRenderTemplate(templateBuf, d, photoBytes) {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   });
 }
+
+// ===== Dialog + submit flow (ปุ่ม 📤 นำทรัพย์สินออก ในหน้าเครื่องมือ) =====
+let aoState = { inst: null, photoBytes: null };
+
+async function openAssetOutModal(instrumentId) {
+  const { data, error } = await sb.from('instruments').select('*').eq('id', instrumentId).single();
+  if (error || !data) { showToast('โหลดข้อมูลเครื่องมือไม่สำเร็จ', 'error'); return; }
+  aoState = { inst: data, photoBytes: null };
+  const today = new Date().toISOString().slice(0, 10);
+  const dept = data.division || data.department || '';
+  document.getElementById('assetOutBody').innerHTML = `
+    <div class="modal-header">
+      <h3>📤 ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท</h3>
+      <button class="btn-close" onclick="closeAssetOutModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="meta-row">
+        <div class="meta-item"><label>เครื่องมือ</label><span>${frmEscapeXml(data.instrument_name || '')}</span></div>
+        <div class="meta-item"><label>รหัสทรัพย์สิน</label><span>${frmEscapeXml(data.asset_no || '')}</span></div>
+        <div class="meta-item"><label>ID Code</label><span>${frmEscapeXml(data.id_code || '')}</span></div>
+      </div>
+      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div class="form-group"><label>วันที่</label><input id="ao_date" type="date" value="${today}"></div>
+        <div class="form-group"><label>เป็นส่วนประกอบของ</label><input id="ao_component" type="text"></div>
+        <div class="form-group"><label>Job Order No.</label><input id="ao_job" type="text"></div>
+        <div class="form-group" style="grid-column:span 2"><label>รายละเอียด/ปัญหา</label><textarea id="ao_detail" style="width:100%;min-height:60px;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;color:var(--text);background:var(--surface);resize:vertical">ส่งเครื่องมือไปสอบเทียบภายนอก ตามวาระ 1ปี/ครั้ง (ISO 17025)</textarea></div>
+        <div class="form-group"><label>PR. NO.</label><input id="ao_pr" type="text"></div>
+        <div class="form-group"><label>PO. NO.</label><input id="ao_po" type="text"></div>
+        <div class="form-group" style="grid-column:span 2"><label>วัตถุประสงค์</label><input id="ao_purpose" type="text" value="ส่งเครื่องมือไปสอบเทียบภายนอก"></div>
+        <div class="form-group" style="grid-column:span 2"><label>บริษัท/ร้านที่รับแก้ไข</label><input id="ao_vname" type="text"></div>
+        <div class="form-group" style="grid-column:span 2"><label>ที่อยู่</label><input id="ao_vaddr" type="text"></div>
+        <div class="form-group"><label>โทรศัพท์</label><input id="ao_vphone" type="text"></div>
+        <div class="form-group"><label>โทรสาร</label><input id="ao_vfax" type="text"></div>
+        <div class="form-group"><label>Email</label><input id="ao_vemail" type="text"></div>
+        <div class="form-group"><label>ชื่อผู้ติดต่อ</label><input id="ao_vcontact" type="text"></div>
+        <div class="form-group"><label>กำหนดวันแล้วเสร็จ</label><input id="ao_due" type="date"></div>
+        <div class="form-group"><label>รูปทรัพย์สิน</label>
+          <input id="ao_photo" type="file" accept="image/*" onchange="assetOutPickPhoto(event)">
+          <img id="ao_photo_prev" style="max-width:120px;display:none;margin-top:6px;border-radius:6px">
+        </div>
+      </div>
+      <div class="ao-hint" style="margin-top:10px;color:var(--text3);font-size:13px">
+        Cost Center: ${frmEscapeXml(data.cost_center || '(ยังไม่ตั้ง)')} · หน่วยงาน: ${frmEscapeXml(dept)}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAssetOutModal()">ยกเลิก</button>
+      <button class="btn-primary" onclick="assetOutSubmit()">บันทึก + Export .xlsx</button>
+    </div>`;
+  document.getElementById('assetOutModal').classList.add('open');
+}
+
+function closeAssetOutModal() {
+  document.getElementById('assetOutModal').classList.remove('open');
+  aoState = { inst: null, photoBytes: null };
+}
+
+function assetOutPickPhoto(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  f.arrayBuffer().then(buf => { aoState.photoBytes = buf; });
+  const prev = document.getElementById('ao_photo_prev');
+  prev.src = URL.createObjectURL(f);
+  prev.style.display = 'block';
+}
+
+async function assetOutSubmit() {
+  const d = aoState.inst; if (!d) return;
+  const val = id => (document.getElementById(id).value || '').trim();
+  const dept = d.division || d.department || '';
+  const rec = {
+    instrument_id: d.id, permit_date: val('ao_date') || null,
+    is_component_of: val('ao_component'), job_order_no: val('ao_job'),
+    detail: val('ao_detail'), pr_no: val('ao_pr'), po_no: val('ao_po'),
+    purpose: val('ao_purpose'), vendor_name: val('ao_vname'), vendor_address: val('ao_vaddr'),
+    vendor_phone: val('ao_vphone'), vendor_fax: val('ao_vfax'), vendor_email: val('ao_vemail'),
+    vendor_contact: val('ao_vcontact'), due_date: val('ao_due') || null,
+    cost_center: d.cost_center || null, dept_name: dept,
+    created_by: currentUser?.name || 'Unknown'
+  };
+  // 1) insert → ได้ id
+  const { data: ins, error } = await sb.from('asset_out_permits').insert(rec).select('id').single();
+  if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return; }
+  // 2) upload รูป (ถ้ามี) → path asset_out_permits/<instrument_id>/<permit_id>.jpg
+  if (aoState.photoBytes) {
+    const path = `asset_out_permits/${d.id}/${ins.id}.jpg`;
+    const { error: upErr } = await sb.storage.from('certificates')
+      .upload(path, new Blob([aoState.photoBytes], { type: 'image/jpeg' }), { upsert: true, contentType: 'image/jpeg' });
+    if (!upErr) await sb.from('asset_out_permits').update({ photo_path: path }).eq('id', ins.id);
+  }
+  // 3) export
+  await assetOutExport({ ...rec, instrument_name: d.instrument_name, asset_no: d.asset_no, id_code: d.id_code }, aoState.photoBytes);
+  showToast('สร้างใบนำทรัพย์สินออกแล้ว', 'success');
+  closeAssetOutModal();
+}
+
+async function assetOutExport(data, photoBytes) {
+  if (typeof JSZip === 'undefined') { showToast('โหลด JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)', 'error'); return; }
+  const buf = await assetOutGetTemplate();
+  const blob = await assetOutRenderTemplate(buf, data, photoBytes || null);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ใบนำทรัพย์สินออก_${(data.id_code || 'asset').replace(/[\\/:*?"<>|]/g, '_')}_${(data.permit_date || '').replace(/-/g, '')}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}

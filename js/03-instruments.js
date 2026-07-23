@@ -364,6 +364,7 @@ function openInstrumentDetail(id) {
         <button class="btn-view" onclick="closeInstrumentDetail();openCalHistory(${Number(d.id)||0})">🕘 ประวัติ</button>
         <button class="btn-view" onclick="closeInstrumentDetail();openRepairsForInstrument(${Number(d.id)||0})">🔧 ประวัติซ่อม</button>
         ${canEdit && typeof getOpenRepair === 'function' && !getOpenRepair(d.id) ? `<button class="btn-view" style="color:#b45309;border-color:#b45309" onclick="closeInstrumentDetail();showPage('repairs');openRepairModal(null, ${Number(d.id)||0})">🔧 แจ้งซ่อม</button>` : ''}
+        ${canEdit ? `<button class="btn-view" style="color:#0b7a44;border-color:#0b7a44" onclick="closeInstrumentDetail();openAssetOutModal(${Number(d.id)||0})">📤 นำทรัพย์สินออก</button>` : ''}
       </div>
     </div>
 
