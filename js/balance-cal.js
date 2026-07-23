@@ -1689,25 +1689,21 @@ function renderPresetPick() {
   if (!CAL_PRESETS.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   sel.innerHTML = '<option value="">— เลือกพรีเซ็ทจุด —</option>'
-    + CAL_PRESETS.map((p, i) => `<option value="${i}">${String(p.name || '').replace(/</g, '&lt;')} (${Array.isArray(p.points) ? p.points.length : 0} จุด)</option>`).join('');
+    + CAL_PRESETS.map((p, i) => { const mr = Array.isArray(p.ranges) && p.ranges.length; return `<option value="${i}">${String(p.name || '').replace(/</g, '&lt;')} (${mr ? p.ranges.length + ' ย่าน' : (Array.isArray(p.points) ? p.points.length : 0) + ' จุด'})</option>`; }).join('');
 }
 function applyPresetPick(idx) {
   const p = CAL_PRESETS[Number(idx)];
   if (!p) return;
   // พรีเซ็ทหลายย่าน → seed ทุกย่าน แล้วสลับเป็นโหมด Multiple Range (เด้งไปย่าน 1)
   if (Array.isArray(p.ranges) && p.ranges.length) {
-    RANGES = p.ranges.map(normRange).filter(r => Number.isFinite(parseFloat(r.max)));
-    if (!RANGES.length) return;
+    const seeded = p.ranges.map(normRange).filter(r => Number.isFinite(parseFloat(r.max)));
+    if (!seeded.length) return;                 // พรีเซ็ทเสีย → ไม่แตะ RANGES ปัจจุบัน
+    RANGES = seeded;
     ACTIVE_RANGE = 0;
-    applyRangeData(RANGES[0]);
+    applyRangeData(RANGES[0]);                  // แต่ละย่านเก็บ 3.1–3.5 ของตัวเองใน template แล้ว — ไม่ override ด้วย p.setup (ค่าอาจเป็นของย่านอื่นตอน capture)
     setBalanceType('range');   // ตั้ง dropdown + syncBalanceTypeUI (ไม่มี confirm เหมือน applyBalanceType)
     renderRangeTabs();
     if (p.weights && Array.isArray(p.weights.sets) && p.weights.sets.length) restoreSelection(p.weights);
-    if (p.setup) {
-      const setv = (id, v) => { const el = byId(id); if (el && v != null && v !== '') el.value = v; };
-      setv('plPoint', p.setup.plPoint); setv('repPoint', p.setup.repPoint);
-      setv('eccWt', p.setup.eccWt); setv('eccPan', p.setup.eccPan); setv('tareWt', p.setup.tareWt);
-    }
     PREFILL_REC = null; renderPrefillBanner();
     if (typeof drawPanPrev === 'function') drawPanPrev();
     recalc();
