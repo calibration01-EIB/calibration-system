@@ -1693,7 +1693,27 @@ function renderPresetPick() {
 }
 function applyPresetPick(idx) {
   const p = CAL_PRESETS[Number(idx)];
-  if (!p || !Array.isArray(p.points) || !p.points.length) return;
+  if (!p) return;
+  // พรีเซ็ทหลายย่าน → seed ทุกย่าน แล้วสลับเป็นโหมด Multiple Range (เด้งไปย่าน 1)
+  if (Array.isArray(p.ranges) && p.ranges.length) {
+    RANGES = p.ranges.map(normRange).filter(r => Number.isFinite(parseFloat(r.max)));
+    if (!RANGES.length) return;
+    ACTIVE_RANGE = 0;
+    applyRangeData(RANGES[0]);
+    setBalanceType('range');   // ตั้ง dropdown + syncBalanceTypeUI (ไม่มี confirm เหมือน applyBalanceType)
+    renderRangeTabs();
+    if (p.weights && Array.isArray(p.weights.sets) && p.weights.sets.length) restoreSelection(p.weights);
+    if (p.setup) {
+      const setv = (id, v) => { const el = byId(id); if (el && v != null && v !== '') el.value = v; };
+      setv('plPoint', p.setup.plPoint); setv('repPoint', p.setup.repPoint);
+      setv('eccWt', p.setup.eccWt); setv('eccPan', p.setup.eccPan); setv('tareWt', p.setup.tareWt);
+    }
+    PREFILL_REC = null; renderPrefillBanner();
+    if (typeof drawPanPrev === 'function') drawPanPrev();
+    recalc();
+    return;
+  }
+  if (!Array.isArray(p.points) || !p.points.length) return;
   POINTS = p.points.map(n => ({ nominal: Number(n), corr: 0, U: 0 }));
   // ถ้าพรีเซ็ทเก็บการเลือกตุ้มไว้ → คืนชุด + ลูกที่ติ๊ก + override (ลูกหมดอายุข้ามให้)
   if (p.weights && Array.isArray(p.weights.sets) && p.weights.sets.length) restoreSelection(p.weights);
