@@ -340,6 +340,20 @@ function normRange(r) {
     tareWt: r.tareWt, tareChecks: Array.isArray(r.tareChecks) ? r.tareChecks : [],
   };
 }
+// พรีเซ็ท: แปลง range (capture/normalized) → template ตัดค่าอ่านออก (เก็บแค่โครง+นอมินัล+3.1–3.5)
+function stripReads(r) {
+  r = r || {};
+  return {
+    max: r.max, res: r.res, userRange: r.userRange || '',
+    tols: Array.isArray(r.tols) ? r.tols.map(t => ({ from: t.from, to: t.to, tol: t.tol, unit: t.unit || 'g' })) : [],
+    dsegs: Array.isArray(r.dsegs) ? r.dsegs.map(s => ({ to: s.to, d: s.d })) : [],
+    points: Array.isArray(r.points) ? r.points.map(p => ({ nominal: p.nominal, reads: [] })) : [],
+    repPoint: r.repPoint, repReads: [], plPoint: r.plPoint, plReads: [],
+    eccWt: r.eccWt, eccPan: r.eccPan, eccReads: [],
+    tareWt: r.tareWt,
+    tareChecks: Array.isArray(r.tareChecks) ? r.tareChecks.map(c => [Array.isArray(c) ? c[0] : c, '']) : [],
+  };
+}
 // เขียน range object ลงฟอร์ม (rebuild ตาราง + เติมค่าอ่าน) แล้ว recalc — mirror ของ fillFromCAL ส่วนต่อย่าน
 function applyRangeData(r) {
   if (!r) return;
@@ -1712,10 +1726,22 @@ async function saveCurrentAsPreset() {
   if (SAVING_PRESET) return;   // กันกดซ้ำระหว่างกำลังบันทึก
   if (!CAN_EDIT_PRESETS) { alert('เฉพาะ admin/editor เท่านั้นที่บันทึกพรีเซ็ทได้'); return; }
   const db = sbx(); if (!db) { alert('ยังเชื่อมต่อฐานข้อมูลไม่ได้ — ลองรีเฟรช'); return; }
-  const points = POINTS.map(p => Number(p.nominal)).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
-  if (!points.length) { alert('ยังไม่มีจุดทดสอบให้บันทึก — จัดจุดก่อน'); return; }
-  const cap = numf('iCap');
-  const defName = 'เครื่องชั่ง ' + (cap ? cap + ' g' : points[points.length - 1] + ' g');
+  // Multi-range: จับทุกย่านเป็น template (ตัดค่าอ่าน) · ย่านที่แสดงอยู่ flush ก่อน
+  let ranges = null, points, cap = numf('iCap'), defName;
+  if (RANGES.length) {
+    RANGES[ACTIVE_RANGE] = captureRangeData();
+    ranges = RANGES.map(stripReads);
+    points = (ranges[0].points || []).map(p => Number(p.nominal)).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+    const maxes = RANGES.map(r => parseFloat(r.max)).filter(Number.isFinite);
+    const overallMax = maxes.length ? Math.max(...maxes) : cap;
+    cap = overallMax;
+    defName = 'เครื่องชั่ง ' + (overallMax ? overallMax + ' g' : '') + ' (หลายย่าน ' + RANGES.length + ' ย่าน)';
+    if (!ranges.length) { alert('ยังไม่มีย่านให้บันทึก'); return; }
+  } else {
+    points = POINTS.map(p => Number(p.nominal)).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+    if (!points.length) { alert('ยังไม่มีจุดทดสอบให้บันทึก — จัดจุดก่อน'); return; }
+    defName = 'เครื่องชั่ง ' + (cap ? cap + ' g' : points[points.length - 1] + ' g');
+  }
   const name = (prompt('ตั้งชื่อพรีเซ็ท:', defName) || '').trim();
   if (!name) return;
   SAVING_PRESET = true;
@@ -1730,7 +1756,7 @@ async function saveCurrentAsPreset() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> กำลังบันทึก…'; }
   try {
     const { error } = await db.from('cal_point_presets').insert({
-      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, setup, updated_at: new Date().toISOString(),
+      name, capacity_from: 0, capacity_to: cap || null, points, unit: 'g', weights, setup, ranges, updated_at: new Date().toISOString(),
     });
     if (error) throw error;
     const { data } = await db.from('cal_point_presets').select('*').order('capacity_from', { nullsFirst: true });
@@ -1739,7 +1765,7 @@ async function saveCurrentAsPreset() {
     if (idx >= 0 && byId('presetPick')) byId('presetPick').value = String(idx);
     if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> ✓ บันทึกแล้ว: ' + name; btn.style.background = '#e3f5e8'; btn.style.borderColor = '#16784a'; btn.style.color = '#12633f'; }
     setTimeout(revert, 2800);   // โชว์สถานะเขียวค้างให้เห็นชัด แล้วค่อยกลับเป็นปุ่มเดิม
-    alert('✅ บันทึกพรีเซ็ท "' + name + '" แล้ว (' + points.length + ' จุด · ' + weights.checked.length + ' ลูก) — เลือกใช้ซ้ำได้จากดรอปดาวน์ "พรีเซ็ทจุดสอบ" และหน้า "พรีเซ็ทจุด"');
+    alert('✅ บันทึกพรีเซ็ท "' + name + '" แล้ว (' + (ranges ? ranges.length + ' ย่าน · ' : '') + points.length + ' จุด · ' + weights.checked.length + ' ลูก) — เลือกใช้ซ้ำได้จากดรอปดาวน์ "พรีเซ็ทจุดสอบ" และหน้า "พรีเซ็ทจุด"');
   } catch (e) {
     revert();
     alert('❌ บันทึกพรีเซ็ทไม่ได้: ' + (e && e.message ? e.message : e));
