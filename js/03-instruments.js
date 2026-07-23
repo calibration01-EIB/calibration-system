@@ -696,6 +696,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iAssetNo').value = d.asset_no || '';
     document.getElementById('iDept').value = d.department || '';
     document.getElementById('iDivision').value = d.division || '';
+    document.getElementById('iCostCenter').value = d.cost_center || '';
     document.getElementById('iIdCode').value = d.id_code || '';
     document.getElementById('iCertNo').value = d.cert_no || '';
     document.getElementById('iCalDate').value = d.cal_date || '';
@@ -703,7 +704,7 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
     document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
   } else {
-    ['iCategory','iName','iBrand','iModel','iSerial','iAssetNo','iDept','iDivision','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
+    ['iCategory','iName','iBrand','iModel','iSerial','iAssetNo','iDept','iDivision','iCostCenter','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
      'iUsageFreq','iProductGroup','iUspType','iBalanceType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     setRangeField('');
@@ -985,6 +986,7 @@ async function saveInstrument() {
     asset_no: document.getElementById('iAssetNo').value.trim() || null,
     department: document.getElementById('iDept').value.trim(),
     division: document.getElementById('iDivision').value.trim() || null,
+    cost_center: document.getElementById('iCostCenter').value.trim() || null,
     id_code: document.getElementById('iIdCode').value.trim(),
     cert_no: document.getElementById('iCertNo').value.trim(),
     cal_date: document.getElementById('iCalDate').value || null,
