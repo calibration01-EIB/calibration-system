@@ -220,3 +220,32 @@ async function assetOutExport(data, photoBytes) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+
+// ===== ประวัติใบ + พิมพ์ซ้ำ (ปุ่ม 📄 ใบนำออก (ประวัติ) ในหน้าเครื่องมือ) =====
+async function openAssetOutHistory(instrumentId) {
+  const { data, error } = await sb.from('asset_out_permits')
+    .select('*').eq('instrument_id', instrumentId).order('created_at', { ascending: false });
+  const rows = (data || []).map(p => `<tr>
+    <td>${(p.permit_date || '-')}</td><td>${frmEscapeXml(p.vendor_name || '-')}</td>
+    <td>${frmEscapeXml(p.created_by || '-')}</td>
+    <td><button onclick="assetOutReprint(${p.id})">พิมพ์ซ้ำ</button></td></tr>`).join('');
+  document.getElementById('assetOutBody').innerHTML = `
+    <h3>ประวัติใบนำทรัพย์สินออก</h3>
+    <table class="ao-hist"><thead><tr><th>วันที่</th><th>ร้าน</th><th>โดย</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">ยังไม่มี</td></tr>'}</tbody></table>
+    <div class="ao-btns"><button onclick="closeAssetOutModal()">ปิด</button></div>`;
+  document.getElementById('assetOutModal').classList.add('open');
+  if (error) showToast('โหลดประวัติไม่สำเร็จ', 'error');
+}
+
+async function assetOutReprint(permitId) {
+  const { data: p, error } = await sb.from('asset_out_permits').select('*').eq('id', permitId).single();
+  if (error || !p) { showToast('โหลดใบไม่สำเร็จ', 'error'); return; }
+  const { data: inst } = await sb.from('instruments').select('instrument_name,asset_no,id_code').eq('id', p.instrument_id).single();
+  let photoBytes = null;
+  if (p.photo_path) {
+    const { data: u } = await sb.storage.from('certificates').createSignedUrl(p.photo_path, 300);
+    if (u && u.signedUrl) photoBytes = await fetch(u.signedUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+  }
+  await assetOutExport({ ...p, instrument_name: inst?.instrument_name, asset_no: inst?.asset_no, id_code: inst?.id_code }, photoBytes);
+}
