@@ -994,6 +994,7 @@ async function saveInstrument() {
     cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,
     cal_type: document.getElementById('iCalType').value || null,
     remark: document.getElementById('iRemark').value.trim() || null,
+    cal_status: document.getElementById('iCalStatus')?.value === 'cancelled' ? 'cancelled' : 'active',
   };
   // หมายเหตุ: range_profile / tolerance_bands ไม่อยู่ใน payload แล้ว (ถอด UI ตารางออก 2026-07)
   // — save จะไม่แตะคอลัมน์เหล่านี้ ค่าเดิมของเครื่อง multi-range ใน DB คงอยู่ให้ balance-cal ใช้ต่อ

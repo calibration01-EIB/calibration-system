@@ -88,7 +88,7 @@ function filterByStatus(status) {
 (function installListIntegrityFixes() {
   const CANCEL_LABEL = 'ยกเลิกสอบเทียบ';
   const LEGACY_MARKER = '[[CAL_STATUS_CANCELLED]]';
-  window.__calibrationListFixVersion = 14;
+  window.__calibrationListFixVersion = 15;
 
   function getRemarkLines(value) {
     return String(value || '').split(/\r?\n/);
@@ -104,17 +104,14 @@ function filterByStatus(status) {
       .trim();
   }
 
-  function buildCalibrationRemark(remark, status) {
-    const clean = stripCalibrationCancelMarker(remark);
-    return status === 'cancelled' ? [CANCEL_LABEL, clean].filter(Boolean).join('\n') : (clean || null);
-  }
-
   function isCalibrationCancelled(row) {
-    const remarkLines = getRemarkLines(row?.remark).map(line => line.trim());
+    // คอลัมน์ cal_status เป็นตัวชี้ขาด — ถ้ามีค่าใช้ค่านั้นเลย (remark เป็นข้อความเหตุผลล้วน)
     const statusText = String(row?.cal_status || row?.status || '').trim().toLowerCase();
-    return statusText === 'cancelled'
-      || statusText === CANCEL_LABEL.toLowerCase()
-      || remarkLines.includes(CANCEL_LABEL)
+    if (statusText === 'cancelled' || statusText === CANCEL_LABEL.toLowerCase()) return true;
+    if (statusText === 'active') return false;
+    // fallback: ข้อมูลเก่าที่ยังไม่มี cal_status → ดูจาก marker ใน remark
+    const remarkLines = getRemarkLines(row?.remark).map(line => line.trim());
+    return remarkLines.includes(CANCEL_LABEL)
       || remarkLines.includes(`[${CANCEL_LABEL}]`)
       || remarkLines.includes(LEGACY_MARKER);
   }
@@ -420,10 +417,11 @@ function filterByStatus(status) {
   if (originalSaveInstrument) {
     saveInstrument = window.saveInstrument = async function(...args) {
       const listState = captureListState();
-      const statusEl = document.getElementById('iCalStatus');
       const remarkEl = document.getElementById('iRemark');
+      // สถานะยกเลิกเก็บที่คอลัมน์ cal_status (payload ใน saveInstrument) — remark เป็นข้อความเหตุผลล้วน
+      // strip marker เก่าออกกันข้อมูลเดิมที่ยังมี marker ค้าง
       const cleanRemark = stripCalibrationCancelMarker(remarkEl?.value || '');
-      if (remarkEl) remarkEl.value = buildCalibrationRemark(cleanRemark, statusEl?.value);
+      if (remarkEl) remarkEl.value = cleanRemark;
 
       const currentLoadData = typeof loadData === 'function' ? loadData : null;
       if (currentLoadData) {

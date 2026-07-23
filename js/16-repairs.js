@@ -345,17 +345,18 @@ async function repairCancelOrder(orderId) {
     renderRepairOrderView(orderId);
 }
 
-// Task 5 — ตั้งสถานะเครื่อง "ยกเลิกสอบเทียบ" ผ่าน remark marker
+// Task 5 — ตั้งสถานะเครื่อง "ยกเลิกสอบเทียบ" ผ่านคอลัมน์ cal_status (remark เก็บเหตุผลล้วน)
 async function cancelInstrumentUse(instrumentId, refDateText) {
   const d = repairInstrument(instrumentId);
   if (!d) return false;
   const clean = typeof window.stripCalibrationCancelMarker === 'function'
     ? window.stripCalibrationCancelMarker(d.remark) : (d.remark || '');
   const note = `ยกเลิกใช้งาน — ซ่อมไม่ได้ (อ้างอิงงานซ่อมวันที่ ${refDateText})`;
-  const remark = ['ยกเลิกสอบเทียบ', note, clean].filter(Boolean).join('\n');
-  const { error } = await sb.from('instruments').update({ remark }).eq('id', instrumentId);
+  const remark = [note, clean].filter(Boolean).join('\n');
+  const { error } = await sb.from('instruments').update({ remark, cal_status: 'cancelled' }).eq('id', instrumentId);
   if (error) return false;
   d.remark = remark;   // อัปเดต local ทันที — กันปุ่ม retry โผล่ระหว่างรอ loadData
+  d.cal_status = 'cancelled';
   logAudit('ยกเลิกใช้งานเครื่อง (ซ่อมไม่ได้)', d, { note });
   try { localStorage.removeItem(getInstrumentCachePrefix() + '_time'); } catch (e) {}
   loadData(true);   // refresh ทะเบียน → badge ยกเลิกสอบเทียบขึ้นทันที
