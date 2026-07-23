@@ -1742,6 +1742,7 @@ async function saveCurrentAsPreset() {
   if (SAVING_PRESET) return;   // กันกดซ้ำระหว่างกำลังบันทึก
   if (!CAN_EDIT_PRESETS) { alert('เฉพาะ admin/editor เท่านั้นที่บันทึกพรีเซ็ทได้'); return; }
   const db = sbx(); if (!db) { alert('ยังเชื่อมต่อฐานข้อมูลไม่ได้ — ลองรีเฟรช'); return; }
+  const numf = id => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : null; };   // numf ตัวจริงเป็น local ในฟังก์ชันอื่น — สโคปนี้มองไม่เห็น (บั๊กเดิมทำให้ปุ่มตายเงียบ)
   // Multi-range: จับทุกย่านเป็น template (ตัดค่าอ่าน) · ย่านที่แสดงอยู่ flush ก่อน
   let ranges = null, points, cap = numf('iCap'), defName;
   if (RANGES.length) {
