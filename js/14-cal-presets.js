@@ -33,12 +33,16 @@ function renderCalPresets() {
   const rows = presetData.filter(p => !q || String(p.name || '').toLowerCase().includes(q));
   tbody.innerHTML = rows.length ? rows.map(p => {
     const pts = Array.isArray(p.points) ? p.points : [];
-    const range = (p.capacity_from != null || p.capacity_to != null)
-      ? `${p.capacity_from ?? '0'} – ${p.capacity_to ?? '∞'} ${escapeHtmlText(p.unit || 'g')}` : '–';
+    const mr = Array.isArray(p.ranges) && p.ranges.length ? p.ranges : null;
+    const range = mr
+      ? `หลายย่าน · ${mr.length} ย่าน`
+      : ((p.capacity_from != null || p.capacity_to != null)
+        ? `${p.capacity_from ?? '0'} – ${p.capacity_to ?? '∞'} ${p.unit || 'g'}` : '–');   // raw — cell escapes the whole string
+    const mrTip = mr ? mr.map((r, i) => `ย่าน ${i + 1}: ${r.max ?? '?'} g${r.res ? ' d' + r.res : ''} · ${(Array.isArray(r.points) ? r.points.length : 0)} จุด`).join(' | ') : '';
     return `<tr>
       <td><strong>${escapeHtmlText(p.name || '–')}</strong></td>
-      <td>${range}</td>
-      <td style="text-align:right">${pts.length}${(p.weights && Array.isArray(p.weights.checked) && p.weights.checked.length) ? ` <span title="พรีเซ็ทนี้เก็บตุ้มที่เลือกไว้ด้วย ${p.weights.checked.length} ลูก" style="color:var(--accent);font-size:11px;white-space:nowrap">🔩${p.weights.checked.length}</span>` : ''}${(p.setup && [p.setup.plPoint, p.setup.repPoint, p.setup.eccWt, p.setup.tareWt].some(v => v != null && String(v).trim() !== '')) ? ` <span title="พรีเซ็ทนี้เก็บ 3.1–3.5 (Preload/Repeatability/Eccentricity/Tare)" style="font-size:11px">⚙️</span>` : ''}</td>
+      <td${mr ? ` title="${escapeHtmlText(mrTip)}"` : ''}>${escapeHtmlText(range)}</td>
+      <td style="text-align:right">${pts.length}${mr ? ` <span title="พรีเซ็ทหลายย่าน — ${escapeHtmlText(mrTip)}" style="color:var(--accent);font-size:11px;white-space:nowrap">🎚️${mr.length}</span>` : ''}${(p.weights && Array.isArray(p.weights.checked) && p.weights.checked.length) ? ` <span title="พรีเซ็ทนี้เก็บตุ้มที่เลือกไว้ด้วย ${p.weights.checked.length} ลูก" style="color:var(--accent);font-size:11px;white-space:nowrap">🔩${p.weights.checked.length}</span>` : ''}${(p.setup && [p.setup.plPoint, p.setup.repPoint, p.setup.eccWt, p.setup.tareWt].some(v => v != null && String(v).trim() !== '')) ? ` <span title="พรีเซ็ทนี้เก็บ 3.1–3.5 (Preload/Repeatability/Eccentricity/Tare)" style="font-size:11px">⚙️</span>` : ''}</td>
       <td style="font-family:var(--mono);font-size:11px">${escapeHtmlText(pts.join(', ')) || '–'}</td>
       <td style="white-space:nowrap">${canEdit ? `<button class="btn-view" onclick="openPresetEdit('${p.id}')">✏️</button> <button class="btn-del" onclick="deleteCalPreset('${p.id}')">🗑️</button>` : ''}</td>
     </tr>`;
@@ -91,6 +95,18 @@ function openPresetEdit(id) {
   set('presetTareWt', p?.setup?.tareWt);
   // ชุดตุ้ม (โหลด async + ติ๊กชุดที่พรีเซ็ทเก็บไว้)
   loadPresetWeightSets(Array.isArray(p?.weights?.sets) ? p.weights.sets : []);
+  // พรีเซ็ทหลายย่าน: ซ่อนช่องย่านเดียว + โชว์สรุป read-only (แก้ได้แค่ชื่อ)
+  const mr = Array.isArray(p?.ranges) && p.ranges.length ? p.ranges : null;
+  const info = document.getElementById('presetMultiInfo');
+  if (info) info.style.display = mr ? '' : 'none';
+  document.querySelectorAll('#presetModal .presetSingleOnly').forEach(el => { el.style.display = mr ? 'none' : ''; });
+  if (mr) {
+    const box = document.getElementById('presetMultiRanges');
+    if (box) box.innerHTML = mr.map((r, i) => {
+      const nom = (Array.isArray(r.points) ? r.points : []).map(x => x.nominal).join(', ');
+      return `ย่าน ${i + 1}: Max ${escapeHtmlText(String(r.max ?? '?'))} g${r.res ? ' · d ' + escapeHtmlText(String(r.res)) : ''} · ${(Array.isArray(r.points) ? r.points.length : 0)} จุด${nom ? ' (' + escapeHtmlText(nom) + ')' : ''}`;
+    }).join('<br>');
+  }
   document.getElementById('presetModal').classList.add('open');
 }
 function closePresetModal() { document.getElementById('presetModal').classList.remove('open'); presetEditingId = null; }
@@ -100,8 +116,10 @@ async function saveCalPreset() {
   const num = id => { const v = parseFloat(document.getElementById(id)?.value); return Number.isFinite(v) ? v : null; };
   const name = val('presetName');
   const points = parsePresetPoints(val('presetPoints'));
+  const editing = presetEditingId ? presetData.find(x => String(x.id) === String(presetEditingId)) : null;
+  const keepRanges = (editing && Array.isArray(editing.ranges) && editing.ranges.length) ? editing.ranges : null;
   if (!name) { showToast('กรอกชื่อพรีเซ็ท', 'error'); return; }
-  if (!points.length) { showToast('กรอกจุดสอบอย่างน้อย 1 จุด (คั่นด้วยจุลภาค)', 'error'); return; }
+  if (!keepRanges && !points.length) { showToast('กรอกจุดสอบอย่างน้อย 1 จุด (คั่นด้วยจุลภาค)', 'error'); return; }
   // ชุดตุ้มที่ติ๊ก → sets + checked (รวมลูกในชุดทั้งหมด) ให้ balance-cal ผูกตุ้มต่อจุดเอง
   const sets = [...document.querySelectorAll('.presetSetChk:checked')].map(el => el.value);
   const checked = sets.flatMap(k => presetWeightGroups[k] || []);
@@ -112,7 +130,9 @@ async function saveCalPreset() {
   const hasSetup = [setup.plPoint, setup.repPoint, setup.eccWt, setup.tareWt].some(v => v !== '');
   const payload = {
     name, capacity_from: num('presetFrom'), capacity_to: num('presetTo'),
-    points, unit: val('presetUnit') || 'g',
+    points: keepRanges ? (Array.isArray(editing.points) ? editing.points : []) : points,
+    unit: val('presetUnit') || 'g',
+    ranges: keepRanges,
     weights, setup: hasSetup ? setup : null,
     updated_at: new Date().toISOString(),
   };
