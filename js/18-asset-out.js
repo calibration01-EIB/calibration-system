@@ -105,12 +105,12 @@ function assetOutRenderTemplate(templateBuf, d, photoBytes) {
 }
 
 // ===== Dialog + submit flow (ปุ่ม 📤 นำทรัพย์สินออก ในหน้าเครื่องมือ) =====
-let aoState = { inst: null, photoBytes: null };
+let aoState = { inst: null, photoBytes: null, photoPromise: null };
 
 async function openAssetOutModal(instrumentId) {
   const { data, error } = await sb.from('instruments').select('*').eq('id', instrumentId).single();
   if (error || !data) { showToast('โหลดข้อมูลเครื่องมือไม่สำเร็จ', 'error'); return; }
-  aoState = { inst: data, photoBytes: null };
+  aoState = { inst: data, photoBytes: null, photoPromise: null };
   const today = new Date().toISOString().slice(0, 10);
   const dept = data.division || data.department || '';
   document.getElementById('assetOutBody').innerHTML = `
@@ -157,13 +157,16 @@ async function openAssetOutModal(instrumentId) {
 
 function closeAssetOutModal() {
   document.getElementById('assetOutModal').classList.remove('open');
-  aoState = { inst: null, photoBytes: null };
+  aoState = { inst: null, photoBytes: null, photoPromise: null };
 }
 
 function assetOutPickPhoto(ev) {
   const f = ev.target.files && ev.target.files[0];
   if (!f) return;
-  f.arrayBuffer().then(buf => { aoState.photoBytes = buf; });
+  // เก็บ Promise ไว้ (ไม่ await ตรงนี้) — assetOutSubmit จะ await ให้เสร็จก่อนใช้เสมอ
+  // กันเคส submit เร็วกว่า arrayBuffer() จะ resolve (photoBytes ยังไม่ถูกเซ็ต)
+  aoState.photoBytes = null;
+  aoState.photoPromise = f.arrayBuffer();
   const prev = document.getElementById('ao_photo_prev');
   prev.src = URL.createObjectURL(f);
   prev.style.display = 'block';
@@ -171,6 +174,13 @@ function assetOutPickPhoto(ev) {
 
 async function assetOutSubmit() {
   const d = aoState.inst; if (!d) return;
+  // ให้แน่ใจว่ารูปที่เลือกไว้ (ถ้ามี) พร้อมใช้แล้วก่อนดำเนินการต่อ — กันเคสกด "บันทึก" เร็ว
+  // กว่า assetOutPickPhoto's arrayBuffer() จะ resolve เสร็จ (ไม่งั้นรูปจะหายไปเงียบๆ)
+  if (aoState.photoPromise) {
+    try { aoState.photoBytes = await aoState.photoPromise; }
+    catch (e) { aoState.photoBytes = null; showToast('อ่านไฟล์รูปไม่สำเร็จ', 'error'); }
+    aoState.photoPromise = null;
+  }
   const val = id => (document.getElementById(id).value || '').trim();
   const dept = d.division || d.department || '';
   const rec = {
@@ -192,6 +202,7 @@ async function assetOutSubmit() {
     const { error: upErr } = await sb.storage.from('certificates')
       .upload(path, new Blob([aoState.photoBytes], { type: 'image/jpeg' }), { upsert: true, contentType: 'image/jpeg' });
     if (!upErr) await sb.from('asset_out_permits').update({ photo_path: path }).eq('id', ins.id);
+    else showToast('อัปโหลดรูปไม่สำเร็จ (บันทึกข้อมูลอื่นแล้ว)', 'error');
   }
   // 3) export
   await assetOutExport({ ...rec, instrument_name: d.instrument_name, asset_no: d.asset_no, id_code: d.id_code }, aoState.photoBytes);
