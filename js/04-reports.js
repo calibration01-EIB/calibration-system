@@ -162,7 +162,7 @@ const CATEGORY_DEFS = [
   },
   {
     name: 'ตุ้มน้ำหนักมาตรฐาน (Mass)',
-    aliases: ['mass', 'mass set', 'standard weight', 'reference weight', 'weight set', 'weights', 'ตุ้มน้ำหนัก', 'มวลมาตรฐาน', 'ลูกตุ้ม']
+    aliases: ['mass', 'mass set', 'standard weight', 'reference weight', 'weight set', 'weights', 'weight', 'ตุ้มน้ำหนัก', 'มวลมาตรฐาน', 'ลูกตุ้ม']
   },
   {
     name: 'ความยาว/มิติ (Length/Dimension)',
