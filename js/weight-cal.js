@@ -44,3 +44,37 @@ function wcConventionalMass(o) {
   const deltaAvg = mcBar - ci * mcr;   // เฉลี่ย Δ ล้วน (ไว้แสดง/เก็บ)
   return { deltaAvg, ci, mcBar, mct, errorMg: (mct - o.nominalG) * 1000 };
 }
+
+// Repeatability (Type A) → standard uncertainty (mg)
+function wcRepeatabilityMg(repeatMg) { return Number(repeatMg) / Math.sqrt(3); }
+
+// งบความไม่แน่นอน — คืน u, U(k=2), veff, k, และ ui รายองค์ประกอบ
+function wcBudget(inp) {
+  const ws = Number(inp.refUmg) / 2;
+  const ds = Number(inp.dsMg) / Math.sqrt(3);
+  const did = Number(inp.resolutionMg) / Math.sqrt(6);
+  const dc = Number(inp.linearityMg) / Math.sqrt(3);
+  const ab = (Number(inp.nominalMg) * Number(inp.ppm || 1) / 1e6) / Math.sqrt(3);
+  const wr = wcRepeatabilityMg(inp.repeatMg);
+  const componentsUi = { ws, ds, did, dc, ab, wr };
+  const u = Math.sqrt(ws*ws + ds*ds + did*did + dc*dc + ab*ab + wr*wr);
+  const veff = wr > 0 ? (Math.pow(u,4) / Math.pow(wr,4)) * 9 : Infinity;
+  const k = 2;   // v1: k=2 (veff โตมากเสมอในงานนี้); เก็บ veff ไว้ตรวจ
+  return { u, U: k*u, veff, k, componentsUi };
+}
+
+// ปัด 2 นัยสำคัญแบบปัดขึ้น (M3003) — ให้ผลตรงกับ roundUp2sf ใน cert-print.html (ล้วน ไม่มี floor)
+function wcRoundUp2sf(x) {
+  x = Number(x);
+  if (!(x > 0)) return 0;
+  const d = Math.ceil(Math.log10(x));
+  const p = 2 - d;                 // ตำแหน่งทศนิยมสำหรับ 2 sig fig
+  const f = Math.pow(10, p);
+  return Math.ceil(x * f - 1e-9) / f;
+}
+
+// U ที่รายงาน = พื้น CMC ก่อน แล้วค่อยปัด 2 sig-fig (มาตรฐาน ISO 17025 / M3003)
+// cmcMg มาจาก CMC set "Conventional Mass (Class F1)" (point) lookup ตาม nominal
+function wcReportedU(computedU, cmcMg) {
+  return wcRoundUp2sf(Math.max(Number(computedU), Number(cmcMg || 0)));
+}

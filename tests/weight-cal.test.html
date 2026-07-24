@@ -29,5 +29,18 @@ near('WI01 mcBar', wi01.mcBar, 1.6667e-7, 1e-10);
 near('WI01 mct', wi01.mct, 9.97966e-4, 1e-9);
 near('WI01 errorMg', wi01.errorMg, -0.0020333, 1e-6);
 
+// Task 4 — uncertainty budget (WI01)
+near('WR ui', wcRepeatabilityMg(0.0015), 8.6603e-4, 1e-7);
+const b = wcBudget({ refUmg:0.002, dsMg:0.002, resolutionMg:0.001, linearityMg:0.004, nominalMg:1, ppm:1, repeatMg:0.0015 });
+near('WI01 u', b.u, 0.0029297, 1e-6);
+near('WI01 U', b.U, 0.0058595, 1e-6);
+eq('WI01 k', b.k, 2);
+// round-up 2 sig figs (pure, no floor) — 0.0058595 rounds to 0.0059
+eq('roundup 0.0058595->0.0059', wcRoundUp2sf(0.0058595), 0.0059);
+eq('roundup 0.01234->0.013', wcRoundUp2sf(0.01234), 0.013);
+// reported U applies CMC floor first: max(0.0058595, 0.006)=0.006 -> 0.0060
+eq('reportedU WI01 (CMC floor)', wcReportedU(0.0058595, 0.006), 0.006);
+eq('reportedU computed wins', wcReportedU(0.013, 0.006), 0.013);
+
 finish();
 </script></body></html>
