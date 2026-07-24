@@ -374,12 +374,15 @@ function resForLoad(g) {
 const repDec = resDecimals(resForLoad(CAL.repeat.point));    // ทศนิยมค่าอ่าน repeatability
 const preDec = resDecimals(resForLoad(CAL.preload.point));   // ทศนิยมค่าอ่าน preload
 const eccDec = resDecimals(resForLoad(CAL.ecc.wt));          // ทศนิยมค่าอ่าน eccentric
-function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่าเป็น g · จำนวนเต็มไม่โชว์ทศนิยม · ไม่งั้น 2 เลขนัยสำคัญ
+// จัดรูปเป็นข้อความ 2 เลขนัยสำคัญ — คงศูนย์ท้ายไว้เสมอ (9 → "9.0" · 0.3 → "0.30" · 12 → "12")
+function txt2sf(v) {
+  if (!isFinite(v) || v <= 0) return '0';
+  const mag = Math.floor(Math.log10(v) + 1e-12);   // +eps กัน fp (log10(0.001) = -3.0000000000000004)
+  return v.toFixed(Math.max(0, 1 - mag));
+}
+function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่าเป็น g · คงรูป 2 เลขนัยสำคัญเสมอ
   if (!isFinite(u) || u <= 0) return '0';
-  if (u > 100) { const g = u / 1000; return Number.isInteger(g) ? String(g) : String(+g.toFixed(4)); }
-  if (Number.isInteger(u)) return String(u);
-  const mag = Math.floor(Math.log10(u));
-  return u.toFixed(Math.max(0, 1 - mag));
+  return txt2sf(u > 100 ? u / 1000 : u);
 }
 function uUnit(u) { return (isFinite(u) && u > 100) ? 'g' : 'mg'; }  // หน่วย U รายงาน
 // ===== Tolerance (ใบประเมิน EIB55): หาเกณฑ์ผ่าน/ไม่ผ่านต่อจุด — ตรรกะเดียวกับ balance-cal recalc =====
@@ -538,8 +541,7 @@ function secDeparture() {
   const uHeadUnit = uInG ? 'g' : 'mg';
   const fmtUcell = u => {                                    // แสดงเลขล้วน (ไม่มีหน่วยต่อท้าย) ตามหน่วยหัวตาราง
     if (!isFinite(u) || u <= 0) return '0';
-    if (uInG) { const g = u / 1000; return Number.isInteger(g) ? String(g) : String(+g.toFixed(4)); }
-    return fmtU(u);
+    return txt2sf(uInG ? u / 1000 : u);
   };
   return `<h4>DEPARTURE OF INDICATION FROM NOMINAL VALUE</h4>
     <table class="bx dep" style="margin:0 auto;width:92%">

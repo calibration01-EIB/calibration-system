@@ -111,11 +111,16 @@ function roundUp2sf(v) {
 function roundRepU(U_mg) {
   return roundUp2sf(U_mg);
 }
-// แสดง U รายงาน: > 100 mg → หน่วย g · มิฉะนั้น mg
+// จัดรูปเป็นข้อความ 2 เลขนัยสำคัญ — คงศูนย์ท้ายไว้เสมอ (9 → "9.0" · 0.3 → "0.30" · 12 → "12" · 0.0093 → "0.0093")
+function txt2sf(v) {
+  if (!Number.isFinite(v) || v <= 0) return '0';
+  const mag = Math.floor(Math.log10(v) + 1e-12);   // +eps กัน fp (log10(0.001) = -3.0000000000000004)
+  return v.toFixed(Math.max(0, 1 - mag));
+}
+// แสดง U รายงาน: > 100 mg → หน่วย g · มิฉะนั้น mg (คงรูป 2 เลขนัยสำคัญเสมอ)
 function fmtRepU(mg) {
   if (!Number.isFinite(mg)) return '–';
-  if (mg > 100) { const g = mg / 1000; return (Number.isInteger(g) ? g : +g.toFixed(4)) + ' g'; }
-  return (Number.isInteger(mg) ? mg : +mg.toFixed(2)) + ' mg';
+  return mg > 100 ? txt2sf(mg / 1000) + ' g' : txt2sf(mg) + ' mg';
 }
 // ตาราง coverage factor k ตาม Veff (UKAS M3003 ระดับความเชื่อมั่น 95.45%)
 // Veff > 100 → k = 2 · ต่ำกว่านั้นเปิดตาราง (ปัด Veff ลงเพื่อความ conservative)
