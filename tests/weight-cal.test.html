@@ -1,0 +1,15 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
+<pre id="out"></pre>
+<script src="../js/weight-cal.js"></script>
+<script>
+const results = [];
+function eq(name, got, want){ results.push((String(got)===String(want)?'PASS ':'FAIL ')+name+' | got='+got+' want='+want); }
+function near(name, got, want, tol){ results.push((Math.abs(got-want)<=tol?'PASS ':'FAIL ')+name+' | got='+got+' want='+want); }
+function finish(){ const f=results.filter(r=>r[0]==='F').length; document.getElementById('out').textContent=results.join('\n'); document.title=f?('FAIL '+f):'ALLPASS'; }
+
+// Task 2 — environment & air density
+eq('avgCorr', wcAvgCorr(20.4, 20.6, -0.5), 20);
+near('airDensity WI01 (0.061)', wcAirDensity(20, 54.3, 1012.6), 1.19797, 5e-4);
+
+finish();
+</script></body></html>
