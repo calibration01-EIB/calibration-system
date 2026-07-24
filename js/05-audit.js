@@ -194,7 +194,7 @@ function getCertTypeCode(instrumentType, instrumentName = '') {
     ['W', /timer|stopwatch|\btime\b|เวลา/],
     ['P', /pressure|ความดัน/],
     ['F', /force|torque|แรงบิด|แรงกด/],
-    ['M', /\bmass\b|\bweight\s*set\b|\bweights\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน/],
+    ['M', /\bmass\b|\bweights?\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน/],
     ['B', /\bbalance\b|electronic\s*scale|weighing\s*scale|weighing\s*machine|เครื่องชั่ง/],
   ];
   for (const [code, pattern] of nameRules) {

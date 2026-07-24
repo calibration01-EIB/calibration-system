@@ -755,7 +755,7 @@ function isBalanceInstrumentType(value) {
 function isMassInstrumentType(value) {
   const key = normalizeInstrumentTypeKey(value);
   if (!key) return false;
-  return /\bmass\b|\bweight\s*set\b|\bweights\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน|ลูกตุ้ม/i.test(key);
+  return /\bmass\b|\bweights?\b|standard\s*weight|reference\s*weight|ตุ้มน้ำหนัก|มวลมาตรฐาน|ลูกตุ้ม/i.test(key);
 }
 
 function inferBalanceMassDisplayType(row) {
