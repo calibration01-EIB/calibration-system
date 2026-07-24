@@ -139,12 +139,12 @@ function renderSW() {
     const ws = groups[set];
     // เรียงตามมวลจริง (เอาหน่วยมาคูณ): mg < g < kg → 1mg,2mg,…,1g,2g,…,1kg
     ws.sort((a, b) => (Number(a.nominal_value) * (SW_MASS_MG[a.unit] || 1)) - (Number(b.nominal_value) * (SW_MASS_MG[b.unit] || 1)));
-    const cls = ws[0].class_grade || '–', model = ws[0].model || '';
+    const cls = ws[0].class_grade || '–', brand = ws[0].brand || ws[0].model || '';
     const sn = ws[0].serial_no || '', certNo = ws[0].cert_no || '', due = ws[0].due_date || '';
     const nDraft = ws.filter(w => w.status !== 'approved').length;
     const head = `<div class="sw-sethead">
         <span class="sw-setcode">📜 ${escapeHtmlText(set)}</span>
-        <span class="sw-setmeta">Class ${escapeHtmlText(cls)}${model ? ' · ' + escapeHtmlText(model) : ''}${sn ? ' · S/N ' + escapeHtmlText(sn) : ''}</span>
+        <span class="sw-setmeta">Class ${escapeHtmlText(cls)}${brand ? ' · ' + escapeHtmlText(brand) : ''}${sn ? ' · S/N ' + escapeHtmlText(sn) : ''}</span>
         ${certNo ? `<span class="sw-setmeta">Cert <b>${escapeHtmlText(certNo)}</b></span>` : ''}
         ${due ? `<span class="sw-setmeta">ครบ ${fmtDateTH(due)}</span>` : ''}
         <span class="sw-setcnt">${ws.length} ลูก${nDraft ? ' · <b style="color:var(--amber)">รออนุมัติ ' + nDraft + '</b>' : ' · <b style="color:var(--green)">อนุมัติครบ</b>'}</span>
@@ -242,7 +242,7 @@ function openSWSetModal(setCode) {
   swSetCertPaths = { current: h.cert_file_path || null, prev: h.prev_cert_file_path || null };
   const set = (fid, v) => { const el = document.getElementById(fid); if (el) el.value = (v == null ? '' : v); };
   set('swSetCode', h.set_code === '— ไม่ระบุชุด —' ? '' : h.set_code);
-  set('swClass', h.class_grade || 'E2'); set('swModel', h.model); set('swSerial', h.serial_no);
+  set('swClass', h.class_grade || 'E2'); set('swBrand', h.brand); set('swSerial', h.serial_no);
   set('swCertNo', h.cert_no); set('swPrevCert', h.prev_cert_no);
   set('swCalDate', h.cal_date ? String(h.cal_date).split('T')[0] : '');
   set('swDueDate', h.due_date ? String(h.due_date).split('T')[0] : '');
@@ -292,7 +292,7 @@ async function saveSWSet() {
   if (!setCode) { showToast('กรุณากรอกชื่อชุด (Set code)', 'error'); return; }
   const header = {
     set_code: setCode, class_grade: get('swClass') || null,
-    model: get('swModel') || null, serial_no: get('swSerial') || null,
+    brand: get('swBrand') || null, model: null, serial_no: get('swSerial') || null,   // ยี่ห้อแยกจาก model · Model บนใบ cert = CLASS เสมอ
     cert_no: get('swCertNo') || null, prev_cert_no: get('swPrevCert') || null,
     cal_date: get('swCalDate') || null, due_date: get('swDueDate') || null,
     cert_file_path: swSetCertPaths.current || null,
