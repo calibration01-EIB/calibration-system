@@ -42,5 +42,14 @@ eq('roundup 0.01234->0.013', wcRoundUp2sf(0.01234), 0.013);
 eq('reportedU WI01 (CMC floor)', wcReportedU(0.0058595, 0.006), 0.006);
 eq('reportedU computed wins', wcReportedU(0.013, 0.006), 0.013);
 
+// Task 5 — MPE & pass
+eq('MPE F1 1mg', wcMpeMg('F1', 1), 0.020);
+eq('MPE F1 500mg', wcMpeMg('F1', 500), 0.08);
+eq('MPE E2 20mg', wcMpeMg('E2', 20), 0.010);
+eq('MPE unknown class', wcMpeMg('ZZ', 1), null);
+// WI01 error -0.00203 mg vs F1 MPE 0.020 → 2/3*0.020=0.01333 → pass
+eq('pass WI01', wcPass(-0.00203, 0.020), true);
+eq('fail big error', wcPass(0.02, 0.020), false);
+
 finish();
 </script></body></html>

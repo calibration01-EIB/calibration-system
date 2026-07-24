@@ -78,3 +78,26 @@ function wcRoundUp2sf(x) {
 function wcReportedU(computedU, cmcMg) {
   return wcRoundUp2sf(Math.max(Number(computedU), Number(cmcMg || 0)));
 }
+
+// OIML R111-1 MPE (± mg) ต่อ nominal (mg) แยกตาม class
+const WC_MPE = {
+  // nominalMg: { E2, F1, F2 }
+  1:{E2:0.006,F1:0.020,F2:0.06}, 2:{E2:0.006,F1:0.020,F2:0.06}, 5:{E2:0.006,F1:0.020,F2:0.06},
+  10:{E2:0.008,F1:0.025,F2:0.08}, 20:{E2:0.010,F1:0.03,F2:0.10}, 50:{E2:0.012,F1:0.04,F2:0.12},
+  100:{E2:0.016,F1:0.05,F2:0.16}, 200:{E2:0.020,F1:0.06,F2:0.20}, 500:{E2:0.025,F1:0.08,F2:0.25},
+  1000:{E2:0.03,F1:0.10,F2:0.3}, 2000:{E2:0.04,F1:0.12,F2:0.4}, 5000:{E2:0.05,F1:0.16,F2:0.5},
+  10000:{E2:0.06,F1:0.20,F2:0.6}, 20000:{E2:0.08,F1:0.25,F2:0.8}, 50000:{E2:0.10,F1:0.30,F2:1.0},
+  100000:{E2:0.16,F1:0.5,F2:1.6}, 200000:{E2:0.3,F1:1.0,F2:3.0}, 500000:{E2:0.8,F1:2.5,F2:8.0},
+  1000000:{E2:1.6,F1:5,F2:16}, 2000000:{E2:3.0,F1:10,F2:30}, 5000000:{E2:8.0,F1:25,F2:80},
+  10000000:{E2:16,F1:50,F2:160}, 20000000:{E2:30,F1:100,F2:300}
+};
+function wcMpeMg(classGrade, nominalMg) {
+  const row = WC_MPE[Number(nominalMg)];
+  if (!row) return null;
+  const v = row[String(classGrade || '').trim().toUpperCase()];
+  return (v == null) ? null : v;
+}
+function wcPass(errorMg, mpeMg) {
+  if (mpeMg == null) return false;
+  return Math.abs(Number(errorMg)) <= (2/3) * Number(mpeMg);
+}
