@@ -11,5 +11,23 @@ function finish(){ const f=results.filter(r=>r[0]==='F').length; document.getEle
 eq('avgCorr', wcAvgCorr(20.4, 20.6, -0.5), 20);
 near('airDensity WI01 (0.061)', wcAirDensity(20, 54.3, 1012.6), 1.19797, 5e-4);
 
+// Task 3 — ABBA & conventional mass
+near('mcr WI01', wcMcr(0.001, -0.0022), 0.0009978, 1e-9);
+near('delta cycle1 WI01', wcDelta(0, 1e-6, 0, 0), 5e-7, 1e-12);
+eq('delta zero cycle', wcDelta(0,0,0,0), 0);
+// Ci = 0 when densities equal (whole 26M001 job)
+eq('Ci equal densities', wcCi(1.198, 7950, 7950), 0);
+// Ci synthetic (different densities), hand-computed:
+// (1.0-1.2)*((1/8000)-(1/7950)) = -0.2 * (0.000125 - 0.0001257862...) = 1.57233e-7
+near('Ci synthetic', wcCi(1.0, 8000, 7950), 1.57233e-7, 1e-11);
+
+const wi01 = wcConventionalMass({
+  abba:{ r1:[0,0,0], t1:[1e-6,0,0], t2:[0,0,0], r2:[0,0,0] },
+  nominalG:0.001, refCorrMg:-0.0022, rhoA:wcAirDensity(20,54.3,1012.6), rhoTest:7950, rhoRef:7950
+});
+near('WI01 mcBar', wi01.mcBar, 1.6667e-7, 1e-10);
+near('WI01 mct', wi01.mct, 9.97966e-4, 1e-9);
+near('WI01 errorMg', wi01.errorMg, -0.0020333, 1e-6);
+
 finish();
 </script></body></html>
