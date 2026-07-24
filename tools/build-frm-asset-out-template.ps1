@@ -27,3 +27,27 @@ try {
   $wb.Close($false)
   Write-Output "BUILT: $out"
 } finally { $excel.Quit(); [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null }
+
+# 4) รูปตัวอย่าง (image2.jpeg) เป็นภาพจริงของทรัพย์สินตัวอย่าง (Force Gauge DFG100)
+#    ต้องแทนที่ด้วยภาพขาวเปล่าขนาดเท่ากัน (245x404) ก่อนแจกจ่าย template
+#    ไม่งั้นใบที่ export โดยไม่แนบรูป จะโชว์รูปเครื่องมือตัวอย่างแทน
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$blankPath = Join-Path $env:TEMP "frm-asset-out-blank-image2.jpg"
+$bmp = New-Object System.Drawing.Bitmap 245,404
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::White); $g.Dispose()
+$bmp.Save($blankPath, [System.Drawing.Imaging.ImageFormat]::Jpeg); $bmp.Dispose()
+
+$zip = [System.IO.Compression.ZipFile]::Open($out, 'Update')
+try {
+  $entry = $zip.GetEntry('xl/media/image2.jpeg')
+  if ($entry) { $entry.Delete() }
+  $newEntry = $zip.CreateEntry('xl/media/image2.jpeg')
+  $es = $newEntry.Open()
+  $bytes = [System.IO.File]::ReadAllBytes($blankPath)
+  $es.Write($bytes, 0, $bytes.Length)
+  $es.Close()
+} finally { $zip.Dispose() }
+Remove-Item $blankPath -ErrorAction SilentlyContinue
+Write-Output "BLANKED: xl/media/image2.jpeg in $out"
