@@ -94,7 +94,8 @@ const WC_MPE = {
 function wcMpeMg(classGrade, nominalMg) {
   const row = WC_MPE[Number(nominalMg)];
   if (!row) return null;
-  const v = row[String(classGrade || '').trim().toUpperCase()];
+  const key = String(classGrade || '').trim().toUpperCase().replace(/^CLASS\s+/, '');
+  const v = row[key];
   return (v == null) ? null : v;
 }
 function wcPass(errorMg, mpeMg) {
@@ -540,7 +541,7 @@ async function wcLoadJob(id) {
     wcFillJobForm();
     wcRenderPoints();
     if (jobId && jobId !== 'new' && /(^|[?&#])print=1(&|$)/.test(location.hash)) {
-      wcIssueCert();
+      await wcOpenCert();
     }
   } catch (e) {
     if (typeof showToast === 'function') showToast('โหลดงานไม่สำเร็จ: ' + e.message, 'error');
@@ -596,12 +597,18 @@ async function wcSaveJob() {
     return false;
   } finally { hideLoading(); }
 }
+// เปิดใบ Cert แบบอ่านอย่างเดียว (recompute ในหน่วยความจำเท่านั้น) — ไม่บันทึก/ไม่เปลี่ยนสถานะ/ไม่เขียน audit log
+function wcOpenCert() {
+  wcRecalc();
+  if (!WC_POINTS.length) { showToast('เพิ่มอย่างน้อย 1 จุดก่อนออก Cert', 'error'); return; }
+  const CAL = wcBuildCAL(WC_JOB, WC_POINTS);
+  window.open('cert-print.html#data=' + encodeURIComponent(JSON.stringify(CAL)), '_blank');
+}
 async function wcIssueCert() {
   wcRecalc();
   if (!WC_POINTS.length) { showToast('เพิ่มอย่างน้อย 1 จุดก่อนออก Cert', 'error'); return; }
   WC_JOB.status = 'issued';
   const saved = await wcSaveJob();
   if (!saved) return;
-  const CAL = wcBuildCAL(WC_JOB, WC_POINTS);
-  window.open('cert-print.html#data=' + encodeURIComponent(JSON.stringify(CAL)), '_blank');
+  wcOpenCert();
 }
