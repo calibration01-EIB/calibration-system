@@ -279,6 +279,160 @@ function stdev(a) { if (a.length < 2) return 0; const m = a.reduce((x,y)=>x+y,0)
 // ====== หน้าต่อย่าน: ห่อการคำนวณ + ทุกหน้าไว้ในฟังก์ชัน (param CAL = มุมมองย่าน) → multi-range เรียกซ้ำต่อย่าน ======
 // opt.coverOnly → คืนเฉพาะหน้าปก · เลขหน้า: certNo/certTotal (ใบ Cert), wsNo/wsTotal (ใบบันทึกผล) นับต่อเนื่องทั้งเอกสาร
 // คืน { cert, ws } เพื่อให้ assembly จัดกลุ่มหน้า Cert ก่อน แล้วตามด้วยใบบันทึกผล
+
+// ====== ฟังก์ชันช่วยล้วน (pure) — module scope: ใช้ร่วมกันทั้งเอกสาร balance และ weight (Task 6a hoist) ======
+const MON = ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'];
+function dCert(s){ const d=new Date(s+'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}-${MON[d.getMonth()]}-${d.getFullYear()}`; }
+function dTH(s){ const p=s.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const f = (v,d) => { const s = v.toFixed(d); return parseFloat(s) === 0 ? (0).toFixed(d) : s; };
+// โลโก้กลม ILC + ตัวอักษรโค้ง CALIBRATION LABORATORY (ตามหัวฟอร์ม) — ใช้เป็นทั้งตรามุมซ้ายบน (เล็ก) และลายน้ำกลางกระดาษ (ใหญ่ จาง)
+function ilcRound(cls, size) {
+  return `<img class="${cls}" src="${IMG.ilc}" width="${size}" alt="ILC CALIBRATION LABORATORY">`;
+}
+// RESOLUTION บนใบ (ปก/ใบบันทึก): ถ้า multi-interval (มี d ต่อช่วง ≥2 ค่าต่างกัน) → แสดงรายช่วง · ไม่งั้นค่าเดียว — hoisted จาก resolutionText() เดิม, รับ CAL เป็นพารามิเตอร์
+function resolutionTextFor(CAL) {
+  // d-segments (multi-interval) เก็บใน CAL.dsegs [{to,d}] · from = ถึงของช่วงก่อน
+  let prev = 0;
+  const segs = (Array.isArray(CAL.dsegs) ? CAL.dsegs : [])
+    .filter(s => Number.isFinite(s.to) && s.to > 0 && Number.isFinite(s.d) && s.d > 0)
+    .sort((a, b) => a.to - b.to)
+    .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
+  const distinct = [...new Set(segs.map(s => s.d))];
+  // multi-interval → แสดงเฉพาะค่า d ทุกย่าน คั่นด้วยจุลภาค (เช่น 2,5,10 g) ไม่ใส่ช่วงพิกัด
+  if (segs.length >= 2 && distinct.length >= 2) {
+    return `${distinct.join(',')} ${CAL.unit}`;
+  }
+  return `${CAL.resolution} ${CAL.unit}`;
+}
+// ===== Tolerance (ใบประเมิน EIB55): หาเกณฑ์ผ่าน/ไม่ผ่านต่อจุด — hoisted จาก tolForRow() เดิม, รับ CAL เป็นพารามิเตอร์ =====
+const tolUnitFactor = u => ({ g: 1, kg: 1000, mg: 0.001 }[u] || 1);   // หน่วย tolerance → g
+function tolForRow(CAL, nominal_g) {
+  const bands = (Array.isArray(CAL.tols) ? CAL.tols : [])
+    .filter(t => Number.isFinite(Number(t.to)) && Number(t.to) > Number(t.from || 0))
+    .sort((a, b) => a.to - b.to);
+  if (!bands.length) return null;                                      // ไม่มีช่วง → ไม่มีเกณฑ์
+  const b = bands.find(x => nominal_g <= Number(x.to)) || bands[bands.length - 1];
+  const tg = Number(b.tol) * tolUnitFactor(b.unit);
+  return (Number.isFinite(tg) && tg > 0) ? tg : null;
+}
+
+// ====== PAGE: Cert cover (FRM-CAL54 (TP) Rev.01) — module scope (Task 6a hoist), ใช้ร่วมทั้ง balance/weight ======
+function pageCover(CAL, certTotal) {
+  const apName = CAL.signers.tech_mgr;
+  const apPos = (CAL.signers.approver_pos || '').trim() || 'Laboratory Manager';
+  return `<section class="sheet cover">
+    <img class="cv-nac" src="${IMG.nac}" alt="NSC-TISI-TIS 17025">
+    <div class="cv-title">
+      <h1>CERTIFICATE OF CALIBRATION</h1>
+      <div class="cv-certno">CERTIFICATE NO. : <span class="fill" style="border-bottom:1px solid #111;display:inline-block;min-width:28mm;text-align:center">${esc(CAL.cert_no)}</span></div>
+    </div>
+    <div class="cv-head">
+      <div class="cv-issued">
+        <div>ISSUED BY:</div>
+        ${ilcRound('cv-circ', 181)}
+      </div>
+      <div class="cv-lab">
+        <div>${esc(CAL.lab.name)}</div>
+        <div>${esc(CAL.lab.dept)}</div>
+        ${CAL.lab.addr.map(a => `<div>${esc(a)}</div>`).join('')}
+      </div>
+      <div class="cv-issue-line"><span>${esc(CAL.lab.phone)}</span><span>DATE OF ISSUE : <span class="fill" style="border-bottom:1px solid #111;display:inline-block;min-width:110px;text-align:center">${dCert(CAL.date_issue)}</span></span></div>
+    </div>
+    <div class="cv-rule"></div>
+    ${ilcRound('cv-watermark', 700)}
+    <div class="cv-row"><span>NAME OF CLIENT :</span><span class="fill">${esc(CAL.client.name)}</span></div>
+    <div class="cv-row"><span>ADDRESS OF CLIENT :</span><span class="fill">${CAL.client.addr.map(a => esc(a)).join('<br>')}</span></div>
+    <div class="cv-row" style="margin-top:14px"><span>DATE OF RECEIVE :</span><span class="fill">${dCert(CAL.date_receive)}</span></div>
+    <div class="cv-row"><span>CALIBRATION DATE :</span><span class="fill">${dCert(CAL.date_cal)}</span></div>
+    <div class="cv-row"><span>EQUIPMENT :</span><span class="fill">${esc(CAL.equipment)}</span></div>
+    <div class="cv-row it"><span class="cv-sub">MANUFACTURER :</span><span class="fill">${esc(CAL.manufacturer)}</span></div>
+    <div class="cv-row it"><span class="cv-sub">MODEL :</span><span class="fill">${esc(CAL.model)}</span></div>
+    <div class="cv-row it"><span class="cv-sub">SERIAL NUMBER :</span><span class="fill">${esc(CAL.serial)}</span></div>
+    <div class="cv-row it"><span class="cv-sub">IDENTIFICATION NUMBER :</span><span class="fill">${esc(CAL.id_no)}</span></div>
+    <div class="cv-row it"><span class="cv-sub">RESOLUTION :</span><span class="fill">${CAL.doc_type === 'weight' ? (CAL.resolution_str || 'N/A') : resolutionTextFor(CAL)}</span></div>
+    <div class="cv-row" style="margin-top:14px"><span>CONDITION AS RECEIVED :</span><span class="fill">${esc(CAL.condition)}</span></div>
+    <div class="cv-row"><span>AMBIENT TEMPERATURE :</span><span class="fill">( ${CAL.temp[0]} - ${CAL.temp[1]} ) °C</span></div>
+    <div class="cv-row"><span>REL. HUMIDITY :</span><span class="fill">( ${CAL.rh[0]} - ${CAL.rh[1]} ) %RH</span></div>
+    <div class="cv-row"><span>PLACE OF CALIBRATION :</span><span class="fill">${esc(CAL.client.name)} / ${esc(CAL.location)}<br>${CAL.client.addr.map(a => esc(a)).join('<br>')}</span></div>
+    <div class="cv-sig">
+      <div>
+        <div><span class="b cv-sig-lbl">CALIBRATED BY :</span> <span class="fill">${esc(CAL.calibrated_by)}</span></div>
+        <div class="ctr" style="margin-top:6px">TECHNICIAN</div>
+      </div>
+      <div>
+        <div class="b cv-sig-lbl" style="margin-left:-10mm">APPROVED BY :</div>
+        <div class="ctr" style="margin-top:26px"><span style="border-bottom:1px solid #111;display:inline-block;min-width:185px">&nbsp;</span></div>
+        <div class="ctr" style="margin-top:4px">( <span class="fill">${esc(apName)}</span> )</div>
+        <div class="ctr"><span class="fill">${esc(apPos)}</span></div>
+      </div>
+    </div>
+    <div class="cv-approval">DATE OF APPROVAL : …..../….…./…..…</div>
+    <div class="cv-foot">
+      <span><span style="white-space:nowrap">THIS CERTIFICATE MAY NOT BE REPRODUCED OTHER THAN IN FULL, EXCEPT WITH THE PRIOR WRITTEN APPROVAL OF THE</span><br>ISSUING LABORATORY.</span>
+      <span class="conf" style="white-space:nowrap">CONFIDENTIAL B</span>
+    </div>
+    <div class="footrow"><span style="margin-left:-11mm">FRM-CAL54 (TP) Rev.01</span><span>Effective Date: 20/06/2026 (5Y)</span><span>PAGE &nbsp;<span class="fill">1</span>&nbsp; OF &nbsp;<span class="fill">${certTotal}</span></span></div>
+  </section>`;
+}
+
+// ====== PAGE: ใบประเมินผลการสอบเทียบ (FRM-EIB55) — module scope (Task 6a hoist): รับ rows คำนวณแล้วจาก caller (balance/weight), render อย่างเดียว ======
+function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
+  const rowsHtml = rows.map(r => `<tr>
+      <td>${r.label}</td>
+      <td>${f(r.errG,3)}</td><td>${f(r.Ug,4)}</td>
+      <td>${f(r.sumEU,4)}</td><td>${f(r.diffEU,4)}</td>
+      <td>${r.tol != null ? f(r.tol,3) : '-'}</td>
+      <td class="${r.result === 'FAIL' ? 'eib-fail' : ''}">${r.result}</td>
+    </tr>`).join('');
+  const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
+  // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) แบนด์ละบรรทัดตีเส้นใต้
+  // แบนด์แรกอยู่บรรทัด label Tolerance (แถว Range) แบนด์ที่เหลือลงแถว Section ให้บรรทัดตรงกัน
+  const tolLine = v => `<span class="eib-tolln">${v || '&nbsp;'}</span>`;
+  // เติมหน่วย g ให้ช่วงในวงเล็บของ Tolerance เก่าที่บันทึกไว้แบบไม่มีหน่วย เช่น "± 30 g (0-60000)" → "(0-60000 g)"
+  const tolWithUnit = s => String(s || '').replace(/\((\s*[>\d.,\s-]+?)\s*\)/, '($1 g)');
+  const tolList = ((Array.isArray(CAL.tolerances) && CAL.tolerances.length) ? CAL.tolerances : ['']).map(tolWithUnit);
+  const tolFirst = tolLine(esc(tolList[0]));
+  const tolRest = tolList.slice(1).map(t => tolLine(esc(t))).join('');
+  // User range: เติมหน่วย g ถ้าเป็นตัวเลขล้วน (เช่น "1 - 2000" → "1 - 2000 g")
+  const userRangeTxt = (CAL.user_range && /\d/.test(CAL.user_range) && !/[a-zA-Zก-๙]/.test(CAL.user_range))
+    ? CAL.user_range + ' g' : CAL.user_range;
+  return `<section class="sheet eib">
+    <div class="eib-head">
+      <div class="eib-brand">
+        <img class="eib-logo" src="${IMG.ilc}" alt="ILC">
+        <div class="eib-co"><div class="eib-co-th">บริษัท อินเตอร์เนชั่นแนล แลบบอราทอรีส์ จำกัด</div><div class="eib-co-en">International Laboratories Corp., Ltd.</div></div>
+      </div>
+      <h2 class="eib-title">ใบประเมินผลการสอบเทียบ</h2>
+      <div class="eib-sub">(Record sheet for verification of calibration results)</div>
+    </div>
+    <div class="eib-inst"><span class="eib-inst-t">INSTRUMENT</span>
+      <span class="rt b">Cert. No. <span class="eib-val">${esc(CAL.cert_no)}</span></span>
+    </div>
+    <table class="eib-grid">
+      <colgroup><col style="width:12.5%"><col style="width:28%"><col style="width:9.5%"><col style="width:22%"><col style="width:9%"><col style="width:19%"></colgroup>
+      <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
+      <tr><td class="eib-lbl bl">Range</td><td class="eib-val bl">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl bl">User range</td><td class="eib-val bl">${tolLine(esc(userRangeTxt))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolFirst}</td></tr>
+      <tr><td class="eib-su" colspan="5"><div class="eib-su-flex"><span class="eib-lbl">Section</span><span class="eib-suv eib-suv-sec">${esc(CAL.section)}</span><span class="eib-lbl eib-su-u">Unit</span><span class="eib-suv eib-suv-unit">${esc(CAL.unit_dept)}</span></div></td><td class="eib-val top">${tolRest}</td></tr>
+    </table>
+    <table class="bx eib-tbl">
+      <thead><tr>
+        <th>Nominal Value<br>( g )</th><th>Error<br>( g )</th><th>Uncertainty<br>± ( g )</th>
+        <th>Error + Uncertainty<br>( g )</th><th>Error - Uncertainty<br>( g )</th><th>Tolerance<br>± ( g )</th><th>Result</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="eib-sign">
+      <div class="eib-sign-l"><span>Prepared by : __________ Date ____/____/____</span></div>
+      <div class="eib-sign-r">
+        <span>Approved by : __________ (EIB) Date ____/____/____</span>
+        <span>Approved by : __________ (Owner) Date ____/____/____</span>
+      </div>
+    </div>
+    <div class="footrow"><span>FRM-EIB55 Rev.00</span><span>Effective Date: 09/09/2024 (4Y)</span><span>Page ${pageNo} of ${total}</span></div>
+  </section>`;
+}
+
 function rangePages(CAL, opt) {
   opt = opt || {};
   const CERT_TOTAL = opt.certTotal || 3, WS_TOTAL = opt.wsTotal || 6;
@@ -333,27 +487,11 @@ const ROWS = [{ nominal: 0, desc: '0', conv: 0, U: 0, reads: [0,0,0], zero: true
   const corr = p.conv - avg;
   return { ...p, avg, corr, sd: stdev(p.reads), bud: budget(p.zero ? 0 : p.nominal, p.zero ? 0 : p.U, p.zero ? 0 : p.ds, p.zero ? CAL.resolution : p.d) };
 });
-// RESOLUTION บนใบ: ถ้า multi-interval (มี d ต่อช่วง ≥2 ค่าต่างกัน) → แสดงรายช่วง · ไม่งั้นค่าเดียว
-function resolutionText() {
-  // d-segments (multi-interval) เก็บใน CAL.dsegs [{to,d}] · from = ถึงของช่วงก่อน
-  let prev = 0;
-  const segs = (Array.isArray(CAL.dsegs) ? CAL.dsegs : [])
-    .filter(s => Number.isFinite(s.to) && s.to > 0 && Number.isFinite(s.d) && s.d > 0)
-    .sort((a, b) => a.to - b.to)
-    .map(s => { const from = prev; prev = s.to; return { from, to: s.to, d: s.d }; });
-  const distinct = [...new Set(segs.map(s => s.d))];
-  // multi-interval → แสดงเฉพาะค่า d ทุกย่าน คั่นด้วยจุลภาค (เช่น 2,5,10 g) ไม่ใส่ช่วงพิกัด
-  if (segs.length >= 2 && distinct.length >= 2) {
-    return `${distinct.join(',')} ${CAL.unit}`;
-  }
-  return `${CAL.resolution} ${CAL.unit}`;
-}
 // eccentricity: เสมอกันให้ค่าหลังชนะ (ตามใบจริง −0.01)
 let eccMax = 0; const eccDiffs = CAL.ecc.reads.map((v,i)=> i===0?0: v-CAL.ecc.reads[0]);
 eccDiffs.forEach(dv => { if (Math.abs(dv) >= Math.abs(eccMax) && dv !== 0) eccMax = dv; });
 
-// ====== format helpers ======
-const f = (v,d) => { const s = v.toFixed(d); return parseFloat(s) === 0 ? (0).toFixed(d) : s; };
+// ====== format helpers (เฉพาะเครื่องชั่ง — f/esc/dCert/dTH/ilcRound hoisted ไปข้างบนแล้ว) ======
 // จำนวนทศนิยมของ resolution เครื่องชั่ง (10→0, 0.01→2, 0.0001→4) — ใช้รายงาน DISPLAYED VALUE ตามหน้าจอเครื่องจริง
 function resDecimals(d) {
   if (!Number.isFinite(d) || d <= 0) return 2;
@@ -385,21 +523,7 @@ function fmtU(u) { // ตัวเลข U รายงาน: >100mg → ค่
   return txt2sf(u > 100 ? u / 1000 : u);
 }
 function uUnit(u) { return (isFinite(u) && u > 100) ? 'g' : 'mg'; }  // หน่วย U รายงาน
-// ===== Tolerance (ใบประเมิน EIB55): หาเกณฑ์ผ่าน/ไม่ผ่านต่อจุด — ตรรกะเดียวกับ balance-cal recalc =====
-const tolUnitFactor = u => ({ g: 1, kg: 1000, mg: 0.001 }[u] || 1);   // หน่วย tolerance → g
-function tolForRow(nominal_g) {
-  const bands = (Array.isArray(CAL.tols) ? CAL.tols : [])
-    .filter(t => Number.isFinite(Number(t.to)) && Number(t.to) > Number(t.from || 0))
-    .sort((a, b) => a.to - b.to);
-  if (!bands.length) return null;                                      // ไม่มีช่วง → ไม่มีเกณฑ์
-  const b = bands.find(x => nominal_g <= Number(x.to)) || bands[bands.length - 1];
-  const tg = Number(b.tol) * tolUnitFactor(b.unit);
-  return (Number.isFinite(tg) && tg > 0) ? tg : null;
-}
-const MON = ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'];
-function dCert(s){ const d=new Date(s+'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}-${MON[d.getMonth()]}-${d.getFullYear()}`; }
-function dTH(s){ const p=s.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
-const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// (tolForRow, MON, dCert, dTH, esc hoisted to module scope above rangePages — Task 6a)
 function chk(on){ return `<span class="chk">${on ? '✓' : '&nbsp;'}</span>`; }
 
 // SVG จานชั่ง 3 แบบ (สี่เหลี่ยม/วงกลม/สามเหลี่ยม)
@@ -412,69 +536,7 @@ function panSVG(shape) {
   return `<svg width="62" height="54" viewBox="0 0 60 54"><defs><clipPath id="tri-pan-clip"><path d="${tri}"/></clipPath></defs><path d="${tri}" fill="#fff"/><g clip-path="url(#tri-pan-clip)" stroke="#888" stroke-width=".5" stroke-linecap="butt"><line x1="30" y1="0" x2="30" y2="54"/><line x1="0" y1="29" x2="60" y2="29"/><line x1="30" y1="29" x2="17" y2="16"/><line x1="30" y1="29" x2="43" y2="16"/><line x1="30" y1="29" x2="1" y2="58"/><line x1="30" y1="29" x2="59" y2="58"/></g><path d="${tri}" fill="none" stroke="#555" stroke-width=".9" stroke-linejoin="round"/>${tc(22,20,3)}${tc(38,20,4)}${tc(21,38,2)}${tc(39,38,5)}${tc(30,29,1)}</svg>`;
 }
 
-// ====== PAGE: Cert cover (FRM-CAL54 (TP) Rev.01) ======
-// โลโก้กลม ILC + ตัวอักษรโค้ง CALIBRATION LABORATORY (ตามหัวฟอร์ม)
-// ใช้เป็นทั้งตรามุมซ้ายบน (เล็ก) และลายน้ำกลางกระดาษ (ใหญ่ จาง)
-function ilcRound(cls, size) {
-  return `<img class="${cls}" src="${IMG.ilc}" width="${size}" alt="ILC CALIBRATION LABORATORY">`;
-}
-function pageCover() {
-  const apName = CAL.signers.tech_mgr;
-  const apPos = (CAL.signers.approver_pos || '').trim() || 'Laboratory Manager';
-  return `<section class="sheet cover">
-    <img class="cv-nac" src="${IMG.nac}" alt="NSC-TISI-TIS 17025">
-    <div class="cv-title">
-      <h1>CERTIFICATE OF CALIBRATION</h1>
-      <div class="cv-certno">CERTIFICATE NO. : <span class="fill" style="border-bottom:1px solid #111;display:inline-block;min-width:28mm;text-align:center">${esc(CAL.cert_no)}</span></div>
-    </div>
-    <div class="cv-head">
-      <div class="cv-issued">
-        <div>ISSUED BY:</div>
-        ${ilcRound('cv-circ', 181)}
-      </div>
-      <div class="cv-lab">
-        <div>${esc(CAL.lab.name)}</div>
-        <div>${esc(CAL.lab.dept)}</div>
-        ${CAL.lab.addr.map(a => `<div>${esc(a)}</div>`).join('')}
-      </div>
-      <div class="cv-issue-line"><span>${esc(CAL.lab.phone)}</span><span>DATE OF ISSUE : <span class="fill" style="border-bottom:1px solid #111;display:inline-block;min-width:110px;text-align:center">${dCert(CAL.date_issue)}</span></span></div>
-    </div>
-    <div class="cv-rule"></div>
-    ${ilcRound('cv-watermark', 700)}
-    <div class="cv-row"><span>NAME OF CLIENT :</span><span class="fill">${esc(CAL.client.name)}</span></div>
-    <div class="cv-row"><span>ADDRESS OF CLIENT :</span><span class="fill">${CAL.client.addr.map(a => esc(a)).join('<br>')}</span></div>
-    <div class="cv-row" style="margin-top:14px"><span>DATE OF RECEIVE :</span><span class="fill">${dCert(CAL.date_receive)}</span></div>
-    <div class="cv-row"><span>CALIBRATION DATE :</span><span class="fill">${dCert(CAL.date_cal)}</span></div>
-    <div class="cv-row"><span>EQUIPMENT :</span><span class="fill">${esc(CAL.equipment)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">MANUFACTURER :</span><span class="fill">${esc(CAL.manufacturer)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">MODEL :</span><span class="fill">${esc(CAL.model)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">SERIAL NUMBER :</span><span class="fill">${esc(CAL.serial)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">IDENTIFICATION NUMBER :</span><span class="fill">${esc(CAL.id_no)}</span></div>
-    <div class="cv-row it"><span class="cv-sub">RESOLUTION :</span><span class="fill">${resolutionText()}</span></div>
-    <div class="cv-row" style="margin-top:14px"><span>CONDITION AS RECEIVED :</span><span class="fill">${esc(CAL.condition)}</span></div>
-    <div class="cv-row"><span>AMBIENT TEMPERATURE :</span><span class="fill">( ${CAL.temp[0]} - ${CAL.temp[1]} ) °C</span></div>
-    <div class="cv-row"><span>REL. HUMIDITY :</span><span class="fill">( ${CAL.rh[0]} - ${CAL.rh[1]} ) %RH</span></div>
-    <div class="cv-row"><span>PLACE OF CALIBRATION :</span><span class="fill">${esc(CAL.client.name)} / ${esc(CAL.location)}<br>${CAL.client.addr.map(a => esc(a)).join('<br>')}</span></div>
-    <div class="cv-sig">
-      <div>
-        <div><span class="b cv-sig-lbl">CALIBRATED BY :</span> <span class="fill">${esc(CAL.calibrated_by)}</span></div>
-        <div class="ctr" style="margin-top:6px">TECHNICIAN</div>
-      </div>
-      <div>
-        <div class="b cv-sig-lbl" style="margin-left:-10mm">APPROVED BY :</div>
-        <div class="ctr" style="margin-top:26px"><span style="border-bottom:1px solid #111;display:inline-block;min-width:185px">&nbsp;</span></div>
-        <div class="ctr" style="margin-top:4px">( <span class="fill">${esc(apName)}</span> )</div>
-        <div class="ctr"><span class="fill">${esc(apPos)}</span></div>
-      </div>
-    </div>
-    <div class="cv-approval">DATE OF APPROVAL : …..../….…./…..…</div>
-    <div class="cv-foot">
-      <span><span style="white-space:nowrap">THIS CERTIFICATE MAY NOT BE REPRODUCED OTHER THAN IN FULL, EXCEPT WITH THE PRIOR WRITTEN APPROVAL OF THE</span><br>ISSUING LABORATORY.</span>
-      <span class="conf" style="white-space:nowrap">CONFIDENTIAL B</span>
-    </div>
-    <div class="footrow"><span style="margin-left:-11mm">FRM-CAL54 (TP) Rev.01</span><span>Effective Date: 20/06/2026 (5Y)</span><span>PAGE &nbsp;<span class="fill">1</span>&nbsp; OF &nbsp;<span class="fill">${CERT_TOTAL}</span></span></div>
-  </section>`;
-}
+// (ilcRound, pageCover hoisted to module scope above rangePages — Task 6a; balance caller calls pageCover(CAL, CERT_TOTAL))
 
 // ====== หัวซ้ำของหน้า cert ต่อเนื่อง ======
 function ctHead(pageNo) {
@@ -492,7 +554,7 @@ function resultLine() {
     &nbsp;&nbsp;( ${CAL.adjusted === 'without' ? '✓' : '&nbsp;&nbsp;'} ) WITHOUT ADJUSTMENT
     &nbsp;&nbsp;&nbsp;&nbsp;( ${CAL.adjusted === 'after' ? '✓' : '&nbsp;&nbsp;'} ) AFTER ADJUSTMENT</p>
     <p>MAXIMUM CAPACITY : ${CAL.capacity} ${CAL.unit}
-    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionText()}</p>`;
+    &nbsp;&nbsp;&nbsp;&nbsp;RESOLUTION : ${resolutionTextFor(CAL)}</p>`;
 }
 
 // ====== Cert section builders (FRM-CAL55) — ใช้ซ้ำระหว่างหน้าแรก/หน้าอัดแน่นของแต่ละย่าน ======
@@ -610,80 +672,14 @@ function pageCertCompact(pageNo, withEnd) {
   </section>`;
 }
 
-// ====== PAGE: ใบประเมินผลการสอบเทียบ (FRM-EIB55) — 1 หน้า/ย่าน · เกณฑ์ผ่าน/ไม่ผ่านต่อจุด ======
-function pageEIB55(pageNo, total) {
-  // Range = พิกัดเครื่อง (MAX) จาก opt.instMax — ไม่ใช่ capacity ของย่านที่พิมพ์ (multi-range ทุกใบแสดงพิกัดเดียวกัน)
-  const instCap = (opt.instMax != null ? opt.instMax : CAL.capacity);
-  const rangeTxt = instCap > 30000 ? (+(instCap / 1000).toFixed(3)) + ' kg' : instCap + ' ' + CAL.unit;
-  const rows = ROWS.map(r => {
-    const errG = Math.round((-r.corr) * 1000) / 1000;
-    const Ug = r.bud.Ufinal / 1000;
-    const tol = tolForRow(r.zero ? 0 : r.nominal);
-    const hasTol = tol != null;
-    const pass = hasTol ? ((errG + Ug) <= tol && (errG - Ug) >= -tol) : null;
-    const res = !hasTol ? '-' : (pass ? 'PASS' : 'FAIL');
-    return `<tr>
-      <td>${r.zero ? 'UNLOAD' : r.nominal}</td>
-      <td>${f(errG,3)}</td><td>${f(Ug,4)}</td>
-      <td>${f(errG + Ug,4)}</td><td>${f(errG - Ug,4)}</td>
-      <td>${hasTol ? f(tol,3) : '-'}</td>
-      <td class="${pass === false ? 'eib-fail' : ''}">${res}</td>
-    </tr>`;
-  }).join('');
-  const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
-  // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) แบนด์ละบรรทัดตีเส้นใต้
-  // แบนด์แรกอยู่บรรทัด label Tolerance (แถว Range) แบนด์ที่เหลือลงแถว Section ให้บรรทัดตรงกัน
-  const tolLine = v => `<span class="eib-tolln">${v || '&nbsp;'}</span>`;
-  // เติมหน่วย g ให้ช่วงในวงเล็บของ Tolerance เก่าที่บันทึกไว้แบบไม่มีหน่วย เช่น "± 30 g (0-60000)" → "(0-60000 g)"
-  const tolWithUnit = s => String(s || '').replace(/\((\s*[>\d.,\s-]+?)\s*\)/, '($1 g)');
-  const tolList = ((Array.isArray(CAL.tolerances) && CAL.tolerances.length) ? CAL.tolerances : ['']).map(tolWithUnit);
-  const tolFirst = tolLine(esc(tolList[0]));
-  const tolRest = tolList.slice(1).map(t => tolLine(esc(t))).join('');
-  // User range: เติมหน่วย g ถ้าเป็นตัวเลขล้วน (เช่น "1 - 2000" → "1 - 2000 g")
-  const userRangeTxt = (CAL.user_range && /\d/.test(CAL.user_range) && !/[a-zA-Zก-๙]/.test(CAL.user_range))
-    ? CAL.user_range + ' g' : CAL.user_range;
-  return `<section class="sheet eib">
-    <div class="eib-head">
-      <div class="eib-brand">
-        <img class="eib-logo" src="${IMG.ilc}" alt="ILC">
-        <div class="eib-co"><div class="eib-co-th">บริษัท อินเตอร์เนชั่นแนล แลบบอราทอรีส์ จำกัด</div><div class="eib-co-en">International Laboratories Corp., Ltd.</div></div>
-      </div>
-      <h2 class="eib-title">ใบประเมินผลการสอบเทียบ</h2>
-      <div class="eib-sub">(Record sheet for verification of calibration results)</div>
-    </div>
-    <div class="eib-inst"><span class="eib-inst-t">INSTRUMENT</span>
-      <span class="rt b">Cert. No. <span class="eib-val">${esc(CAL.cert_no)}</span></span>
-    </div>
-    <table class="eib-grid">
-      <colgroup><col style="width:12.5%"><col style="width:28%"><col style="width:9.5%"><col style="width:22%"><col style="width:9%"><col style="width:19%"></colgroup>
-      <tr>${cell('Brand / Model', (CAL.manufacturer || '') + '  ' + (CAL.model || ''))}${cell('Serial No.', CAL.serial)}${cell('ID.No.', CAL.id_no)}</tr>
-      <tr><td class="eib-lbl bl">Range</td><td class="eib-val bl">${tolLine(esc(rangeTxt))}</td><td class="eib-lbl bl">User range</td><td class="eib-val bl">${tolLine(esc(userRangeTxt))}</td><td class="eib-lbl top">Tolerance</td><td class="eib-val top">${tolFirst}</td></tr>
-      <tr><td class="eib-su" colspan="5"><div class="eib-su-flex"><span class="eib-lbl">Section</span><span class="eib-suv eib-suv-sec">${esc(CAL.section)}</span><span class="eib-lbl eib-su-u">Unit</span><span class="eib-suv eib-suv-unit">${esc(CAL.unit_dept)}</span></div></td><td class="eib-val top">${tolRest}</td></tr>
-    </table>
-    <table class="bx eib-tbl">
-      <thead><tr>
-        <th>Nominal Value<br>( g )</th><th>Error<br>( g )</th><th>Uncertainty<br>± ( g )</th>
-        <th>Error + Uncertainty<br>( g )</th><th>Error - Uncertainty<br>( g )</th><th>Tolerance<br>± ( g )</th><th>Result</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="eib-sign">
-      <div class="eib-sign-l"><span>Prepared by : __________ Date ____/____/____</span></div>
-      <div class="eib-sign-r">
-        <span>Approved by : __________ (EIB) Date ____/____/____</span>
-        <span>Approved by : __________ (Owner) Date ____/____/____</span>
-      </div>
-    </div>
-    <div class="footrow"><span>FRM-EIB55 Rev.00</span><span>Effective Date: 09/09/2024 (4Y)</span><span>Page ${pageNo} of ${total}</span></div>
-  </section>`;
-}
+// (pageEIB55 hoisted to module scope above rangePages — Task 6a; balance caller builds eibRows/eibRangeTxt below then calls pageEIB55(CAL, eibRows, eibRangeTxt, pageNo, total))
 
 // ====== PAGE: ใบบันทึกผล หน้า 1 (FRM-CAL77) ======
 function pageWs1(pageNo, instMax, instResText, instTols) {
   // instMax/instResText/instTols = พิกัด+ความละเอียด+Tolerance ระดับเครื่อง (multi-range = ทุกย่าน) ส่งมาจาก assembly
   // ส่วน preload/repeat คงค่าจริงของย่านที่ทดสอบ (ย่านแรก เช่น preload 6000, repeat 5000)
   const capTxt = (instMax != null ? instMax : CAL.capacity);
-  const resTxt = (instResText != null ? instResText : resolutionText());
+  const resTxt = (instResText != null ? instResText : resolutionTextFor(CAL));
   const tolList = (Array.isArray(instTols) && instTols.length) ? instTols : (CAL.tolerances || []);
   // แบนด์ละบรรทัด (คอลัมน์แรกแคบลง — ต่อกันบรรทัดเดียวยาวเกินช่อง) · >4 แบนด์จับคู่ 2 ต่อบรรทัดกันหน้าล้น
   // แต่ละบรรทัดตีเส้นใต้ (.tolln) + เว้นบรรทัดเปล่าตีเส้น 1 บรรทัดท้าย
@@ -871,14 +867,27 @@ function pageUnc(blockRows, pageNo) {
   while (UNC_ROWS.length % 3) UNC_ROWS.push({ blank: true });
   const uncPages = [];
   for (let i = 0; i < UNC_ROWS.length; i += 3) uncPages.push(UNC_ROWS.slice(i, i + 3));
-  if (opt.coverOnly) return pageCover();
+  if (opt.coverOnly) return pageCover(CAL, CERT_TOTAL);
   // ใบ Cert (flow ต่อเนื่องแบบ PDF): ย่านแรก = หน้าเงื่อนไข + หน้า departure (2 หน้า) · ย่านถัดไป = หน้าอัดแน่น (1 หน้า) · END ครั้งเดียวที่ย่านสุดท้าย
   const certHtml = opt.isFirst
     ? pageCertConditions(CERT_NO) + pageCertDeparture(CERT_NO + 1, opt.isLast)
     : pageCertCompact(CERT_NO, opt.isLast);
+  // ===== แถวใบประเมิน EIB55: คำนวณ error/uncertainty/tolerance ต่อจุด (ย้ายออกจาก pageEIB55 เดิม) แล้วส่งเข้า pageEIB55 (module scope, Task 6a) =====
+  // Range = พิกัดเครื่อง (MAX) จาก opt.instMax — ไม่ใช่ capacity ของย่านที่พิมพ์ (multi-range ทุกใบแสดงพิกัดเดียวกัน)
+  const eibInstCap = (opt.instMax != null ? opt.instMax : CAL.capacity);
+  const eibRangeTxt = eibInstCap > 30000 ? (+(eibInstCap / 1000).toFixed(3)) + ' kg' : eibInstCap + ' ' + CAL.unit;
+  const eibRows = ROWS.map(r => {
+    const errG = Math.round((-r.corr) * 1000) / 1000;
+    const Ug = r.bud.Ufinal / 1000;
+    const tol = tolForRow(CAL, r.zero ? 0 : r.nominal);
+    const hasTol = tol != null;
+    const pass = hasTol ? ((errG + Ug) <= tol && (errG - Ug) >= -tol) : null;
+    const result = !hasTol ? '-' : (pass ? 'PASS' : 'FAIL');
+    return { label: r.zero ? 'UNLOAD' : r.nominal, errG, Ug, sumEU: errG + Ug, diffEU: errG - Ug, tol, result };
+  });
   return {
     cert: certHtml,
-    assess: pageEIB55(opt.assessNo, opt.assessTotal),                 // ใบประเมินผล EIB55: 1 หน้า/ย่าน
+    assess: pageEIB55(CAL, eibRows, eibRangeTxt, opt.assessNo, opt.assessTotal),   // ใบประเมินผล EIB55: 1 หน้า/ย่าน
     // ใบบันทึกผลแยกชิ้น (ให้ assembly จัดกลุ่ม): ws1 (พิมพ์เฉพาะย่านแรก) · ws2 ต่อย่าน · unc ต่อย่าน — เลขหน้าส่งมาจาก assembly
     ws1: opt.isFirst ? pageWs1(1, opt.instMax, opt.instResText, opt.instTols) : '',
     ws2: pageWs2(opt.ws2No),
