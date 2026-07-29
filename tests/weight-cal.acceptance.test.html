@@ -1,0 +1,102 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
+<!--
+  Acceptance test: reproduce real Excel job 26M001 (12-point weight-set calibration)
+  through the pure calc engine js/weight-cal.js — wcComputePoint(...).
+
+  Inputs extracted from ตัวอย่าง/26M001/26M001-0 CLCLSB06-WI01..WI12 *.xlsx,
+  sheet "5040101-03", using scratchpad/dump-xlsx.ps1:
+    - B7  = reference weight correction (mg)
+    - N7  = reference weight uncertainty (mg)
+    - F9/F13 = ref/test density (both 7950 kg/m3 for this whole job -> Ci = 0)
+    - B3  = mass comparator id ("AT21" for all 12 points)
+    - B11/D11 = nominal + unit (confirms filename)
+    - rows 28-30, cols B/D/F/H = ABBA cycle readings r1/t1/t2/r2 (g)
+
+  Golden results (cert page 3, error mg / U mg) come from the task brief.
+-->
+<pre id="out"></pre>
+<script src="../js/weight-cal.js"></script>
+<script>
+const results = [];
+function acc(name, got, want, tol){ results.push((Math.abs(got-want)<=tol?'PASS ':'FAIL ')+name+' got='+got+' want='+want); }
+function finish(){ const f=results.filter(r=>r[0]==='F').length; document.getElementById('out').textContent=results.join('\n'); document.title=f?('FAIL '+f):'ALLPASS'; }
+
+// ---- job header (same environment for all 12 points, job 26M001) ----
+const JOB = {
+  temp_lo: 20.4, temp_hi: 20.6, temp_corr: -0.5,
+  rh_lo: 54.9, rh_hi: 55.1, rh_corr: -0.7,
+  press_lo: 1020, press_hi: 1020, press_corr: -7.4
+};
+// ---- mass comparator AT21 (same for all 12 points) ----
+const AT21 = { repeatability: 0.0015, linearity: 0.004, resolution: 0.000001 };
+// ---- instrument class F1 ----
+const INST_F1 = { class_grade: 'F1', density: 7950 };
+// ---- CMC floor per nominal (Conventional Mass Class F1, mg) ----
+const CMC = { 1:0.006, 2:0.006, 5:0.006, 10:0.008, 20:0.010, 50:0.012, 100:0.016, 200:0.020, 500:0.025 };
+
+// ---- per-point inputs extracted from the 12 WI*.xlsx files (sheet 5040101-03) ----
+// std = { correction: B7 (mg), uncertainty: N7 (mg), density: F9/F13=7950, ds: N7 }
+function std(refCorrMg, refUmg){ return { correction: refCorrMg, uncertainty: refUmg, density: 7950, ds: refUmg }; }
+
+const POINTS = [
+  // WI01 — 1mg NONE
+  { file:'WI01', nominal_value:1,   marking:'NONE',  refCorr:-0.0022, refU:0.002,
+    abba:{ r1:[0,0,0],              t1:[1e-6,0,0],                 t2:[0,0,0],                    r2:[0,0,0] },
+    want:{ err:-0.0020, U:0.0060 } },
+  // WI02 — 2mg NONE
+  { file:'WI02', nominal_value:2,   marking:'NONE',  refCorr: 0.0021, refU:0.002,
+    abba:{ r1:[0,0,0],              t1:[-1.1e-5,-8e-6,-1.1e-5],    t2:[-1.0e-5,-1.0e-5,-1.1e-5],  r2:[0,0,-1e-6] },
+    want:{ err:-0.0079, U:0.0060 } },
+  // WI03 — 2mg POINT
+  { file:'WI03', nominal_value:2,   marking:'POINT', refCorr: 0.0021, refU:0.002,
+    abba:{ r1:[0,0,0],              t1:[-8e-6,-8e-6,-7e-6],        t2:[-9e-6,-9e-6,-9e-6],        r2:[0,0,0] },
+    want:{ err:-0.0062, U:0.0060 } },
+  // WI04 — 5mg NONE
+  { file:'WI04', nominal_value:5,   marking:'NONE',  refCorr:-0.0013, refU:0.002,
+    abba:{ r1:[0,0,0],              t1:[0,0,0],                    t2:[0,0,0],                    r2:[0,0,0] },
+    want:{ err:-0.0013, U:0.0060 } },
+  // WI05 — 10mg NONE
+  { file:'WI05', nominal_value:10,  marking:'NONE',  refCorr: 0.0037, refU:0.0025,
+    abba:{ r1:[0,2e-6,0],           t1:[0,0,0],                    t2:[0,0,0],                    r2:[2e-6,0,2e-6] },
+    want:{ err: 0.0027, U:0.0080 } },
+  // WI06 — 20mg NONE
+  { file:'WI06', nominal_value:20,  marking:'NONE',  refCorr: 0.0038, refU:0.003,
+    abba:{ r1:[0,0,0],              t1:[-1.3e-5,-1.4e-5,-1.3e-5],  t2:[-1.2e-5,-1.5e-5,-1.2e-5],  r2:[0,0,0] },
+    want:{ err:-0.009,  U:0.010  } },
+  // WI07 — 20mg POINT
+  { file:'WI07', nominal_value:20,  marking:'POINT', refCorr: 0.0038, refU:0.003,
+    abba:{ r1:[0,0,0],              t1:[9e-6,1.2e-5,1.2e-5],       t2:[1.1e-5,1.1e-5,1.1e-5],     r2:[0,0,0] },
+    want:{ err: 0.015,  U:0.010  } },
+  // WI08 — 50mg NONE
+  { file:'WI08', nominal_value:50,  marking:'NONE',  refCorr: 0.0042, refU:0.004,
+    abba:{ r1:[0,0,0],              t1:[-8e-6,-8e-6,-8e-6],        t2:[-8e-6,-6e-6,-8e-6],        r2:[0,0,0] },
+    want:{ err:-0.004,  U:0.012  } },
+  // WI09 — 100mg NONE
+  { file:'WI09', nominal_value:100, marking:'NONE',  refCorr: 0.0074, refU:0.005,
+    abba:{ r1:[0,0,5e-6],           t1:[-1.2e-5,-1.1e-5,-6e-6],    t2:[-1.2e-5,-1.0e-5,-1.5e-5],  r2:[0,2e-6,0] },
+    want:{ err:-0.005,  U:0.016  } },
+  // WI10 — 200mg NONE
+  { file:'WI10', nominal_value:200, marking:'NONE',  refCorr: 0.0075, refU:0.006,
+    abba:{ r1:[0,1e-6,0],           t1:[-1.7e-5,-1.4e-5,-1.6e-5],  t2:[-1.7e-5,-1.4e-5,-1.8e-5],  r2:[0,2e-6,0] },
+    want:{ err:-0.009,  U:0.020  } },
+  // WI11 — 200mg POINT
+  { file:'WI11', nominal_value:200, marking:'POINT', refCorr: 0.0075, refU:0.006,
+    abba:{ r1:[0,0,0],              t1:[-1.5e-5,-1.4e-5,-1.5e-5],  t2:[-1.6e-5,-1.4e-5,-1.7e-5],  r2:[0,0,0] },
+    want:{ err:-0.008,  U:0.020  } },
+  // WI12 — 500mg NONE
+  { file:'WI12', nominal_value:500, marking:'NONE',  refCorr: 0.0088, refU:0.008,
+    abba:{ r1:[0,0,0],              t1:[-1.5e-5,-1.4e-5,-1.5e-5],  t2:[-1.6e-5,-1.4e-5,-1.7e-5],  r2:[0,0,0] },
+    want:{ err:-0.006,  U:0.025  } }
+];
+
+POINTS.forEach(pt => {
+  const p = { abba: pt.abba, nominal_value: pt.nominal_value, unit: 'mg', marking: pt.marking, ppm: 1 };
+  const r = wcComputePoint(p, JOB, std(pt.refCorr, pt.refU), AT21, INST_F1, CMC[pt.nominal_value]);
+  const label = pt.file + ' ' + pt.nominal_value + 'mg ' + pt.marking;
+  // cert displays 3 or 4 dp depending on band; tolerance 5e-4 absorbs the cert's own display rounding
+  acc(label + ' error', +r.correction_mg.toFixed(4), pt.want.err, 5e-4);
+  acc(label + ' U', r.uncertainty_mg, pt.want.U, 0);
+});
+
+finish();
+</script></body></html>
