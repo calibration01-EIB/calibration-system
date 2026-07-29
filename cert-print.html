@@ -150,6 +150,18 @@ table { border-collapse: collapse; }
 .std-tbl th { text-decoration: underline; font-weight: 400; padding: 2px 8px; text-align: center; } /* หัวคอลัมน์ = ขีดเส้นใต้ ไม่หนา */
 .std-tbl td { padding: 1.5px 8px; text-align: center; }
 .dep td, .dep th { border: 1px solid #111; padding: 1.5px 6px; text-align: center; }     /* หัวตารางข้อมูล (th) = หนา */
+/* ===== ใบ Cert เฉพาะตุ้มน้ำหนัก (Task 6b) — หน้า body/results ใช้คลาส .ct ร่วมกับใบเครื่องชั่ง (หัว ctHead) + คลาสใหม่สำหรับส่วนเนื้อหาเฉพาะตุ้ม ===== */
+.ct-title2 { font-size: var(--fl); font-weight: 700; margin: 6px 0 4px; text-decoration: underline; }
+.ct-ind { padding-left: 12px; margin: 1.5px 0; }
+.wt-std, .wt-res, .wt-abba, .wt-budget { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 4px 0 8px; }
+.wt-std th, .wt-std td, .wt-res th, .wt-res td, .wt-abba th, .wt-abba td, .wt-budget th, .wt-budget td { border: 1px solid #111; padding: 3px 6px; text-align: center; }
+.wt-note { font-size: 11.5px; margin-top: 8px; }
+.wt-end { text-align: center; font-weight: 700; margin-top: 16px; }
+.wt-h { text-align: center; font-size: 15px; margin: 0 0 10px; }
+.wt-recblk, .wt-uncblk { margin-bottom: 16px; }
+.wt-rechd, .wt-unchd { font-weight: 700; margin-bottom: 4px; }
+.wt-recres, .wt-uncres { margin-top: 4px; font-size: 12.5px; }
+.num { text-align: right; }
 /* ===== worksheet (Thai forms) ===== */
 .ws { font-size: var(--fd); line-height: 1.08; --ffd: 'Cordia New','CordiaUPC',sans-serif; --ffl: 'Cordia New','CordiaUPC',sans-serif; font-family: var(--ffd); } /* ทั้ง worksheet ใช้ Cordia New (ตัวเลขเต็มขนาด) ให้สม่ำเสมอทั้งหน้า UKAS+error-table และเท่าหน้าปก — เดิม AngsanaUPC ทำให้ตัวเลขเล็ก */ .ws .fill { font-weight: 400; } .ws .chk { width: 13px; height: 13px; vertical-align: -1px; line-height: 12px; margin-right: 5px; } .ws .row > span:not(.fv) { font-weight: 700; } .ws .hdrck .chk { vertical-align: -3px; } .ws .hdrck > span:first-child { padding-left: 40px; }
 .ws h2 { margin: 0 0 6px; text-align: center; font-family: var(--ffl); font-size: var(--fl); font-weight: 700; }
@@ -431,6 +443,108 @@ function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
     </div>
     <div class="footrow"><span>FRM-EIB55 Rev.00</span><span>Effective Date: 09/09/2024 (4Y)</span><span>Page ${pageNo} of ${total}</span></div>
   </section>`;
+}
+
+// ===== หน้า Cert เฉพาะตุ้มน้ำหนัก (Task 6b) — module scope, อ่าน CAL ตัวแปร global โดยตรง ไม่ผ่าน/ไม่แตะ rangePages =====
+const WEIGHT_CERT_TOTAL = 3;   // ปก + body (เงื่อนไข+มาตรฐาน) + results — จำนวนหน้าชุด Cert ของตุ้มน้ำหนักคงที่เสมอ
+// หัวซ้ำหน้า Cert ต่อเนื่อง สำหรับตุ้มน้ำหนัก — เทียบเท่า ctHead ฝั่งเครื่องชั่ง (ซ้อนอยู่ใน rangePages เรียกจากนอกไม่ได้) แยกฟังก์ชันเองไม่แก้ rangePages
+function wtCtHead(pageNo) {
+  return `<div class="hd-right">CERT.NO. :  <span>${esc(CAL.cert_no)}</span><br>PAGE :  ${pageNo}  OF  ${WEIGHT_CERT_TOTAL}</div>
+    <p class="ct-title">CONTINUATION OF CERTIFICATE OF CALIBRATION FOR</p>
+    <div class="kv"><span>EQUIPMENT :</span><span>${esc(CAL.equipment)}</span></div>
+    <div class="kv2"><span></span><span>MANUFACTURER :</span><span>${esc(CAL.manufacturer)}</span></div>
+    <div class="kv2"><span></span><span>MODEL :</span><span>${esc(CAL.model)}</span></div>
+    <div class="kv2"><span></span><span>SERIAL NUMBER :</span><span>${esc(CAL.serial)}</span></div>
+    <div class="kv2"><span></span><span>IDENTIFICATION NUMBER :</span><span>${esc(CAL.id_no)}</span></div>
+    <div class="kv"><span>CALIBRATION DATE :</span><span>${dCert(CAL.date_cal)}</span></div>`;
+}
+function pageWeightCertBody(pageNo) {   // หน้า 2: วิธีการ + รายการมาตรฐาน
+  const rs = (CAL.procedure_refs || []).map((r, i) =>
+    `<tr><td>${i+1}.) ${esc(r.label)}</td><td>${esc(r.model)}</td><td>${esc(r.serial)}</td><td>${dCert(r.due)}</td><td>${esc(r.cert)}</td></tr>`).join('');
+  const comps = (CAL.comparators || []).map((c, i) =>
+    `<tr><td>${(CAL.procedure_refs||[]).length + i + 1}.) MASS COMPARATOR</td><td>${esc(c.name)}</td><td>${esc(c.serial)}</td><td>${esc(c.due||'-')}</td><td>${esc(c.cert||'-')}</td></tr>`).join('');
+  return `<section class="sheet ct">${wtCtHead(pageNo)}
+    <p class="ct-title2">CONDITION OF THIS RESULT</p>
+    <p>1. CALIBRATION PROCEDURE :</p>
+    <p class="ct-ind">THIS INSTRUMENT WAS CALIBRATED BY COMPARISON WITH REFERENCE STANDARD WEIGHT IN AIR BY USING THE
+      SUBSTITUTION WEIGHING METHOD ( ABBA ) WITHOUT AIR BUOYANCY CORRECTION. THREE WEIGHING CYCLES WERE PERFORMED
+      ON EACH WEIGHT. ACCORDING TO IN-HOUSE WORK INSTRUCTION NO. SWI-CAL-701 BASED ON OIML R111-1.</p>
+    <p>2. ENVIRONMENTAL CONDITIONS : ( ${CAL.temp[0]} - ${CAL.temp[1]} ) °C , RELATIVE HUMIDITY ( ${CAL.rh[0]} - ${CAL.rh[1]} ) %RH.</p>
+    <p>3. REFERENCE STANDARD INSTRUMENTS AND TEST INSTRUMENTS :</p>
+    <table class="wt-std"><thead><tr><th>INSTRUMENT</th><th>MODEL</th><th>SERIAL NO.</th><th>DUE.DATE</th><th>CERTIFICATION NO.</th></tr></thead>
+      <tbody>${rs}${comps}</tbody></table>
+    <p>4. THIS RESULT OF CALIBRATION WAS FOUND ACCURATE AS SHOWN ON DATE, PLACE OF CALIBRATION AND THIS EQUIPMENT ONLY.</p>
+    <p>5. THIS CERTIFICATION IS TRACEABLE TO THE SI UNIT ACCORDING TO NATIONAL INSTITUTE OF METROLOGY (THAILAND).</p>
+    <div class="footrow"><span>FRM-CAL55 (TP) Rev.01</span><span></span><span>PAGE &nbsp;${pageNo}&nbsp; OF &nbsp;${WEIGHT_CERT_TOTAL}</span></div>
+  </section>`;
+}
+
+function pageWeightResults(pageNo) {    // หน้า 3: ตารางผล
+  const rows = (CAL.points || []).map(p =>
+    `<tr><td>${p.nominal_value} ${esc(p.unit)}</td><td>${esc(p.marking)}</td>
+      <td class="num">${esc(p.conventional_mass_str)}</td><td class="num">${esc(p.uncertainty_str)}</td></tr>`).join('');
+  return `<section class="sheet ct">${wtCtHead(pageNo)}
+    <p class="ct-title2">RESULT OF CALIBRATION :</p>
+    <table class="wt-res"><thead><tr><th>NOMINAL VALUE</th><th>MARKING</th><th>CONVENTIONAL MASS</th><th>UNCERTAINTY (k=2)</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <p class="wt-note">THE REPORTED EXPANDED UNCERTAINTY IS BASED ON A STANDARD UNCERTAINTY MULTIPLIED BY A COVERAGE FACTOR k = 2.</p>
+    <p class="wt-end">THE END OF CERTIFICATE</p>
+    <div class="footrow"><span>FRM-CAL55 (TP) Rev.01</span><span></span><span>PAGE &nbsp;${pageNo}&nbsp; OF &nbsp;${WEIGHT_CERT_TOTAL}</span></div>
+  </section>`;
+}
+
+// ใบบันทึกผล ABBA (FRM-CAL68) — 1 จุด/บล็อก, จัด WC_REC_PER_PAGE จุดต่อหน้า
+const WC_REC_PER_PAGE = 2;
+function wcRecordBlock(p) {
+  const cyc = [0,1,2].map(i =>
+    `<tr><td>${i+1}</td><td>${p.abba.r1[i]}</td><td>${p.abba.t1[i]}</td><td>${p.abba.t2[i]}</td><td>${p.abba.r2[i]}</td></tr>`).join('');
+  return `<div class="wt-recblk">
+    <div class="wt-rechd">${p.nominal_value} ${esc(p.unit)}${p.marking==='POINT'?' (POINT)':''} · Ref ${esc(p.std.id_code)} · ${esc(p.comparator.name)}</div>
+    <table class="wt-abba"><thead><tr><th>n</th><th>Ref (r1)</th><th>Unknown (t1)</th><th>Unknown (t2)</th><th>Ref (r2)</th></tr></thead>
+      <tbody>${cyc}</tbody></table>
+    <div class="wt-recres">Conventional mass: ${esc(p.conventional_mass_str)} &nbsp; U(k=2): ${esc(p.uncertainty_str)}</div>
+  </div>`;
+}
+function pageWeightRecord(startNo) {     // คืน {html, pages}
+  const pts = CAL.points || [];
+  let html = '', pages = 0;
+  for (let i = 0; i < pts.length; i += WC_REC_PER_PAGE) {
+    pages++;
+    const blocks = pts.slice(i, i + WC_REC_PER_PAGE).map(wcRecordBlock).join('');
+    html += `<section class="sheet"><h3 class="wt-h">ใบบันทึกผลการสอบเทียบตุ้มน้ำหนัก (ABBA)</h3>${blocks}
+      <div class="footrow"><span>FRM-CAL68-00-0565</span><span></span><span></span></div></section>`;
+  }
+  return { html, pages };
+}
+
+// ใบรายงาน Uncertainty (FRM-CAL90) — 1 จุด/บล็อก
+const WC_UNC_PER_PAGE = 2;
+function wcUncBlock(p) {
+  const b = p.budget;
+  const row = (sym, name, ui) => `<tr><td>${sym}</td><td>${name}</td><td class="num">${ui.toPrecision(4)}</td></tr>`;
+  return `<div class="wt-uncblk">
+    <div class="wt-unchd">${p.nominal_value} ${esc(p.unit)}${p.marking==='POINT'?' (POINT)':''} · ${esc(p.std.id_code)}</div>
+    <table class="wt-budget"><thead><tr><th>Symbol</th><th>Source of uncertainty</th><th>ui (mg)</th></tr></thead><tbody>
+      ${row('WS','Calibration of standard weight', b.ws)}
+      ${row('DS','Drift since last calibration', b.ds)}
+      ${row('dId','Digital rounding error', b.did)}
+      ${row('dC','Comparator non-linearity', b.dc)}
+      ${row('Ab','Air buoyancy', b.ab)}
+      ${row('WR','Repeatability of indication', b.wr)}
+    </tbody></table>
+    <div class="wt-uncres">u(WX) = ${b.u.toPrecision(4)} mg &nbsp; U (k=${b.k}) = ${b.U.toPrecision(4)} mg &nbsp; → reported ${esc(p.uncertainty_str)}</div>
+  </div>`;
+}
+function pageWeightUnc(startNo) {         // คืน {html, pages}
+  const pts = CAL.points || [];
+  let html = '', pages = 0;
+  for (let i = 0; i < pts.length; i += WC_UNC_PER_PAGE) {
+    pages++;
+    const blocks = pts.slice(i, i + WC_UNC_PER_PAGE).map(wcUncBlock).join('');
+    html += `<section class="sheet"><h3 class="wt-h">ใบบันทึกการหาค่าความไม่แน่นอน (FRM-CAL90)</h3>${blocks}
+      <div class="footrow"><span>FRM-CAL90-00-0965</span><span></span><span></span></div></section>`;
+  }
+  return { html, pages };
 }
 
 function rangePages(CAL, opt) {
@@ -907,6 +1021,18 @@ function rangeOverride(r) {
 }
 function uncPageCount(C) { return Math.max(1, Math.ceil((1 + ((C.points && C.points.length) || 0)) / 3)); }
 (function assemblePages() {
+  if (CAL.doc_type === 'weight') {
+    // เอกสารตุ้มน้ำหนัก: ปก + body + results (ใบ Cert) + EIB55 (ใบประเมิน) + ใบบันทึก ABBA + ใบความไม่แน่นอน
+    // ใช้ pageCover/pageEIB55 ที่ hoisted เป็น module scope (Task 6a) — ไม่ผ่าน/ไม่แตะ rangePages เลย
+    const certTotal = WEIGHT_CERT_TOTAL;          // ปก + body + results
+    const rec = pageWeightRecord(0), unc = pageWeightUnc(0);
+    document.getElementById('pages').innerHTML =
+      pageCover(CAL, certTotal) +                 // hoisted shared builder (Task 6a)
+      pageWeightCertBody(2) + pageWeightResults(3) +
+      pageEIB55(CAL, CAL.eib_rows || [], CAL.range_text, 1, 1) +   // hoisted shared builder (Task 6a)
+      rec.html + unc.html;
+    return;                                       // ไม่ทำ flow เครื่องชั่ง
+  }
   const list = (CAL.multi_range && Array.isArray(CAL.ranges) && CAL.ranges.length)
     ? CAL.ranges.map(r => Object.assign({}, CAL, rangeOverride(r)))
     : [CAL];
