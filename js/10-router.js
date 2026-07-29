@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs','weightjobs'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -24,6 +24,7 @@ function showPage(page) {
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
     calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
     repairs: ['🔧 งานซ่อม','แจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมเครื่องมือ'],
+    weightjobs: ['⚖️ สอบเทียบตุ้มน้ำหนัก','ทะเบียนงานสอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA)'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -33,6 +34,7 @@ function showPage(page) {
 
   if (page === 'plan') { loadPlanConfirmBadge(); initPlanPage(); }
   if (page === 'weights') { loadStandardWeights(); }
+  if (page === 'weightjobs') { loadWeightjobs(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
   if (page === 'calrecs') {

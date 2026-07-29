@@ -539,6 +539,9 @@ async function wcLoadJob(id) {
     }
     wcFillJobForm();
     wcRenderPoints();
+    if (jobId && jobId !== 'new' && /(^|[?&#])print=1(&|$)/.test(location.hash)) {
+      wcIssueCert();
+    }
   } catch (e) {
     if (typeof showToast === 'function') showToast('โหลดงานไม่สำเร็จ: ' + e.message, 'error');
   } finally {

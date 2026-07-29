@@ -2741,6 +2741,7 @@ body.app-mode textarea:focus {
         <div class="nav-item" onclick="showPage('calrecs')" id="nav-calrecs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📋</span> ติดตามผลสอบเทียบ</span><span id="navCalrecsBadge" style="display:none;background:#f0a500;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('repairs')" id="nav-repairs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">🔧</span> งานซ่อม</span><span id="navRepairBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">📜</span> ใบ Cert Reference</div>
+        <div class="nav-item" onclick="showPage('weightjobs')" id="nav-weightjobs"><span class="nav-icon">⚖️</span> สอบเทียบตุ้มน้ำหนัก</div>
       </nav>
       <div class="sidebar-user">
         <div class="user-avatar" id="sidebarInitial">A</div>
@@ -3486,6 +3487,30 @@ body.app-mode textarea:focus {
           </div>
           <div style="margin-top:10px;font-size:12px;color:var(--text3)">💡 พิกัดในช่วง "จาก &lt; พิกัดเครื่อง ≤ ถึง" จะถูก auto-match · จุดคั่นด้วยจุลภาค เช่น 1, 2, 5, 10, 20</div>
         </div><!-- /presetSection -->
+      </div>
+
+      <!-- หน้า ทะเบียนงานสอบเทียบตุ้มน้ำหนัก -->
+      <div id="pageWeightjobs" data-page="weightjobs" class="page-content" style="display:none">
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="wjSearch" type="search" placeholder="🔍 ค้นหาเลขที่งาน, Cert No., ชื่อลูกค้า" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none" oninput="filterWeightjobs()">
+          <select id="wjStatusFilter" onchange="filterWeightjobs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);min-width:160px">
+            <option value="">ทุกสถานะ</option>
+            <option value="draft">🟡 ร่าง</option>
+            <option value="issued">🏷️ ออก Cert แล้ว</option>
+          </select>
+          <button onclick="loadWeightjobs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--font);font-size:13px;cursor:pointer">↻ รีเฟรช</button>
+          <button onclick="newWeightJob()" style="padding:8px 18px;background:#00695C;color:white;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">＋ สร้างงานใหม่</button>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow);overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr style="text-align:left;color:var(--text3);border-bottom:2px solid var(--border)">
+              <th style="padding:8px;font-weight:600">เลขที่งาน</th><th style="padding:8px;font-weight:600">Cert No.</th>
+              <th style="padding:8px;font-weight:600">ลูกค้า</th><th style="padding:8px;font-weight:600">วันสอบ</th>
+              <th style="padding:8px;font-weight:600">จำนวนจุด</th><th style="padding:8px;font-weight:600">สถานะ</th><th style="padding:8px;font-weight:600">จัดการ</th>
+            </tr></thead>
+            <tbody id="wjList"><tr><td colspan="7" class="no-data">กำลังโหลด...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- MODAL: Standard Cert Detail -->
@@ -4318,6 +4343,7 @@ body.app-mode textarea:focus {
 <script src="js/16-repairs.js?v=20260721-repairs"></script>
 <script src="js/17-frm-cross-month.js?v=20260722-cross-month"></script>
 <script src="js/18-asset-out.js?v=20260723-asset-out"></script>
+<script src="js/19-weight-jobs.js?v=20260729-weight-cal"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
