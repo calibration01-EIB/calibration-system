@@ -25,6 +25,11 @@ const CAL = {
      budget:{ws:0.001,ds:0.0011547,did:0.00040825,dc:0.0023094,ab:1.1547e-6,wr:0.00086603,u:0.0029297,U:0.0058595,veff:1178,k:2},
      std:{id_code:'CLCLRS01-WI02',serial:'15885',cert_no:'MM-0140-24',due_date:'2026-09-01',density:7950,correction:0.0021,uncertainty:0.002},
      comparator:{name:'AT21',serial:'1119102616'}}
+  ],
+  // Task 9: rows พร้อมสำหรับ pageEIB55 (หน่วยเดียวกับ js/weight-cal.js eib_rows — errG/Ug เป็น "กรัม" แต่ค่าจริงระดับ mg หาร 1000)
+  eib_rows:[
+    {label:'1 mg', errG:-0.0020/1000, Ug:0.0060/1000, sumEU:(-0.0020+0.0060)/1000, diffEU:(-0.0020-0.0060)/1000, tol:0.020/1000, result:'PASS'},
+    {label:'2 mg', errG:0.0062/1000, Ug:0.0060/1000, sumEU:(0.0062+0.0060)/1000, diffEU:(0.0062-0.0060)/1000, tol:0.020/1000, result:'PASS'}
   ]
 };
 const results=[];
@@ -37,6 +42,11 @@ window.addEventListener('load',()=>{
     ok('has cover', !!doc.querySelector('.sheet.cover'));
     ok('has >=6 sheets', sheets.length>=6);
     ok('results table shows conventional', doc.body.textContent.indexOf('- 0.0020')>=0);
+    // Task 9: EIB55 assessment table ต้องแสดงหน่วย mg และค่าไม่ถูกปัดเป็นศูนย์
+    const eibTbl = doc.querySelector('.eib-tbl');
+    ok('eib table header shows ( mg )', !!eibTbl && eibTbl.textContent.indexOf('( mg )')>=0);
+    ok('eib table row shows -0.0020 mg (not rounded to 0.000)', !!eibTbl && eibTbl.textContent.indexOf('-0.0020')>=0);
+    ok('eib table row shows 0.0060 mg uncertainty', !!eibTbl && eibTbl.textContent.indexOf('0.0060')>=0);
     const fails=results.filter(r=>r[0]==='F').length;
     document.getElementById('out').textContent=results.join('\n');
     document.title=fails?('FAIL '+fails):'ALLPASS';

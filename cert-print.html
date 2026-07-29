@@ -390,11 +390,17 @@ function pageCover(CAL, certTotal) {
 
 // ====== PAGE: ใบประเมินผลการสอบเทียบ (FRM-EIB55) — module scope (Task 6a hoist): รับ rows คำนวณแล้วจาก caller (balance/weight), render อย่างเดียว ======
 function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
+  // ตุ้มน้ำหนัก (doc_type='weight'): rows คำนวณเก็บเป็น "กรัม" แต่ค่าจริงระดับ mg → คูณ 1000 กลับเป็น mg ตอนแสดงผล ไม่แตะฝั่งเครื่องชั่ง
+  const wtDoc = CAL.doc_type === 'weight';
+  const eUnit = wtDoc ? 'mg' : 'g';     // header unit
+  const eSc   = wtDoc ? 1000 : 1;       // rows carry grams; ×1000 → mg for weight
+  const eErrDp = wtDoc ? 4 : 3;         // Error / Tolerance decimals
+  const eUncDp = 4;                     // Uncertainty / sum / diff decimals (unchanged)
   const rowsHtml = rows.map(r => `<tr>
       <td>${r.label}</td>
-      <td>${f(r.errG,3)}</td><td>${f(r.Ug,4)}</td>
-      <td>${f(r.sumEU,4)}</td><td>${f(r.diffEU,4)}</td>
-      <td>${r.tol != null ? f(r.tol,3) : '-'}</td>
+      <td>${f(r.errG*eSc,eErrDp)}</td><td>${f(r.Ug*eSc,eUncDp)}</td>
+      <td>${f(r.sumEU*eSc,eUncDp)}</td><td>${f(r.diffEU*eSc,eUncDp)}</td>
+      <td>${r.tol != null ? f(r.tol*eSc,eErrDp) : '-'}</td>
       <td class="${r.result === 'FAIL' ? 'eib-fail' : ''}">${r.result}</td>
     </tr>`).join('');
   const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
@@ -429,8 +435,8 @@ function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
     </table>
     <table class="bx eib-tbl">
       <thead><tr>
-        <th>Nominal Value<br>( g )</th><th>Error<br>( g )</th><th>Uncertainty<br>± ( g )</th>
-        <th>Error + Uncertainty<br>( g )</th><th>Error - Uncertainty<br>( g )</th><th>Tolerance<br>± ( g )</th><th>Result</th>
+        <th>Nominal Value<br>( ${eUnit} )</th><th>Error<br>( ${eUnit} )</th><th>Uncertainty<br>± ( ${eUnit} )</th>
+        <th>Error + Uncertainty<br>( ${eUnit} )</th><th>Error - Uncertainty<br>( ${eUnit} )</th><th>Tolerance<br>± ( ${eUnit} )</th><th>Result</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
