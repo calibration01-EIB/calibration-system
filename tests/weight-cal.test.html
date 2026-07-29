@@ -51,5 +51,18 @@ eq('MPE unknown class', wcMpeMg('ZZ', 1), null);
 eq('pass WI01', wcPass(-0.00203, 0.020), true);
 eq('fail big error', wcPass(0.02, 0.020), false);
 
+// Task 7 — orchestration
+const pt = wcComputePoint(
+  { abba:{r1:[0,0,0],t1:[1e-6,0,0],t2:[0,0,0],r2:[0,0,0]}, nominal_value:1, unit:'mg', marking:'NONE', ppm:1 },
+  { temp_lo:20.4, temp_hi:20.6, temp_corr:-0.5, rh_lo:54.9, rh_hi:55.1, rh_corr:-0.7, press_lo:1020, press_hi:1020, press_corr:-7.4 },
+  { correction:-0.0022, uncertainty:0.002, density:7950, ds:0.002 },           // std (Dₛ from swDrift)
+  { repeatability:0.0015, linearity:0.004, resolution:0.000001 },              // comparator
+  { class_grade:'F1', density:7950 },                                           // instrument
+  0.006                                                                          // cmcMg for 1 mg (CMC floor)
+);
+near('computePoint error', pt.correction_mg, -0.0020333, 1e-6);
+eq('computePoint U 2sf', pt.uncertainty_mg, 0.006);
+eq('computePoint pass', pt.pass, true);
+
 finish();
 </script></body></html>

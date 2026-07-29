@@ -1,0 +1,44 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
+<!-- โหลด weight-cal.html ใน iframe แล้วเช็คว่าโครงหน้า (element id ที่รู้จัก) เรนเดอร์ได้ ไม่มี syntax error
+     ไม่เช็คข้อมูลจริง เพราะไม่มี session ล็อกอิน (Supabase call จะ fail แบบ non-blocking ผ่าน try/catch อยู่แล้ว) -->
+<iframe id="f" style="width:0;height:0;border:0"></iframe>
+<pre id="out"></pre>
+<script>
+const results = [];
+function ok(n, c) { results.push((c ? 'PASS ' : 'FAIL ') + n); }
+function finish() {
+  const fails = results.filter(r => r[0] === 'F').length;
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = fails ? ('FAIL ' + fails) : 'ALLPASS';
+}
+window.addEventListener('load', () => {
+  const f = document.getElementById('f');
+  f.onload = () => {
+    try {
+      const doc = f.contentDocument;
+      ok('title present', /สอบเทียบตุ้มน้ำหนัก/.test(doc.title));
+      ok('#wcJobNo (job header) exists', !!doc.getElementById('wcJobNo'));
+      ok('#wcCertNo (auto cert no) exists', !!doc.getElementById('wcCertNo'));
+      ok('#wcTempLo / #wcAirDensityOut (env section) exist', !!doc.getElementById('wcTempLo') && !!doc.getElementById('wcAirDensityOut'));
+      ok('#wcPointsBody (points table container) exists', !!doc.getElementById('wcPointsBody'));
+      ok('#wcStatusPill (status pill) exists', !!doc.getElementById('wcStatusPill'));
+      const btns = [...doc.querySelectorAll('button')].map(b => b.textContent);
+      ok('save button (บันทึก) present', btns.some(t => t.indexOf('บันทึก') >= 0));
+      ok('issue-cert button (ออก Cert) present', btns.some(t => t.indexOf('ออก Cert') >= 0));
+      ok('wc* functions defined in iframe window (no syntax error)',
+        typeof f.contentWindow.wcComputePoint === 'function' &&
+        typeof f.contentWindow.wcBuildCAL === 'function' &&
+        typeof f.contentWindow.wcLoadJob === 'function' &&
+        typeof f.contentWindow.wcAddPoint === 'function' &&
+        typeof f.contentWindow.wcRecalc === 'function' &&
+        typeof f.contentWindow.wcSaveJob === 'function' &&
+        typeof f.contentWindow.wcIssueCert === 'function');
+    } catch (e) {
+      ok('no exception while inspecting iframe', false);
+      results.push('EXCEPTION: ' + e.message);
+    }
+    finish();
+  };
+  f.src = '../weight-cal.html';
+});
+</script></body></html>

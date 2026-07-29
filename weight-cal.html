@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สอบเทียบตุ้มน้ำหนัก — ป้อนข้อมูล → ออกใบรับรอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e4eef0; --surface: #f6faf7; --surface2: #edf5f1; --surface3: #f2f6eb;
+  --input: #fbfcf7; --input-edit: #fff7dc; --line: #c7d9d7; --line-soft: #dbe7e4;
+  --text: #183042; --muted: #647a82; --soft: #8fa5aa;
+  --accent: #0e7f92; --accent-soft: #d8f1ef;
+  --green: #16784a; --green-soft: #e3f5e8; --amber: #d17a13; --amber-soft: #fff1cc;
+  --red: #c83f4b; --red-soft: #ffe9ed;
+  --radius: 8px; --shadow: 0 12px 28px rgba(32,71,84,.10);
+  --font: "IBM Plex Sans Thai", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: linear-gradient(180deg,#edf5f5 0%,var(--bg) 52%,#dfe9eb 100%); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+input[type=number] { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.page { width: min(1100px, calc(100vw - 24px)); margin: 0 auto; padding: 18px 0 60px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid rgba(14,127,146,.16); border-radius: 10px; background: linear-gradient(135deg,rgba(246,250,247,.92),rgba(232,243,238,.82)); box-shadow: 0 8px 22px rgba(32,71,84,.07); }
+.top h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+.top p { margin: 5px 0 0; color: var(--muted); max-width: 720px; font-size: 12px; }
+.card { background: linear-gradient(180deg,var(--surface) 0%,#f1f7f4 100%); border: 1px solid rgba(14,127,146,.16); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
+.card-head { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.card h2 { margin: 0; font-size: 15px; }
+.card .hint { margin: 2px 0 0; color: var(--muted); font-size: 11.5px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px 14px; }
+.span2 { grid-column: span 2; }
+.field label { display: block; color: var(--muted); font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+.field input, .field select, .field textarea { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 7px; padding: 0 9px; background: var(--input); color: var(--text); outline: none; }
+.field textarea { min-height: 56px; padding: 6px 9px; resize: vertical; line-height: 1.35; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: rgba(8,136,166,.55); box-shadow: 0 0 0 3px rgba(8,136,166,.12); }
+.field input[readonly] { background: var(--surface2); color: var(--muted); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.kpi { position: relative; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 11px; background: linear-gradient(180deg,#ffffff,var(--surface3)); padding: 9px 11px 9px 15px; box-shadow: 0 1px 2px rgba(32,71,84,.05); }
+.kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+.kpi span { display: block; color: var(--muted); font-size: 10.5px; font-weight: 700; }
+.kpi strong { display: block; margin-top: 3px; font-size: 15px; font-weight: 800; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.readout { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 8px; background: var(--accent-soft); color: #06718b; font-weight: 800; }
+.status { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; white-space: nowrap; background: #e6eef2; color: #385a68; }
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status.ok { color: var(--green); background: var(--green-soft); }
+.status.bad { color: var(--red); background: var(--red-soft); }
+#wcPointsBody { display: flex; flex-direction: column; gap: 12px; }
+.wc-point { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 12px; }
+.wc-point-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.wc-point-head .wc-inst { flex: 1; min-height: 36px; border: 1px solid var(--line); border-radius: 7px; padding: 0 9px; background: var(--input); }
+.wc-rm { flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid #f3c0c0; background: #fff4f4; color: #b03030; border-radius: 7px; font-weight: 700; }
+.wc-rm:hover { background: #fce0e0; }
+.wc-point-fields { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin-bottom: 8px; }
+.wc-abba-wrap { margin: 6px 0; }
+.wc-abba-wrap summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 12px; padding: 4px 0; }
+.wc-abba-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.wc-abba-tbl th, .wc-abba-tbl td { border: 1px solid var(--line-soft); padding: 3px 4px; text-align: center; font-size: 11.5px; }
+.wc-abba-tbl th { background: #e4f0ef; }
+.wc-abba-tbl input { width: 100%; min-width: 84px; min-height: 28px; border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; background: var(--input-edit); text-align: right; }
+.wc-point-res { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 8px; }
+.no-data { padding: 20px; text-align: center; color: var(--muted); }
+.actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 18px; border: none; border-radius: 8px; font-weight: 800; }
+.btn-save { background: linear-gradient(135deg,#2d6fb0,#0e7f92); color: #fff; box-shadow: 0 8px 18px rgba(13,90,150,.2); }
+.btn-cert { background: linear-gradient(135deg,#16784a,#0e7f92); color: #fff; box-shadow: 0 8px 18px rgba(13,112,56,.22); }
+.btn-add { background: var(--accent-soft); color: #06718b; border: 1px solid #a7e2ef; }
+.btn:hover { filter: brightness(1.05); }
+#wcToastHost { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+.wc-toast { min-width: 220px; max-width: 340px; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,.18); color: #fff; background: #385a68; }
+.wc-toast.success { background: #16784a; }
+.wc-toast.error { background: #c83f4b; }
+.wc-toast.warning { background: #d17a13; }
+#wcLoadingOverlay { position: fixed; inset: 0; background: rgba(20,40,50,.35); display: none; align-items: center; justify-content: center; z-index: 9998; color: #fff; font-weight: 800; }
+#wcLoadingOverlay.show { display: flex; }
+@media (max-width: 980px) {
+  .grid2, .grid3, .grid4, .kpis, .wc-point-fields, .wc-point-res { grid-template-columns: 1fr 1fr; }
+  .span2 { grid-column: span 2; }
+}
+@media (max-width: 620px) {
+  .grid2, .grid3, .grid4, .kpis, .wc-point-fields, .wc-point-res { grid-template-columns: 1fr; }
+  .span2 { grid-column: auto; }
+  .top { flex-direction: column; }
+  .actions { flex-direction: column; align-items: stretch; }
+  .btn { justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="top">
+    <div>
+      <h1>⚖️ สอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA / OIML R111-1)</h1>
+      <p>ป้อนสภาวะแวดล้อม + จุดสอบเทียบ (ABBA) → คำนวณ Conventional mass / ค่าแก้ / Uncertainty อัตโนมัติ แล้วออกใบรับรองได้ทันที</p>
+    </div>
+    <span class="status" id="wcStatusPill">● ฉบับร่าง</span>
+  </div>
+
+  <!-- ===== 1) ข้อมูลงาน + ลูกค้า ===== -->
+  <section class="card" id="secJob">
+    <div class="card-head"><h2>1. ข้อมูลงาน + ลูกค้า</h2></div>
+    <div class="grid4">
+      <div class="field"><label>Job No.</label><input id="wcJobNo" placeholder="เช่น 26M001" oninput="wcReadJobForm()"></div>
+      <div class="field"><label>Revision</label><input id="wcRevision" type="number" step="1" value="0" oninput="wcReadJobForm()"></div>
+      <div class="field"><label>Cert No. (ออกโดยระบบ)</label><input id="wcCertNo" readonly></div>
+      <div class="field"><label>สถานะ</label><input id="wcJobStatusRO" value="draft" readonly></div>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="field"><label>ชื่อลูกค้า</label><input id="wcClientName"></div>
+      <div class="field"><label>ที่อยู่ลูกค้า (บรรทัดละ 1 ที่อยู่)</label><textarea id="wcClientAddr"></textarea></div>
+    </div>
+    <div class="grid4" style="margin-top:10px">
+      <div class="field"><label>ชื่อเครื่อง/อุปกรณ์</label><input id="wcEquipment" value="WEIGHT"></div>
+      <div class="field"><label>ช่วง (Range text)</label><input id="wcRangeText" placeholder="เช่น 1 mg - 500 mg"></div>
+      <div class="field"><label>ยี่ห้อ (Manufacturer)</label><input id="wcManufacturer"></div>
+      <div class="field"><label>Class / Model</label><input id="wcModel" placeholder="เช่น CLASS F1"></div>
+      <div class="field"><label>Serial No.</label><input id="wcSerial"></div>
+      <div class="field"><label>ID. No.</label><input id="wcIdNo"></div>
+      <div class="field"><label>วันที่รับเครื่อง</label><input id="wcDateReceive" type="date"></div>
+      <div class="field"><label>วันที่สอบเทียบ</label><input id="wcDateCal" type="date"></div>
+      <div class="field"><label>วันที่ออกใบ</label><input id="wcDateIssue" type="date"></div>
+      <div class="field"><label>ครบกำหนดถัดไป</label><input id="wcDueDate" type="date"></div>
+    </div>
+    <div class="grid3" style="margin-top:10px">
+      <div class="field"><label>ผู้สอบเทียบ (Calibrated by)</label><input id="wcCalibratedBy"></div>
+      <div class="field"><label>ผู้ตรวจสอบทางเทคนิค (Tech. Mgr)</label><input id="wcTechMgr"></div>
+      <div class="field"><label>ผู้จัดการ/ผู้อนุมัติ (Director)</label><input id="wcDirector"></div>
+    </div>
+  </section>
+
+  <!-- ===== 2) สภาวะแวดล้อม ===== -->
+  <section class="card" id="secEnv">
+    <div class="card-head"><h2>2. สภาวะแวดล้อม (Environmental conditions)</h2></div>
+    <div class="grid4">
+      <div class="field"><label>อุณหภูมิ ต่ำสุด (°C)</label><input id="wcTempLo" type="number" step="any" value="20" oninput="wcRecalc()"></div>
+      <div class="field"><label>อุณหภูมิ สูงสุด (°C)</label><input id="wcTempHi" type="number" step="any" value="20" oninput="wcRecalc()"></div>
+      <div class="field"><label>ค่าแก้อุณหภูมิ</label><input id="wcTempCorr" type="number" step="any" value="0" oninput="wcRecalc()"></div>
+      <div class="field"><label>Air density (คำนวณสด)</label><div class="readout" id="wcAirDensityOut">–</div></div>
+    </div>
+    <div class="grid4" style="margin-top:10px">
+      <div class="field"><label>%RH ต่ำสุด</label><input id="wcRhLo" type="number" step="any" value="50" oninput="wcRecalc()"></div>
+      <div class="field"><label>%RH สูงสุด</label><input id="wcRhHi" type="number" step="any" value="50" oninput="wcRecalc()"></div>
+      <div class="field"><label>ค่าแก้ %RH</label><input id="wcRhCorr" type="number" step="any" value="0" oninput="wcRecalc()"></div>
+      <div class="field"><label>ความกดอากาศ ต่ำสุด (mbar)</label><input id="wcPressLo" type="number" step="any" value="1013" oninput="wcRecalc()"></div>
+    </div>
+    <div class="grid4" style="margin-top:10px">
+      <div class="field"><label>ความกดอากาศ สูงสุด (mbar)</label><input id="wcPressHi" type="number" step="any" value="1013" oninput="wcRecalc()"></div>
+      <div class="field"><label>ค่าแก้ความกดอากาศ</label><input id="wcPressCorr" type="number" step="any" value="0" oninput="wcRecalc()"></div>
+    </div>
+  </section>
+
+  <!-- ===== 3) จุดสอบเทียบ (ABBA) ===== -->
+  <section class="card" id="secPoints">
+    <div class="card-head"><h2>3. จุดสอบเทียบ (ABBA)</h2>
+      <button type="button" class="btn btn-add" onclick="wcAddPoint()">＋ เพิ่มจุด</button>
+    </div>
+    <div id="wcPointsBody"><div class="no-data">กำลังโหลด...</div></div>
+  </section>
+
+  <!-- ===== 4) ดำเนินการ ===== -->
+  <section class="card" id="secActions">
+    <div class="card-head"><h2>4. บันทึก / ออกใบรับรอง</h2></div>
+    <div class="actions">
+      <button type="button" class="btn btn-save" onclick="wcSaveJob()">💾 บันทึก</button>
+      <button type="button" class="btn btn-cert" onclick="wcIssueCert()">🖨️ ออก Cert</button>
+      <span class="status" id="wcStatusPill2">● ฉบับร่าง</span>
+    </div>
+  </section>
+</div>
+
+<div id="wcToastHost"></div>
+<div id="wcLoadingOverlay"><span id="wcLoadingMsg">กำลังโหลด...</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/00-config.js?v=20260729-weight-cal"></script>
+<script src="js/weight-cal.js?v=20260729-weight-cal"></script>
+<script>
+// ===== minimal local toast/loading (หน้านี้สแตนด์อโลน ไม่มี index.html ให้พึ่งพา) =====
+function showToast(msg, type) {
+  const host = document.getElementById('wcToastHost');
+  if (!host) return;
+  const el = document.createElement('div');
+  el.className = 'wc-toast' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+function showLoading(msg) {
+  const ov = document.getElementById('wcLoadingOverlay');
+  const m = document.getElementById('wcLoadingMsg');
+  if (m) m.textContent = msg || 'กำลังโหลด...';
+  if (ov) ov.classList.add('show');
+}
+function hideLoading() {
+  const ov = document.getElementById('wcLoadingOverlay');
+  if (ov) ov.classList.remove('show');
+}
+// currentUser สำหรับ logAudit — อ่านจาก session เดียวกับแอปหลัก (localStorage.cal_session)
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch (e) { currentUser = null; }
+async function logAudit(action, instrument, changes) {
+  try {
+    if (!sb) return;
+    await sb.from('audit_logs').insert({
+      user_id: (currentUser && currentUser.id) || null,
+      username: (currentUser && currentUser.name) || 'Unknown',
+      action,
+      instrument_id: (instrument && instrument.id) || null,
+      id_code: (instrument && instrument.id_code) || null,
+      instrument_name: (instrument && (instrument.instrument_name || instrument.instrument_type)) || null,
+      changes: changes || null,
+    });
+  } catch (e) { console.warn('Audit log failed:', e); }
+}
+// sync สถานะทั้งสอง pill (บนสุด + action bar)
+function wcRenderStatusMirror() {
+  const a = document.getElementById('wcStatusPill'), b = document.getElementById('wcStatusPill2');
+  if (a && b) { b.textContent = a.textContent; b.className = a.className; }
+}
+const _wcRenderStatus = wcRenderStatus;
+wcRenderStatus = function () { _wcRenderStatus(); wcRenderStatusMirror(); };
+
+document.addEventListener('DOMContentLoaded', () => {
+  try { sb = calCreateClient(); } catch (e) { sb = null; }
+  wcLoadJob();
+  window.addEventListener('hashchange', () => wcLoadJob());
+});
+</script>
+</body>
+</html>
