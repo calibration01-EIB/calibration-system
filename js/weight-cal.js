@@ -171,7 +171,7 @@ function WC_refLines(points) {
         label: 'STANDARD WEIGHT',
         model: ('CLASS ' + (s.class_grade || '') + ' ( ' + nomTxt.trim() + ' )').replace(/\s+/g, ' ').trim(),
         serial: s.serial || s.id_code || '-',
-        due: s.due_date || s.due || '-',
+        due: s.due_date || s.due || null,
         cert: s.cert_no || s.cert || '-'
       });
     }
@@ -197,6 +197,11 @@ function wcBuildCAL(job, points) {
     client: { name: job.client_name, addr: (job.client_addr || '').split('\n') },
     equipment: job.equipment, range_text: job.range_text,
     manufacturer: job.manufacturer, model: job.model, serial: job.serial, id_no: job.id_no,
+    resolution_str: 'N/A',            // ตุ้มน้ำหนักไม่มี resolution → N/A (ตรงกับใบ cert จริง FRM-CAL54)
+    tolerances: [],                   // EIB55 header Tolerance band — ตุ้มใช้ MPE รายจุด (คอลัมน์ tol ใน eib_rows)
+    section: '',                      // ไม่มีในโมเดลงานตุ้ม v1
+    unit_dept: '',
+    user_range: job.range_text || '',
     temp: [job.temp_lo, job.temp_hi], rh: [job.rh_lo, job.rh_hi],
     date_receive: job.date_receive, date_cal: job.date_cal, date_issue: job.date_issue,
     signers: { tech_mgr: job.tech_mgr, approver_pos: 'TECHNICAL MANAGEMENT STAFF' },

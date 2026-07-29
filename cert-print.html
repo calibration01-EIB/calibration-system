@@ -460,7 +460,7 @@ function wtCtHead(pageNo) {
 }
 function pageWeightCertBody(pageNo) {   // หน้า 2: วิธีการ + รายการมาตรฐาน
   const rs = (CAL.procedure_refs || []).map((r, i) =>
-    `<tr><td>${i+1}.) ${esc(r.label)}</td><td>${esc(r.model)}</td><td>${esc(r.serial)}</td><td>${dCert(r.due)}</td><td>${esc(r.cert)}</td></tr>`).join('');
+    `<tr><td>${i+1}.) ${esc(r.label)}</td><td>${esc(r.model)}</td><td>${esc(r.serial)}</td><td>${r.due ? dCert(r.due) : '-'}</td><td>${esc(r.cert)}</td></tr>`).join('');
   const comps = (CAL.comparators || []).map((c, i) =>
     `<tr><td>${(CAL.procedure_refs||[]).length + i + 1}.) MASS COMPARATOR</td><td>${esc(c.name)}</td><td>${esc(c.serial)}</td><td>${esc(c.due||'-')}</td><td>${esc(c.cert||'-')}</td></tr>`).join('');
   return `<section class="sheet ct">${wtCtHead(pageNo)}
