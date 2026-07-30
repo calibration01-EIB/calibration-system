@@ -169,6 +169,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
     <div class="actions">
       <button type="button" class="btn btn-save" onclick="wcSaveJob()">💾 บันทึก</button>
       <button type="button" class="btn btn-cert" onclick="wcIssueCert()">🖨️ ออก Cert</button>
+      <button type="button" class="btn btn-xlsx" onclick="wcExportXlsx()">⬇️ Export Excel</button>
       <span class="status" id="wcStatusPill2">● ฉบับร่าง</span>
     </div>
   </section>
@@ -178,8 +179,10 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 <div id="wcLoadingOverlay"><span id="wcLoadingMsg">กำลังโหลด...</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/00-config.js?v=20260729-weight-cal"></script>
 <script src="js/weight-cal.js?v=20260729-weight-cal"></script>
+<script src="js/20-weight-cert-xlsx.js?v=20260729-weight-xlsx"></script>
 <script>
 // ===== minimal local toast/loading (หน้านี้สแตนด์อโลน ไม่มี index.html ให้พึ่งพา) =====
 function showToast(msg, type) {

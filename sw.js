@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v107';
+const CACHE_NAME = 'calibration-app-v109';
 const THEME_STYLESHEET = './theme-midnight-lab.css';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
@@ -42,6 +42,8 @@ const APP_SHELL = [
   './js/19-weight-jobs.js',
   './weight-cal.html',
   './js/weight-cal.js',
+  './js/20-weight-cert-xlsx.js',
+  './assets/weight-cert-template.xlsx',
   './assets/frm-eib04-template.xlsx',
   './assets/frm-asset-out-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT

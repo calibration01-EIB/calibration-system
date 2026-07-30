@@ -635,3 +635,16 @@ async function wcIssueCert() {
   if (!saved) return;
   wcOpenCert();
 }
+
+// Export ใบ Cert + ไฟล์ทำงานภายในเป็น workbook เดียว (.xlsx) เหมือนฟอร์ม — ค่าจาก calc engine
+async function wcExportXlsx() {
+  wcRecalc();
+  if (!WC_POINTS.length) { showToast('เพิ่มอย่างน้อย 1 จุดก่อนออก Excel', 'error'); return; }
+  if (typeof exportWeightXlsx !== 'function') { showToast('โหลดตัว export ไม่สำเร็จ', 'error'); return; }
+  const CAL = wcBuildCAL(WC_JOB, WC_POINTS);
+  try {
+    await exportWeightXlsx(CAL);
+  } catch (e) {
+    showToast('Export Excel ไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
