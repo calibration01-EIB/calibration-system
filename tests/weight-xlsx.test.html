@@ -20,5 +20,32 @@ eq('overwrite once', (s3.match(/r="C3"/g)||[]).length, 1); ok('overwritten val',
 ok('exportWeightXlsx is a function', typeof exportWeightXlsx==='function');
 ok('wxFillCover is a function', typeof wxFillCover==='function');
 ok('wxFillCertBody is a function', typeof wxFillCertBody==='function');
+
+// ===== Task 3 — sheet registration + resolver =====
+let ct='<Types><Override PartName="/xl/worksheets/sheet1.xml" ContentType="a"/></Types>';
+let wb='<workbook><sheets><sheet name="Rec" sheetId="4" r:id="rId4"/></sheets></workbook>';
+let rl='<Relationships><Relationship Id="rId4" Type="ws" Target="worksheets/sheet4.xml"/></Relationships>';
+const r=wxRegisterSheet(ct,wb,rl,'Rec_2','xl/worksheets/sheet7.xml','rId7',7);
+ok('ct has new override', r.ctXml.indexOf('/xl/worksheets/sheet7.xml')>=0);
+ok('wb has new sheet', r.wbXml.indexOf('name="Rec_2"')>=0 && r.wbXml.indexOf('r:id="rId7"')>=0 && r.wbXml.indexOf('sheetId="7"')>=0);
+ok('rels has new rel', r.relsXml.indexOf('Id="rId7"')>=0 && r.relsXml.indexOf('worksheets/sheet7.xml')>=0);
+ok('register keeps original sheet', r.wbXml.indexOf('name="Rec"')>=0);
+
+// resolver: name -> full xl/ path (attribute order robust)
+const wb2='<workbook><sheets><sheet name="Cover" sheetId="2" r:id="rId1"/><sheet name="CertP2" sheetId="3" r:id="rId2"/><sheet name="Rec" sheetId="4" r:id="rId3"/></sheets></workbook>';
+const rl2='<Relationships><Relationship Id="rId3" Type="ws" Target="worksheets/sheet3.xml"/><Relationship Id="rId1" Type="ws" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="ws" Target="worksheets/sheet2.xml"/></Relationships>';
+const smap=wxResolveSheets(wb2,rl2);
+eq('resolve Cover', smap['Cover'], 'xl/worksheets/sheet1.xml');
+eq('resolve Rec', smap['Rec'], 'xl/worksheets/sheet3.xml');
+
+// rename a sheet in workbook.xml (Rec -> Rec_1) keeps r:id/sheetId
+let wb3=wxRenameSheet('<sheets><sheet name="Rec" sheetId="4" r:id="rId3"/><sheet name="Unc" sheetId="5" r:id="rId4"/></sheets>','Rec','Rec_1');
+ok('rename applied', wb3.indexOf('name="Rec_1"')>=0 && wb3.indexOf('r:id="rId3"')>=0);
+ok('rename does not touch Unc', wb3.indexOf('name="Unc"')>=0);
+
+// next-id scanners
+eq('max rid', wxMaxRid('<x><Relationship Id="rId3"/><Relationship Id="rId14"/><Relationship Id="rId2"/></x>'), 14);
+eq('max sheetId', wxMaxSheetId('<sheet sheetId="2"/><sheet sheetId="6"/><sheet sheetId="3"/>'), 6);
+ok('wxCloneSheetFull is a function', typeof wxCloneSheetFull==='function');
 finish();
 </script></body></html>

@@ -43,14 +43,119 @@ function wxFillCertBody(x, cal){
   return x;
 }
 
-async function exportWeightXlsx(cal){
-  if(typeof JSZip==='undefined'){ showToast('โหลด JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)','error'); return; }
-  const buf = await fetch('assets/weight-cert-template.xlsx').then(r=>r.arrayBuffer());
+// ===================== OOXML plumbing (per-point sheet cloning) =====================
+// ลงทะเบียนชีตใหม่ใน 3 ที่: [Content_Types].xml, workbook.xml, workbook.xml.rels
+function wxRegisterSheet(ctXml, wbXml, relsXml, newName, newPath, newRid, newSheetId){
+  ctXml = ctXml.replace('</Types>',
+    `<Override PartName="/${newPath}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
+  wbXml = wbXml.replace('</sheets>',
+    `<sheet name="${wxEsc(newName)}" sheetId="${newSheetId}" r:id="${newRid}"/></sheets>`);
+  const target = newPath.replace(/^xl\//,''); // rels Target is relative to xl/
+  relsXml = relsXml.replace('</Relationships>',
+    `<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="${target}"/></Relationships>`);
+  return { ctXml, wbXml, relsXml };
+}
+// หา path ไฟล์ชีตจากชื่อชีต (robust ต่อลำดับ attribute)
+function wxResolveSheets(wbXml, relsXml){
+  const rel={};
+  relsXml.replace(/<Relationship\b([^>]*?)\/?>/g,(m,a)=>{
+    const id=(a.match(/\bId="([^"]+)"/)||[])[1];
+    const tg=(a.match(/\bTarget="([^"]+)"/)||[])[1];
+    if(id&&tg) rel[id]=tg; return m;
+  });
+  const map={};
+  wbXml.replace(/<sheet\b([^>]*?)\/?>/g,(m,a)=>{
+    const name=(a.match(/\bname="([^"]+)"/)||[])[1];
+    const rid=(a.match(/r:id="([^"]+)"/)||[])[1];
+    if(name&&rid){ let t=(rel[rid]||'').replace(/^\//,''); if(!/^xl\//.test(t)) t='xl/'+t; map[name]=t; }
+    return m;
+  });
+  return map;
+}
+// เปลี่ยนชื่อชีตใน workbook.xml (ไม่แตะ r:id/sheetId) — ใช้ทำ Rec→Rec_1 ให้จุดแรกใช้ชีตเดิม
+function wxRenameSheet(wbXml, oldName, newName){
+  return wbXml.replace(new RegExp(`(<sheet\\b[^>]*?\\bname=")${oldName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(")`), `$1${wxEsc(newName)}$2`);
+}
+function wxMaxRid(relsXml){ let mx=0; (relsXml.match(/Id="rId(\d+)"/g)||[]).forEach(s=>{ const n=+s.match(/\d+/)[0]; if(n>mx)mx=n; }); return mx; }
+function wxMaxSheetId(wbXml){ let mx=0; (wbXml.match(/sheetId="(\d+)"/g)||[]).forEach(s=>{ const n=+s.match(/\d+/)[0]; if(n>mx)mx=n; }); return mx; }
+
+// clone ชีต 1 ใบพร้อม chain: sheet.xml + _rels + drawing (+drawing _rels) — media/printerSettings ใช้ร่วม (ไม่ทำซ้ำ)
+// mutate plumb={ct,wb,rels}, ids={nextSheet,nextDrawing,nextRid,nextSheetId}; คืน path ชีตใหม่
+async function wxCloneSheetFull(zip, plumb, ids, srcSheetPath, newName){
+  const srcNum = srcSheetPath.match(/sheet(\d+)\.xml/)[1];
+  const newSheetNum = ids.nextSheet++;
+  const newPath = `xl/worksheets/sheet${newSheetNum}.xml`;
+  zip.file(newPath, await zip.file(srcSheetPath).async('string'));
+  // clone the sheet's _rels (drawing + printerSettings). drawing must be per-sheet → clone it; printerSettings shared.
+  const srcRelsFile = zip.file(`xl/worksheets/_rels/sheet${srcNum}.xml.rels`);
+  if(srcRelsFile){
+    let relsXml = await srcRelsFile.async('string');
+    const dm = relsXml.match(/\.\.\/drawings\/drawing(\d+)\.xml/);
+    if(dm){
+      const srcDraw=dm[1], newDraw=ids.nextDrawing++;
+      zip.file(`xl/drawings/drawing${newDraw}.xml`, await zip.file(`xl/drawings/drawing${srcDraw}.xml`).async('string'));
+      const drawRels = zip.file(`xl/drawings/_rels/drawing${srcDraw}.xml.rels`);
+      if(drawRels) zip.file(`xl/drawings/_rels/drawing${newDraw}.xml.rels`, await drawRels.async('string')); // targets = shared media
+      plumb.ct = plumb.ct.replace('</Types>',
+        `<Override PartName="/xl/drawings/drawing${newDraw}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+      relsXml = relsXml.replace(`../drawings/drawing${srcDraw}.xml`, `../drawings/drawing${newDraw}.xml`);
+    }
+    zip.file(`xl/worksheets/_rels/sheet${newSheetNum}.xml.rels`, relsXml);
+  }
+  const newRid=`rId${ids.nextRid++}`, newSheetId=ids.nextSheetId++;
+  const r = wxRegisterSheet(plumb.ct, plumb.wb, plumb.rels, newName, newPath, newRid, newSheetId);
+  plumb.ct=r.ctXml; plumb.wb=r.wbXml; plumb.rels=r.relsXml;
+  return newPath;
+}
+
+// สร้าง JSZip object พร้อม inject/clone ครบ (ยังไม่ download) — แยกไว้ให้ acceptance harness เรียก capture ได้
+async function wxBuildZip(cal, templateUrl){
+  const points = (cal && cal.points) || [];
+  const buf = await fetch(templateUrl||'assets/weight-cert-template.xlsx').then(r=>r.arrayBuffer());
   const zip = await JSZip.loadAsync(buf);
   const rd = n => zip.file(n).async('string');
-  // sheet file paths resolved via workbook.xml + rels (Task 3 adds a resolver); for now assume Cover=sheet1, CertP2=sheet2
-  let cover = await rd('xl/worksheets/sheet1.xml'); cover = wxFillCover(cover, cal); zip.file('xl/worksheets/sheet1.xml', cover);
-  let p2 = await rd('xl/worksheets/sheet2.xml'); p2 = wxFillCertBody(p2, cal); zip.file('xl/worksheets/sheet2.xml', p2);
+
+  // --- read plumbing ---
+  const plumb = {
+    ct:   await rd('[Content_Types].xml'),
+    wb:   await rd('xl/workbook.xml'),
+    rels: await rd('xl/_rels/workbook.xml.rels'),
+  };
+  const smap = wxResolveSheets(plumb.wb, plumb.rels); // {Cover,CertP2,Rec,Unc,Eval} → path
+  const ids = {
+    nextSheet:   Math.max(...Object.keys(zip.files).map(f=>{ const m=f.match(/^xl\/worksheets\/sheet(\d+)\.xml$/); return m?+m[1]:0; }))+1,
+    nextDrawing: Math.max(0,...Object.keys(zip.files).map(f=>{ const m=f.match(/^xl\/drawings\/drawing(\d+)\.xml$/); return m?+m[1]:0; }))+1,
+    nextRid:     wxMaxRid(plumb.rels)+1,
+    nextSheetId: wxMaxSheetId(plumb.wb)+1,
+  };
+
+  // --- per-point sheet paths: point 1 reuses template Rec/Unc/Eval; points 2..N cloned ---
+  const ptSheets = [{ rec:smap.Rec, unc:smap.Unc, eval:smap.Eval }];
+  plumb.wb = wxRenameSheet(plumb.wb,'Rec','Rec_1');
+  plumb.wb = wxRenameSheet(plumb.wb,'Unc','Unc_1');
+  plumb.wb = wxRenameSheet(plumb.wb,'Eval','Eval_1');
+  for(let i=1;i<points.length;i++){
+    const rec  = await wxCloneSheetFull(zip, plumb, ids, smap.Rec,  'Rec_'+(i+1));
+    const unc  = await wxCloneSheetFull(zip, plumb, ids, smap.Unc,  'Unc_'+(i+1));
+    const evl  = await wxCloneSheetFull(zip, plumb, ids, smap.Eval, 'Eval_'+(i+1));
+    ptSheets.push({ rec, unc, eval:evl });
+  }
+
+  // --- fill cert sheets (per-point fills wired in Task 4) ---
+  let cover = await rd(smap.Cover); cover = wxFillCover(cover, cal); zip.file(smap.Cover, cover);
+  let p2 = await rd(smap.CertP2); p2 = wxFillCertBody(p2, cal); zip.file(smap.CertP2, p2);
+
+  // --- write plumbing back ---
+  zip.file('[Content_Types].xml', plumb.ct);
+  zip.file('xl/workbook.xml', plumb.wb);
+  zip.file('xl/_rels/workbook.xml.rels', plumb.rels);
+  return zip;
+}
+
+async function exportWeightXlsx(cal){
+  if(typeof JSZip==='undefined'){ showToast('โหลด JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)','error'); return; }
+  if(!((cal&&cal.points)||[]).length){ showToast('ยังไม่มีจุดสอบเทียบ','error'); return; }
+  const zip = await wxBuildZip(cal);
   const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(cal.cert_no||'weight-cert')+'.xlsx'; a.click(); URL.revokeObjectURL(a.href);
 }
