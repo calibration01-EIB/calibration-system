@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body><pre id="out"></pre>
+<script src="../js/20-weight-cert-xlsx.js"></script>
+<script>
+const results=[]; function ok(n,c){results.push((c?'PASS ':'FAIL ')+n);} function eq(n,g,w){results.push((String(g)===String(w)?'PASS ':'FAIL ')+n+' | '+g+' vs '+w);}
+function finish(){const f=results.filter(r=>r[0]==='F').length;document.getElementById('out').textContent=results.join('\n');document.title=f?('FAIL '+f):'ALLPASS';}
+eq('colIndex A',wxColIndex('A'),1); eq('colIndex AA',wxColIndex('AA'),27);
+eq('cellRef',wxCellRef(3,5),'C5');
+// set text into an empty row: existing <row r="3"/> gets a <c> with inlineStr
+let s='<sheetData><row r="3"></row></sheetData>';
+s=wxSetCellText(s,'B3','AT21');
+ok('text inserted', s.indexOf('AT21')>=0 && s.indexOf('t="inlineStr"')>=0 && s.indexOf('r="B3"')>=0);
+// set number
+let s2='<sheetData><row r="3"></row></sheetData>';
+s2=wxSetCellNum(s2,'C3',1.5);
+ok('num inserted', s2.indexOf('<v>1.5</v>')>=0 && s2.indexOf('r="C3"')>=0 && s2.indexOf('inlineStr')<0);
+// overwrite existing cell value
+let s3='<sheetData><row r="3"><c r="C3"><v>9</v></c></row></sheetData>';
+s3=wxSetCellNum(s3,'C3',1.5);
+eq('overwrite once', (s3.match(/r="C3"/g)||[]).length, 1); ok('overwritten val', s3.indexOf('<v>1.5</v>')>=0);
+ok('exportWeightXlsx is a function', typeof exportWeightXlsx==='function');
+ok('wxFillCover is a function', typeof wxFillCover==='function');
+ok('wxFillCertBody is a function', typeof wxFillCertBody==='function');
+finish();
+</script></body></html>
