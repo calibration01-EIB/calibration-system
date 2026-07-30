@@ -47,5 +47,51 @@ ok('rename does not touch Unc', wb3.indexOf('name="Unc"')>=0);
 eq('max rid', wxMaxRid('<x><Relationship Id="rId3"/><Relationship Id="rId14"/><Relationship Id="rId2"/></x>'), 14);
 eq('max sheetId', wxMaxSheetId('<sheet sheetId="2"/><sheet sheetId="6"/><sheet sheetId="3"/>'), 6);
 ok('wxCloneSheetFull is a function', typeof wxCloneSheetFull==='function');
+
+// ===== Task 4 — per-point fills (WI01 golden) =====
+const P={ nominal_value:1, unit:'mg', marking:'NONE',
+  abba:{r1:[0,0,0],t1:[1e-6,0,0],t2:[0,0,0],r2:[0,0,0]}, ci:0,
+  correction_mg:-0.00203, uncertainty_mg:0.006, conventional_mass:0.000997966, mc_bar:1.6667e-7,
+  mpe_mg:0.006, pass:true, ppm:1, _rhoA:1.19796,
+  conventional_mass_str:'1 mg   - 0.002', uncertainty_str:'0.006 mg',
+  _budget:{ws:0.001,ds:0.0011547,did:0.00040825,dc:0.0023094,ab:5.7735e-7,wr:0.00086603},
+  budget:{u:0.0029297,U:0.0058595,veff:1178.8,k:2,ws:0.001,ds:0.0011547,did:0.00040825,dc:0.0023094,ab:5.7735e-7,wr:0.00086603},
+  std:{correction:-0.0022,uncertainty:0.002,ds:0.002,density:7950,serial:'15885',cert_no:'MM-0140-24',due_date:'2026-09-01',id_code:'CLCLRS01-WI01',class_grade:'E2',nominal_value:0.001,unit:'g'},
+  comparator:{name:'AT21',id_code:'CLCLMC01-WI01',serial:'1119102616',repeatability:0.0015,linearity:0.004,resolution:1e-6},
+  unknown:{id_code:'CLCLSB06-WI01',serial:'N/A',manufacturer:'Mettler Toledo',material:'Stainless',density:7950} };
+const CAL={cert_no:'26M001-0', env:{date_cal:'2026-01-15',due_date:'2027-01-15',temp_lo:20.4,temp_hi:20.6,temp_avg:20,rh_lo:54.9,rh_hi:55.1,rh_avg:54.3,press_lo:1020,press_hi:1020,press_avg:1012.6,air_density:1.19796}};
+
+let rec='<sheetData></sheetData>'; rec=wxFillRec(rec,P,CAL);
+ok('rec cert M2', rec.indexOf('r="M2"')>=0 && rec.indexOf('26M001-0')>=0);
+ok('rec comparator B3', rec.indexOf('r="B3"')>=0 && rec.indexOf('AT21')>=0);
+ok('rec ABBA t1 D28', rec.indexOf('r="D28"')>=0 && (rec.indexOf('0.000001')>=0||rec.indexOf('1e-6')>=0));
+ok('rec mct N32', rec.indexOf('r="N32"')>=0);
+ok('rec error L33', rec.indexOf('r="L33"')>=0 && rec.indexOf('-0.00203')>=0);
+ok('rec air density C20', rec.indexOf('r="C20"')>=0);
+
+let unc='<sheetData></sheetData>'; unc=wxFillUnc(unc,P,CAL);
+ok('unc nominal B2', unc.indexOf('r="B2"')>=0);
+ok('unc ws value E9', unc.indexOf('r="E9"')>=0 && unc.indexOf('0.002')>=0);
+ok('unc ui ws I9', unc.indexOf('r="I9"')>=0);
+ok('unc raw U I16 (0.00585 not 0.006)', unc.indexOf('r="I16"')>=0 && unc.indexOf('0.0058')>=0);
+ok('unc u I15', unc.indexOf('r="I15"')>=0);
+
+let evl='<sheetData></sheetData>'; evl=wxFillEval(evl,P,CAL);
+ok('eval cert H7', evl.indexOf('r="H7"')>=0 && evl.indexOf('26M001-0')>=0);
+ok('eval row14 nominal A14', evl.indexOf('r="A14"')>=0);
+ok('eval result I14', evl.indexOf('r="I14"')>=0);
+
+let res='<sheetData></sheetData>'; res=wxFillResultsRow(res,P,0);
+ok('results B55 nominal', res.indexOf('r="B55"')>=0 && res.indexOf('1  mg')>=0);
+ok('results F55 conv-mass str', res.indexOf('r="F55"')>=0 && res.indexOf('- 0.002')>=0);
+ok('results I55 U str', res.indexOf('r="I55"')>=0 && res.indexOf('0.006 mg')>=0);
+
+let std='<sheetData><row r="21"><c r="A21"><is><t>OLD</t></is></c></row></sheetData>';
+std=wxFillStdRow(std,{model:'CLASS E2 ( 1 mg )',serial:'15885',due:'46289',cert:'MM-0140-24'},1);
+ok('std row A21 label', std.indexOf('1.) STANDARD WEIGHT')>=0);
+ok('std row D21 class', std.indexOf('CLASS E2 ( 1 mg )')>=0);
+ok('std row overwrote OLD', std.indexOf('OLD')<0);
+
+eq('dateSerial 2026-01-15', wxDateSerial('2026-01-15'), 46037);
 finish();
 </script></body></html>

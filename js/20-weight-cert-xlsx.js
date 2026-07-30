@@ -37,9 +37,137 @@ function wxFillCover(x, cal){
   x=wxSetCellText(x,'D32',cal.calibrated_by); x=wxSetCellText(x,'H34',cal.signers&&cal.signers.tech_mgr);
   return x;
 }
+// วันที่ ISO (YYYY-MM-DD) → Excel serial (1899-12-30 = 0) เพื่อคงรูปแบบวันที่ในเซลล์
+function wxDateSerial(s){
+  if(!s) return null;
+  const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) return null;
+  return Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/86400000)+25569;
+}
+const WX_UNIT_MG={ mg:1, g:1000, kg:1e6 };
+function wxNominalMg(pt){ return Number(pt.nominal_value||0)*(WX_UNIT_MG[pt.unit]||1); }
+function wxNominalG(pt){ return wxNominalMg(pt)/1000; }
+// เขียนวันที่ (serial) ถ้าแปลงได้ ไม่งั้นเขียนเป็นข้อความเดิม
+function wxSetCellDate(x, addr, iso){ const s=wxDateSerial(iso); return s!=null ? wxSetCellNum(x,addr,s) : wxSetCellText(x,addr,iso); }
+// เคลียร์เซลล์ (เขียน inlineStr ว่าง) — ใช้ล้างค่าตัวอย่างที่เหลือใน template
+function wxClearCell(x, addr){ return wxSetCell(x, addr, '<is><t xml:space="preserve"></t></is>', ' t="inlineStr"'); }
+
 function wxFillCertBody(x, cal){
-  x=wxSetCellText(x,'K1',cal.cert_no); x=wxSetCellText(x,'C4',cal.equipment); x=wxSetCellText(x,'F4',cal.range_text);
-  // reference-standard rows + results rows filled in Task 4
+  const env=cal.env||{};
+  x=wxSetCellText(x,'K1',cal.cert_no);
+  // page 2 identity
+  x=wxSetCellText(x,'C4',cal.equipment); x=wxSetCellText(x,'F5',cal.manufacturer);
+  x=wxSetCellText(x,'F6',cal.model); x=wxSetCellText(x,'F7',cal.serial); x=wxSetCellText(x,'F8',cal.id_no);
+  x=wxSetCellDate(x,'C9',env.date_cal);
+  // page 3 identity (restated)
+  x=wxSetCellText(x,'C43',cal.equipment); x=wxSetCellText(x,'F44',cal.manufacturer);
+  x=wxSetCellText(x,'F45',cal.model); x=wxSetCellText(x,'F46',cal.serial); x=wxSetCellText(x,'F47',cal.id_no);
+  x=wxSetCellDate(x,'C48',env.date_cal);
+  return x;
+}
+
+// แถวมาตรฐานอ้างอิง (CertP2 rows 21..) — n = ลำดับ (1-based)
+function wxFillStdRow(x, ref, n){
+  const r=20+n;
+  x=wxSetCellText(x,'A'+r, '    '+n+'.) STANDARD WEIGHT');
+  x=wxSetCellText(x,'D'+r, ref.model);
+  x=wxSetCellText(x,'G'+r, ref.serial);
+  x=wxSetCellText(x,'I'+r, ref.due);
+  x=wxSetCellText(x,'K'+r, ref.cert);
+  return x;
+}
+// แถว mass comparator (ต่อลำดับจากมาตรฐาน)
+function wxFillCompRow(x, comp, n){
+  const r=20+n;
+  x=wxSetCellText(x,'A'+r, '    '+n+'.) MASS COMPARATOR');
+  x=wxSetCellText(x,'D'+r, comp.name);
+  x=wxSetCellText(x,'G'+r, comp.serial);
+  x=wxSetCellText(x,'I'+r, comp.due||'-');
+  x=wxSetCellText(x,'K'+r, comp.cert||'-');
+  return x;
+}
+// แถวผลสรุป (CertP2 rows 55..66) — i = index 0-based
+function wxFillResultsRow(x, pt, i){
+  const r=55+i;
+  x=wxSetCellText(x,'B'+r, pt.nominal_value+'  '+pt.unit);
+  x=wxSetCellText(x,'D'+r, pt.marking);
+  const cm = pt.conventional_mass_str || (pt.nominal_value+' '+pt.unit+'   '+((pt.correction_mg>=0?'+ ':'- ')+Math.abs(pt.correction_mg)));
+  x=wxSetCellText(x,'F'+r, cm);
+  x=wxSetCellText(x,'H'+r, pt.unit);
+  const un = pt.uncertainty_str || (pt.uncertainty_mg+' '+pt.unit);
+  x=wxSetCellText(x,'I'+r, un);
+  return x;
+}
+
+// ใบบันทึกผลการสอบเทียบ ABBA (5040101-03) รายจุด
+function wxFillRec(x, pt, cal){
+  const env=cal.env||{}, std=pt.std||{}, comp=pt.comparator||{}, unk=pt.unknown||{}, b=pt._budget||{};
+  x=wxSetCellText(x,'M2',cal.cert_no);
+  // comparator
+  x=wxSetCellText(x,'B3',comp.name); x=wxSetCellText(x,'F3',comp.id_code); x=wxSetCellText(x,'L3',comp.serial);
+  x=wxSetCellNum(x,'C4',comp.repeatability); x=wxSetCellNum(x,'M4',comp.linearity);
+  // reference standard
+  x=wxSetCellNum(x,'B6',std.nominal_value); x=wxSetCellText(x,'D6','g /'+(std.class_grade||''));
+  x=wxSetCellText(x,'F6',std.id_code); x=wxSetCellText(x,'M6',std.serial);
+  x=wxSetCellNum(x,'B7',std.correction); x=wxSetCellNum(x,'N7',std.uncertainty);
+  x=wxSetCellText(x,'B8',std.cert_no); x=wxSetCellDate(x,'M8',std.due_date);
+  x=wxSetCellText(x,'B9','Stainless'); x=wxSetCellNum(x,'F9',std.density);
+  // unknown weight
+  x=wxSetCellNum(x,'B11',pt.nominal_value); x=wxSetCellText(x,'D11',pt.unit);
+  x=wxSetCellText(x,'G11',unk.manufacturer); x=wxSetCellText(x,'B12',unk.id_code); x=wxSetCellText(x,'F12',unk.serial||'N/A');
+  x=wxSetCellText(x,'B13',unk.material||'Stainless'); x=wxSetCellNum(x,'F13',unk.density||7950);
+  // environment
+  x=wxSetCellDate(x,'D15',env.date_cal);
+  x=wxSetCellNum(x,'E17',env.temp_lo); x=wxSetCellNum(x,'H17',env.temp_hi); x=wxSetCellNum(x,'L17',env.temp_avg);
+  x=wxSetCellNum(x,'E18',env.rh_lo); x=wxSetCellNum(x,'H18',env.rh_hi); x=wxSetCellNum(x,'M18',env.rh_avg);
+  x=wxSetCellNum(x,'E19',env.press_lo); x=wxSetCellNum(x,'H19',env.press_hi); x=wxSetCellNum(x,'L19',env.press_avg);
+  x=wxSetCellNum(x,'C20',pt._rhoA); x=wxSetCellDate(x,'I20',env.due_date);
+  // ABBA rows 28-30 (grams) + per-cycle Δ (J) and mci (N)
+  const abba=pt.abba||{r1:[],t1:[],t2:[],r2:[]};
+  const ci=Number(pt.ci||0), mcr=wxNominalG(pt)+Number(std.correction||0)/1000;
+  const rows=[28,29,30];
+  for(let i=0;i<3;i++){ const r=rows[i];
+    const r1=Number((abba.r1||[])[i]||0), t1=Number((abba.t1||[])[i]||0), t2=Number((abba.t2||[])[i]||0), r2=Number((abba.r2||[])[i]||0);
+    x=wxSetCellNum(x,'B'+r,r1); x=wxSetCellNum(x,'D'+r,t1); x=wxSetCellNum(x,'F'+r,t2); x=wxSetCellNum(x,'H'+r,r2);
+    const d=(t1-r1-r2+t2)/2;
+    x=wxSetCellNum(x,'J'+r,d); x=wxSetCellNum(x,'N'+r,d+ci*mcr);
+  }
+  x=wxSetCellNum(x,'N31',pt.mc_bar); x=wxSetCellNum(x,'N32',pt.conventional_mass);
+  x=wxSetCellNum(x,'L33',pt.correction_mg); x=wxSetCellNum(x,'K38',ci);
+  return x;
+}
+
+// ใบหาค่าความไม่แน่นอน (uncer) รายจุด — I15/I16 = u/U ดิบ (ก่อนปัด 2sf ที่รายงานบน cert)
+function wxFillUnc(x, pt, cal){
+  const std=pt.std||{}, comp=pt.comparator||{}, unk=pt.unknown||{}, b=pt._budget||{}, bud=pt.budget||{};
+  x=wxSetCellNum(x,'B2',pt.nominal_value); x=wxSetCellText(x,'C2',pt.unit);
+  x=wxSetCellText(x,'H2',unk.id_code); x=wxSetCellText(x,'C3',cal.cert_no);
+  const ab=wxNominalMg(pt)*Number(pt.ppm||1)/1e6;
+  // rows 9-14: E=source magnitude (±mg), I=ui(mg)
+  x=wxSetCellNum(x,'E9',std.uncertainty);            x=wxSetCellNum(x,'I9',b.ws);
+  x=wxSetCellNum(x,'E10',std.ds!=null?std.ds:std.uncertainty); x=wxSetCellNum(x,'I10',b.ds);
+  x=wxSetCellNum(x,'E11',Number(comp.resolution||0)*1000);     x=wxSetCellNum(x,'I11',b.did);
+  x=wxSetCellNum(x,'E12',comp.linearity);            x=wxSetCellNum(x,'I12',b.dc);
+  x=wxSetCellNum(x,'K12',pt.mpe_mg);                 x=wxSetCellNum(x,'L12',pt.mpe_mg!=null?pt.mpe_mg/3:null);
+  x=wxSetCellNum(x,'E13',ab);                        x=wxSetCellNum(x,'I13',b.ab);
+  x=wxSetCellNum(x,'E14',b.wr);                      x=wxSetCellNum(x,'I14',b.wr);
+  x=wxSetCellNum(x,'I15',bud.u);  x=wxSetCellNum(x,'J15',bud.veff);
+  x=wxSetCellNum(x,'I16',bud.U);
+  // derivation footnotes
+  x=wxSetCellNum(x,'O24',ab); x=wxSetCellNum(x,'M26',comp.repeatability); x=wxSetCellNum(x,'O26',b.wr);
+  return x;
+}
+
+// ใบประเมินผลการสอบเทียบ รายจุด — ตารางแถว 14 (หน่วยกรัม)
+function wxFillEval(x, pt, cal){
+  const unk=pt.unknown||{};
+  x=wxSetCellText(x,'H7',cal.cert_no); x=wxSetCellText(x,'H8',unk.id_code);
+  const errG=Number(pt.correction_mg||0)/1000, Ug=Number(pt.uncertainty_mg||0)/1000;
+  const tolG=(pt.mpe_mg!=null?pt.mpe_mg/1000:null);
+  x=wxSetCellNum(x,'A14',wxNominalG(pt));
+  x=wxSetCellNum(x,'B14',errG); x=wxSetCellNum(x,'C14',Ug);
+  x=wxSetCellNum(x,'D14',errG+Ug); x=wxSetCellNum(x,'F14',errG-Ug);
+  if(tolG!=null) x=wxSetCellNum(x,'H14',tolG); else x=wxSetCellText(x,'H14','-');
+  x=wxSetCellText(x,'I14', tolG==null?'-':(pt.pass?'PASS':'FAIL'));
   return x;
 }
 
@@ -141,9 +269,26 @@ async function wxBuildZip(cal, templateUrl){
     ptSheets.push({ rec, unc, eval:evl });
   }
 
-  // --- fill cert sheets (per-point fills wired in Task 4) ---
+  // --- fill Cover ---
   let cover = await rd(smap.Cover); cover = wxFillCover(cover, cal); zip.file(smap.Cover, cover);
-  let p2 = await rd(smap.CertP2); p2 = wxFillCertBody(p2, cal); zip.file(smap.CertP2, p2);
+
+  // --- fill CertP2: identity + reference-standard/comparator table + results table ---
+  let p2 = await rd(smap.CertP2); p2 = wxFillCertBody(p2, cal);
+  let n=1;
+  (cal.procedure_refs||[]).forEach(ref=>{ p2=wxFillStdRow(p2, ref, n); n++; });
+  (cal.comparators||[]).forEach(c=>{ p2=wxFillCompRow(p2, c, n); n++; });
+  for(let r=20+n; r<=30; r++){ ['A','D','G','I','K'].forEach(col=>{ p2=wxClearCell(p2, col+r); }); } // ล้างแถวตัวอย่างที่เหลือ
+  points.forEach((pt,i)=>{ p2=wxFillResultsRow(p2, pt, i); });
+  for(let r=55+points.length; r<=66; r++){ ['B','D','F','H','I'].forEach(col=>{ p2=wxClearCell(p2, col+r); }); }
+  zip.file(smap.CertP2, p2);
+
+  // --- fill per-point Rec/Unc/Eval ---
+  for(let i=0;i<points.length;i++){
+    const ps=ptSheets[i], pt=points[i];
+    let rec = await rd(ps.rec);  rec  = wxFillRec(rec, pt, cal);   zip.file(ps.rec, rec);
+    let unc = await rd(ps.unc);  unc  = wxFillUnc(unc, pt, cal);   zip.file(ps.unc, unc);
+    let evl = await rd(ps.eval); evl  = wxFillEval(evl, pt, cal);  zip.file(ps.eval, evl);
+  }
 
   // --- write plumbing back ---
   zip.file('[Content_Types].xml', plumb.ct);

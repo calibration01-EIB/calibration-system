@@ -189,9 +189,31 @@ function wcBuildCAL(job, points) {
     correction_str: fmtErr(pt.correction_mg),
     uncertainty_str: `${pt.uncertainty_mg} mg`,
     abba: pt.abba, ci: pt.ci,
+    // raw numerics for xlsx export (js/20-weight-cert-xlsx.js) — additive, HTML cert path ไม่ใช้
+    correction_mg: pt.correction_mg, uncertainty_mg: pt.uncertainty_mg,
+    conventional_mass: pt.conventional_mass, mc_bar: pt.mc_bar, delta_avg: pt.delta_avg,
+    mpe_mg: pt.mpe_mg, pass: pt.pass, ppm: pt.ppm,
+    _rhoA: pt._rhoA, _budget: pt._budget,
     budget: Object.assign({ u: pt._u, U: pt._U, veff: pt.veff, k: pt.k }, pt._budget || {}),
-    std: pt._std, comparator: pt._comp
+    std: pt._std, comparator: pt._comp,
+    // ตัวตนของตุ้ม unknown (จาก instrument ที่เลือกรายจุด) สำหรับ Rec/Unc/Eval
+    unknown: pt._inst ? {
+      id_code: pt._inst.id_code, serial: pt._inst.serial_no, manufacturer: pt._inst.brand,
+      material: 'Stainless', density: 7950,
+      class_grade: pt._inst.accuracy_class || pt._inst.class_grade || null
+    } : null
   }));
+  // job-level environment block (เท่ากันทุกจุด) สำหรับใบบันทึก Rec — ค่าเฉลี่ยแก้ค่าแล้ว + air density
+  const envT = wcAvgCorr(job.temp_lo, job.temp_hi, job.temp_corr);
+  const envRH = wcAvgCorr(job.rh_lo, job.rh_hi, job.rh_corr);
+  const envP = wcAvgCorr(job.press_lo, job.press_hi, job.press_corr);
+  const env = {
+    temp_lo: job.temp_lo, temp_hi: job.temp_hi, temp_avg: envT,
+    rh_lo: job.rh_lo, rh_hi: job.rh_hi, rh_avg: envRH,
+    press_lo: job.press_lo, press_hi: job.press_hi, press_avg: envP,
+    air_density: wcAirDensity(envT, envRH, envP),
+    date_cal: job.date_cal, due_date: job.due_date
+  };
   return {
     doc_type: 'weight', cert_no: job.cert_no,
     lab: WC_LAB,                          // ค่าคงที่ห้องแล็บ (คัดจาก cert-print balance CAL.lab)
@@ -208,6 +230,7 @@ function wcBuildCAL(job, points) {
     signers: { tech_mgr: job.tech_mgr, approver_pos: 'TECHNICAL MANAGEMENT STAFF' },
     calibrated_by: job.calibrated_by,
     comparators: WC_uniqueComparators(points), procedure_refs: WC_refLines(points),
+    env: env,
     points: P,
     // pre-computed rows for the shared pageEIB55 (Task 6a shape)
     eib_rows: points.map(pt => {
@@ -339,7 +362,7 @@ function wcStdToStdArg(w) {
 }
 function wcCompToCompArg(c) {
   if (!c) return null;
-  return { name: c.name, serial: c.serial, repeatability: c.repeatability, linearity: c.linearity, resolution: c.resolution, due: '-', cert: '-' };
+  return { name: c.name, id_code: c.id_code, serial: c.serial, repeatability: c.repeatability, linearity: c.linearity, resolution: c.resolution, due: '-', cert: '-' };
 }
 function wcInstToInstArg(inst, p) {
   return { class_grade: (inst && (inst.accuracy_class || inst.class_grade)) || p.class_grade || 'F1', density: 7950 };
@@ -506,7 +529,7 @@ function wcRecalc() {
     if (comp) p.comparator_id = comp.id;
     const stdArg = wcStdToStdArg(std);
     const compArg = wcCompToCompArg(comp);
-    p._std = stdArg; p._comp = compArg;
+    p._std = stdArg; p._comp = compArg; p._inst = inst || null;
     if (!stdArg || !compArg || !p.nominal_value) {
       Object.assign(p, { delta_avg: null, ci: null, mc_bar: null, conventional_mass: null, correction_mg: null, uncertainty_mg: null, veff: null, k: null, mpe_mg: null, pass: null });
       return;
