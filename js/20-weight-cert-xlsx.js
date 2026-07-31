@@ -274,12 +274,16 @@ async function wxBuildZip(cal, templateUrl){
 
   // --- fill CertP2: identity + reference-standard/comparator table + results table ---
   let p2 = await rd(smap.CertP2); p2 = wxFillCertBody(p2, cal);
+  // ตารางมาตรฐาน/comparator = แถว 21-30 (จุ 10 แถว), ตารางผล = แถว 55-66 (จุ 12 แถว)
+  // เกินความจุ → หยุดเติมเพื่อไม่ทับ boilerplate (แจ้งเตือนที่ wcExportXlsx)
+  const STD_MAX=10, RES_MAX=12;
   let n=1;
-  (cal.procedure_refs||[]).forEach(ref=>{ p2=wxFillStdRow(p2, ref, n); n++; });
-  (cal.comparators||[]).forEach(c=>{ p2=wxFillCompRow(p2, c, n); n++; });
+  (cal.procedure_refs||[]).forEach(ref=>{ if(n<=STD_MAX){ p2=wxFillStdRow(p2, ref, n); n++; } });
+  (cal.comparators||[]).forEach(c=>{ if(n<=STD_MAX){ p2=wxFillCompRow(p2, c, n); n++; } });
   for(let r=20+n; r<=30; r++){ ['A','D','G','I','K'].forEach(col=>{ p2=wxClearCell(p2, col+r); }); } // ล้างแถวตัวอย่างที่เหลือ
-  points.forEach((pt,i)=>{ p2=wxFillResultsRow(p2, pt, i); });
-  for(let r=55+points.length; r<=66; r++){ ['B','D','F','H','I'].forEach(col=>{ p2=wxClearCell(p2, col+r); }); }
+  const nRes=Math.min(points.length, RES_MAX);
+  for(let i=0;i<nRes;i++){ p2=wxFillResultsRow(p2, points[i], i); }
+  for(let r=55+nRes; r<=66; r++){ ['B','D','F','H','I'].forEach(col=>{ p2=wxClearCell(p2, col+r); }); }
   zip.file(smap.CertP2, p2);
 
   // --- fill per-point Rec/Unc/Eval ---

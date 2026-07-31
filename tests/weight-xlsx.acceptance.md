@@ -25,16 +25,24 @@ decoded to `golden.xlsx` → verified with Excel COM.
   combined U, matching the source sheet — the reported 0.006 lives on the cert only).
 - **Eval_1:** `H7`=cert, `A14`=0.001 g, `B14`=error (g), `I14`=`PASS`.
 
-## Known limitations (non-blocking, follow-up / V2)
+## V2 fixes applied (2026-07-31)
 
-1. **Standard nominal unit:** the standards table shows each standard's nominal in its stored unit,
-   e.g. `CLASS E2 ( 0.001 g )`, whereas the paper cert prints `( 1 mg )`. Comes from
-   `WC_refLines` in `wcBuildCAL` (shared with the HTML cert), not the exporter.
-2. **Error display precision:** the results/`F` column renders the error at 4 dp
-   (`− 0.0094`) whereas the paper cert matches the error's dp to the uncertainty's (`− 0.009`).
-   Comes from `conventional_mass_str` in `wcBuildCAL` (shared with the HTML cert). Values correct.
-3. **Table capacity:** template has 10 reference rows (21-30) and 12 result rows (55-66). Jobs with
-   more unique standards or points would overflow into boilerplate. 26M001 fits (9 std + 1 comp,
-   12 results). Larger jobs need OOXML row insertion or a taller template.
-4. **Rec ref cal-date (`F8`)** is not populated (not carried in the model). Pass/fail on the Rec
-   sheet is a static label pair; the actual pass/fail is written on the Eval sheet (`I14`).
+1. **Standard nominal unit — FIXED.** `WC_refLines` now formats the standard nominal via
+   `wcReadableMass` (<1 g → mg, <1 kg → g, else kg), so the standards table prints
+   `CLASS E2 ( 1 mg )` … `( 500 mg )` matching the paper cert (also improves the HTML cert).
+2. **Error/uncertainty display precision — FIXED.** `wcBuildCAL` now renders the error and the
+   reported U at the uncertainty's 2-sig-fig decimal count (`wcDp2sf`), e.g. U `0.0060` → error
+   `− 0.0020`; U `0.010` → error `− 0.009`. Matches the paper cert for 11/12 golden rows.
+   *Boundary note:* WI08 (50 mg) shows `− 0.003` where the paper shows `− 0.004`. The computed
+   error is −0.00347 mg (rounds to −0.003 at 3 dp); the paper's −0.004 implies its stored raw was
+   ≥ 0.0035. The two agree within the validated ±0.0005 mg tolerance — an input-precision boundary,
+   not a formatting defect (the value was always −0.00347, previously masked by fixed-4dp display).
+3. **Table capacity — GUARDED.** Standards/comparator fill is capped at 10 rows (21-30) and results
+   at 12 rows (55-66) so oversized jobs no longer overwrite boilerplate; `wcExportXlsx` shows a
+   warning toast when a job exceeds either (per-point Rec/Unc/Eval sheets are still emitted for
+   every point). Full support for larger tables needs OOXML row insertion or a taller template.
+
+## Known limitations (still open, non-blocking)
+
+- **Rec ref cal-date (`F8`)** is not populated (not carried in the model). Pass/fail on the Rec
+  sheet is a static label pair; the actual pass/fail is written on the Eval sheet (`I14`).

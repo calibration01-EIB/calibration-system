@@ -159,6 +159,16 @@ function WC_uniqueComparators(points) {
   return [...seen.values()];
 }
 
+// แปลงพิกัด (ค่า+หน่วยที่เก็บ) → สตริงหน่วยอ่านง่าย: <1g → mg, <1kg → g, ≥1kg → kg (เหมือนใบ cert)
+function wcReadableMass(nominal, unit) {
+  const g = Number(nominal) * (WC_UNIT_G[unit] || 1);
+  if (!(g > 0)) return ((nominal != null ? nominal : '') + ' ' + (unit || '')).trim();
+  const clean = (x) => Math.round(x * 1e6) / 1e6;
+  if (g >= 1000) return clean(g / 1000) + ' kg';
+  if (g >= 1) return clean(g) + ' g';
+  return clean(g * 1000) + ' mg';
+}
+
 // รวมรายชื่อตุ้มมาตรฐานอ้างอิงที่ใช้ในงานนี้ (ไม่ซ้ำ) → รายการหน้า 2 ของ cert (procedure_refs)
 function WC_refLines(points) {
   const seen = new Map();
@@ -167,7 +177,7 @@ function WC_refLines(points) {
     if (!s) return;
     const key = s.id_code || s.serial || (String(s.nominal_value) + (s.unit || ''));
     if (!seen.has(key)) {
-      const nomTxt = (s.nominal_value != null ? s.nominal_value : '') + ' ' + (s.unit || '');
+      const nomTxt = wcReadableMass(s.nominal_value, s.unit || 'g');
       seen.set(key, {
         label: 'STANDARD WEIGHT',
         model: ('CLASS ' + (s.class_grade || '') + ' ( ' + nomTxt.trim() + ' )').replace(/\s+/g, ' ').trim(),
@@ -180,14 +190,24 @@ function WC_refLines(points) {
   return [...seen.values()];
 }
 
+// จำนวนทศนิยมของค่า 2 sig-fig — ให้ error/U แสดง dp เท่ากันตามใบ cert (เช่น U 0.0060 → 4, 0.010 → 3)
+function wcDp2sf(u) {
+  u = Math.abs(Number(u));
+  if (!(u > 0)) return 4;
+  return Math.max(0, 1 - Math.floor(Math.log10(u) + 1e-9));
+}
+
 // ประกอบ object ให้ cert-print.html (doc_type='weight')
 function wcBuildCAL(job, points) {
-  const fmtErr = (mg) => (mg >= 0 ? '+ ' : '- ') + Math.abs(wcRoundHalf(mg, 4)); // helper below
-  const P = points.map(pt => ({
+  const P = points.map(pt => {
+    const dp = wcDp2sf(pt.uncertainty_mg);               // error แสดง dp เท่า U ที่รายงาน
+    const fmtErr = (mg) => (mg >= 0 ? '+ ' : '- ') + Math.abs(Number(mg)).toFixed(dp);
+    const uStr = (pt.uncertainty_mg != null ? Number(pt.uncertainty_mg).toFixed(dp) : '');
+    return {
     nominal_value: pt.nominal_value, unit: pt.unit, marking: pt.marking,
     conventional_mass_str: `${pt.nominal_value} ${pt.unit}   ${fmtErr(pt.correction_mg)}`,
     correction_str: fmtErr(pt.correction_mg),
-    uncertainty_str: `${pt.uncertainty_mg} mg`,
+    uncertainty_str: `${uStr} mg`,
     abba: pt.abba, ci: pt.ci,
     // raw numerics for xlsx export (js/20-weight-cert-xlsx.js) — additive, HTML cert path ไม่ใช้
     correction_mg: pt.correction_mg, uncertainty_mg: pt.uncertainty_mg,
@@ -202,7 +222,8 @@ function wcBuildCAL(job, points) {
       material: 'Stainless', density: 7950,
       class_grade: pt._inst.accuracy_class || pt._inst.class_grade || null
     } : null
-  }));
+  };
+  });
   // job-level environment block (เท่ากันทุกจุด) สำหรับใบบันทึก Rec — ค่าเฉลี่ยแก้ค่าแล้ว + air density
   const envT = wcAvgCorr(job.temp_lo, job.temp_hi, job.temp_corr);
   const envRH = wcAvgCorr(job.rh_lo, job.rh_hi, job.rh_corr);
@@ -642,6 +663,10 @@ async function wcExportXlsx() {
   if (!WC_POINTS.length) { showToast('เพิ่มอย่างน้อย 1 จุดก่อนออก Excel', 'error'); return; }
   if (typeof exportWeightXlsx !== 'function') { showToast('โหลดตัว export ไม่สำเร็จ', 'error'); return; }
   const CAL = wcBuildCAL(WC_JOB, WC_POINTS);
+  const nRef = (CAL.procedure_refs || []).length + (CAL.comparators || []).length;
+  if (nRef > 10 || WC_POINTS.length > 12) {
+    showToast('เกินความจุตารางฟอร์ม (มาตรฐาน+comparator ≤10, จุด ≤12) — ตารางสรุปในใบ Cert อาจแสดงไม่ครบ (ใบบันทึกรายจุดครบทุกจุด)', 'warning');
+  }
   try {
     await exportWeightXlsx(CAL);
   } catch (e) {
