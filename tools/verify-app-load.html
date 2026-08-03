@@ -1,0 +1,109 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>verify-app-load</title>
+<pre id="out">running…</pre>
+
+<script>
+// Harness ตรวจว่าแยกไฟล์ JS แล้วแอปยังโหลดครบ — รันด้วย headless Chrome + --allow-file-access-from-files
+// (ดู tools/verify-app-load.ps1) เช็ค 3 อย่าง: โหลด/parse ทุกไฟล์ผ่าน · ไม่มี error ตอนโหลด ·
+// ทุกฟังก์ชันที่ inline handler ใน index.html เรียก มีจริงบน window
+const ERRORS = [];
+window.addEventListener('error', e => {
+  ERRORS.push('ERROR ' + (e.filename || '?').split('/').pop() + ':' + e.lineno + ' ' + e.message);
+});
+window.addEventListener('unhandledrejection', e => {
+  ERRORS.push('REJECT ' + (e.reason && e.reason.message || e.reason));
+});
+
+// index.html รันโค้ดที่แตะ DOM/Supabase ตอนโหลด — สตับเท่าที่จำเป็นให้สคริปต์โหลดจบโดยไม่ระเบิด
+window.supabase = window.supabase || { createClient: () => new Proxy({}, { get: () => () => Promise.resolve({ data: [], error: null }) }) };
+window.Chart = window.Chart || function () { return { destroy() {}, update() {} }; };
+window.XLSX = window.XLSX || { utils: {}, read: () => ({ SheetNames: [], Sheets: {} }) };
+window.JSZip = window.JSZip || function () {};
+
+function get(url) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.onload = () => res(x.responseText);
+    x.onerror = () => rej(new Error('fetch failed ' + url));
+    x.send();
+  });
+}
+
+function loadScript(src) {
+  return new Promise(res => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => res({ src, ok: true });
+    s.onerror = () => res({ src, ok: false });
+    document.head.appendChild(s);
+  });
+}
+
+(async function () {
+  const lines = [];
+  let indexHtml;
+  try {
+    indexHtml = await get('../index.html');
+  } catch (e) {
+    document.getElementById('out').textContent = 'HARNESS_FAIL cannot read index.html — ' + e.message;
+    return;
+  }
+
+  // 0) ยก <body> ของ index.html มาเป็น DOM จริงก่อนโหลดสคริปต์ (innerHTML ไม่รัน inline script — คุมลำดับเองได้)
+  //    จำเป็น เพราะหลายไฟล์ผูก addEventListener กับ element ตอนโหลด ถ้าไม่มี DOM จะพังแบบ false positive
+  const bodyMatch = indexHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  if (bodyMatch) {
+    const outEl = document.getElementById('out');
+    document.body.innerHTML = bodyMatch[1].replace(/<script[\s\S]*?<\/script>/gi, '');
+    document.body.appendChild(outEl);
+  }
+  lines.push(bodyMatch ? '# index.html body grafted into DOM' : '# WARNING no <body> found — DOM-dependent init may false-fail');
+
+  // 1) โหลดสคริปต์ตามลำดับที่ index.html ประกาศจริง (อ่านจาก <script src="js/...">)
+  const srcs = [...indexHtml.matchAll(/<script src="(js\/[^"?]+)[^"]*"><\/script>/g)].map(m => '../' + m[1]);
+  lines.push('# scripts declared in index.html: ' + srcs.length);
+  const failed = [];
+  for (const s of srcs) {
+    const r = await loadScript(s);
+    if (!r.ok) failed.push(s);
+  }
+  lines.push(failed.length ? 'LOAD_FAIL ' + failed.join(', ') : 'LOAD_OK all ' + srcs.length + ' scripts fetched+parsed');
+
+  // 2) ทุกฟังก์ชันที่ inline handler เรียก ต้องมีจริง (จับเคส "ย้ายโค้ดแล้วลืมโหลดไฟล์")
+  const handlers = new Set();
+  for (const m of indexHtml.matchAll(/\son(?:click|change|input|submit|keyup|keydown|blur|focus)="([^"]*)"/g)) {
+    // เอาเฉพาะการเรียกฟังก์ชัน global — ตัด method call (นำหน้าด้วย .) เช่น el.click() / document.getElementById()
+    for (const c of m[1].matchAll(/(^|[^.\w$])([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) handlers.add(c[2]);
+  }
+  const builtins = new Set(['if', 'for', 'while', 'switch', 'return', 'typeof', 'function', 'catch', 'Number', 'String', 'Boolean', 'Array', 'Object', 'parseInt', 'parseFloat', 'alert', 'confirm', 'setTimeout', 'encodeURIComponent', 'decodeURIComponent', 'JSON']);
+  const missing = [...handlers].filter(n => !builtins.has(n) && typeof window[n] !== 'function').sort();
+  lines.push('# inline-handler functions referenced: ' + handlers.size);
+  lines.push(missing.length ? 'HANDLERS_MISSING ' + missing.join(', ') : 'HANDLERS_OK all resolve to functions');
+
+  // 3) monkey-patch ยังติดอยู่จริงไหม — จุดเปราะที่สุดเวลาย้ายโค้ดข้ามไฟล์
+  //    10-router.js / 11-import-template-selection.js ห่อฟังก์ชันของไฟล์ก่อนหน้า "ตอนโหลด"
+  //    ถ้าไฟล์ที่นิยามฟังก์ชันนั้นถูกย้ายไปโหลดทีหลัง ตัว patch จะโดนทับเงียบ ๆ ไม่มี error
+  //    ตัวห่อทุกตัวเรียก originalX.apply(...) จึงเช็คจาก source ได้ตรง ๆ
+  const PATCHED = ['updateStats', 'updatePaginationUI', 'renderTable', 'renderMobileCards',
+                   'renderDonut', 'renderAlerts', 'resetFilters', 'openInstrumentModal',
+                   'saveInstrument', 'loadData', 'openImportModal'];
+  const unpatched = PATCHED.filter(n => {
+    const fn = window[n];
+    return typeof fn !== 'function' || !/\boriginal[A-Z]/.test(Function.prototype.toString.call(fn));
+  });
+  lines.push('# monkey-patched functions expected: ' + PATCHED.length);
+  lines.push(unpatched.length
+    ? 'PATCH_LOST ' + unpatched.join(', ') + '  <- ไฟล์ที่นิยามฟังก์ชันนี้โหลดหลังตัวที่ห่อมัน'
+    : 'PATCH_OK all wrappers still installed');
+
+  // 4) error ที่เกิดตอนโหลด (redeclaration ข้ามไฟล์จะโผล่ตรงนี้)
+  lines.push('# load-time errors: ' + ERRORS.length);
+  ERRORS.forEach(e => lines.push('  ' + e));
+
+  const bad = failed.length || missing.length || unpatched.length || ERRORS.length;
+  lines.push('SUMMARY ' + (bad ? 'PROBLEMS' : 'CLEAN'));
+  document.getElementById('out').textContent = lines.join('\n');
+})();
+</script>
