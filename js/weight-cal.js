@@ -132,11 +132,6 @@ function wcComputePoint(p, job, std, comp, inst, cmcMg) {
   };
 }
 
-// ปัดเศษปกติ (round-half-up) dp ตำแหน่งทศนิยม — ใช้จัดรูปตัวเลขแสดงผลใน CAL (ไม่ใช่ 2sf ของ M3003)
-function wcRoundHalf(x, dp) {
-  const f = Math.pow(10, dp);
-  return Math.round((Number(x) + Number.EPSILON) * f) / f;
-}
 
 // ค่าคงที่ห้องแล็บ — คัดลอกจาก LAB ใน js/balance-cal.js (ต้องตรงกันทุกตัวอักษรกับปกใบเครื่องชั่ง)
 const WC_LAB = {

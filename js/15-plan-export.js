@@ -281,7 +281,6 @@ function frmItemFromInstrument(row, planMonth) {
 }
 
 // ---------------- UI ----------------
-let frmExportGroups = [];
 let frmTemplateBufPromise = null;
 
 function frmGetTemplate() {
@@ -293,75 +292,11 @@ function frmGetTemplate() {
   return frmTemplateBufPromise;
 }
 
-function openPlanExportModal() {
-  if (typeof JSZip === 'undefined') { showToast('โหลดไลบรารี JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)', 'error'); return; }
-  if (!planSelectedItems.length) { showToast('กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ', 'error'); return; }
-  frmExportGroups = frmBuildGroups(planSelectedItems);
-  renderFrmExportBody();
-  document.getElementById('frmExportModal').style.display = 'flex';
-}
-
-function closeFrmExportModal() { document.getElementById('frmExportModal').style.display = 'none'; }
-
-function frmSetHeader(i, key, value) { frmExportGroups[i].header[key] = value; }
-
-function renderFrmExportBody() {
-  const inp = 'style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none"';
-  const lbl = 'style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block"';
-  document.getElementById('frmExportBody').innerHTML = frmExportGroups.map((g, i) => {
-    const h = g.header;
-    const monthOpts = FRM_MONTHS.map((m, mi) =>
-      '<option value="' + (mi + 1) + '"' + (h.monthNum === mi + 1 ? ' selected' : '') + '>' + (mi + 1) + ' - ' + m + '</option>').join('');
-    const noDue = g.items.filter(it => !it.due_date).length;
-    return '<fieldset style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">' +
-      '<legend style="font-size:13px;font-weight:700;padding:0 6px">' + escapeHtmlAttr(g.unitCode) + (frmDeptFullName(g.unitCode) ? ' · ' + escapeHtmlAttr(frmDeptFullName(g.unitCode)) : '') + ' — ' + escapeHtmlAttr(g.typeName) + ' (' + g.items.length + ' รายการ)</legend>' +
-      (g.unitCode === 'ไม่ระบุ' ? '<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ เครื่องกลุ่มนี้ไม่มี ID CODE/หน่วยงานในทะเบียน — แก้หน่วยงานในช่องด้านล่างก่อนพิมพ์</div>' : '') +
-      (noDue ? '<div style="font-size:12px;color:var(--amber,#b06000);margin-bottom:8px">🆕 ' + noDue + ' เครื่องใหม่ (ไม่มีวันครบกำหนด) — Due Date จะแสดง "New" มาร์กวันที่วางแผนได้ในแท็บ "ลงแผน FRM"</div>' : '') +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">' +
-      '<div><label ' + lbl + '>เดือนที่สอบ</label><select ' + inp + ' onchange="frmSetHeader(' + i + ',\'monthNum\',+this.value)">' + monthOpts + '</select></div>' +
-      '<div><label ' + lbl + '>ปี (ค.ศ.)</label><input type="number" ' + inp + ' value="' + h.year + '" onchange="frmSetHeader(' + i + ',\'year\',+this.value)"></div>' +
-      '<div><label ' + lbl + '>กลุ่มเครื่องมือ</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(h.group) + '" oninput="frmSetHeader(' + i + ',\'group\',this.value)"></div>' +
-      '<div><label ' + lbl + '>หน่วยงาน (Unit)</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(h.unit) + '" oninput="frmSetHeader(' + i + ',\'unit\',this.value)"></div>' +
-      '<div><label ' + lbl + '>แผนก (Section)</label><input type="text" ' + inp + ' value="' + escapeHtmlAttr(h.section) + '" oninput="frmSetHeader(' + i + ',\'section\',this.value)"></div>' +
-      '</div>' +
-      '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;align-items:center">' +
-      '<label><input type="checkbox"' + (h.internal ? ' checked' : '') + ' onchange="frmSetHeader(' + i + ',\'internal\',this.checked)"> สอบเทียบภายใน</label>' +
-      '<label><input type="checkbox"' + (h.external ? ' checked' : '') + ' onchange="frmSetHeader(' + i + ',\'external\',this.checked)"> สอบเทียบภายนอก</label>' +
-      '<label><input type="checkbox"' + (h.drug ? ' checked' : '') + ' onchange="frmSetHeader(' + i + ',\'drug\',this.checked)"> Drug product</label>' +
-      '<label><input type="checkbox"' + (h.cosmetic ? ' checked' : '') + ' onchange="frmSetHeader(' + i + ',\'cosmetic\',this.checked)"> Cosmetic product</label>' +
-      '<label>Other: <input type="text" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;width:140px" value="' + escapeHtmlAttr(h.otherText) + '" oninput="frmSetHeader(' + i + ',\'otherText\',this.value)"></label>' +
-      '<button type="button" class="btn-primary" style="margin-left:auto" onclick="exportPlanFrmUnit(' + i + ')">⬇️ ดาวน์โหลด</button>' +
-      '</div></fieldset>';
-  }).join('');
-}
 
 function frmFileName(g) {
   const clean = s => String(s || '').replace(/[\\\/:*?"<>|]/g, '-').trim();
   const grp = clean(g.header.group);
   return 'FRM-EIB04_' + clean(g.unitCode) + (grp ? '_' + grp : '') + '_' + g.header.year + '-' + String(g.header.monthNum).padStart(2, '0') + '.xlsx';
-}
-
-async function exportPlanFrmUnit(i) {
-  const g = frmExportGroups[i];
-  try {
-    showLoading('กำลังสร้างไฟล์ ' + g.unitCode + '...');
-    const buf = await frmGetTemplate();
-    const blob = await frmRenderTemplate(buf, g.header, g.items);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = frmFileName(g);
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    hideLoading();
-    showToast('✅ สร้างไฟล์ ' + frmFileName(g) + ' แล้ว', 'success');
-  } catch (e) {
-    hideLoading();
-    showToast('สร้างไฟล์ไม่สำเร็จ: ' + e.message, 'error');
-  }
-}
-
-async function exportAllPlanFrm() {
-  for (let i = 0; i < frmExportGroups.length; i++) await exportPlanFrmUnit(i);
 }
 
 // ---------------- แท็บลงแผน FRM: รายการแผน ----------------
@@ -742,7 +677,6 @@ async function frmExportPlan(p) {
     showToast('✅ Export แล้ว', 'success');
   } catch (e) { hideLoading(); showToast('Export ไม่สำเร็จ: ' + e.message, 'error'); }
 }
-async function frmEditorExport() { return frmExportPlan(frmEditorPlan); }
 async function frmExportPlanById(id) {
   const p = frmPlanRows.find(x => x.id === id);
   if (p) return frmExportPlan(p);

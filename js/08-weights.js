@@ -3,7 +3,6 @@
 // + ระบบอนุมัติ (admin) ก่อนนำไปใช้ในระบบสอบเทียบ
 // ====================================================
 let swData = [], swFiltered = [];
-let editingSWId = null;
 
 const SW_MASS_MG = { mg: 1, g: 1000, kg: 1e6 };
 

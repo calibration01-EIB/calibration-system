@@ -441,34 +441,5 @@ async function deleteCertEntry(instrumentId, certNo, isApproved) {
   loadCertPage();
 }
 
-function exportFrmCal95() {
-  const yearSel = document.getElementById('certHistoryYear');
-  const typeSel = document.getElementById('certHistoryType');
-  const yearCode = yearSel ? yearSel.value : '26';
-  const typeCode = typeSel ? typeSel.value : '';
-  const prefix = typeCode ? `${yearCode}${typeCode}` : String(yearCode);
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-  const rows = allData.filter(d => d.cert_no && d.cert_no.startsWith(prefix));
-  rows.sort((a, b) => (a.cert_no||'').localeCompare(b.cert_no||''));
-  const wb = XLSX.utils.book_new();
-  const header = [
-    ['ใบบันทึกการออกหมายเลขลำดับที่ใบรับรองผลการสอบเทียบและการแก้ไข'],
-    ['FRM-CAL95'],
-    ['ประเภทของอุปกรณ์เครื่องมือวัด: ' + (typeCode ? `${typeCode} — ${CERT_LABELS[typeCode]||typeCode}` : 'ทุกประเภท')],
-    [''],
-    ['ลำดับที่','หมายเลขใบรับรองผลการสอบเทียบ','วัน-เดือน-ปี ที่ออก','ชื่ออุปกรณ์เครื่องมือวัด / ID CODE','หมายเลขใบขอรับบริการ','เลขที่ของงาน','ผู้ออกเอกสาร','ผู้รับผิดชอบ'],
-  ];
-  const dataRows = rows.map((d, i) => [
-    i+1, d.cert_no||'', fmt(d.cal_date),
-    `${d.instrument_name||''} / ${d.id_code||''}`,
-    d.request_no||'', d.job_no||'', d.issued_by||'', d.responsible_by||''
-  ]);
-  const ws = XLSX.utils.aoa_to_sheet([...header, ...dataRows]);
-  ws['!cols'] = [{wch:8},{wch:28},{wch:18},{wch:40},{wch:22},{wch:16},{wch:18},{wch:18}];
-  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} },{ s:{r:1,c:0}, e:{r:1,c:7} },{ s:{r:2,c:0}, e:{r:2,c:7} }];
-  XLSX.utils.book_append_sheet(wb, ws, 'FRM-CAL95');
-  XLSX.writeFile(wb, `FRM-CAL95_${yearCode}${typeCode||'_ALL'}.xlsx`);
-  showToast(`✅ Export FRM-CAL95 สำเร็จ ${rows.length} รายการ`,'success');
-}
 
 // ====================================================

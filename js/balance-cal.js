@@ -133,24 +133,6 @@ function kFromVeff(veff) {
   return k;
 }
 
-// แปลงองค์ประกอบตุ้ม (เช่น "F1 1 kg + 2 kg") → รายละเอียดเป็นกรัม
-// ตุ้มเดี่ยว = "1000" · รวมหลายลูก = "3000(1000+2000)"
-// แยกส่วนประกอบตุ้มของจุดทดสอบ → อาเรย์น้ำหนักเป็นกรัม (เช่น 'F1 1 kg + 2 kg' → [1000, 2000])
-function compParts(comp) {
-  return String(comp).replace(/^F\d+\s*/i, '').split('+').map(t => {
-    const m = t.trim().match(/([\d.]+)\s*(kg|g)?/i);
-    if (!m) return null;
-    let v = parseFloat(m[1]);
-    if (m[2] && m[2].toLowerCase() === 'kg') v *= 1000;
-    return v;
-  }).filter(v => Number.isFinite(v));
-}
-function weightDesc(comp) {
-  const parts = compParts(comp);
-  if (!parts.length) return String(comp);
-  if (parts.length === 1) return String(parts[0]);
-  return parts.reduce((a, b) => a + b, 0) + '(' + parts.join('+') + ')';
-}
 
 // รูปจานเครื่องชั่ง (0=สี่เหลี่ยม, 1=กลม, 2=สามเหลี่ยม) — ตรงกับ panSVG ในใบ Cert
 function panSVG(shape) {
@@ -316,7 +298,6 @@ function genPoints(cap) {
 }
 
 // ===== Multi-range: capture/restore ชุดข้อมูลต่อย่าน + แท็บเลือกย่าน =====
-const rangeNum = (id, def) => { const v = parseFloat(val(id)); return Number.isFinite(v) ? v : def; };
 // อ่านอินพุตทั้งหมดของย่านที่กำลังกรอกอยู่ → object (ค่าเก็บเป็น string ตามที่กรอก)
 function captureRangeData() {
   return {
@@ -492,7 +473,6 @@ function dateMask(el) {   // ใส่ / อัตโนมัติตอนพ
   else if (s.length >= 3) s = s.slice(0, 2) + '/' + s.slice(2);
   el.value = s;
 }
-function updateDateHints() {}   // เลิกใช้ hint แล้ว (ช่องเป็น dd/mm/yyyy ในตัว) — คงฟังก์ชันไว้กัน caller เดิมพัง
 
 // ===== คำนวณทั้งหน้า =====
 // d (ค่าอ่านละเอียด) ต่อโหลด — multi-interval: ถ้า band ที่จุดตกอยู่กำหนด d ไว้ → ใช้ค่านั้น · ไม่งั้นใช้ d รวม (iRes)
@@ -1474,8 +1454,6 @@ async function saveEdits() {
     _btns.forEach(b => { b.disabled = false; });
   }
 }
-async function markSigned()  { if (CAL_STATE !== 'issued') return; if (!confirm('ยืนยันลงนามใบ ' + CERT_NO + ' ?')) return; CAL_STATE = 'signed';   renderCertBar(); await setRecStatus('signed'); }
-async function approveCert() { if (CAL_STATE !== 'signed') return; if (!confirm('ยืนยันอนุมัติใบ ' + CERT_NO + ' (ทำให้สมบูรณ์) ?')) return; CAL_STATE = 'approved'; renderCertBar(); await setRecStatus('approved'); }
 async function voidCert() {
   if (!confirm('ยกเลิกใบ ' + CERT_NO + ' ?\nเลขจะถูกเก็บไว้เป็นประวัติ (ไม่ออกซ้ำ) · ทะเบียนเครื่องจะคืนเป็นใบก่อนหน้า')) return;
   CAL_STATE = 'voided'; renderCertBar(); await setRecStatus('voided');
@@ -1729,15 +1707,6 @@ function applyPresetPick(idx) {
   if (typeof drawPanPrev === 'function') drawPanPrev();
   recalc();
 }
-function presetForCapacity(cap) {
-  const c = Number(cap);
-  if (!Number.isFinite(c)) return null;
-  return CAL_PRESETS.find(p => {
-    const lo = p.capacity_from == null ? -Infinity : Number(p.capacity_from);
-    const hi = p.capacity_to == null ? Infinity : Number(p.capacity_to);
-    return c > lo && c <= hi && Array.isArray(p.points) && p.points.length;
-  }) || null;
-}
 // ===== บันทึกจุดทดสอบที่จัดไว้ตอนนี้ → พรีเซ็ทใหม่ (เฉพาะ admin/editor · ช่วงพิกัด auto = 0–พิกัดเครื่อง) =====
 let CAL_USER = null;
 try { CAL_USER = JSON.parse(localStorage.getItem('cal_session') || 'null'); } catch (e) {}
@@ -1835,7 +1804,6 @@ document.addEventListener('focusin', e => {
 // ===== ต่อระบบจริง: โหลดชุดตุ้ม (standard_weights) + CMC (cmc_set/cmc_row) จาก Supabase =====
 // SUPABASE_URL / SUPABASE_KEY มาจาก js/00-config.js (โหลดใน <head> ก่อน script นี้)
 let SBCAL = null;
-const _mgF = u => ({ mg:1, g:1000, kg:1e6 }[u] || 1);     // หน่วย → mg
 const _gF  = u => ({ mg:0.001, g:1, kg:1000 }[u] || 1);   // หน่วย → g
 async function loadFromDB() {
   if (typeof supabase === 'undefined') return;

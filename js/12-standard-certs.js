@@ -104,24 +104,6 @@ function scRowDrift(c, row, prev) {
   const drift = Math.abs(Number(row.correction) - Number(prevRow.correction));
   return { hasPrev: true, prev, prevRow, drift, Ds: Math.max(Number(row.uncertainty), drift) };
 }
-// ใบมวลล่าสุดของชุด/ซีเรียล + ดึงค่า correction/U/Dₛ ให้ตุ้มรายลูก (ใช้โดยแท็บลูกตุ้ม — เตรียมไว้)
-function scLatestMassCert(serial, setCode) {
-  const m = scData.filter(c => ['ตุ้มน้ำหนักมาตรฐาน', 'มวล/น้ำหนัก'].includes(c.category)
-    && c.serial_no === serial && (!setCode || c.set_code === setCode));
-  if (!m.length) return null;
-  return m.reduce((a, b) => new Date(b.measurement_date || 0) > new Date(a.measurement_date || 0) ? b : a);
-}
-function stdValueFor(w) {
-  const cert = scLatestMassCert(w.serial_no, w.set_code);
-  if (!cert) return { hasCert: false };
-  const cand = (cert.values || []).filter(r => Number(r.nominal_value) === Number(w.nominal_value) && r.unit === w.unit);
-  if (!cand.length) return { hasCert: true, hasRow: false, cert };
-  const row = (w.marking ? cand.find(r => (r.marking || '') === (w.marking || '')) : null) || cand[0];
-  const dr = scRowDrift(cert, row);
-  return { hasCert: true, hasRow: true, cert, prev: dr.prev,
-    correction: Number(row.correction), U: Number(row.uncertainty), corr_unit: row.corr_unit,
-    actual: scTrueValue(row), Ds: dr.Ds, drift: dr.drift, hasPrev: dr.hasPrev };
-}
 
 function scFiltered() {
   const q = (document.getElementById('scSearch')?.value || '').trim().toLowerCase();

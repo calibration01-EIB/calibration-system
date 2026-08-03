@@ -136,25 +136,6 @@ table td, table th { white-space: nowrap; }
 // ====================================================
 // CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)
 // ====================================================
-const CATEGORY_ICONS = {
-  'เครื่องชั่ง (Balance)': 'ti-scale',
-  'ตุ้มน้ำหนักมาตรฐาน (Mass)': 'ti-weight',
-  'มวล/น้ำหนัก (Mass/Weight)': 'ti-weight',
-  'ความยาว/มิติ (Length/Dimension)': 'ti-ruler',
-  'อุณหภูมิ/ความชื้น (Temperature/Humidity)': 'ti-temperature',
-  'ความดัน/สุญญากาศ (Pressure/Vacuum)': 'ti-gauge',
-  'ความเร็วรอบ (Speed/Rotation)': 'ti-rotate-clockwise',
-  'เวลา (Time)': 'ti-clock',
-  'เคมี/ความเข้มข้น (Chemical/Concentration)': 'ti-flask',
-  'ความหนืด/ความหนาแน่น (Viscosity/Density)': 'ti-droplet',
-  'ไฟฟ้า (Electrical)': 'ti-bolt',
-  'การไหล/ปริมาตร (Flow/Volume)': 'ti-wave-sine',
-  'แสง/เสียง (Light/Sound)': 'ti-bulb',
-  'ความปลอดภัย (Safety)': 'ti-shield',
-  'แรงบิด/แรงกด (Torque/Force)': 'ti-arrows-transfer-down',
-  'อื่นๆ (Others)': 'ti-dots-circle-horizontal',
-};
-
 const CATEGORY_DEFS = [
   {
     name: 'เครื่องชั่ง (Balance)',
@@ -294,7 +275,6 @@ let activeCategory = 'all';
 // RENDER MONTHLY CARDS
 // ====================================================
 const MONTH_NAMES_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const MONTH_NAMES_FULL  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 let activeMonthCard = null;
 
 function renderMonthly() {
@@ -438,12 +418,6 @@ function renderCategoryCards() {
 }
 
 
-function selectCategory(cat) {
-  activeCategory = (activeCategory === cat) ? 'all' : cat;
-  currentPage = 1;
-  filterData();
-  renderCategoryCards();
-}
 
 // ====================================================
 // PAGINATION

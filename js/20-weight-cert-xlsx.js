@@ -6,7 +6,6 @@ function wxColIndex(letters){ let n=0; for(const ch of letters) n=n*26+(ch.charC
 function wxCellRef(col,row){ let s=''; while(col>0){ const m=(col-1)%26; s=String.fromCharCode(65+m)+s; col=(col-m-1)/26; } return s+row; }
 function wxEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function wxRowNum(addr){ return parseInt(addr.replace(/[A-Z]/g,''),10); }
-function wxColLetters(addr){ return addr.replace(/[0-9]/g,''); }
 // เขียน cell (inlineStr หรือ number) ลง sheetData string — insert row/cell ถ้ายังไม่มี, ทับถ้ามี
 function wxSetCell(sheetXml, addr, inner, attr){
   const row=wxRowNum(addr);
