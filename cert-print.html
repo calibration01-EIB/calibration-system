@@ -394,15 +394,18 @@ function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
   const wtDoc = CAL.doc_type === 'weight';
   const eUnit = wtDoc ? 'mg' : 'g';     // header unit
   const eSc   = wtDoc ? 1000 : 1;       // rows carry grams; ×1000 → mg for weight
-  const eErrDp = wtDoc ? 4 : 3;         // Error / Tolerance decimals
+  const eErrDp = wtDoc ? 4 : 3;         // Error / Tolerance decimals — fallback ถ้าแถวไม่ระบุ r.dp เอง
   const eUncDp = 4;                     // Uncertainty / sum / diff decimals (unchanged)
-  const rowsHtml = rows.map(r => `<tr>
+  const rowsHtml = rows.map(r => {
+    const dp = Number.isFinite(r.dp) ? r.dp : eErrDp;   // ตำแหน่งทศนิยม Error ตามที่รายงานผลจริง (เท่าคอลัมน์ CORRECTION) ไม่ฟิก
+    return `<tr>
       <td>${r.label}</td>
-      <td>${f(r.errG*eSc,eErrDp)}</td><td>${f(r.Ug*eSc,eUncDp)}</td>
+      <td>${f(r.errG*eSc,dp)}</td><td>${f(r.Ug*eSc,eUncDp)}</td>
       <td>${f(r.sumEU*eSc,eUncDp)}</td><td>${f(r.diffEU*eSc,eUncDp)}</td>
-      <td>${r.tol != null ? f(r.tol*eSc,eErrDp) : '-'}</td>
+      <td>${r.tol != null ? f(r.tol*eSc,dp) : '-'}</td>
       <td class="${r.result === 'FAIL' ? 'eib-fail' : ''}">${r.result}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   const cell = (lbl, val) => `<td class="eib-lbl">${lbl}</td><td class="eib-val">${esc(val)}</td>`;
   // Tolerance: แสดงทุกแบนด์ของย่านนี้ (บางเครื่อง 1 จุด บางเครื่อง 2 จุด) แบนด์ละบรรทัดตีเส้นใต้
   // แบนด์แรกอยู่บรรทัด label Tolerance (แถว Range) แบนด์ที่เหลือลงแถว Section ให้บรรทัดตรงกัน
@@ -997,13 +1000,16 @@ function pageUnc(blockRows, pageNo) {
   const eibInstCap = (opt.instMax != null ? opt.instMax : CAL.capacity);
   const eibRangeTxt = eibInstCap > 30000 ? (+(eibInstCap / 1000).toFixed(3)) + ' kg' : eibInstCap + ' ' + CAL.unit;
   const eibRows = ROWS.map(r => {
-    const errG = Math.round((-r.corr) * 1000) / 1000;
+    // ตำแหน่งทศนิยม Error = ตาม resolution ของจุดนี้ (เท่ากับคอลัมน์ CORRECTION ในใบ Cert: resDecimals+1) ไม่ฟิกที่ 3
+    const dp = resDecimals(rowRes(r)) + 1;
+    const scale = Math.pow(10, dp);
+    const errG = Math.round((-r.corr) * scale) / scale;
     const Ug = r.bud.Ufinal / 1000;
     const tol = tolForRow(CAL, r.zero ? 0 : r.nominal);
     const hasTol = tol != null;
     const pass = hasTol ? ((errG + Ug) <= tol && (errG - Ug) >= -tol) : null;
     const result = !hasTol ? '-' : (pass ? 'PASS' : 'FAIL');
-    return { label: r.zero ? 'UNLOAD' : r.nominal, errG, Ug, sumEU: errG + Ug, diffEU: errG - Ug, tol, result };
+    return { label: r.zero ? 'UNLOAD' : r.nominal, errG, Ug, sumEU: errG + Ug, diffEU: errG - Ug, tol, result, dp };
   });
   return {
     cert: certHtml,

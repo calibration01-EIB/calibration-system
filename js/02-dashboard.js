@@ -566,10 +566,15 @@ async function loadData(forceRefresh = false) {
 
   const procesData = (rows) => {
     const today = new Date(); today.setHours(0,0,0,0);
-    allData = rows.map(d => ({
-      ...d,
-      days_left: d.due_date ? Math.round((new Date(d.due_date) - today) / 86400000) : null
-    }));
+    allData = rows.map(d => {
+      const cancelled = d.calibration_cancelled === true
+        || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
+      return {
+        ...d,
+        calibration_cancelled: cancelled,
+        days_left: (!cancelled && d.due_date) ? Math.round((new Date(d.due_date) - today) / 86400000) : null
+      };
+    });
     filteredData = [...allData];
     populateFilters();
     fileCountCache = {};
