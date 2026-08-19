@@ -30,7 +30,10 @@ function listLines(value) {
   // เงื่อนไข: หลังสแลชต้องขึ้นต้นด้วยตัวเลข หรือเครื่องหมาย ± + - < > ~ แล้วตามด้วยตัวเลข
   // → แยก "0.01mg/0.1mg", "0.01 mg / 0.1 mg", "± 0.05 mg/± 0.2 mg"
   // → ไม่แยกหน่วยที่มีสแลชในตัว: mg/L, kg/cm2, N/A, 0.5 mg/kg, 10 °C/min
+  // ต้องแปลง "+/-" เป็น "±" ก่อนแยก ไม่งั้นสแลชในเครื่องหมายบวกลบจะถูกนับเป็นตัวคั่นย่าน
+  // ("+/- 0.01 kg" -> "+" กับ "- 0.01 kg") — ทะเบียนเขียนปนกัน 2 แบบ ±1,188 / +/-366 เครื่อง
   const parts = String(value == null ? '' : value)
+    .replace(/\+\s*\/\s*-/g, '±')
     .split(/\r?\n|\s*\/\s*(?=[±+\-<>~]?\s*\d)/)
     .map(s => s.trim()).filter(Boolean);
   return parts.length ? parts : ['–'];
@@ -257,8 +260,8 @@ function renderListFull(rows, start) {
       <td>${listMultiHtml(d.resolution_text || d.resolution)}</td>
       <td>${listMultiHtml(d.tolerance)}</td>
       <td>${listMultiHtml(listRangeText(d))}</td>
-      <td>${escapeHtmlText(d.usage_min || '–')}</td>
-      <td>${escapeHtmlText(d.usage_max || '–')}</td>
+      <td>${listMultiHtml(d.usage_min)}</td>
+      <td>${listMultiHtml(d.usage_max)}</td>
       <td>${escapeHtmlText(d.usage_frequency || '–')}</td>
       <td>${escapeHtmlText(d.cal_frequency || '–')}</td>
       <td class="c-loc">${escapeHtmlText([d.department, d.division, d.location].filter(Boolean).join(' · ') || '–')}</td>
