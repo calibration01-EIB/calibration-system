@@ -1246,60 +1246,91 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 }
 
 /* ============================================================
-   7k · modal รายละเอียดเครื่องมือ — จัดกลุ่มเป็นหมวดมีสี + ตารางมีเส้นกรอบ
-   ต้องยิงด้วย #instrumentDetailModal เพื่อชนะ CSS เดิมใน index.html
+   7k · modal รายละเอียดเครื่องมือ — แผงพื้นสี + หัวข้อทรงธง + การ์ดขาว
+   ตามดีไซน์ Claude Design: แต่ละหมวดเป็นแผงพื้นสีอ่อน มีธงหัวข้อสีเข้ม
+   ข้างในเป็นการ์ดขาว ช่อง label/value อยู่คู่กันในแถวเดียว
+   ต้องยิงด้วย #instrumentDetailModal เพื่อชนะกฎเดิมใน index.html
    ============================================================ */
 
-#instrumentDetailModal .reg-section {
-  margin: 20px 0 0; padding: 9px 13px; gap: 8px;
-  border-radius: 10px 10px 0 0; font-size: 13.5px; font-weight: 700;
+#instrumentDetailModal .reg-panel {
+  --rp-bg: #f1f6fb; --rp-flag: #2f6fb5; --rp-line: #dde8f2;
+  background: var(--rp-bg); border-radius: 14px;
+  padding: 14px; margin: 16px 0 0;
 }
-/* กฎเดิม .reg-section span:first-of-type{margin-right:auto} จะดันหัวข้อหนีไอคอน */
-#instrumentDetailModal .reg-section span.reg-sec-ic { margin-right: 0; font-size: 14px; }
-#instrumentDetailModal .reg-section::before { display: none; }
+#instrumentDetailModal .reg-panel--photo { --rp-bg: #eaf6f3; --rp-flag: #12786a; --rp-line: #d3e9e4; }
+#instrumentDetailModal .reg-panel--info  { --rp-bg: #eef5fd; --rp-flag: #2f6fb5; --rp-line: #dbe8f6; }
+#instrumentDetailModal .reg-panel--cal   { --rp-bg: #e9f7ef; --rp-flag: #1f8a4c; --rp-line: #d3ecdd; }
+#instrumentDetailModal .reg-panel--org   { --rp-bg: #f2eefb; --rp-flag: #6242a8; --rp-line: #e2daf3; }
+#instrumentDetailModal .reg-panel--file  { --rp-bg: #fdf4e3; --rp-flag: #b07a10; --rp-line: #f0e2c6; }
+#instrumentDetailModal .reg-panel--audit { --rp-bg: #eff2f5; --rp-flag: #4a5b6b; --rp-line: #dfe5eb; }
 
-#instrumentDetailModal .reg-section--photo { background: #e6f4f2; color: #0d5f55; }
-#instrumentDetailModal .reg-section--info  { background: #e8f1fb; color: #14496f; }
-#instrumentDetailModal .reg-section--cal   { background: #e3f5ec; color: #0f6248; }
-#instrumentDetailModal .reg-section--org   { background: #f0eafb; color: #4a2f7a; }
-#instrumentDetailModal .reg-section--file  { background: #fdf1dd; color: #8a5a09; }
-#instrumentDetailModal .reg-section--audit { background: #eef1f4; color: #3c4a57; }
+/* ธงหัวข้อ: ปลายขวาเฉียงลงแบบริบบิ้นในดีไซน์ */
+#instrumentDetailModal .reg-flag {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--rp-flag); color: #fff;
+  font-size: 15px; font-weight: 700; line-height: 1.2;
+  padding: 11px 36px 11px 13px; border-radius: 9px 0 0 9px;
+  margin-bottom: 12px;
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 100%, 0 100%);
+}
+#instrumentDetailModal .reg-flag-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 25px; height: 25px; flex: 0 0 auto; border-radius: 7px;
+  background: rgba(255,255,255,.22); font-size: 14px;
+}
 
-/* ตารางข้อมูล: เส้นกรอบทุกช่องแบบในดีไซน์ */
+/* การ์ดขาวข้างในแผง — 3 คู่ label/value ต่อแถว */
 #instrumentDetailModal .reg-info-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0; margin-bottom: 4px;
-  border: 1px solid var(--border2); border-top: 0;
-  border-radius: 0 0 10px 10px; overflow: hidden;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0; background: #fff;
+  border: 1px solid var(--rp-line); border-radius: 10px; overflow: hidden;
 }
+#instrumentDetailModal .reg-info-grid + .reg-info-grid { margin-top: 12px; }
+
 #instrumentDetailModal .reg-info-item {
-  padding: 9px 12px; border-bottom: 1px solid #eef3f7; border-right: 1px solid #eef3f7;
-  display: flex; flex-direction: column; justify-content: center; min-height: 46px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: stretch; min-height: 52px;
+  border-bottom: 1px solid var(--rp-line); border-right: 1px solid var(--rp-line);
+  padding: 0;
+}
+#instrumentDetailModal .reg-info-item span,
+#instrumentDetailModal .reg-info-item strong {
+  display: flex; align-items: center; padding: 9px 12px; min-width: 0;
+  overflow-wrap: anywhere;
 }
 #instrumentDetailModal .reg-info-item span {
-  font-size: 11.5px; font-weight: 600; color: var(--text3); line-height: 1.3;
+  background: #fafcfe; border-right: 1px solid var(--rp-line);
+  font-size: 12.5px; font-weight: 600; color: var(--text3); line-height: 1.3;
 }
 #instrumentDetailModal .reg-info-item strong {
-  margin-top: 3px; font-size: 13.5px; font-weight: 700; color: var(--ink2);
+  font-size: 14px; font-weight: 700; color: var(--ink2);
   line-height: 1.35; white-space: pre-line;
 }
-#instrumentDetailModal .reg-info-item.full { grid-column: 1 / -1; border-right: 0; }
+#instrumentDetailModal .reg-info-item.full { grid-column: 1 / -1; }
 
-/* บล็อกที่วาดเนื้อหาด้วย JS (รูป/ไฟล์/audit) ให้ต่อใต้หัวข้อเป็นกล่องเดียวกัน */
+/* บล็อกที่วาดด้วย JS (รูป/ไฟล์/audit) ให้เป็นการ์ดขาวเหมือนกัน */
 #instrumentDetailModal #regDetailPhotos,
 #instrumentDetailModal #regDetailFiles,
 #instrumentDetailModal #regDetailAudit {
-  border: 1px solid var(--border2); border-top: 0; border-radius: 0 0 10px 10px;
-  padding: 12px; margin-bottom: 4px;
+  background: #fff; border: 1px solid var(--rp-line); border-radius: 10px; padding: 12px;
 }
 
-/* หมวดที่มีไม่กี่ช่อง ใช้ 2 คอลัมน์จะอ่านง่ายกว่า */
-#instrumentDetailModal .reg-info-grid--cal,
-#instrumentDetailModal .reg-info-grid--org { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-@media (max-width: 768px) {
-  #instrumentDetailModal .reg-info-grid,
-  #instrumentDetailModal .reg-info-grid--cal,
-  #instrumentDetailModal .reg-info-grid--org { grid-template-columns: 1fr; }
-  #instrumentDetailModal .reg-info-item { border-right: 0; }
+@media (max-width: 900px) {
+  #instrumentDetailModal .reg-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* index.html มีเลเยอร์มือถือเดิมที่ยัด repeat(2,…) !important และ padding:4px 0 !important
+   ใส่ .reg-info-grid/.reg-info-item ไว้ (จูนมาตอนช่องยังเป็นแบบ label อยู่บนค่า)
+   ช่องแบบใหม่เป็น label|value คู่กัน ถ้าปล่อย 2 คอลัมน์ที่จอ 400px จะล้นออกนอกจอ
+   → ต้องทับกลับด้วย !important เหมือนกัน */
+/* ต้องขึ้นต้นด้วย body.app-mode ให้ specificity เท่ากับเลเยอร์มือถือใน index.html
+   (body.app-mode #instrumentDetailModal .reg-info-grid = 1 id + 2 class + 1 element)
+   แล้วอาศัยลำดับ — theme-aqua.css โหลดหลัง <style> ในหน้าเสมอ ถ้าใช้แค่
+   #instrumentDetailModal จะแพ้ แม้ใส่ !important ก็ตาม */
+@media (max-width: 640px) {
+  body.app-mode #instrumentDetailModal .reg-info-grid { grid-template-columns: 1fr !important; }
+  body.app-mode #instrumentDetailModal .reg-info-item { border-right: 0; padding: 0 !important; }
+  body.app-mode #instrumentDetailModal .reg-info-item span { font-size: 12px !important; padding: 8px 10px !important; }
+  body.app-mode #instrumentDetailModal .reg-info-item strong { font-size: 13px !important; padding: 8px 10px !important; }
+  body.app-mode #instrumentDetailModal .reg-flag { font-size: 14px; padding: 9px 32px 9px 11px; }
+  body.app-mode #instrumentDetailModal .reg-panel { padding: 11px; }
 }

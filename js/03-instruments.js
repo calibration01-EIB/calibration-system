@@ -106,6 +106,11 @@ function regDetailItem(label, value, full = false) {
   return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
 }
 
+// หัวข้อทรงธงของแต่ละแผงใน modal รายละเอียด (สีมาจาก .reg-panel--* ที่ครอบอยู่)
+function regFlag(icon, label) {
+  return `<div class="reg-flag"><span class="reg-flag-ic">${icon}</span>${escapeHtmlText(label)}</div>`;
+}
+
 // แสดงชื่อหน่วยงานเต็มใต้ช่องรหัสหน่วยงานในฟอร์ม (จาก list departments)
 function updateDeptUnitHint() {
   const el = document.getElementById('iDeptUnitHint');
@@ -369,8 +374,10 @@ function openInstrumentDetail(id) {
       </div>
     </div>
 
-    <div class="reg-section reg-section--photo"><span class="reg-sec-ic">📷</span>รูปเครื่องมือ</div>
-    <div id="regDetailPhotos"><div class="reg-photo-empty">กำลังโหลดรูป...</div></div>
+    <div class="reg-panel reg-panel--photo">
+      ${regFlag('📷', 'รูปเครื่องมือ')}
+      <div id="regDetailPhotos"><div class="reg-photo-empty">กำลังโหลดรูป...</div></div>
+    </div>
 
     <div class="reg-metric-grid">
       <div class="reg-metric"><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div>
@@ -379,51 +386,63 @@ function openInstrumentDetail(id) {
       <div class="reg-metric"><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div>
     </div>
 
-    <div class="reg-section reg-section--info"><span class="reg-sec-ic">📄</span>รายละเอียดเครื่องมือ</div>
-    <div class="reg-info-grid">
-      ${regDetailItem('ชื่อเครื่องมือ (Name)', d.instrument_name)}
-      ${regDetailItem('รหัสเครื่องจักร (Machine Code)', d.machine_name)}
-      ${regDetailItem('ยี่ห้อ (Brand)', d.brand)}
-      ${regDetailItem('รุ่น (Model)', d.model)}
-      ${regDetailItem('หมายเลขเครื่อง (Serial No.)', d.serial_no)}
-      ${regDetailItem('Asset No.', d.asset_no)}
-      ${regDetailItem('ประเภทเครื่องชั่ง', ({ single: 'Single Range (ช่วงเดียว)', range: 'Multiple Range (หลายช่วง)', interval: 'Multi-Interval (หลายช่วงความละเอียด)' })[d.balance_type] || d.balance_type)}
-      ${regDetailItem('สถานที่ (Location)', d.location)}
-      ${regDetailItem('พิกัด Max', d.capacity != null && d.capacity !== '' ? `${d.capacity} ${d.capacity_unit || 'g'}` : '')}
-      ${regDetailItem('ความละเอียด (Resolution)', d.resolution_text || d.resolution)}
-      ${regDetailItem('ค่ายอมรับ (Tolerance)', d.tolerance)}
-      ${regDetailItem('ย่านการวัด (Range)', d.range_val)}
-      ${regDetailItem('ใช้งานต่ำสุด (Minimum usage)', d.usage_min)}
-      ${regDetailItem('ใช้งานสูงสุด (Maximum usage)', d.usage_max)}
-      ${regDetailItem('ความถี่ใช้งาน (Usage Frequency)', d.usage_frequency)}
-      ${regDetailItem('Accuracy Class', d.accuracy_class)}
-      ${regDetailItem('Type : A/B/C (Ref.USP1058)', d.usp_type)}
-      ${regDetailItem('กลุ่มสินค้า (Product group)', d.product_group)}
+    <div class="reg-panel reg-panel--info">
+      ${regFlag('📄', 'รายละเอียดเครื่องมือ')}
+      <div class="reg-info-grid">
+        ${regDetailItem('ชื่อเครื่องมือ (Name)', d.instrument_name)}
+        ${regDetailItem('รหัสเครื่องจักร (Machine Code)', d.machine_name)}
+        ${regDetailItem('ยี่ห้อ (Brand)', d.brand)}
+        ${regDetailItem('รุ่น (Model)', d.model)}
+        ${regDetailItem('หมายเลขเครื่อง (Serial No.)', d.serial_no)}
+        ${regDetailItem('Asset No.', d.asset_no)}
+        ${regDetailItem('ประเภทเครื่องชั่ง', ({ single: 'Single Range (ช่วงเดียว)', range: 'Multiple Range (หลายช่วง)', interval: 'Multi-Interval (หลายช่วงความละเอียด)' })[d.balance_type] || d.balance_type)}
+        ${regDetailItem('สถานที่ (Location)', d.location)}
+      </div>
+      <div class="reg-info-grid">
+        ${regDetailItem('พิกัด Max', d.capacity != null && d.capacity !== '' ? `${d.capacity} ${d.capacity_unit || 'g'}` : '')}
+        ${regDetailItem('ความละเอียด (Resolution)', d.resolution_text || d.resolution)}
+        ${regDetailItem('ค่ายอมรับ (Tolerance)', d.tolerance)}
+        ${regDetailItem('ย่านการวัด (Range)', d.range_val)}
+        ${regDetailItem('ใช้งานต่ำสุด (Minimum usage)', d.usage_min)}
+        ${regDetailItem('ใช้งานสูงสุด (Maximum usage)', d.usage_max)}
+        ${regDetailItem('ความถี่ใช้งาน (Usage frequency)', d.usage_frequency)}
+        ${regDetailItem('Accuracy Class', d.accuracy_class)}
+        ${regDetailItem('Type : A,B,C (Ref.USP1058)', d.usp_type)}
+        ${regDetailItem('กลุ่มสินค้า (Product group)', d.product_group)}
+      </div>
     </div>
 
-    <div class="reg-section reg-section--cal"><span class="reg-sec-ic">🧪</span>การสอบเทียบ</div>
-    <div class="reg-info-grid reg-info-grid--cal">
-      ${regDetailItem('ประเภทเครื่องมือ', displayType)}
-      ${regDetailItem('ความถี่สอบเทียบ (Calibration frequency)', d.cal_frequency)}
-      ${regDetailItem('การสอบเทียบ (Calibration)', d.cal_type)}
-      ${regDetailItem('ผู้รับผิดชอบสอบเทียบ', d.responsible_by)}
-      ${regDetailItem('ผู้ออกใบรับรอง', d.issued_by)}
-      ${regDetailItem('สถานะสอบเทียบ', cancelled ? 'ยกเลิกสอบเทียบ' : 'ใช้งาน / รอสอบเทียบ')}
+    <div class="reg-panel reg-panel--cal">
+      ${regFlag('✅', 'การสอบเทียบ')}
+      <div class="reg-info-grid">
+        ${regDetailItem('ประเภทเครื่องมือ', displayType)}
+        ${regDetailItem('ความถี่สอบเทียบ (Calibration frequency)', d.cal_frequency)}
+        ${regDetailItem('การสอบเทียบ (Calibration)', d.cal_type)}
+        ${regDetailItem('ผู้รับผิดชอบสอบเทียบ', d.responsible_by)}
+        ${regDetailItem('ผู้ออกใบรับรอง', d.issued_by)}
+        ${regDetailItem('สถานะสอบเทียบ', cancelled ? 'ยกเลิกสอบเทียบ' : 'ใช้งาน / รอสอบเทียบ')}
+      </div>
     </div>
 
-    <div class="reg-section reg-section--org"><span class="reg-sec-ic">🏢</span>หน่วยงานและผู้รับผิดชอบ</div>
-    <div class="reg-info-grid reg-info-grid--org">
-      ${regDetailItem('หน่วยงาน (Unit)', d.department && typeof deptUnitName === 'function' && deptUnitName(d.department) ? `${d.department} · ${deptUnitName(d.department)}` : d.department)}
-      ${regDetailItem('แผนก (Section)', d.division)}
-      ${regDetailItem('Cost center', d.cost_center)}
-      ${regDetailItem('Remark', remarkClean, true)}
+    <div class="reg-panel reg-panel--org">
+      ${regFlag('🏢', 'หน่วยงานและผู้รับผิดชอบ')}
+      <div class="reg-info-grid">
+        ${regDetailItem('หน่วยงาน (Unit)', d.department && typeof deptUnitName === 'function' && deptUnitName(d.department) ? `${d.department} · ${deptUnitName(d.department)}` : d.department)}
+        ${regDetailItem('แผนก (Section)', d.division)}
+        ${regDetailItem('Cost center', d.cost_center)}
+        ${regDetailItem('Remark', remarkClean, true)}
+      </div>
     </div>
 
-    <div class="reg-section reg-section--file"><span class="reg-sec-ic">📁</span>ไฟล์ในระบบ</div>
-    <div id="regDetailFiles"><div class="reg-empty">กำลังโหลดไฟล์...</div></div>
+    <div class="reg-panel reg-panel--file">
+      ${regFlag('📁', 'ไฟล์ในระบบ')}
+      <div id="regDetailFiles"><div class="reg-empty">กำลังโหลดไฟล์...</div></div>
+    </div>
 
-    <div class="reg-section reg-section--audit"><span class="reg-sec-ic">🕘</span>Audit Log</div>
-    <div id="regDetailAudit"><div class="reg-empty">กำลังโหลด...</div></div>
+    <div class="reg-panel reg-panel--audit">
+      ${regFlag('🕘', 'Audit Log')}
+      <div id="regDetailAudit"><div class="reg-empty">กำลังโหลด...</div></div>
+    </div>
   `;
   document.getElementById('instrumentDetailModal').classList.add('open');
   loadDetailFiles(d);
