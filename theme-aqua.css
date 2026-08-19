@@ -1382,7 +1382,8 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #instrumentDetailModal .reg-metric > div { min-width: 0; }
 #instrumentDetailModal .reg-metric span { font-size: 12px; font-weight: 600; color: var(--text3); }
 #instrumentDetailModal .reg-metric strong { display: block; margin-top: 1px; font-size: 15px; font-weight: 700; color: var(--ink2); }
-#instrumentDetailModal .reg-metric-grid { gap: 12px; margin-bottom: 4px; }
+/* แถวการ์ดอยู่บนสุดใต้ปุ่มงาน (เหนือรูปเครื่องมือ) ตามดีไซน์ */
+#instrumentDetailModal .reg-metric-grid { gap: 12px; margin: 16px 0 0; }
 
 /* ปุ่มงานให้ใหญ่ขึ้นแบบดีไซน์ */
 #instrumentDetailModal .reg-detail-actions .btn-view {

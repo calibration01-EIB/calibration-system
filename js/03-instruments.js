@@ -428,16 +428,16 @@ function openInstrumentDetail(id) {
       </div>
     </div>
 
-    <div class="reg-panel reg-panel--photo">
-      ${regFlag('📷', 'รูปเครื่องมือ')}
-      <div id="regDetailPhotos"><div class="reg-photo-empty">กำลังโหลดรูป...</div></div>
-    </div>
-
     <div class="reg-metric-grid">
       <div class="reg-metric"><span class="reg-metric-ic" style="background:#eaf1f8;color:#2f6fb5">📄</span><div><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div></div>
       <div class="reg-metric"><span class="reg-metric-ic" style="background:#f1ecfb;color:#6242a8">🆔</span><div><span>ID.No.</span><strong>${escapeHtmlText(d.id_code || '–')}</strong></div></div>
       <div class="reg-metric"><span class="reg-metric-ic" style="background:#e7f4ee;color:#1f8a4c">📅</span><div><span>วันที่สอบเทียบ</span><strong>${formatDate(d.cal_date)}</strong></div></div>
       <div class="reg-metric"><span class="reg-metric-ic" style="background:#fdf0e2;color:#b07a10">📅</span><div><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div></div>
+    </div>
+
+    <div class="reg-panel reg-panel--photo">
+      ${regFlag('📷', 'รูปเครื่องมือ')}
+      <div id="regDetailPhotos"><div class="reg-photo-empty">กำลังโหลดรูป...</div></div>
     </div>
 
     <div class="reg-panel reg-panel--info">
