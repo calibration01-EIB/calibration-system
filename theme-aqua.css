@@ -1244,3 +1244,62 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   #app .ax-pager-ctl select,
   #app .ax-pager-ctl .ax-ghost-btn { padding: 8px 12px !important; font-size: 14px !important; }
 }
+
+/* ============================================================
+   7k · modal รายละเอียดเครื่องมือ — จัดกลุ่มเป็นหมวดมีสี + ตารางมีเส้นกรอบ
+   ต้องยิงด้วย #instrumentDetailModal เพื่อชนะ CSS เดิมใน index.html
+   ============================================================ */
+
+#instrumentDetailModal .reg-section {
+  margin: 20px 0 0; padding: 9px 13px; gap: 8px;
+  border-radius: 10px 10px 0 0; font-size: 13.5px; font-weight: 700;
+}
+/* กฎเดิม .reg-section span:first-of-type{margin-right:auto} จะดันหัวข้อหนีไอคอน */
+#instrumentDetailModal .reg-section span.reg-sec-ic { margin-right: 0; font-size: 14px; }
+#instrumentDetailModal .reg-section::before { display: none; }
+
+#instrumentDetailModal .reg-section--photo { background: #e6f4f2; color: #0d5f55; }
+#instrumentDetailModal .reg-section--info  { background: #e8f1fb; color: #14496f; }
+#instrumentDetailModal .reg-section--cal   { background: #e3f5ec; color: #0f6248; }
+#instrumentDetailModal .reg-section--org   { background: #f0eafb; color: #4a2f7a; }
+#instrumentDetailModal .reg-section--file  { background: #fdf1dd; color: #8a5a09; }
+#instrumentDetailModal .reg-section--audit { background: #eef1f4; color: #3c4a57; }
+
+/* ตารางข้อมูล: เส้นกรอบทุกช่องแบบในดีไซน์ */
+#instrumentDetailModal .reg-info-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0; margin-bottom: 4px;
+  border: 1px solid var(--border2); border-top: 0;
+  border-radius: 0 0 10px 10px; overflow: hidden;
+}
+#instrumentDetailModal .reg-info-item {
+  padding: 9px 12px; border-bottom: 1px solid #eef3f7; border-right: 1px solid #eef3f7;
+  display: flex; flex-direction: column; justify-content: center; min-height: 46px;
+}
+#instrumentDetailModal .reg-info-item span {
+  font-size: 11.5px; font-weight: 600; color: var(--text3); line-height: 1.3;
+}
+#instrumentDetailModal .reg-info-item strong {
+  margin-top: 3px; font-size: 13.5px; font-weight: 700; color: var(--ink2);
+  line-height: 1.35; white-space: pre-line;
+}
+#instrumentDetailModal .reg-info-item.full { grid-column: 1 / -1; border-right: 0; }
+
+/* บล็อกที่วาดเนื้อหาด้วย JS (รูป/ไฟล์/audit) ให้ต่อใต้หัวข้อเป็นกล่องเดียวกัน */
+#instrumentDetailModal #regDetailPhotos,
+#instrumentDetailModal #regDetailFiles,
+#instrumentDetailModal #regDetailAudit {
+  border: 1px solid var(--border2); border-top: 0; border-radius: 0 0 10px 10px;
+  padding: 12px; margin-bottom: 4px;
+}
+
+/* หมวดที่มีไม่กี่ช่อง ใช้ 2 คอลัมน์จะอ่านง่ายกว่า */
+#instrumentDetailModal .reg-info-grid--cal,
+#instrumentDetailModal .reg-info-grid--org { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (max-width: 768px) {
+  #instrumentDetailModal .reg-info-grid,
+  #instrumentDetailModal .reg-info-grid--cal,
+  #instrumentDetailModal .reg-info-grid--org { grid-template-columns: 1fr; }
+  #instrumentDetailModal .reg-info-item { border-right: 0; }
+}
