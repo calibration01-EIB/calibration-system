@@ -62,11 +62,11 @@ async function renderPendingCertWidget() {
   if (dd && dd.style.display === 'block') renderScanNotifDropdown();
 }
 
-// ===== หน้าติดตามผลสอบเทียบ: ตารางรวม calibration_records ทั้งหมด + กรองสถานะ/ค้นหา =====
+// ===== หน้าติดตามผลสอบเทียบ: โหลด calibration_records ทั้งหมดมาไว้จับคู่กับเครื่องมือ =====
 let CALRECS = [];
 async function loadCalrecsPage() {
   const body = document.getElementById('calrecBody');
-  if (body) body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">กำลังโหลด...</td></tr>';
+  if (body) body.innerHTML = '<tr><td colspan="8" class="no-data">กำลังโหลด...</td></tr>';
   try {
     const { data, error } = await sb.from('calibration_records')
       .select('id,cert_no,job_no,cal_date,due_date,status,calibrated_by,approved_by,approved_at,signed_file_path,instrument_id')
@@ -75,45 +75,236 @@ async function loadCalrecsPage() {
     CALRECS = data || [];
   } catch (e) {
     CALRECS = [];
-    if (body) body.innerHTML = `<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(e.message || '')}</td></tr>`;
+    if (body) body.innerHTML = `<tr><td colspan="8" class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(e.message || '')}</td></tr>`;
     return;
   }
   renderCalrecsTable();
 }
-function filterCalrecs() { renderCalrecsTable(); }
-function renderCalrecsTable() {
-  const body = document.getElementById('calrecBody'); if (!body) return;
-  const q = (document.getElementById('calrecSearch')?.value || '').trim().toLowerCase();
-  const st = document.getElementById('calrecStatus')?.value || '';
+/* ===== ติดตามผลสอบเทียบ (ดีไซน์ Calibration App) =====
+   มุมเครื่องมือ ไม่ใช่มุมใบ Cert: 1 แถว = 1 เครื่อง พร้อมความคืบหน้า 4 ขั้น
+   ขั้นตอนแมปจากของที่มีอยู่แล้ว — planStatusMap (06-plan) + calibration_records
+     1 วางแผน      : มีแผนผูกกับเครื่องนี้
+     2 อนุมัติแผน   : plan.status ≥ planned
+     3 สอบเทียบ    : plan.status = completed หรือมีใบ record แล้ว
+     4 แนบสแกน     : record.status = approved หรือมีไฟล์สแกน                       */
+
+const CRC_SCOPES = [
+  { v: 'due30',   emoji: '🗓️', label: 'ครบกำหนดใน 30 วัน', bg: '#eef4f9', fg: '#0c4a5e', bd: '#d5e1ea',
+    title: 'เครื่องมือที่ครบกำหนดภายใน 1 เดือน', meta: 'รวมรายการที่เลยกำหนดแล้ว · เรียงตามความเร่งด่วน' },
+  { v: 'noplan',  emoji: '📋', label: 'ยังไม่ได้วางแผน',   bg: '#fde8e8', fg: '#b91c1c', bd: '#f6cfcf',
+    title: 'ครบกำหนดใน 1 เดือน แต่ยังไม่ได้วางแผน', meta: 'ต้องเปิดแผนสอบเทียบให้เครื่องเหล่านี้ก่อน' },
+  { v: 'running', emoji: '🚚', label: 'อยู่ระหว่างดำเนินการ', bg: '#e6f1fb', fg: '#185fa5', bd: '#cfe1f4',
+    title: 'อยู่ระหว่างดำเนินการ', meta: 'วางแผนแล้วแต่ยังไม่ปิดงาน — ทุกช่วงวันครบกำหนด' },
+  { v: 'scan',    emoji: '📎', label: 'รอแนบสแกน',        bg: '#fdf3dd', fg: '#b45309', bd: '#f3e0b6',
+    title: 'สอบเทียบเสร็จแล้ว รอแนบสแกนใบรับรอง', meta: 'แสดงทุกใบที่ยังไม่แนบสแกน ไม่จำกัดวันครบกำหนด' },
+  { v: 'done',    emoji: '✅', label: 'เสร็จสมบูรณ์',      bg: '#e1f5ee', fg: '#0f6e56', bd: '#c4e8dc',
+    title: 'เสร็จสมบูรณ์', meta: 'แนบสแกนและอนุมัติแล้ว · แสดง 200 รายการล่าสุด' }
+];
+
+function crcScope() {
+  const v = document.getElementById('calrecStatus')?.value || 'due30';
+  return CRC_SCOPES.find(s => s.v === v) || CRC_SCOPES[0];
+}
+
+/* ใบล่าสุดของเครื่องนี้ — CALRECS เรียง cal_date desc มาแล้ว, ข้ามใบที่ยกเลิก */
+function crcLatestRec(instrumentId) {
+  return (CALRECS || []).find(r => r.instrument_id === instrumentId && r.status !== 'voided') || null;
+}
+
+function crcRowModel(d) {
+  const rec = crcLatestRec(d.id);
+  const ps = (typeof planStatusMap !== 'undefined' ? planStatusMap[d.id] : null) || null;
+  const st = ps ? ps.status : null;
+  const done = [
+    !!st,                                                            // 1 วางแผน
+    ['planned', 'pending_cert', 'completed'].includes(st),           // 2 อนุมัติแผน
+    st === 'completed' || !!rec,                                     // 3 สอบเทียบ
+    !!rec && (rec.status === 'approved' || !!rec.signed_file_path)   // 4 แนบสแกน
+  ];
+  // rejected ไม่ใช่ "ขั้น" — เป็นธงเสริมข้าง ๆ (แผนถูกตีกลับ = ยังค้างอยู่ที่ขั้นอนุมัติแผน)
+  let stage;
+  if (done[3])            stage = ['✅', 'เสร็จสมบูรณ์',    '#e1f5ee', '#0f6e56', '#c4e8dc'];
+  else if (done[2])       stage = ['📎', 'รอแนบสแกน',      '#fdf3dd', '#b45309', '#f3e0b6'];
+  else if (done[1])       stage = ['🚚', 'รอผลสอบเทียบ',    '#e6f1fb', '#185fa5', '#cfe1f4'];
+  else if (done[0])       stage = ['🕒', 'รออนุมัติแผน',    '#faeeda', '#854f0b', '#f0dcb4'];
+  else                    stage = ['📋', 'ยังไม่ได้วางแผน', '#eef0f3', '#5f6b7a', '#dfe4ea'];
+  return { d, rec, ps, planStatus: st, done, stage, rejected: st === 'rejected' };
+}
+
+function crcMatchScope(m, scope) {
+  const near = m.d.days_left !== null && m.d.days_left !== undefined && m.d.days_left <= 30;
+  if (scope === 'due30')   return near;
+  if (scope === 'noplan')  return near && !m.done[0];
+  if (scope === 'running') return m.done[0] && !m.done[3];
+  if (scope === 'scan')    return m.done[2] && !m.done[3];
+  if (scope === 'done')    return m.done[3];
+  return true;
+}
+
+function crcModels() {
+  return (allData || [])
+    .filter(d => !(d.calibration_cancelled === true
+      || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d))))
+    .map(crcRowModel);
+}
+
+function renderCalrecTiles(models) {
+  const host = document.getElementById('calrecTiles');
+  if (!host) return;
+  const active = crcScope().v;
+  host.innerHTML = CRC_SCOPES.slice(0, 4).map(s => {
+    const n = models.filter(m => crcMatchScope(m, s.v)).length;
+    return `<button type="button" class="ax-crc-tile${active === s.v ? ' is-on' : ''}" onclick="setCalrecScope('${s.v}')">
+      <span class="ax-crc-ic" style="background:${s.bg};border-color:${s.bd}">${s.emoji}</span>
+      <span class="ax-crc-tx">
+        <b style="color:${s.fg}">${n.toLocaleString()}</b>
+        <span>${s.label}</span>
+      </span>
+    </button>`;
+  }).join('');
+}
+
+function renderCalrecChips(models) {
+  const host = document.getElementById('calrecChips');
+  if (!host) return;
+  const active = crcScope().v;
+  host.innerHTML = CRC_SCOPES.map(s => {
+    const n = models.filter(m => crcMatchScope(m, s.v)).length;
+    const on = active === s.v;
+    const style = on ? `background:${s.bg};border-color:${s.fg}66;color:${s.fg}`
+                     : 'background:#fff;border-color:#d7e3ec;color:#4a6377';
+    return `<button type="button" class="ax-chip${on ? ' is-on' : ''}" style="${style}" onclick="setCalrecScope('${s.v}')">
+      <span class="ax-chip-e">${s.emoji}</span><span>${s.label}</span><b>${n.toLocaleString()}</b>
+    </button>`;
+  }).join('');
+}
+
+function setCalrecScope(v) {
+  const sel = document.getElementById('calrecStatus');
+  if (sel) sel.value = v;
+  renderCalrecsTable();
+}
+
+function crcStepsHtml(m) {
+  const labels = ['วางแผน', 'อนุมัติแผน', 'สอบเทียบ', 'แนบสแกน'];
+  return '<span class="ax-steps">' + labels.map((lb, i) => {
+    const ok = m.done[i];
+    const cls = ok ? 'is-done' : (i > 0 && m.done[i - 1] ? 'is-now' : '');
+    const line = i < labels.length - 1
+      ? `<i class="ax-step-line${m.done[i + 1] ? ' is-done' : ''}"></i>` : '';
+    return `<span class="ax-step ${cls}">
+      <span class="ax-step-dot">${ok ? '✓' : i + 1}</span>
+      <span class="ax-step-lb">${lb}</span>
+    </span>${line}`;
+  }).join('') + '</span>';
+}
+
+function crcActionHtml(m) {
+  const id = Number(m.d.id) || 0;
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
+  if (!m.done[0])
+    return `<button type="button" class="ax-crc-act is-primary" onclick="event.stopPropagation();goToPlanWithItem(${id})"><span>📋</span><span>วางแผน</span></button>`;
+  if (!m.done[2])
+    return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();goToPlanDetail(${id})"><span>📅</span><span>ดูแผน</span></button>`;
+  if (!m.done[3] && m.rec && canEdit)
+    return `<button type="button" class="ax-crc-act is-primary" onclick="event.stopPropagation();calRecComplete('${m.rec.id}')"><span>📎</span><span>แนบสแกน</span></button>`;
+  if (m.rec && m.rec.signed_file_path)
+    return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();viewSignedScan('${String(m.rec.signed_file_path).replace(/'/g, '')}')"><span>📄</span><span>ดูสแกน</span></button>`;
+  if (m.rec)
+    return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();openRecReview('${m.rec.id}')"><span>🔍</span><span>ดูรายละเอียด</span></button>`;
+  return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();openCalHistory(${id})"><span>🕘</span><span>ประวัติ</span></button>`;
+}
+
+function filterCalrecs() { renderCalrecsTable(); }
+
+function renderCalrecsTable() {
+  const body = document.getElementById('calrecBody');
+  if (!body) return;
+  const scope = crcScope();
+  const q = (document.getElementById('calrecSearch')?.value || '').trim().toLowerCase();
   const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
-  const instOf = id => (allData || []).find(x => x.id === id) || {};
-  const rows = CALRECS.filter(r => {
-    if (st && r.status !== st) return false;
-    if (!q) return true;
-    const inst = instOf(r.instrument_id);
-    return [r.cert_no, inst.instrument_name, inst.id_code, r.job_no].some(v => String(v || '').toLowerCase().includes(q));
-  });
+
+  const all = crcModels();
+  renderCalrecTiles(all);
+  renderCalrecChips(all);
+
+  let rows = all.filter(m => crcMatchScope(m, scope.v));
+  if (q) rows = rows.filter(m => [m.d.instrument_name, m.d.id_code, m.d.department, m.d.division,
+    m.d.location, m.rec && m.rec.cert_no].some(v => String(v || '').toLowerCase().includes(q)));
+
+  // ค้างนานสุดขึ้นก่อน; ส่วนที่ปิดงานแล้วเรียงใบล่าสุดก่อน
+  if (scope.v === 'done') {
+    rows.sort((a, b) => String(b.rec && b.rec.cal_date || '').localeCompare(String(a.rec && a.rec.cal_date || '')));
+    rows = rows.slice(0, 200);
+  } else {
+    rows.sort((a, b) => (a.d.days_left ?? 99999) - (b.d.days_left ?? 99999));
+  }
+
+  const title = document.getElementById('calrecScopeTitle');
+  if (title) title.textContent = scope.title;
+  const meta = document.getElementById('calrecScopeMeta');
+  if (meta) meta.textContent = scope.meta;
   const cnt = document.getElementById('calrecCount');
-  if (cnt) cnt.textContent = CALRECS.length ? `แสดง ${rows.length} จาก ${CALRECS.length} ใบ` : '';
-  if (!rows.length) { body.innerHTML = `<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>`; return; }
-  body.innerHTML = rows.map(r => {
-    const inst = instOf(r.instrument_id);
-    const name = escapeHtmlText(inst.instrument_name || '–');
-    const idc = escapeHtmlText(inst.id_code || '–');
-    const nameCell = inst.id != null ? `<a onclick="openCalHistory(${inst.id})" style="cursor:pointer;color:#00695C;font-weight:700">${name}</a>` : `<strong>${name}</strong>`;
-    const acts = [];
-    if (r.status === 'issued' && canEdit) acts.push(`<button onclick="calRecComplete('${r.id}')" style="padding:4px 9px;border:1px solid #1b5e20;border-radius:6px;background:#1b5e20;color:#fff;font-size:11.5px;cursor:pointer">📎 แนบสแกน</button>`);
-    acts.push(`<button onclick="openRecReview('${r.id}')" style="padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11.5px;cursor:pointer">ดูรายละเอียด</button>`);
-    if (r.signed_file_path) acts.push(`<button onclick="viewSignedScan('${String(r.signed_file_path).replace(/'/g, '')}')" style="padding:4px 9px;border:1px solid #00695C;border-radius:6px;background:#fff;color:#00695C;font-size:11.5px;cursor:pointer">📎 สแกน</button>`);
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:8px;font-family:var(--mono),monospace;font-weight:700">${escapeHtmlText(r.cert_no || '–')}</td>
-      <td style="padding:8px">${nameCell} <span style="color:var(--text3);font-size:11px">${idc}</span></td>
-      <td style="padding:8px;white-space:nowrap">${fmt(r.cal_date)}</td>
-      <td style="padding:8px;white-space:nowrap">${fmt(r.due_date)}</td>
-      <td style="padding:8px">${escapeHtmlText(r.calibrated_by || '–')}</td>
-      <td style="padding:8px">${calRecStatusBadge(r.status)}</td>
-      <td style="padding:8px"><span style="display:inline-flex;gap:5px;flex-wrap:wrap">${acts.join('')}</span></td>
+  if (cnt) cnt.textContent = `${scope.label} · ${rows.length.toLocaleString()} รายการ`;
+
+  const empty = document.getElementById('calrecEmpty');
+  if (empty) empty.style.display = rows.length ? 'none' : 'flex';
+  const card = body.closest('.ax-tablecard');
+  const wrap = card && card.querySelector('.table-wrap');
+  if (wrap) wrap.style.display = rows.length ? '' : 'none';
+  if (!rows.length) { body.innerHTML = ''; return; }
+
+  body.innerHTML = rows.map((m, i) => {
+    const d = m.d;
+    const id = Number(d.id) || 0;
+    const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+    const [letter, , color] = typeof regTypeMeta === 'function' ? regTypeMeta(displayType, d) : ['-', '', '#52667d'];
+    const days = d.days_left;
+    let dueFg = '#0f6e56', daysText = '–';
+    if (days === null || days === undefined) { dueFg = '#7a8fa3'; }
+    else if (days < 0)  { dueFg = '#d93a3a'; daysText = 'เกิน ' + Math.abs(days) + ' วัน'; }
+    else if (days <= 30) { dueFg = '#b45309'; daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน'; }
+    else { daysText = 'อีก ' + days + ' วัน'; }
+    const calBy = (m.rec && m.rec.calibrated_by) || d.cal_type || '–';
+    // เครื่องที่นำเข้าจากบัญชีรายการมี instruments.cert_no แต่ไม่มีแถวใน calibration_records
+    // ถ้าไม่ตกมาใช้เลขทะเบียน หน้านี้จะขึ้น "ยังไม่มีใบรับรอง" ทั้งที่ทะเบียนมีเลขอยู่
+    const regCert = (!m.rec && d.cert_no) ? String(d.cert_no) : '';
+    const recFg = m.done[3] ? '#0f6e56' : (m.rec ? '#b45309' : (regCert ? '#5b7186' : '#8ba0b2'));
+
+    return `<tr onclick="openCalHistory(${id})" title="คลิกเพื่อดูประวัติการสอบเทียบ">
+      <td class="c-no">${i + 1}</td>
+      <td class="c-name">
+        <div class="ax-namecell">
+          <span class="ax-tletter" style="background:${color}1a;color:${color}">${escapeHtmlText(letter)}</span>
+          <span class="ax-nametx">
+            <span class="ax-crc-name">${escapeHtmlText(d.instrument_name || '–')}</span>
+            <span class="ax-crc-id">${escapeHtmlText(d.id_code || '–')}</span>
+            <span class="ax-sub">ผู้ดูแล ${escapeHtmlText(d.division || d.location || d.department || '–')}</span>
+          </span>
+        </div>
+      </td>
+      <td class="c-dept"><span class="ax-mono">${escapeHtmlText(d.department || '–')}</span></td>
+      <td class="c-due">
+        <span class="ax-duecell">
+          <b>${fmt(d.due_date)}</b>
+          <span style="color:${dueFg}">${escapeHtmlText(daysText)}</span>
+        </span>
+      </td>
+      <td class="c-by">${escapeHtmlText(calBy)}</td>
+      <td class="c-prog">
+        ${crcStepsHtml(m)}
+        <span class="ax-tagrow ax-crc-stagerow">
+          <span class="ax-crc-stage" style="background:${m.stage[2]};color:${m.stage[3]};border-color:${m.stage[4]}">${m.stage[0]} ${m.stage[1]}</span>
+          ${m.rejected ? '<span class="ax-crc-stage" style="background:#fdf1dc;color:#a8620a;border-color:#f5ddb4">↩️ หัวหน้าส่งกลับแก้ไข</span>' : ''}
+        </span>
+      </td>
+      <td class="c-rec">
+        <span class="ax-crc-rec">
+          <b style="color:${recFg}">${escapeHtmlText((m.rec && m.rec.cert_no) || regCert || 'ยังไม่มีใบรับรอง')}</b>
+          <span>${m.rec ? fmt(m.rec.cal_date) : (regCert ? 'จากทะเบียน · ' + fmt(d.cal_date) : '–')}</span>
+        </span>
+      </td>
+      <td class="c-act">${crcActionHtml(m)}</td>
     </tr>`;
   }).join('');
 }

@@ -88,7 +88,7 @@ async function loadCertPage() {
     return acc;
   }, {});
 
-  // Type Cards
+  // Type Cards (ดีไซน์ใหม่ไม่มีการ์ดชุดนี้ — เก็บ guard ไว้เผื่อ element กลับมา)
   const cards = document.getElementById('certTypeCards');
   if (cards) {
     cards.innerHTML = CERT_TYPE_CODES.map(c => {
@@ -105,6 +105,23 @@ async function loadCertPage() {
         <div style="font-size:10px;color:var(--text3);margin-top:2px">${first}${n>1?` – ${last}`:''}</div>
       </div>`;
     }).join('');
+  }
+
+  // ช่วงเลขที่ออกไปแล้วของหมวดที่เลือก — แทนข้อมูลที่การ์ดชุดเดิมเคยบอก
+  const rangeEl = document.getElementById('certRangeLabel');
+  if (rangeEl) {
+    if (typeCode) {
+      const rows = certRowsByType[typeCode] || [];
+      rangeEl.textContent = rows.length
+        ? `${normalizeCertNo(rows[0].cert_no)} – ${normalizeCertNo(rows[rows.length - 1].cert_no)} · ออกไปแล้ว ${rows.length.toLocaleString()} ฉบับ`
+        : 'ยังไม่มีเลขที่ออกในหมวดนี้';
+    } else {
+      const used = CERT_TYPE_CODES.filter(c => (certRowsByType[c] || []).length);
+      const total = used.reduce((s, c) => s + certRowsByType[c].length, 0);
+      rangeEl.textContent = total
+        ? `ปี ${yearCode} · ${used.length} หมวด · ออกไปแล้ว ${total.toLocaleString()} ฉบับ`
+        : `ปี ${yearCode} · ยังไม่มีเลขที่ออก`;
+    }
   }
 
   // ประวัติ Cert
@@ -139,48 +156,54 @@ async function loadCertPage() {
   const histBody = document.getElementById('certHistoryBody');
   if (histBody) {
     histBody.innerHTML = history.length === 0
-      ? '<tr><td colspan="10" style="padding:16px;text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>'
+      ? '<tr><td colspan="9" class="no-data">ไม่มีข้อมูล</td></tr>'
       : visibleHistory.map((d, i) => {
         const approved = !!d.approved_by;
-        const rowBg = approved
-          ? (i%2===0?'background:#f0faf5':'background:#e8f5f0')
-          : (i%2===0?'':'background:var(--surface2)');
-        const certNo = escapeHtmlText(d.cert_no || '–');
+        const certNo = escapeHtmlText(normalizeCertNo(d.cert_no) || '–');
         const issueDate = escapeHtmlText(fmt(d.cal_date));
         const instrumentName = escapeHtmlText(d.instrument_name || '–');
         const idCode = escapeHtmlText(d.id_code || '–');
+        const serial = escapeHtmlText(d.serial_no || '–');
         const requestNo = escapeHtmlText(d.request_no || '–');
         const jobNo = escapeHtmlText(d.job_no || '–');
         const issuedBy = escapeHtmlText(d.issued_by || '–');
         const responsibleBy = escapeHtmlText(d.responsible_by || '–');
         const approvedBy = escapeHtmlText(d.approved_by || '');
         const approvedAt = escapeHtmlText(fmtDt(d.approved_at));
+        // ดีไซน์มีป้าย "ฉบับแก้ไข" ใต้เลข — ใช้ prev_cert_no ที่ระบบเก็บตอนเปลี่ยนเลข
+        const revPill = d.prev_cert_no
+          ? `<span class="ax-cert-rev">แก้ไขจาก ${escapeHtmlText(normalizeCertNo(d.prev_cert_no))}</span>` : '';
         const approveBtn = isAdmin && !approved
-          ? `<button class="cert-action-btn cert-action-approve" onclick="approveCertEntry(${d.id})" title="อนุมัติ">✅</button>`
+          ? `<button type="button" class="cert-action-btn cert-action-approve" onclick="approveCertEntry(${d.id})" title="อนุมัติ">✅</button>`
           : '';
         const editBtn = !approved
-          ? `<button class="cert-action-btn cert-action-edit" onclick="openEditCertModal(${d.id})" title="แก้ไข">✏️</button>`
+          ? `<button type="button" class="cert-action-btn cert-action-edit" onclick="openEditCertModal(${d.id})" title="แก้ไข">✏️</button>`
           : `<span class="cert-lock" title="อนุมัติแล้ว ไม่สามารถแก้ไขได้">🔒</span>`;
         const delBtn = isAdmin
-          ? `<button class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',${approved})" title="ลบ">🗑️</button>`
-          : (!approved ? `<button class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" title="ลบ">🗑️</button>` : '');
+          ? `<button type="button" class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',${approved})" title="ลบ">🗑️</button>`
+          : (!approved ? `<button type="button" class="cert-action-btn cert-action-delete" onclick="deleteCertEntry(${d.id},'${(d.cert_no||'').replace(/'/g,'')}',false)" title="ลบ">🗑️</button>` : '');
         return `
-        <tr style="${rowBg}">
-          <td class="cert-index">${start + i + 1}</td>
-          <td class="cert-number">${certNo}</td>
-          <td class="cert-date">${issueDate}</td>
-          <td class="cert-instrument"><strong>${instrumentName}</strong><span class="cert-sub">ID Code: <span class="cert-code">${idCode}</span></span></td>
-          <td class="cert-short">${requestNo}</td>
-          <td class="cert-short">${jobNo}</td>
-          <td class="cert-short">${issuedBy}</td>
-          <td class="cert-short">${responsibleBy}</td>
-          <td>
-            ${approved
-              ? `<span class="cert-status approved">อนุมัติแล้ว</span><span class="cert-approved-name">${approvedBy}</span>${approvedAt ? `<span class="cert-approved-at">${approvedAt}</span>` : ''}`
-              : `<span class="cert-status pending">รออนุมัติ</span>`}
+        <tr class="${approved ? 'is-approved' : ''}">
+          <td class="c-no">${start + i + 1}</td>
+          <td class="c-cert"><span class="ax-certcell"><b>${certNo}</b>${revPill}</span></td>
+          <td class="c-date">${issueDate}</td>
+          <td class="c-name">
+            <span class="ax-certname">
+              <span>${instrumentName}</span>
+              <span class="ax-certids">ID.NO. ${idCode} · S/N ${serial}</span>
+            </span>
           </td>
-          <td>
-            <span class="cert-actions">${approveBtn}${editBtn}${delBtn}</span>
+          <td class="c-req">${requestNo}</td>
+          <td class="c-job">${jobNo}</td>
+          <td class="c-issuer">${issuedBy}</td>
+          <td class="c-owner">${responsibleBy}</td>
+          <td class="c-act">
+            <span class="ax-certact">
+              ${approved
+                ? `<span class="cert-status approved">อนุมัติแล้ว</span>${approvedBy ? `<span class="cert-approved-name">${approvedBy}</span>` : ''}${approvedAt ? `<span class="cert-approved-at">${approvedAt}</span>` : ''}`
+                : `<span class="cert-status pending">รออนุมัติ</span>`}
+              <span class="cert-actions">${approveBtn}${editBtn}${delBtn}</span>
+            </span>
           </td>
         </tr>`;
       }).join('');

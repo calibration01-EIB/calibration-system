@@ -127,45 +127,101 @@ function repairFilteredRows() {
   });
 }
 
+function resetRepairFilters() {
+  ['repairSearch', 'repairStatusFilter', 'repairDeptFilter', 'repairFromFilter', 'repairToFilter']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  filterRepairs();
+}
+
+function setRepairStatusFilter(v) {
+  const sel = document.getElementById('repairStatusFilter');
+  if (sel) sel.value = sel.value === v ? '' : v;
+  filterRepairs();
+}
+
 function renderRepairSummary() {
   const host = document.getElementById('repairSummary');
   if (!host) return;
   const now = new Date();
   const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const yr = String(now.getFullYear());
   const cnt = { reported: 0, in_progress: 0, doneMonth: 0 };
+  let costYear = 0;
   repairOrders.forEach(o => {
     if (o.status === 'reported') cnt.reported++;
     else if (o.status === 'in_progress') cnt.in_progress++;
     else if (o.status === 'completed' && (o.completed_date || '').startsWith(ym)) cnt.doneMonth++;
+    if ((o.completed_date || o.reported_date || '').startsWith(yr)) costYear += Number(o.cost) || 0;
   });
-  const card = (label, val, fg, bg, filterVal) => `
-    <div onclick="document.getElementById('repairStatusFilter').value='${filterVal}';filterRepairs()"
-      style="background:${bg};border-radius:12px;padding:12px 16px;cursor:pointer">
-      <div style="font-size:22px;font-weight:700;color:${fg}">${val}</div>
-      <div style="font-size:12px;color:${fg}">${label}</div>
-    </div>`;
+  const active = document.getElementById('repairStatusFilter')?.value || '';
+  const card = (label, val, unit, fg, bar, filterVal) => `
+    <button type="button" class="ax-rp-kpi${filterVal && active === filterVal ? ' is-on' : ''}"
+      ${filterVal ? `onclick="setRepairStatusFilter('${filterVal}')"` : 'style="cursor:default"'}>
+      <span class="ax-rp-bar" style="background:${bar}"></span>
+      <span class="ax-rp-val"><b style="color:${fg}">${val}</b><span>${unit}</span></span>
+      <span class="ax-rp-lb">${label}</span>
+    </button>`;
   host.innerHTML =
-    card('แจ้งซ่อม รอดำเนินการ', cnt.reported, '#b45309', '#fdf3dd', 'reported') +
-    card('กำลังซ่อม', cnt.in_progress, '#b91c1c', '#fde8e8', 'in_progress') +
-    card('ซ่อมเสร็จเดือนนี้', cnt.doneMonth, '#0b7a44', '#e5f6ec', 'completed');
+    card('แจ้งซ่อม รอดำเนินการ', cnt.reported, 'ใบ', '#b45309', '#f0a417', 'reported') +
+    card('กำลังซ่อม', cnt.in_progress, 'ใบ', '#b91c1c', '#e03b3b', 'in_progress') +
+    card('ซ่อมเสร็จเดือนนี้', cnt.doneMonth, 'ใบ', '#0b7a44', '#12a186', 'completed') +
+    card('ค่าใช้จ่ายรวมปีนี้', costYear.toLocaleString('th-TH'), 'บาท', '#0c4a5e', '#0c4a5e', '');
 }
 
 function renderRepairsTable() {
   const tbody = document.getElementById('repairTableBody');
   if (!tbody) return;
+  renderRepairSummary();
   const rows = repairFilteredRows();
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="no-data">ไม่พบงานซ่อม</td></tr>'; return; }
+
+  const empty = document.getElementById('repairEmpty');
+  if (empty) empty.style.display = rows.length ? 'none' : 'flex';
+  const card = tbody.closest('.ax-tablecard');
+  const wrap = card && card.querySelector('.table-wrap');
+  if (wrap) wrap.style.display = rows.length ? '' : 'none';
+  const countLabel = document.getElementById('repairCountLabel');
+  if (countLabel) {
+    countLabel.textContent = rows.length
+      ? `แสดง ${rows.length.toLocaleString()} จาก ${repairOrders.length.toLocaleString()} ใบงาน`
+      : '';
+  }
+  if (!rows.length) { tbody.innerHTML = ''; return; }
+
   tbody.innerHTML = rows.map((o, i) => {
     const d = repairInstrument(o.instrument_id);
-    return `<tr onclick="openRepairModal('${o.id}')" style="cursor:pointer">
-      <td>${i + 1}</td>
-      <td><strong>${escapeHtmlText(d?.id_code || '?')}</strong><br><span class="reg-sub">${escapeHtmlText(d?.instrument_name || 'ไม่พบเครื่องในทะเบียน')}</span></td>
-      <td>${escapeHtmlText(d?.department || '–')}</td>
-      <td>${fmtRepairDate(o.reported_date)}</td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtmlAttr(o.symptom || '')}">${escapeHtmlText(o.symptom || '–')}</td>
-      <td>${repairStatusBadge(o.status)}</td>
-      <td>${escapeHtmlText(o.repair_type === 'external' ? (o.vendor_name || 'ภายนอก') : o.repair_type === 'internal' ? 'ภายใน' : '–')}</td>
-      <td style="text-align:right">${fmtBaht(o.cost)}</td>
+    const [lbl, fg, bg] = repairStatusMeta(o.status);
+    const displayType = d && typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : '';
+    const [letter, , color] = typeof regTypeMeta === 'function' ? regTypeMeta(displayType, d) : ['-', '', '#52667d'];
+    const byText = o.repair_type === 'external' ? (o.vendor_name || 'ผู้ให้บริการภายนอก')
+      : o.repair_type === 'internal' ? 'ทีมช่างภายใน' : '–';
+    const byTag = o.repair_type === 'external' ? 'ภายนอก' : o.repair_type === 'internal' ? 'ภายใน' : '';
+    return `<tr onclick="openRepairModal('${o.id}')" title="คลิกเพื่อเปิดใบงาน">
+      <td class="c-no">${i + 1}</td>
+      <td class="c-inst">
+        <span class="ax-namecell">
+          <span class="ax-tletter" style="background:${color}1a;color:${color};width:34px;height:34px;border-radius:10px;font-size:15px">${escapeHtmlText(letter)}</span>
+          <span class="ax-nametx">
+            <span class="ax-rp-name">${escapeHtmlText(d?.instrument_name || 'ไม่พบเครื่องในทะเบียน')}</span>
+            <span class="ax-rp-id">ID: ${escapeHtmlText(d?.id_code || '?')}</span>
+          </span>
+        </span>
+      </td>
+      <td class="c-dept">${escapeHtmlText(d?.department || '–')}</td>
+      <td class="c-date">
+        <span class="ax-rp-when">
+          <b>${fmtRepairDate(o.reported_date)}</b>
+          ${o.reported_by ? `<span>โดย ${escapeHtmlText(o.reported_by)}</span>` : ''}
+        </span>
+      </td>
+      <td class="c-sym">${escapeHtmlText(o.symptom || '–')}</td>
+      <td class="c-status"><span class="ax-rp-status" style="background:${bg};color:${fg}">${escapeHtmlText(lbl)}</span></td>
+      <td class="c-by">
+        <span class="ax-rp-when">
+          <b style="font-weight:400">${escapeHtmlText(byText)}</b>
+          ${byTag ? `<span>${byTag}</span>` : ''}
+        </span>
+      </td>
+      <td class="c-cost">${fmtBaht(o.cost)}</td>
     </tr>`;
   }).join('');
 }

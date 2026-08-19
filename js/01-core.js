@@ -83,6 +83,8 @@ function enterApp(user) {
     if (bn) bn.style.display = 'flex';
   }
   setDriveStatus(true, 'เชื่อมต่อ Supabase แล้ว');
+  // หน้าแรกหลังล็อกอิน = Home (ดีไซน์ใหม่) ไม่ใช่ Dashboard
+  if (typeof showPage === 'function') showPage('home');
   loadData();
 }
 

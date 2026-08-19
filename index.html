@@ -16,7 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -2676,6 +2676,8 @@ body.app-mode textarea:focus {
   }
 }
 </style>
+<!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
+<link rel="stylesheet" href="theme-aqua.css">
 </head>
 <body>
 
@@ -2752,66 +2754,161 @@ body.app-mode textarea:focus {
     </div>
 
     <div class="main-content">
+      <!-- HEADER (ดีไซน์ใหม่) — แทน sidebar + topbar เดิม -->
+      <header class="ax-header">
+        <div class="ax-header-inner">
+          <button type="button" class="ax-brand" onclick="showPage('home')" title="กลับหน้าแรก">
+            <img src="assets/ilc-logo-symbol.png" alt="ILC">
+            <span class="ax-brand-txt">
+              <b>INTERNATIONAL</b>
+              <span>LABORATORIES CORP.,LTD.</span>
+            </span>
+          </button>
+
+          <div class="ax-actions">
+            <button type="button" class="ax-home-btn" id="axHomeBtn" onclick="showPage('home')" title="หน้าแรก">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.6 12 3.8l8.5 6.8V20a1 1 0 0 1-1 1h-4.6v-6H10v6H4.5a1 1 0 0 1-1-1z"></path></svg>
+              <span>หน้าแรก</span>
+            </button>
+
+            <div class="notif-wrapper" id="scanNotifWrapper">
+              <button class="notif-btn" onclick="toggleScanNotifDropdown()" title="สอบเสร็จแล้ว — รอแนบสแกน">
+                📎
+                <span class="notif-badge notif-badge--scan" id="scanNotifBadge"><span id="scanNotifCount">0</span></span>
+              </button>
+              <div class="notif-dropdown" id="scanNotifDropdown"></div>
+            </div>
+            <div class="notif-wrapper" id="notifWrapper">
+              <button class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน">
+                🔔
+                <span class="notif-badge" id="notifBadge"><span id="notifCount">0</span></span>
+              </button>
+              <div class="notif-dropdown" id="notifDropdown"></div>
+            </div>
+
+            <button type="button" class="ax-icon-btn" onclick="showPage('home')" title="ช่วยเหลือ">❓</button>
+
+            <div class="ax-user" id="axUser" onclick="toggleAxUserMenu(event)">
+              <div class="ax-user-av" id="axUserInitial">A</div>
+              <span class="ax-user-txt">
+                <b id="axUserName">Admin</b>
+                <span id="axUserRole">admin</span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8fa3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M6 9.5l6 6 6-6"></path></svg>
+              <div class="ax-menu" id="axUserMenu">
+                <button type="button" class="ax-menu-item" id="axMenuAdmin" onclick="axGo(event,'admin')">
+                  <span class="ax-menu-ic">👥</span>
+                  <span class="ax-menu-tx"><b>จัดการผู้ใช้</b><span>บัญชีและสิทธิ์การใช้งาน</span></span>
+                </button>
+                <button type="button" class="ax-menu-item" id="axMenuAudit" onclick="axGo(event,'audit')">
+                  <span class="ax-menu-ic">📋</span>
+                  <span class="ax-menu-tx"><b>Audit Log</b><span>ประวัติการเปลี่ยนแปลง</span></span>
+                </button>
+                <button type="button" class="ax-menu-item is-danger" onclick="axLogout(event)">
+                  <span class="ax-menu-ic">↩</span>
+                  <span class="ax-menu-tx"><b>ออกจากระบบ</b><span>ออกจากบัญชีนี้</span></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+          </div>
+        </div>
+      </header>
+
+      <!-- เก็บไว้ให้ JS เดิมเขียนหัวข้อได้ (ซ่อนด้วย theme-aqua.css) -->
       <div class="topbar">
         <div>
-            <div class="topbar-title" id="topbarTitle">Dashboard</div>
-            <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
-          </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="notif-wrapper" id="scanNotifWrapper">
-            <button class="notif-btn" onclick="toggleScanNotifDropdown()" title="สอบเสร็จแล้ว — รอแนบสแกน">
-              📎
-              <span class="notif-badge notif-badge--scan" id="scanNotifBadge"><span id="scanNotifCount">0</span></span>
-            </button>
-            <div class="notif-dropdown" id="scanNotifDropdown"></div>
-          </div>
-          <div class="notif-wrapper" id="notifWrapper">
-            <button class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน">
-              🔔
-              <span class="notif-badge" id="notifBadge"><span id="notifCount">0</span></span>
-            </button>
-            <div class="notif-dropdown" id="notifDropdown"></div>
-          </div>
-          <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+          <div class="topbar-title" id="topbarTitle">Dashboard</div>
+          <div class="topbar-sub" id="topbarSub">ภาพรวมสถานะเครื่องมือ</div>
+        </div>
+      </div>
+
+      <!-- ================= หน้าแรก (Home) ================= -->
+      <div id="pageHome" class="page-content" style="display:none">
+        <div class="ax-home">
+
+          <!-- hero: ข้อความเป็น HTML จริง (แก้คำได้ คมทุกความละเอียด) ทับรูปเวอร์เนียร์ที่ไม่มีตัวหนังสือ -->
+          <section class="ax-hero ax-hero--split">
+            <div class="ax-hero-media">
+              <img src="assets/hero-caliper.png" alt=""
+                   onerror="this.onerror=null;this.src='assets/calibration-lab-hero.png'">
+            </div>
+            <div class="ax-hero-scrim"></div>
+            <div class="ax-hero-copy">
+              <span class="ax-hero-kicker">Welcome</span>
+              <h1>Calibration System</h1>
+              <p>ระบบบริหารจัดการกระบวนการสอบเทียบเครื่องมือวัด<br>ครบถ้วน แม่นยำ เชื่อถือได้</p>
+            </div>
+          </section>
+
+          <section class="ax-tiles" id="axTiles"></section>
         </div>
       </div>
 
 
-      <div id="pageDashboard" class="page-content">
+      <div id="pageDashboard" class="page-content" style="display:none">
 
-        <!-- HERO -->
-        <div class="dsh-hero">
-          <div class="dsh-hero-top">
-            <div>
-              <div class="dsh-hero-title">ภาพรวมระบบสอบเทียบ</div>
-              <div class="dsh-hero-sub" id="dashHeroDate"></div>
-            </div>
-            <button class="dsh-hero-btn" onclick="loadData(true)"><i class="ti ti-refresh"></i> รีเฟรชข้อมูล</button>
+        <!-- หัวหน้าเพจ (ดีไซน์ใหม่ — แทน hero navy เดิม) -->
+        <div class="ax-page-head">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1>ภาพรวมระบบสอบเทียบ</h1>
+            <p id="dashHeroDate"></p>
           </div>
+          <button type="button" class="ax-ghost-btn" onclick="loadData(true)">
+            <span style="font-size:18px">🔄</span><span>รีเฟรชข้อมูล</span>
+          </button>
         </div>
 
-        <!-- KPI CARDS (ลอยทับ hero) -->
+        <!-- แท็บ -->
+        <div class="ax-tabs">
+          <button type="button" class="ax-tab is-on" onclick="showPage('dashboard')"><span>📊</span><span>ภาพรวม</span></button>
+          <button type="button" class="ax-tab" onclick="showPage('soon')"><span>📈</span><span>KPI</span></button>
+        </div>
+
+        <!-- KPI CARDS -->
         <div id="statCardsGrid" class="dsh-kpis">
-          <div class="dsh-kpi" onclick="filterByStatus('')">
-            <div class="dsh-kpi-ic" style="background:#e0f2ef;color:#00897B"><i class="ti ti-tools"></i></div>
-            <div class="dsh-kpi-v" id="statTotal">–</div>
-            <div class="dsh-kpi-lb">เครื่องมือทั้งหมด</div>
+          <button type="button" class="dsh-kpi" onclick="filterByStatus('')">
+            <span class="dsh-kpi-top"><span class="dsh-kpi-ic" style="background:#e0f2ee">🧰</span><span class="dsh-kpi-ar">→</span></span>
+            <span class="dsh-kpi-b">
+              <span class="dsh-kpi-v" id="statTotal">–</span>
+              <span class="dsh-kpi-lb">เครื่องมือทั้งหมด</span>
+              <span class="dsh-kpi-sub">ในทะเบียนเครื่องมือวัด</span>
+            </span>
+          </button>
+          <button type="button" class="dsh-kpi" onclick="filterByStatus('ok')">
+            <span class="dsh-kpi-top"><span class="dsh-kpi-ic" style="background:#e5f6ec">✅</span><span class="dsh-kpi-ar">→</span></span>
+            <span class="dsh-kpi-b">
+              <span class="dsh-kpi-v" style="color:#12784f" id="statOk">–</span>
+              <span class="dsh-kpi-lb">ปกติ</span>
+              <span class="dsh-kpi-sub">สอบเทียบแล้ว ยังไม่ครบกำหนด</span>
+            </span>
+          </button>
+          <button type="button" class="dsh-kpi" onclick="filterByStatus('warning')">
+            <span class="dsh-kpi-top"><span class="dsh-kpi-ic" style="background:#fdf3dd">⏳</span><span class="dsh-kpi-ar">→</span></span>
+            <span class="dsh-kpi-b">
+              <span class="dsh-kpi-v" style="color:#b45309" id="statWarning">–</span>
+              <span class="dsh-kpi-lb">ใกล้ครบกำหนด</span>
+              <span class="dsh-kpi-sub">ภายใน 30 วัน</span>
+            </span>
+          </button>
+          <button type="button" class="dsh-kpi" onclick="filterByStatus('overdue')">
+            <span class="dsh-kpi-top"><span class="dsh-kpi-ic" style="background:#fde8e8">⚠️</span><span class="dsh-kpi-ar">→</span></span>
+            <span class="dsh-kpi-b">
+              <span class="dsh-kpi-v" style="color:#b91c1c" id="statOverdue">–</span>
+              <span class="dsh-kpi-lb">เกินกำหนด</span>
+              <span class="dsh-kpi-sub">ต้องดำเนินการ</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- งานที่ต้องทำก่อน -->
+        <div class="dsh-card" style="margin-bottom:16px">
+          <div class="dsh-sect">
+            <h2>งานที่ต้องทำก่อน</h2>
+            <p>เรียงตามความเร่งด่วน</p>
           </div>
-          <div class="dsh-kpi" onclick="filterByStatus('ok')">
-            <div class="dsh-kpi-ic" style="background:#e5f6ec;color:#2E7D32"><i class="ti ti-circle-check"></i></div>
-            <div class="dsh-kpi-v" style="color:#0b7a44" id="statOk">–</div>
-            <div class="dsh-kpi-lb">ปกติ · สอบเทียบแล้ว</div>
-          </div>
-          <div class="dsh-kpi" onclick="filterByStatus('warning')">
-            <div class="dsh-kpi-ic" style="background:#fdf3dd;color:#b45309"><i class="ti ti-hourglass"></i></div>
-            <div class="dsh-kpi-v" style="color:#b45309" id="statWarning">–</div>
-            <div class="dsh-kpi-lb">ใกล้ครบกำหนด · ภายใน 30 วัน</div>
-          </div>
-          <div class="dsh-kpi" onclick="filterByStatus('overdue')">
-            <div class="dsh-kpi-ic" style="background:#fde8e8;color:#b91c1c"><i class="ti ti-alert-triangle"></i></div>
-            <div class="dsh-kpi-v" style="color:#b91c1c" id="statOverdue">–</div>
-            <div class="dsh-kpi-lb">เกินกำหนด · ต้องดำเนินการ</div>
-          </div>
+          <div id="dashTodoList" class="dsh-todo"></div>
         </div>
 
         <!-- ประเภทเครื่องมือ -->
@@ -2874,74 +2971,143 @@ body.app-mode textarea:focus {
 
       <!-- หน้า รายการเครื่องมือ -->
    <div id="pageList" class="page-content" style="display:none">
-        <!-- ROW 4: FILTER + TABLE -->
-        <div class="controls-bar">
-          <input type="text" id="searchInput" placeholder="🔍 ค้นหา เครื่องมือ, ยี่ห้อ, ID, CERT..." oninput="filterData()">
-          <select id="typeFilter" onchange="filterData()"><option value="">ทุกประเภท</option></select>
-          <select id="unitFilter" onchange="filterData()"><option value="">ทุกหน่วยงาน</option></select>
-          <select id="statusFilter" onchange="filterData()">
-            <option value="">ทุกสถานะ</option>
-            <option value="overdue">เลยกำหนด</option>
-            <option value="warning">ใกล้ครบ</option>
-            <option value="ok">ปกติ</option>
-          </select>
-          <select id="monthFilter" onchange="filterData()">
-            <option value="">ทุกเดือน (ครบกำหนด)</option>
-            <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-            <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-            <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-            <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-            <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-            <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-          </select>
-          <button class="btn-reset" onclick="resetFilters()">รีเซ็ต</button>
-          <button class="btn-refresh" onclick="loadData(true)">↻ รีเฟรช</button>
-          <button class="btn-add" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none">+ เพิ่มเครื่องมือ</button>
-          <button class="btn-refresh" onclick="printReport()" style="background:var(--green-light);border-color:#b8e0bf;color:var(--green)">🖨️ PDF</button>
-          <button class="btn-refresh" onclick="exportExcel()" style="background:#e8f5e9;border-color:#a5d6a7;color:#2E7D32;font-weight:500">📊 Excel</button>
-          <button class="btn-add" id="btnImportExcel" onclick="openImportModal()" style="display:none;background:#5C6BC0;border-color:#3949AB">⬆️ Import Excel</button>
+
+        <!-- หัวหน้าเพจ + ปุ่มหลัก (ดีไซน์ Calibration App) -->
+        <div class="ax-page-head">
+          <div>
+            <h1>รายการเครื่องมือ</h1>
+            <p id="listResultLabel">–</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" class="ax-ghost-btn" onclick="loadData(true)"><span>↻</span><span>รีเฟรช</span></button>
+            <button type="button" class="ax-ghost-btn" onclick="printReport()"><span>🖨️</span><span>PDF</span></button>
+            <button type="button" class="ax-ghost-btn" onclick="exportExcel()"><span>📊</span><span>Excel</span></button>
+            <button type="button" class="ax-ghost-btn" id="btnImportExcel" onclick="openImportModal()" style="display:none"><span>⬆️</span><span>Import Excel</span></button>
+            <button type="button" class="ax-primary-btn" id="btnAddInstrument" onclick="openInstrumentModal()" style="display:none"><span>➕</span><span>เพิ่มเครื่องมือ</span></button>
+          </div>
         </div>
 
-        <!-- CATEGORY PILLS -->
-        <nav id="listCategoryStrip" class="reg-pills" aria-label="หมวดเครื่องมือ"></nav>
+        <!-- การ์ดตัวกรอง: ค้นหา → พิลหมวด → ชิปสถานะ -->
+        <div class="ax-filter-card">
+          <div class="ax-filter-row">
+            <label class="ax-search">
+              <span aria-hidden="true">🔍</span>
+              <input type="text" id="searchInput" placeholder="ค้นหาชื่อเครื่องมือ, ยี่ห้อ, ID.No. หรือเลข CERT." oninput="filterData()">
+            </label>
+            <select id="typeFilter" onchange="filterData()"><option value="">ทุกประเภท</option></select>
+            <select id="unitFilter" onchange="filterData()"><option value="">ทุกหน่วยงาน</option></select>
+            <select id="monthFilter" onchange="filterData()">
+              <option value="">ทุกเดือน (ครบกำหนด)</option>
+              <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+              <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+              <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+              <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+              <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+            </select>
+            <button type="button" class="ax-ghost-btn" onclick="resetFilters()">ล้างตัวกรอง</button>
+            <!-- สถานะเลือกผ่านชิปด้านล่าง — select นี้เก็บไว้ให้ filterData()/filterByStatus() ใช้ -->
+            <select id="statusFilter" onchange="filterData()" class="ax-hidden-field" tabindex="-1" aria-hidden="true">
+              <option value="">ทุกสถานะ</option>
+              <option value="overdue">เลยกำหนด</option>
+              <option value="warning">ใกล้ครบ</option>
+              <option value="ok">ปกติ</option>
+              <option value="cancelled">ยกเลิกสอบเทียบ</option>
+            </select>
+          </div>
 
-        <!-- PAGINATION -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="font-size:15px;color:var(--text2)" id="paginationInfo">–</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:15px;color:var(--text2)">แสดง</span>
-            <select id="pageSizeSelect" onchange="changePageSize()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:15px;outline:none">
+          <nav id="listCategoryStrip" class="reg-pills ax-catpills" aria-label="หมวดเครื่องมือ"></nav>
+
+          <div class="ax-chips" id="listStatusChips"></div>
+        </div>
+
+        <!-- สลับมุมมอง: สเปก / บัญชีรายการ / การ์ด -->
+        <div class="ax-view-tabs" id="listViewTabs"></div>
+
+        <!-- มุมมองสเปก -->
+        <div class="ax-tablecard" id="listSpecCard">
+          <div class="table-wrap">
+            <table class="ax-table ax-table-spec">
+              <thead>
+                <tr>
+                  <th class="c-no">ลำดับที่<span>(No.)</span></th>
+                  <th class="c-name">เครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(Instrument / Brand / Model)</span></th>
+                  <th class="c-cert">เลขที่ Cert<span>(Certificate No.)</span></th>
+                  <th class="c-id">รหัสเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(ID.CODE / MACHINE CODE)</span></th>
+                  <th class="c-range">ย่านการวัด<span>(Range)</span></th>
+                  <th class="c-res">ความละเอียด<span>(Resolution)</span></th>
+                  <th class="c-tol">ค่ายอมรับ<span>(Tolerance)</span></th>
+                  <th class="c-cal">วันที่สอบเทียบ<span>(Cal. date)</span></th>
+                  <th class="c-due">ครบกำหนด<span>(Due date)</span></th>
+                  <th class="c-method">การสอบเทียบ / ความถี่<span>(Method · Frequency)</span></th>
+                  <th class="c-status">สถานะ<span>(Status)</span></th>
+                  <th class="c-act">งาน<span>(Actions)</span></th>
+                </tr>
+              </thead>
+              <tbody id="dataTable"><tr><td colspan="12" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- มุมมองบัญชีรายการ (ทุกคอลัมน์ตามฟอร์ม) -->
+        <div class="ax-tablecard" id="listFullCard" style="display:none">
+          <div class="table-wrap">
+            <table class="ax-table ax-table-full">
+              <thead>
+                <tr>
+                  <th rowspan="2">ลำดับที่<span>(No.)</span></th>
+                  <th rowspan="2" class="c-name">ชื่อเครื่องจักรหรือเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(Name of machine or Inspection, measuring and testing instruments)</span></th>
+                  <th rowspan="2">รหัสเครื่องจักร<span>(Machine Code)</span></th>
+                  <th rowspan="2">รหัสเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(ID.Code)</span></th>
+                  <th rowspan="2">ยี่ห้อ<span>(Brand)</span></th>
+                  <th rowspan="2">รุ่น<span>(Model)</span></th>
+                  <th rowspan="2">หมายเลขเครื่อง<span>(Serial No.)</span></th>
+                  <th rowspan="2">ความละเอียด<span>(Resolution)</span></th>
+                  <th rowspan="2">ค่ายอมรับ<span>(Tolerance)</span></th>
+                  <th rowspan="2">ย่านการวัด<span>(Range)</span></th>
+                  <th rowspan="2">ใช้งานต่ำสุด<span>(Minimum usage)</span></th>
+                  <th rowspan="2">ใช้งานสูงสุด<span>(Maximum usage)</span></th>
+                  <th rowspan="2">ความถี่ใช้งาน<span>(Usage frequency)</span></th>
+                  <th rowspan="2">ความถี่สอบเทียบ<span>(Calibration frequency)</span></th>
+                  <th rowspan="2" class="c-loc">สถานที่<span>(Location)</span></th>
+                  <th colspan="2">การสอบเทียบ<span>(Calibration)</span></th>
+                  <th rowspan="2">Type : A,B,C<span>(Ref.USP1058)</span></th>
+                  <th rowspan="2">สถานะ<span>(Status)</span></th>
+                </tr>
+                <tr>
+                  <th class="c-sub">Internal</th>
+                  <th class="c-sub">External</th>
+                </tr>
+              </thead>
+              <tbody id="dataTableFull"><tr><td colspan="19" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- มุมมองการ์ด -->
+        <div class="ax-cards" id="listCardCard" style="display:none"></div>
+
+        <div class="ax-empty" id="listEmpty" style="display:none">
+          <span class="ax-empty-ic">🔍</span>
+          <b>ไม่พบเครื่องมือที่ตรงกับตัวกรอง</b>
+          <span>ลองล้างตัวกรองหรือเปลี่ยนคำค้นหา</span>
+        </div>
+
+        <div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
+
+        <div class="ax-pager">
+          <span id="paginationInfo">–</span>
+          <div class="ax-pager-ctl">
+            <select id="pageSizeSelect" onchange="changePageSize()">
               <option value="50">50 แถว</option>
               <option value="100" selected>100 แถว</option>
               <option value="200">200 แถว</option>
             </select>
-            <button onclick="goPage(-1)" id="btnPrev" class="btn-reset" style="padding:7px 14px">◀ ก่อนหน้า</button>
-            <span id="pageNum" style="font-size:15px;font-weight:600;color:var(--accent)">หน้า 1</span>
-            <button onclick="goPage(1)" id="btnNext" class="btn-reset" style="padding:7px 14px">ถัดไป ▶</button>
+            <button type="button" onclick="goPage(-1)" id="btnPrev" class="ax-ghost-btn">← ก่อนหน้า</button>
+            <span id="pageNum">หน้า 1</span>
+            <button type="button" onclick="goPage(1)" id="btnNext" class="ax-ghost-btn">ถัดไป →</button>
           </div>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>เครื่องมือ</th>
-                <th>ID.No. / CERT.</th>
-                <th>หมวด</th>
-                <th>หน่วยงาน</th>
-                <th>วันสอบเทียบ</th>
-                <th>ครบกำหนด</th>
-                <th>สถานะ</th>
-                <th>วางแผน</th>
-                <th>ไฟล์</th>
-                <th id="thManage" style="display:none">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="dataTable"><tr><td colspan="11" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
-          </table>
-        </div>
-        <div class="mobile-card-list" id="mobileCardList" style="display:none;padding:0 0 8px"></div>
 
    </div>
 
@@ -2955,42 +3121,76 @@ body.app-mode textarea:focus {
 
             <!-- AUDIT LOG -->
       <div id="pageAudit" class="page-content" style="display:none">
-        <div class="section-header">
-          <h2>Audit Log — ประวัติการแก้ไข</h2>
-          <button class="btn-refresh" onclick="loadAuditLogs()">↻ รีเฟรช</button>
+
+        <div class="ax-page-head">
+          <div>
+            <h1>Audit Log</h1>
+            <p>ประวัติการดำเนินการทั้งหมดในระบบ</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" class="ax-ghost-btn" onclick="loadAuditLogs()"><span>↻</span><span>รีเฟรช</span></button>
+            <button type="button" class="ax-ghost-btn" onclick="printAuditLog()"><span>🖨️</span><span>PDF</span></button>
+            <button type="button" class="ax-ghost-btn" onclick="exportAuditExcel()"><span>📊</span><span>Excel</span></button>
+          </div>
         </div>
-        <div class="controls-bar" style="margin-bottom:16px">
-          <input type="text" id="auditSearch" placeholder="🔍 ค้นหา ผู้ใช้, ID Code, การกระทำ..." style="flex:1;min-width:200px" oninput="filterAuditLogs()">
+
+        <div class="ax-crc-tiles" id="auditStats"></div>
+
+        <div class="ax-filter-card">
+          <div class="ax-filter-row">
+            <label class="ax-search">
+              <span aria-hidden="true">🔍</span>
+              <input type="text" id="auditSearch" placeholder="ค้นหาผู้ใช้, รายการ หรือรายละเอียด" oninput="filterAuditLogs()">
+            </label>
+            <select id="auditActionFilter" onchange="filterAuditLogs()">
+              <option value="">ทุกการดำเนินการ</option>
+              <option value="เพิ่ม">➕ เพิ่ม</option>
+              <option value="แก้ไข">✏️ แก้ไข</option>
+              <option value="ลบ">🗑️ ลบ</option>
+              <option value="อัพโหลดไฟล์">📎 อัพโหลดไฟล์</option>
+              <option value="ลบไฟล์">🗂️ ลบไฟล์</option>
+              <option value="วางแผนสอบเทียบ">📅 วางแผนสอบเทียบ</option>
+              <option value="ยกเลิกแผน">❌ ยกเลิกแผน</option>
+            </select>
+            <select id="auditModuleFilter" onchange="filterAuditLogs()"><option value="">ทุกเมนู</option></select>
+            <select id="auditUserFilter" onchange="filterAuditLogs()"><option value="">ทุกผู้ใช้</option></select>
+            <select id="auditPageSize" onchange="auditFilterChange()">
+              <option value="50">50 รายการ/หน้า</option>
+              <option value="100">100 รายการ/หน้า</option>
+            </select>
+            <button type="button" class="ax-ghost-btn" onclick="clearAuditFilters()">ล้างตัวกรอง</button>
+          </div>
           <span id="auditResultCount"></span>
-          <select id="auditPageSize" onchange="renderAuditTable()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
-            <option value="50">แสดง 50 รายการ</option>
-            <option value="100">แสดง 100 รายการ</option>
-          </select>
-          <select id="auditActionFilter" onchange="filterAuditLogs()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:14px;color:#111;outline:none">
-            <option value="">ทุกการกระทำ</option>
-            <option value="เพิ่ม">➕ เพิ่ม</option>
-            <option value="แก้ไข">✏️ แก้ไข</option>
-            <option value="ลบ">🗑️ ลบ</option>
-            <option value="อัพโหลดไฟล์">📎 อัพโหลดไฟล์</option>
-            <option value="ลบไฟล์">🗂️ ลบไฟล์</option>
-            <option value="วางแผนสอบเทียบ">📅 วางแผนสอบเทียบ</option>
-            <option value="ยกเลิกแผน">❌ ยกเลิกแผน</option>
-          </select>
         </div>
-        <div id="auditLogTableWrap" class="table-wrap">
-          <table id="auditLogTable">
-            <thead class="audit-table-head">
-              <tr>
-                <th class="audit-th">เวลา</th>
-                <th class="audit-th">ผู้ใช้</th>
-                <th class="audit-th">การกระทำ</th>
-                <th class="audit-th">ID Code</th>
-                <th class="audit-th">เครื่องมือ</th>
-                <th class="audit-th">รายละเอียด</th>
-              </tr>
-            </thead>
-            <tbody id="auditTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
-          </table>
+
+        <div class="ax-tablecard">
+          <div class="table-wrap" id="auditLogTableWrap">
+            <table id="auditLogTable" class="ax-table ax-table-audit">
+              <thead>
+                <tr>
+                  <th class="c-time">วันที่ / เวลา</th>
+                  <th class="c-user">ผู้ใช้งาน</th>
+                  <th class="c-action">การดำเนินการ</th>
+                  <th class="c-module">เมนู</th>
+                  <th class="c-target">รายการที่เกี่ยวข้อง</th>
+                </tr>
+              </thead>
+              <tbody id="auditTable"><tr><td colspan="5" class="no-data">กำลังโหลด...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="ax-empty ax-empty--inline" id="auditEmpty" style="display:none">
+            <span class="ax-empty-ic">🗂️</span>
+            <b>ไม่พบรายการที่ตรงกับตัวกรอง</b>
+          </div>
+        </div>
+
+        <div class="ax-pager">
+          <span id="auditPageLabel">–</span>
+          <div class="ax-pager-ctl">
+            <button type="button" id="auditPrev" class="ax-ghost-btn" onclick="auditGoPage(-1)">← ก่อนหน้า</button>
+            <span id="auditPageNum"></span>
+            <button type="button" id="auditNext" class="ax-ghost-btn" onclick="auditGoPage(1)">ถัดไป →</button>
+          </div>
         </div>
       </div>
 
@@ -3160,149 +3360,364 @@ body.app-mode textarea:focus {
 
       <!-- ADMIN -->
       <div id="pageAdmin" class="page-content" style="display:none">
-        <div class="section-header">
-          <h2>จัดการผู้ใช้งาน</h2>
-          <button class="btn-add" onclick="openUserModal()">+ เพิ่มผู้ใช้</button>
+
+        <div class="ax-page-head">
+          <div>
+            <h1>ข้อมูลผู้ใช้งาน</h1>
+            <p id="userTotalLabel">บัญชีผู้ใช้ สิทธิ์การเข้าถึง และขอบเขตข้อมูลของแต่ละระดับ</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" class="ax-primary-btn" onclick="openUserModal()"><span>＋</span><span>เพิ่มผู้ใช้งาน</span></button>
+          </div>
         </div>
-        <div class="users-table-wrap">
-          <table>
-            <thead><tr><th>ชื่อ</th><th>Username</th><th>Role</th><th>สถานะ</th><th>ประเภทที่ดูแล</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
-            <tbody id="usersTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
-          </table>
+
+        <div class="ax-role-cards" id="userRoleCards"></div>
+
+        <div class="ax-filter-card">
+          <div class="ax-filter-row">
+            <label class="ax-search">
+              <span aria-hidden="true">🔍</span>
+              <input type="text" id="userSearch" placeholder="ค้นหาชื่อ, username หรือหน่วยงาน" oninput="renderUsersTable()">
+            </label>
+            <select id="userRoleFilter" onchange="renderUsersTable()">
+              <option value="">ทุกสิทธิ์</option>
+              <option value="admin">Admin</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+              <option value="owner">Owner</option>
+            </select>
+            <select id="userStatusFilter" onchange="renderUsersTable()">
+              <option value="">ทุกสถานะ</option>
+              <option value="active">เปิดใช้งาน</option>
+              <option value="inactive">ปิดใช้งาน</option>
+            </select>
+            <button type="button" class="ax-ghost-btn" onclick="clearUserFilters()">ล้างตัวกรอง</button>
+          </div>
+          <span id="userResultCount"></span>
         </div>
-        <div style="margin-top:16px;padding:16px 20px;background:var(--amber-light);border:1px solid #f0d070;border-radius:var(--radius);font-size:13px;color:var(--amber);">
+
+        <div class="ax-tablecard">
+          <div class="table-wrap users-table-wrap">
+            <table class="ax-table ax-table-users">
+              <thead>
+                <tr>
+                  <th class="c-user">ผู้ใช้งาน</th>
+                  <th class="c-dept">หน่วยงาน</th>
+                  <th class="c-role">สิทธิ์การใช้งาน</th>
+                  <th class="c-status">สถานะ</th>
+                  <th class="c-scope">ขอบเขตข้อมูล<span>(ประเภทที่ดูแล)</span></th>
+                  <th class="c-act">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable"><tr><td colspan="6" class="no-data">กำลังโหลด...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="ax-empty ax-empty--inline" id="userEmpty" style="display:none">
+            <span class="ax-empty-ic">👥</span>
+            <b>ไม่พบบัญชีที่ตรงกับตัวกรอง</b>
+          </div>
+        </div>
+
+        <div class="ax-perm-card">
+          <div class="ax-perm-head">
+            <div class="dsh-sect">
+              <h2>ตารางสิทธิ์การเข้าถึง</h2>
+              <p>สิทธิ์ที่แต่ละระดับผู้ใช้ทำได้ในแต่ละเมนูของระบบ</p>
+            </div>
+            <div class="ax-perm-legend">
+              <span><i class="ax-perm-mark full">✓</i>มีสิทธิ์เต็ม</span>
+              <span><i class="ax-perm-mark part">◐</i>เฉพาะของหน่วยงานตน</span>
+              <span><i class="ax-perm-mark none">–</i>ไม่มีสิทธิ์</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="ax-table ax-table-perm" id="userPermTable"></table>
+          </div>
+          <p class="ax-perm-note">ℹ️ ตารางนี้เป็นสรุปอ้างอิงตามเงื่อนไขสิทธิ์ในโค้ดปัจจุบัน — ถ้าแก้เงื่อนไขสิทธิ์ในระบบ ต้องมาปรับตารางนี้ด้วย</p>
+        </div>
+
+        <div class="ax-note-warn">
           ⚠️ รหัสผ่านถูก hash ด้วย SHA-256 ก่อนบันทึก — Admin ไม่สามารถดูรหัสผ่านจริงได้
         </div>
       </div>
 
       <!-- CERT PAGE -->
       <div id="pageCert" class="page-content" style="display:none">
-        <!-- Type Cards บนสุด -->
-        <div id="certTypeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:16px"></div>
 
-        <!-- Header + ปุ่ม -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="ax-page-head">
           <div>
-            <div style="font-size:16px;font-weight:800;color:var(--text)">ออกหมายเลขใบรับรอง (Cert)</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">บันทึกและตรวจสอบประวัติการออกหมายเลขใบรับรองผลการสอบเทียบ</div>
+            <h1>ลำดับเลข Cert</h1>
+            <p>ทะเบียนหมายเลขลำดับใบรับรองผลสอบเทียบและฉบับแก้ไข</p>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="certApproveAllBtn" onclick="approveAllCerts()" style="display:none;background:#2e7d32;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">✅ อนุมัติทั้งหมด</button>
-            <button onclick="printCertPage()" style="background:white;color:#1565c0;border:1px solid #1565c0;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600">🖨️ Print PDF</button>
-            <button onclick="openIssueCertModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:700">🏷️ + ออกหมายเลขใบรับรอง</button>
+          <div class="ax-head-actions">
+            <button type="button" id="certApproveAllBtn" class="ax-ghost-btn" onclick="approveAllCerts()" style="display:none"><span>✅</span><span>อนุมัติทั้งหมด</span></button>
+            <button type="button" class="ax-ghost-btn" onclick="printCertPage()"><span>🖨️</span><span>Export แบบฟอร์ม FRM-CAL95</span></button>
+            <button type="button" class="ax-primary-btn" onclick="openIssueCertModal()"><span>➕</span><span>ออกเลขลำดับใหม่</span></button>
           </div>
         </div>
 
-        <!-- ประวัติ Cert -->
-        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div style="font-size:14px;font-weight:800;color:var(--text)">ประวัติการออกหมายเลขใบรับรอง</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <span id="certHistoryCount" style="font-size:12px;color:var(--text3);font-weight:700;white-space:nowrap"></span>
-              <select id="certHistoryLimit" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
-                <option value="50">แสดง 50 รายการ/หน้า</option>
-                <option value="100">แสดง 100 รายการ/หน้า</option>
-                <option value="200">แสดง 200 รายการ/หน้า</option>
-              </select>
-              <select id="certHistoryYear" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
-                <option value="26">ปี 26 (2026)</option>
-                <option value="27">ปี 27 (2027)</option>
-                <option value="25">ปี 25 (2025)</option>
-              </select>
-              <select id="certHistoryType" onchange="certHistFilterChange()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px">
+        <!-- การ์ดทรงแบบฟอร์ม FRM-CAL95 -->
+        <div class="ax-formcard">
+          <div class="ax-formcard-head">
+            <h2>ใบบันทึกการออกหมายเลขลำดับที่ใบรับรองผลการสอบเทียบและการแก้ไข</h2>
+            <div class="ax-formcard-pick">
+              <span>ประเภทของอุปกรณ์เครื่องมือวัด</span>
+              <select id="certHistoryType" onchange="certHistFilterChange()" class="ax-underline-select">
                 <option value="">ทุกประเภท</option>
-                <option value="C">C — pH / Visco / DO</option>
-                <option value="D">D — Calipers</option>
-                <option value="L">L — Length Tools</option>
-                <option value="Q">Q — Flow Meter</option>
-                <option value="R">R — Ruler / Tape</option>
-                <option value="G">G — Moisture</option>
-                <option value="T">T — Temperature</option>
-                <option value="H">H — Tachometer</option>
-                <option value="W">W — Timer</option>
-                <option value="P">P — Pressure</option>
-                <option value="B">B — Balance</option>
-                <option value="M">M — Mass</option>
-                <option value="F">F — Force / Torque</option>
               </select>
             </div>
+            <p class="ax-formcard-range" id="certRangeLabel">–</p>
           </div>
-          <div id="certHistoryTableWrap" style="overflow-x:hidden">
-            <table id="certHistTable" style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead class="cert-table-head" style="position:sticky;top:0;z-index:1;">
+
+          <div class="ax-formcard-tools">
+            <select id="certHistoryYear" onchange="certHistFilterChange()">
+              <option value="26">ปี 26 (2026)</option>
+              <option value="27">ปี 27 (2027)</option>
+              <option value="25">ปี 25 (2025)</option>
+            </select>
+            <select id="certHistoryLimit" onchange="certHistFilterChange()">
+              <option value="50">แสดง 50 รายการ/หน้า</option>
+              <option value="100">แสดง 100 รายการ/หน้า</option>
+              <option value="200">แสดง 200 รายการ/หน้า</option>
+            </select>
+          </div>
+
+          <div class="table-wrap" id="certHistoryTableWrap">
+            <table id="certHistTable" class="ax-table ax-table-cert">
+              <thead>
                 <tr>
-                  <th class="cert-th">#</th>
-                  <th class="cert-th">เลขใบรับรอง</th>
-                  <th class="cert-th">วันที่ออก</th>
-                  <th class="cert-th">ชื่ออุปกรณ์ / ID</th>
-                  <th class="cert-th">ใบขอรับบริการ</th>
-                  <th class="cert-th">เลขงาน</th>
-                  <th class="cert-th">ผู้ออก</th>
-                  <th class="cert-th">ผู้รับผิดชอบ</th>
-                  <th class="cert-th">อนุมัติ</th>
-                  <th class="cert-th">จัดการ</th>
+                  <th class="c-no">ลำดับที่</th>
+                  <th class="c-cert">หมายเลขใบรับรองผลการสอบเทียบและฉบับแก้ไข</th>
+                  <th class="c-date">วัน-เดือน-ปี<span>ที่ออกเอกสาร</span></th>
+                  <th class="c-name">ชื่ออุปกรณ์ เครื่องมือวัด / ID.NO. หรือ SERIAL NO.</th>
+                  <th class="c-req">หมายเลขใบขอรับบริการ</th>
+                  <th class="c-job">เลขที่ของงาน</th>
+                  <th class="c-issuer">ผู้ออกเอกสาร</th>
+                  <th class="c-owner">ผู้รับผิดชอบ</th>
+                  <th class="c-act">สถานะ / จัดการ</th>
                 </tr>
               </thead>
               <tbody id="certHistoryBody"></tbody>
             </table>
           </div>
-          <style>#certHistPrev:disabled,#certHistNext:disabled{opacity:.4;cursor:not-allowed}#certHistPrev:not(:disabled):hover,#certHistNext:not(:disabled):hover{border-color:var(--accent,#00897B)}</style>
-          <div id="certHistPager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-top:12px">
-            <button id="certHistPrev" type="button" onclick="certHistGoPage(-1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">‹ ก่อนหน้า</button>
-            <span id="certHistPageLabel" style="font-size:13px;font-weight:700;color:var(--text);min-width:90px;text-align:center"></span>
-            <button id="certHistNext" type="button" onclick="certHistGoPage(1)" style="padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">ถัดไป ›</button>
+
+          <div class="ax-formcard-foot">
+            <span id="certHistoryCount"></span>
+            <div id="certHistPager" style="display:none">
+              <button id="certHistPrev" type="button" class="ax-ghost-btn" onclick="certHistGoPage(-1)">‹ ก่อนหน้า</button>
+              <span id="certHistPageLabel"></span>
+              <button id="certHistNext" type="button" class="ax-ghost-btn" onclick="certHistGoPage(1)">ถัดไป ›</button>
+            </div>
           </div>
         </div>
       </div>
 
       <div id="pageCalrecs" class="page-content" style="display:none">
-        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <input id="calrecSearch" type="search" placeholder="🔍 ค้นหา Cert No, ชื่อเครื่อง, ID Code" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none" oninput="filterCalrecs()">
-          <select id="calrecStatus" onchange="filterCalrecs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);min-width:180px">
-            <option value="">ทุกสถานะ</option>
-            <option value="issued">⏳ รอแนบสแกน/อนุมัติ</option>
-            <option value="approved">✅ เสร็จสมบูรณ์</option>
-          </select>
-          <span id="calrecCount" style="font-size:12px;color:var(--text3);font-weight:700;white-space:nowrap"></span>
-          <button onclick="loadCalrecsPage()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-family:var(--font);font-size:13px;cursor:pointer">↻ รีเฟรช</button>
+
+        <div class="ax-page-head">
+          <div>
+            <h1>ติดตามผลสอบเทียบ</h1>
+            <p id="calrecCount">–</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" class="ax-ghost-btn" onclick="loadCalrecsPage()"><span>↻</span><span>รีเฟรช</span></button>
+          </div>
         </div>
-        <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow);overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-            <thead><tr style="text-align:left;color:var(--text3);border-bottom:2px solid var(--border)">
-              <th style="padding:8px;font-weight:600">Cert No.</th><th style="padding:8px;font-weight:600">เครื่องมือ / ID</th>
-              <th style="padding:8px;font-weight:600">วันสอบ</th><th style="padding:8px;font-weight:600">ครบกำหนด</th>
-              <th style="padding:8px;font-weight:600">ผู้สอบ</th><th style="padding:8px;font-weight:600">สถานะ</th><th style="padding:8px;font-weight:600">จัดการ</th>
-            </tr></thead>
-            <tbody id="calrecBody"></tbody>
-          </table>
+
+        <div class="ax-crc-tiles" id="calrecTiles"></div>
+
+        <div class="ax-filter-card">
+          <div class="ax-crc-head">
+            <div class="dsh-sect">
+              <h2 id="calrecScopeTitle">เครื่องมือที่ครบกำหนดภายใน 1 เดือน</h2>
+              <p id="calrecScopeMeta">–</p>
+            </div>
+            <label class="ax-search ax-search--sm">
+              <span aria-hidden="true">🔍</span>
+              <input id="calrecSearch" type="search" placeholder="ค้นหาชื่อเครื่องมือ, ID.No., ผู้ดูแล" oninput="filterCalrecs()">
+            </label>
+          </div>
+          <div class="ax-chips" id="calrecChips"></div>
+          <!-- ขอบเขตเลือกผ่านชิปด้านบน — select นี้เก็บสถานะไว้ให้ filterCalrecs() อ่าน -->
+          <select id="calrecStatus" onchange="filterCalrecs()" class="ax-hidden-field" tabindex="-1" aria-hidden="true">
+            <option value="due30">ครบกำหนดใน 30 วัน</option>
+            <option value="noplan">ยังไม่ได้วางแผน</option>
+            <option value="running">อยู่ระหว่างดำเนินการ</option>
+            <option value="scan">รอแนบสแกน</option>
+            <option value="done">เสร็จสมบูรณ์</option>
+          </select>
+        </div>
+
+        <div class="ax-tablecard">
+          <div class="table-wrap">
+            <table class="ax-table ax-table-crc">
+              <thead>
+                <tr>
+                  <th class="c-no">ลำดับ</th>
+                  <th class="c-name">เครื่องมือ<span>(Instrument · ID.No.)</span></th>
+                  <th class="c-dept">หน่วยงาน</th>
+                  <th class="c-due">ครบกำหนด<span>(Due date)</span></th>
+                  <th class="c-by">ผู้ให้บริการ<span>(Cal. by)</span></th>
+                  <th class="c-prog">ความคืบหน้าการติดตาม<span>(Follow-up progress)</span></th>
+                  <th class="c-rec">ผลที่บันทึก<span>(Recorded result)</span></th>
+                  <th class="c-act">ดำเนินการ<span>(Action)</span></th>
+                </tr>
+              </thead>
+              <tbody id="calrecBody"></tbody>
+            </table>
+          </div>
+          <div class="ax-empty ax-empty--inline" id="calrecEmpty" style="display:none">
+            <span class="ax-empty-ic">🔍</span>
+            <b>ไม่พบรายการที่ตรงกับตัวกรอง</b>
+            <span>ลองล้างคำค้นหาหรือเลือกสถานะอื่น</span>
+          </div>
         </div>
       </div>
 
       <!-- หน้า งานซ่อม -->
       <div id="pageRepairs" class="page-content" style="display:none">
-        <div id="repairSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px"></div>
-        <div class="controls-bar">
-          <input type="text" id="repairSearch" placeholder="🔍 ค้นหา รหัส, ชื่อเครื่อง, ผู้ซ่อม..." oninput="filterRepairs()">
-          <select id="repairStatusFilter" onchange="filterRepairs()">
-            <option value="">ทุกสถานะ</option>
-            <option value="open">ยังไม่ปิดงาน</option>
-            <option value="reported">แจ้งซ่อม</option>
-            <option value="in_progress">กำลังซ่อม</option>
-            <option value="completed">ซ่อมเสร็จ</option>
-            <option value="unrepairable">ซ่อมไม่ได้</option>
-            <option value="cancelled">ยกเลิกใบแจ้ง</option>
-          </select>
-          <select id="repairDeptFilter" onchange="filterRepairs()"><option value="">ทุกหน่วยงาน</option></select>
-          <input type="date" id="repairFromFilter" onchange="filterRepairs()" title="วันที่แจ้ง ตั้งแต่">
-          <input type="date" id="repairToFilter" onchange="filterRepairs()" title="วันที่แจ้ง ถึง">
-          <button id="repairNewBtn" onclick="openRepairModal(null)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap">+ แจ้งซ่อม</button>
+
+        <div class="ax-page-head">
+          <div>
+            <h1>งานซ่อมเครื่องมือ</h1>
+            <p>ใบแจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมของเครื่องมือในทะเบียนสอบเทียบ</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" id="repairNewBtn" class="ax-primary-btn" onclick="openRepairModal(null)"><span>🔧</span><span>แจ้งซ่อมเครื่องมือ</span></button>
+          </div>
         </div>
-        <div class="table-wrap" style="overflow:auto">
-          <table>
-            <thead><tr><th>#</th><th>เครื่องมือ</th><th>หน่วยงาน</th><th>วันที่แจ้ง</th><th>อาการ</th><th>สถานะ</th><th>ผู้ซ่อม</th><th style="text-align:right">ค่าใช้จ่าย</th></tr></thead>
-            <tbody id="repairTableBody"></tbody>
-          </table>
+
+        <div id="repairSummary" class="ax-rp-kpis"></div>
+
+        <div class="ax-filter-card">
+          <div class="ax-filter-row">
+            <label class="ax-search">
+              <span aria-hidden="true">🔍</span>
+              <input type="text" id="repairSearch" placeholder="ค้นหา ID.No., ชื่อเครื่อง, อาการเสีย หรือชื่อผู้ซ่อม" oninput="filterRepairs()">
+            </label>
+            <select id="repairStatusFilter" onchange="filterRepairs()">
+              <option value="">ทุกสถานะ</option>
+              <option value="open">ยังไม่ปิดงาน</option>
+              <option value="reported">แจ้งซ่อม</option>
+              <option value="in_progress">กำลังซ่อม</option>
+              <option value="completed">ซ่อมเสร็จ</option>
+              <option value="unrepairable">ซ่อมไม่ได้</option>
+              <option value="cancelled">ยกเลิกใบแจ้ง</option>
+            </select>
+            <select id="repairDeptFilter" onchange="filterRepairs()"><option value="">ทุกหน่วยงาน</option></select>
+            <input type="date" id="repairFromFilter" onchange="filterRepairs()" title="วันที่แจ้ง ตั้งแต่">
+            <input type="date" id="repairToFilter" onchange="filterRepairs()" title="วันที่แจ้ง ถึง">
+            <button type="button" class="ax-ghost-btn" onclick="resetRepairFilters()">ล้างตัวกรอง</button>
+          </div>
         </div>
+
+        <div class="ax-tablecard">
+          <div class="table-wrap">
+            <table class="ax-table ax-table-repair">
+              <thead>
+                <tr>
+                  <th class="c-no">ลำดับ<span>(No.)</span></th>
+                  <th class="c-inst">เครื่องมือ</th>
+                  <th class="c-dept">หน่วยงาน</th>
+                  <th class="c-date">วันที่แจ้ง</th>
+                  <th class="c-sym">อาการเสีย</th>
+                  <th class="c-status">สถานะ</th>
+                  <th class="c-by">ผู้ซ่อม</th>
+                  <th class="c-cost">ค่าใช้จ่าย (บาท)</th>
+                </tr>
+              </thead>
+              <tbody id="repairTableBody"></tbody>
+            </table>
+          </div>
+          <div class="ax-empty ax-empty--inline" id="repairEmpty" style="display:none">
+            <span class="ax-empty-ic">🔧</span>
+            <b>ไม่พบใบงานซ่อมตามเงื่อนไขที่เลือก</b>
+          </div>
+          <div class="ax-formcard-foot" style="padding:0 16px 16px">
+            <span id="repairCountLabel"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้า KPI -->
+      <div id="pageKpi" class="page-content" style="display:none">
+        <div class="ax-page-head">
+          <div>
+            <h1>KPI งานสอบเทียบ</h1>
+            <p>ผลการดำเนินงานสอบเทียบเทียบกับแผน รายปีและรายเดือน</p>
+          </div>
+          <div class="ax-head-actions">
+            <select id="kpiYear" onchange="kpiSetYear(this.value)" class="ax-kpi-year"></select>
+            <button type="button" class="ax-ghost-btn" onclick="loadData(true)"><span>↻</span><span>รีเฟรช</span></button>
+          </div>
+        </div>
+        <div class="ax-kpi-nav" id="kpiSubNav"></div>
+        <div id="kpiBody"></div>
+      </div>
+
+      <!-- หน้า นำของออกนอกสถานที่ -->
+      <div id="pageGate" class="page-content" style="display:none">
+
+        <div class="ax-page-head">
+          <div>
+            <h1>นำของออกนอกสถานที่</h1>
+            <p>ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท · บันทึกการนำเครื่องมือออก ติดตามกำหนดกลับ และประวัติย้อนหลัง</p>
+          </div>
+          <div class="ax-head-actions">
+            <button type="button" class="ax-ghost-btn" onclick="loadAssetOutPage()"><span>↻</span><span>รีเฟรช</span></button>
+          </div>
+        </div>
+
+        <div id="gateKpis" class="ax-rp-kpis"></div>
+
+        <div class="ax-filter-card">
+          <div class="ax-filter-row">
+            <label class="ax-search">
+              <span aria-hidden="true">🔍</span>
+              <input type="text" id="gateSearch" placeholder="ค้นหาเลขที่ใบ, ID.No., ชื่อเครื่อง หรือบริษัทผู้รับดำเนินการ" oninput="renderAssetOutTable()">
+            </label>
+            <select id="gateStatusFilter" onchange="renderAssetOutTable()">
+              <option value="">ทุกสถานะ</option>
+              <option value="open">ยังอยู่ข้างนอก</option>
+              <option value="out">ยังไม่ถึงกำหนดกลับ</option>
+              <option value="overdue">เกินกำหนดกลับ</option>
+              <option value="nodue">ไม่ระบุกำหนดกลับ</option>
+              <option value="returned">รับกลับแล้ว</option>
+            </select>
+            <select id="gatePurposeFilter" onchange="renderAssetOutTable()"><option value="">ทุกวัตถุประสงค์</option></select>
+            <button type="button" class="ax-ghost-btn" onclick="resetGateFilters()">ล้างตัวกรอง</button>
+          </div>
+        </div>
+
+        <div class="ax-tablecard">
+          <div class="table-wrap">
+            <table class="ax-table ax-table-gate">
+              <thead>
+                <tr>
+                  <th class="c-no">เลขที่ใบนำออก</th>
+                  <th class="c-inst">ทรัพย์สิน / เครื่องมือ</th>
+                  <th class="c-purpose">วัตถุประสงค์</th>
+                  <th class="c-vendor">ผู้รับดำเนินการ</th>
+                  <th class="c-out">วันที่นำออก</th>
+                  <th class="c-due">กำหนดกลับ</th>
+                  <th class="c-status">สถานะ</th>
+                  <th class="c-by">ผู้ดำเนินการส่ง</th>
+                  <th class="c-act">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="gateTableBody"><tr><td colspan="9" class="no-data">กำลังโหลด...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="ax-empty ax-empty--inline" id="gateEmpty" style="display:none">
+            <span class="ax-empty-ic">📤</span>
+            <b>ไม่พบใบนำของออกตามเงื่อนไขที่เลือก</b>
+          </div>
+          <div class="ax-formcard-foot" style="padding:0 16px 16px">
+            <span id="gateCountLabel"></span>
+          </div>
+        </div>
+
+        <p class="ax-perm-note">ℹ️ กด <b>📥 รับกลับ</b> เมื่อทรัพย์สินกลับเข้าบริษัทแล้ว ระบบจะบันทึกวันเวลาและผู้รับกลับไว้ · ใบที่ยังไม่กดจะนับเป็น "ยังอยู่ข้างนอก" และขึ้นเตือนเมื่อเลยกำหนด</p>
       </div>
 
       <div id="pageWeights" class="page-content" style="display:none">
@@ -4339,6 +4754,11 @@ body.app-mode textarea:focus {
 <script src="js/19-weight-jobs.js?v=20260729-weight-cal"></script>
 <script src="js/22-users.js?v=20260803-split"></script>
 <script src="js/23-cal-records.js?v=20260803-split"></script>
+<script src="js/24-home.js?v=20260817-home"></script>
+<script src="js/25-dashboard-ui.js?v=20260817-dash"></script>
+<script src="js/26-list-ui.js?v=20260819-multiline"></script>
+<script src="js/27-asset-out-page.js?v=20260818-gate"></script>
+<script src="js/28-kpi.js?v=20260819-kpi"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">

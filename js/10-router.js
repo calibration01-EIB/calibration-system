@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs','weightjobs'];
+  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs','weightjobs','gate','kpi'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -25,6 +25,8 @@ function showPage(page) {
     calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
     repairs: ['🔧 งานซ่อม','แจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมเครื่องมือ'],
     weightjobs: ['⚖️ สอบเทียบตุ้มน้ำหนัก','ทะเบียนงานสอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA)'],
+    gate: ['📤 นำของออกนอกสถานที่','ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท'],
+    kpi: ['📈 KPI งานสอบเทียบ','ผลการดำเนินงานเทียบกับแผน'],
   };
   const t = titles[page] || ['',''];
   const tb = document.getElementById('topbarTitle');
@@ -37,6 +39,20 @@ function showPage(page) {
   if (page === 'weightjobs') { loadWeightjobs(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
+  if (page === 'gate') {
+    const waitAndLoad = (attempt) => {
+      if ((allData && allData.length > 0) || attempt > 20) { loadAssetOutPage(); return; }
+      setTimeout(() => waitAndLoad(attempt + 1), 200);
+    };
+    waitAndLoad(0);
+  }
+  if (page === 'kpi') {
+    const waitAndLoad = (attempt) => {
+      if ((allData && allData.length > 0) || attempt > 20) { loadKpiPage(); return; }
+      setTimeout(() => waitAndLoad(attempt + 1), 200);
+    };
+    waitAndLoad(0);
+  }
   if (page === 'calrecs') {
     const waitAndLoad = (attempt) => {
       if ((allData && allData.length > 0) || attempt > 20) { loadCalrecsPage(); return; }
@@ -319,6 +335,9 @@ function filterByStatus(status) {
 
   window.isCalibrationCancelled = isCalibrationCancelled;
   window.stripCalibrationCancelMarker = stripCalibrationCancelMarker;
+  // ให้ตัววาดตารางหน้า list (26-list-ui.js) เรียก normalize ได้เอง
+  window.normalizeListRows = normalizeRows;
+  window.getListRowStatus = getRowStatus;
 
   const originalUpdateStats = typeof updateStats === 'function' ? updateStats : null;
   if (originalUpdateStats) {
@@ -460,7 +479,10 @@ function filterByStatus(status) {
   ensureCancelStatusFilterOption();
 })();
 
-(function init() {
+// ต้องรอให้สคริปต์ท้าย ๆ โหลดครบก่อน โดยเฉพาะ 24-home.js ที่ห่อ showPage() ให้รู้จักหน้า 'home'
+// ถ้ารันทันทีตอนโหลดไฟล์นี้ enterApp() จะเรียก showPage('home') กับ router ตัวเดิมที่ไม่รู้จัก 'home'
+// -> ซ่อนทุกหน้าแล้วได้จอว่าง (เคสผู้ใช้ที่มี session ค้างอยู่ = เปิดแอปครั้งต่อ ๆ ไป)
+function bootApp() {
   const session = getSession();
   if (session) {
     currentUser = session;
@@ -471,4 +493,10 @@ function filterByStatus(status) {
     document.getElementById('loginPage')?.style.setProperty('display', 'grid', 'important');
     document.getElementById('app')?.style.setProperty('display', 'none', 'important');
   }
-})();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp, { once: true });
+} else {
+  bootApp();
+}

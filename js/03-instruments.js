@@ -935,11 +935,16 @@ async function deleteInstrument(id, name) {
   } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
 }
 
+// ดีไซน์ใหม่ไม่มี th "จัดการ" แยกแล้ว (ปุ่มลบอยู่ในคอลัมน์ "งาน" ที่ 26-list-ui.js วาด)
+// ต้อง null-safe ทุกบรรทัด — enterApp() เรียกฟังก์ชันนี้ก่อน showPage() ถ้า throw ที่นี่
+// จะไม่ได้เข้าหน้าแรกและ loadData() ไม่ถูกเรียกเลย
 function toggleManageColumns(show) {
-  document.getElementById('btnAddInstrument').style.display = show ? 'flex' : 'none';
-  document.getElementById('thManage').style.display = show ? '' : 'none';
-  const btnImp = document.getElementById('btnImportExcel');
-  if (btnImp) btnImp.style.display = show ? 'flex' : 'none';
+  ['btnAddInstrument', 'btnImportExcel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  });
+  const thManage = document.getElementById('thManage');
+  if (thManage) thManage.style.display = show ? '' : 'none';
 }
 
 

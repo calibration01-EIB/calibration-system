@@ -1,28 +1,26 @@
-const CACHE_NAME = 'calibration-app-v112';
-const THEME_STYLESHEET = './theme-midnight-lab.css';
+const CACHE_NAME = 'calibration-app-v126';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
-const LIST_HEIGHT_STYLE = `<style id="codex-list-height-fix">
-@media (min-width: 769px) {
-  body.app-mode #app #pageList .table-wrap,
-  body.app-mode #pageList .table-wrap {
-    height: clamp(390px, calc(100vh - 378px), 620px) !important;
-    min-height: clamp(390px, calc(100vh - 378px), 620px) !important;
-    max-height: clamp(390px, calc(100vh - 378px), 620px) !important;
-    overflow: auto !important;
-  }
-}
-</style>`;
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  THEME_STYLESHEET,
+  './theme-aqua.css',
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
   './assets/calibration-lab-hero.png',
+  './assets/hero-caliper.png',
+  './assets/tiles/01_dashboard.png',
+  './assets/tiles/02_instrument_list.png',
+  './assets/tiles/03_calibration_tracking.png',
+  './assets/tiles/04_cert_number.png',
+  './assets/tiles/05_cert_reference.png',
+  './assets/tiles/06_calibration_planning.png',
+  './assets/tiles/07_daily_scale_record.png',
+  './assets/tiles/08_repair.png',
+  './assets/tiles/09_offsite_equipment.png',
   './js/00-config.js',
   './js/01-core.js',
   './js/02-dashboard.js',
@@ -35,6 +33,11 @@ const APP_SHELL = [
   './js/08-weights.js',
   './js/09-cert.js',
   './js/10-router.js',
+  './js/24-home.js',
+  './js/25-dashboard-ui.js',
+  './js/26-list-ui.js',
+  './js/27-asset-out-page.js',
+  './js/28-kpi.js',
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',
@@ -52,20 +55,14 @@ const APP_SHELL = [
   IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
 
-async function withMidnightLabTheme(response) {
+/* ธีมมาจาก theme-aqua.css ที่ index.html ลิงก์เองแล้ว (ดีไซน์ Calibration App)
+   เดิม SW แทรก theme-midnight-lab.css + ความสูงตายตัวของตาราง list ต่อท้าย </head>
+   ซึ่งทับธีมใหม่ จึงถอดออก เหลือแค่แทรกสคริปต์ import template */
+async function withAppInjections(response) {
   const html = await response.text();
-  const hasTheme = html.includes('theme-midnight-lab.css');
-  const withTheme = hasTheme
+  const withImportTemplateSelection = html.includes('11-import-template-selection.js')
     ? html
-    : html
-        .replace(/<meta name="theme-color" content="#[^"]*">/i, '<meta name="theme-color" content="#102337">')
-        .replace(/<\/head>/i, '<link rel="stylesheet" href="./theme-midnight-lab.css">\n</head>');
-  const withListHeight = withTheme.includes('codex-list-height-fix')
-    ? withTheme
-    : withTheme.replace(/<\/head>/i, `${LIST_HEIGHT_STYLE}\n</head>`);
-  const withImportTemplateSelection = withListHeight.includes('11-import-template-selection.js')
-    ? withListHeight
-    : withListHeight.replace(/<\/body>/i, `<script src="${IMPORT_TEMPLATE_SELECTION_SCRIPT}"></script>\n</body>`);
+    : html.replace(/<\/body>/i, `<script src="${IMPORT_TEMPLATE_SELECTION_SCRIPT}"></script>\n</body>`);
   const headers = new Headers(response.headers);
   headers.set('Content-Type', 'text/html; charset=utf-8');
   return new Response(withImportTemplateSelection, {
@@ -96,7 +93,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .catch(() => caches.match(event.request))
-        .then(response => response ? withMidnightLabTheme(response) : Response.error())
+        .then(response => response ? withAppInjections(response) : Response.error())
     );
     return;
   }

@@ -7,3 +7,7 @@ constanb.ttf
 constani.ttf
 constanz.ttf
 .superpowers/
+
+# preview harness (dev only)
+__inside_preview.html
+home-preview.html

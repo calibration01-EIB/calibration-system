@@ -11,27 +11,163 @@ async function loadUsers() {
   renderUsersTable();
 }
 
+/* ===== จัดการผู้ใช้ (ดีไซน์ Calibration App) =====
+   ตาราง users ไม่มีคอลัมน์ ตำแหน่ง / เข้าใช้งานล่าสุด ที่ดีไซน์มี
+   จึงใช้ "ขอบเขตข้อมูล" (instrument_types) ซึ่งเป็นของจริงและมีความหมายกว่าแทน */
+
+const USER_ROLES = [
+  { id: 'admin',  name: 'ผู้ดูแลระบบ', en: 'Admin',  emoji: '🛡️', color: '#6d28d9', tint: '#ede9fe', bd: '#ddd6fe', bg: '#faf9ff',
+    desc: 'ดูแลระบบทั้งหมด อนุมัติเลข Cert อนุมัติแผนสอบเทียบ และจัดการบัญชีผู้ใช้',
+    rights: ['อนุมัติทุกอย่าง', 'จัดการผู้ใช้', 'ดู Audit Log'], scope: 'ทุกหน่วยงาน ทุกประเภทเครื่องมือ' },
+  { id: 'editor', name: 'ผู้บันทึกข้อมูล', en: 'Editor', emoji: '✏️', color: '#185fa5', tint: '#e6f1fb', bd: '#cfe1f4', bg: '#f8fbfe',
+    desc: 'เพิ่ม/แก้ไขเครื่องมือ ออกเลข Cert แนบไฟล์ใบรับรอง สร้างแผน และแจ้งซ่อม',
+    rights: ['แก้ไขข้อมูล', 'ออกเลข Cert', 'แนบไฟล์'], scope: 'ตามประเภทเครื่องมือที่กำหนดให้' },
+  { id: 'viewer', name: 'ผู้ดูข้อมูล', en: 'Viewer', emoji: '👁️', color: '#5b7186', tint: '#eef2f6', bd: '#e2e8ef', bg: '#fbfcfd',
+    desc: 'ดูข้อมูลและรายงานได้อย่างเดียว แก้ไขหรือแนบไฟล์ไม่ได้',
+    rights: ['ดูรายการ', 'ดูรายงาน'], scope: 'อ่านอย่างเดียว' },
+  { id: 'owner',  name: 'เจ้าของเครื่องมือ', en: 'Owner', emoji: '🏭', color: '#b45309', tint: '#fdf3dd', bd: '#f3e0b6', bg: '#fffcf6',
+    desc: 'รับทราบแผนสอบเทียบของหน่วยงานตนเอง และติดตามสถานะเครื่องมือในหน่วยงาน',
+    rights: ['รับทราบแผน', 'ดูเครื่องในหน่วยงาน'], scope: 'เฉพาะหน่วยงานของตน (unit code)' },
+];
+function userRoleMeta(role) {
+  return USER_ROLES.find(r => r.id === role) || { name: role || '–', en: role || '', emoji: '👤', color: '#5b7186', tint: '#eef2f6' };
+}
+
+/* สรุปอ้างอิงจากเงื่อนไขสิทธิ์ที่มีอยู่จริงในโค้ด (admin / editor / viewer / owner) */
+const USER_PERMS = [
+  ['g', 'รายการเครื่องมือ'],
+  ['r', 'ดูรายการ ค้นหา และรายงาน',            ['full', 'full', 'full', 'part']],
+  ['r', 'เพิ่ม / แก้ไขเครื่องมือ',              ['full', 'full', 'none', 'none']],
+  ['r', 'ลบเครื่องมือ',                        ['full', 'full', 'none', 'none']],
+  ['r', 'แนบไฟล์ใบรับรอง',                     ['full', 'full', 'none', 'none']],
+  ['g', 'ใบรับรอง / สอบเทียบ'],
+  ['r', 'ออกเลขลำดับ Cert',                    ['full', 'full', 'none', 'none']],
+  ['r', 'อนุมัติเลข Cert',                     ['full', 'none', 'none', 'none']],
+  ['r', 'แนบสแกนใบรับรอง',                     ['full', 'full', 'none', 'none']],
+  ['g', 'วางแผนสอบเทียบ'],
+  ['r', 'สร้าง / แก้ไขแผน',                    ['full', 'full', 'none', 'none']],
+  ['r', 'อนุมัติแผน และยืนยันผลสอบ',            ['full', 'none', 'none', 'none']],
+  ['r', 'รับทราบแผนของหน่วยงานตน',              ['full', 'none', 'none', 'part']],
+  ['g', 'งานซ่อม'],
+  ['r', 'แจ้งซ่อม และอัปเดตสถานะ',              ['full', 'full', 'none', 'none']],
+  ['g', 'ระบบ'],
+  ['r', 'ดู Audit Log',                        ['full', 'none', 'none', 'none']],
+  ['r', 'จัดการผู้ใช้งาน',                      ['full', 'none', 'none', 'none']],
+];
+const PERM_MARK = {
+  full: ['✓', '#e2f6ec', '#0d7a58', 'มีสิทธิ์เต็ม'],
+  part: ['◐', '#fdf0dc', '#b45309', 'เฉพาะของหน่วยงานตน'],
+  none: ['–', 'transparent', '#a9b8c5', 'ไม่มีสิทธิ์'],
+};
+
+function clearUserFilters() {
+  ['userSearch', 'userRoleFilter', 'userStatusFilter']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderUsersTable();
+}
+function setUserRoleFilter(role) {
+  const sel = document.getElementById('userRoleFilter');
+  if (sel) sel.value = sel.value === role ? '' : role;
+  renderUsersTable();
+}
+
+function renderUserRoleCards() {
+  const host = document.getElementById('userRoleCards');
+  if (!host) return;
+  const active = document.getElementById('userRoleFilter')?.value || '';
+  host.innerHTML = USER_ROLES.map(r => {
+    const n = usersData.filter(u => u.role === r.id).length;
+    return `<button type="button" class="ax-role-card${active === r.id ? ' is-on' : ''}"
+        style="background:${r.bg};border-color:${active === r.id ? r.color : r.bd}" onclick="setUserRoleFilter('${r.id}')">
+      <span class="ax-role-top">
+        <span class="ax-role-ic" style="background:${r.tint}">${r.emoji}</span>
+        <span class="ax-role-nm"><b>${r.name}</b><span style="color:${r.color}">${r.en}</span></span>
+        <span class="ax-role-n"><b style="color:${r.color}">${n}</b><span>บัญชี</span></span>
+      </span>
+      <p>${r.desc}</p>
+      <span class="ax-role-chips">${r.rights.map(t => `<span>${t}</span>`).join('')}</span>
+      <span class="ax-role-scope">ขอบเขต: ${r.scope}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderUserPerms() {
+  const table = document.getElementById('userPermTable');
+  if (!table) return;
+  const heads = USER_ROLES.map(r =>
+    `<th class="c-role"><span class="ax-perm-h"><b style="color:${r.color}">${r.name}</b><span>${r.en}</span></span></th>`).join('');
+  const body = USER_PERMS.map(row => {
+    if (row[0] === 'g') return `<tr><td class="ax-perm-group" colspan="${USER_ROLES.length + 1}">${row[1]}</td></tr>`;
+    const cells = row[2].map(k => {
+      const [mark, bg, fg, title] = PERM_MARK[k];
+      return `<td class="c-mark"><span class="ax-perm-mark" title="${title}" style="background:${bg};color:${fg}">${mark}</span></td>`;
+    }).join('');
+    return `<tr><td class="c-cap">${row[1]}</td>${cells}</tr>`;
+  }).join('');
+  table.innerHTML = `<thead><tr><th class="c-cap">สิทธิ์ / ความสามารถ</th>${heads}</tr></thead><tbody>${body}</tbody>`;
+}
+
 function renderUsersTable() {
   const tbody = document.getElementById('usersTable');
-  const roleMap = { admin: ['badge-purple','Admin'], editor: ['badge-blue','Editor'], viewer: ['badge-gray','Viewer'], owner: ['badge-amber','Owner'] };
-  tbody.innerHTML = usersData.map(u => {
-    const [cls, label] = roleMap[u.role] || ['badge-gray', u.role];
-    const activeBadge = u.active ? '<span class="badge badge-green">เปิด</span>' : '<span class="badge badge-red">ปิด</span>';
-    const date = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH') : '–';
+  if (!tbody) return;
+  renderUserRoleCards();
+  renderUserPerms();
+
+  const q = (document.getElementById('userSearch')?.value || '').trim().toLowerCase();
+  const roleF = document.getElementById('userRoleFilter')?.value || '';
+  const statusF = document.getElementById('userStatusFilter')?.value || '';
+  const rows = usersData.filter(u => {
+    if (roleF && u.role !== roleF) return false;
+    if (statusF === 'active' && !u.active) return false;
+    if (statusF === 'inactive' && u.active) return false;
+    if (!q) return true;
+    return [u.name, u.username, u.department, u.role].some(v => String(v || '').toLowerCase().includes(q));
+  });
+
+  const totalLabel = document.getElementById('userTotalLabel');
+  if (totalLabel) {
+    totalLabel.textContent = `บัญชีผู้ใช้ สิทธิ์การเข้าถึง และขอบเขตข้อมูลของแต่ละระดับ · ทั้งหมด ${usersData.length.toLocaleString()} บัญชี`;
+  }
+  const countEl = document.getElementById('userResultCount');
+  if (countEl) countEl.textContent = rows.length ? `พบ ${rows.length.toLocaleString()} บัญชี` : 'ไม่พบบัญชีที่ตรงกับตัวกรอง';
+  const empty = document.getElementById('userEmpty');
+  if (empty) empty.style.display = rows.length ? 'none' : 'flex';
+  const wrap = tbody.closest('.table-wrap');
+  if (wrap) wrap.style.display = rows.length ? '' : 'none';
+  if (!rows.length) { tbody.innerHTML = ''; return; }
+
+  tbody.innerHTML = rows.map(u => {
+    const r = userRoleMeta(u.role);
     const isSelf = currentUser?.id === u.id;
-    const typesList = (u.instrument_types && u.instrument_types.length > 0)
-      ? u.instrument_types.map(t => (typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType({ instrument_type: t }) : t).split(' (')[0]).join(', ')
-      : '<span style="color:var(--text3);font-size:12px">ทุกประเภท</span>';
-    return `<tr>
-      <td><strong>${u.name}</strong></td>
-      <td style="font-family:var(--mono);font-size:20px">${u.username}</td>
-      <td><span class="badge ${cls}">${label}</span>${u.department ? ` <span style="font-size:11px;color:var(--text3)">${u.department}</span>` : ''}</td>
-      <td>${activeBadge}</td>
-      <td style="font-size:13px;max-width:220px;white-space:normal;line-height:1.5">${typesList}</td>
-      <td>${date}</td>
-      <td>
-        <button class="btn-view" style="margin-right:6px" onclick="openUserModal('${u.id}')">แก้ไข</button>
-        ${!isSelf ? `<button class="btn-del" onclick="deleteUser('${u.id}')">ลบ</button>` : ''}
+    const initial = escapeHtmlText(String(u.name || u.username || '?').charAt(0).toUpperCase());
+    const scope = (u.instrument_types && u.instrument_types.length)
+      ? u.instrument_types.map(t => escapeHtmlText(
+          (typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType({ instrument_type: t }) : t).split(' (')[0]
+        )).join(' · ')
+      : '<span class="ax-user-all">ทุกประเภท</span>';
+    return `<tr class="${u.active ? '' : 'is-off'}">
+      <td class="c-user">
+        <span class="ax-user-cell">
+          <span class="ax-user-avatar" style="background:${r.tint};color:${r.color}">${initial}</span>
+          <span class="ax-user-tx">
+            <b>${escapeHtmlText(u.name || '–')}</b>
+            <span>${escapeHtmlText(u.username || '')}</span>
+          </span>
+        </span>
+      </td>
+      <td class="c-dept">${escapeHtmlText(u.department || '–')}</td>
+      <td class="c-role">
+        <span class="ax-user-role" style="background:${r.tint};color:${r.color}">${r.emoji} ${escapeHtmlText(r.name)}</span>
+      </td>
+      <td class="c-status">
+        <span class="ax-user-status" style="${u.active ? 'background:#e1f5ee;color:#0f6e56' : 'background:#eef0f3;color:#5f6b7a'}">${u.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
+      </td>
+      <td class="c-scope">${scope}</td>
+      <td class="c-act">
+        <span class="ax-user-acts">
+          <button type="button" class="ax-crc-act" onclick="openUserModal('${u.id}')">จัดการ</button>
+          ${!isSelf ? `<button type="button" class="btn-del" onclick="deleteUser('${u.id}')" title="ลบบัญชี">🗑️</button>` : ''}
+        </span>
       </td>
     </tr>`;
   }).join('');

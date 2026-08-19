@@ -86,12 +86,18 @@ function loadScript(src) {
   //    10-router.js / 11-import-template-selection.js ห่อฟังก์ชันของไฟล์ก่อนหน้า "ตอนโหลด"
   //    ถ้าไฟล์ที่นิยามฟังก์ชันนั้นถูกย้ายไปโหลดทีหลัง ตัว patch จะโดนทับเงียบ ๆ ไม่มี error
   //    ตัวห่อทุกตัวเรียก originalX.apply(...) จึงเช็คจาก source ได้ตรง ๆ
+  //    ยกเว้น renderTable: 26-list-ui.js เขียนทับทั้งตัว (ตารางหน้า list เป็นดีไซน์ใหม่)
+  //    แต่ยังต้องเรียก normalizeListRows ของ 10-router ก่อนวาด ไม่งั้นสถานะยกเลิกสอบเทียบหาย
   const PATCHED = ['updateStats', 'updatePaginationUI', 'renderTable', 'renderMobileCards',
                    'renderDonut', 'renderAlerts', 'resetFilters', 'openInstrumentModal',
                    'saveInstrument', 'loadData', 'openImportModal'];
+  const KEEPS_ROUTER_NORMALIZE = { renderTable: /\bnormalizeListRows\b/ };
   const unpatched = PATCHED.filter(n => {
     const fn = window[n];
-    return typeof fn !== 'function' || !/\boriginal[A-Z]/.test(Function.prototype.toString.call(fn));
+    if (typeof fn !== 'function') return true;
+    const src = Function.prototype.toString.call(fn);
+    const alt = KEEPS_ROUTER_NORMALIZE[n];
+    return !(/\boriginal[A-Z]/.test(src) || (alt && alt.test(src)));
   });
   lines.push('# monkey-patched functions expected: ' + PATCHED.length);
   lines.push(unpatched.length
