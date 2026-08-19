@@ -1,18 +1,23 @@
 /* ============================================================
    26-list-ui.js — หน้า "รายการเครื่องมือ" ตามดีไซน์ Calibration App
-   3 มุมมอง: สเปก / บัญชีรายการ / การ์ด + ชิปสถานะ + pager แบบใหม่
+   2 มุมมอง: สเปก / บัญชีรายการ + ชิปสถานะ + pager แบบใหม่
+   (จอมือถือไม่ใช้ตารางเลย — ใช้ #mobileCardList ของเดิมแทน)
    แทน renderTable() เดิม (02-dashboard.js) แต่ยังใช้ตัวกรอง/pagination เดิมทั้งหมด
    ต้องโหลดหลัง 02-dashboard.js / 04-reports.js / 10-router.js
    ============================================================ */
 
+/* มุมมองการ์ดเป็นของฝั่งมือถือเท่านั้น (#mobileCardList + renderMobileCards ใน 02-dashboard.js)
+   จอใหญ่จึงมีแค่ 2 มุมมองนี้ — อย่าเพิ่ม 'card' กลับเข้ามาเป็นแท็บ */
 const LIST_VIEWS = [
   { k: 'spec', label: 'มุมมองสเปก',      sub: 'ย่าน · ความละเอียด · ค่ายอมรับ' },
-  { k: 'full', label: 'บัญชีรายการ',      sub: 'ทุกคอลัมน์ตามฟอร์ม' },
-  { k: 'card', label: 'มุมมองการ์ด',      sub: 'อ่านง่าย เหมาะกับจอเล็ก' }
+  { k: 'full', label: 'บัญชีรายการ',      sub: 'ทุกคอลัมน์ตามฟอร์ม' }
 ];
 
 let listView = (() => {
-  try { return localStorage.getItem('axListView') || 'spec'; } catch (e) { return 'spec'; }
+  // ต้องกรองค่าเก่าใน localStorage ด้วย ('card' ที่เคยเลือกไว้จะทำให้ไม่มีตารางไหนโชว์เลย)
+  let v = 'spec';
+  try { v = localStorage.getItem('axListView') || 'spec'; } catch (e) {}
+  return LIST_VIEWS.some(x => x.k === v) ? v : 'spec';
 })();
 
 const LIST_STATUS_CHIPS = [
@@ -59,13 +64,6 @@ function listStatusPill(d) {
   if (days < 0)  return { bg: '#fde8e8', fg: '#d93a3a', emoji: '🔴', text: 'เลยกำหนด', days: 'เกิน ' + Math.abs(days) + ' วัน', cancelled: false };
   if (days <= 30) return { bg: '#fdf3dd', fg: '#b45309', emoji: '🟡', text: 'ใกล้ครบ', days: days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน', cancelled: false };
   return { bg: '#e1f5ee', fg: '#0f6e56', emoji: '🟢', text: 'ปกติ', days: 'อีก ' + days + ' วัน', cancelled: false };
-}
-
-function listProgressPct(d) {
-  if (!d.cal_date || !d.due_date || d.days_left === null || d.days_left === undefined) return 0;
-  const total = (new Date(d.due_date) - new Date(d.cal_date)) / 86400000;
-  if (!(total > 0)) return 100;
-  return Math.max(0, Math.min(100, Math.round((total - d.days_left) / total * 100)));
 }
 
 /* ปุ่มงานท้ายแถว (ไฟล์ / วางแผน / ลบ) — ดีไซน์ไม่มีคอลัมน์นี้
@@ -273,53 +271,6 @@ function renderListFull(rows, start) {
   }).join('');
 }
 
-/* ---------- มุมมองการ์ด ---------- */
-
-function renderListCards(rows) {
-  const host = document.getElementById('listCardCard');
-  if (!host) return;
-  host.innerHTML = rows.map(d => {
-    const id = Number(d.id) || 0;
-    const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
-    const [letter, , color] = regTypeMeta(displayType, d);
-    const p = listStatusPill(d);
-    const pct = listProgressPct(d);
-    const ids = listLines(d.id_code);
-    const idTag = ids[0] + (ids.length > 1 ? ` +${ids.length - 1}` : '');
-    return `<button type="button" class="ax-icard" onclick="openInstrumentDetail(${id})">
-      <div class="ax-icard-top">
-        <span class="ax-tletter" style="background:${color}1a;color:${color}">${escapeHtmlText(letter)}</span>
-        <span class="ax-icard-hd">
-          <span class="ax-icard-name">${escapeHtmlText(listLines(d.instrument_name)[0])}</span>
-          <span class="ax-icard-meta">
-            <span class="ax-idtag">${escapeHtmlText(idTag)}</span>
-            <span>${escapeHtmlText([d.department, d.location].filter(Boolean).join(' · ') || '–')}</span>
-          </span>
-        </span>
-        <span class="ax-pill" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span>
-      </div>
-      <div class="ax-icard-specs">
-        <span><i>RANGE</i><b>${escapeHtmlText(listRangeText(d) || '–')}</b></span>
-        <span><i>RESOLUTION</i><b>${escapeHtmlText(d.resolution_text || d.resolution || '–')}</b></span>
-        <span><i>TOLERANCE</i><b>${escapeHtmlText(d.tolerance || '–')}</b></span>
-      </div>
-      <div class="ax-icard-prog">
-        <span class="ax-bar"><span style="width:${pct}%;background:${p.fg}"></span></span>
-        <span class="ax-icard-dates">
-          <span>${formatDate(d.cal_date)}</span>
-          <span style="color:${p.fg};font-weight:700">${escapeHtmlText(p.days)}</span>
-          <span style="font-weight:600">${p.cancelled ? '–' : formatDate(d.due_date)}</span>
-        </span>
-      </div>
-      <div class="ax-tagrow">
-        <span class="ax-tag ax-tag-usp">Type ${escapeHtmlText(d.usp_type || '–')}</span>
-        <span class="ax-tag">${escapeHtmlText(d.cal_type || '–')}</span>
-        <span class="ax-tag">${escapeHtmlText(d.cal_frequency || '–')}</span>
-      </div>
-    </button>`;
-  }).join('');
-}
-
 /* ---------- ตัววาดหลัก (แทน renderTable เดิม) ---------- */
 
 function renderListPage() {
@@ -340,7 +291,6 @@ function renderListPage() {
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   show('listSpecCard', !empty && listView === 'spec');
   show('listFullCard', !empty && listView === 'full');
-  show('listCardCard', !empty && listView === 'card');
   show('listEmpty', empty);
 
   if (empty) {
@@ -348,14 +298,10 @@ function renderListPage() {
     if (tb) tb.innerHTML = '<tr><td colspan="12" class="no-data">ไม่พบข้อมูล</td></tr>';
     const tf = document.getElementById('dataTableFull');
     if (tf) tf.innerHTML = '<tr><td colspan="19" class="no-data">ไม่พบข้อมูล</td></tr>';
-    const hc = document.getElementById('listCardCard');
-    if (hc) hc.innerHTML = '';
-  } else if (listView === 'spec') {
-    renderListSpec(pageRows, start);
   } else if (listView === 'full') {
     renderListFull(pageRows, start);
   } else {
-    renderListCards(pageRows);
+    renderListSpec(pageRows, start);
   }
 
   const label = document.getElementById('listResultLabel');

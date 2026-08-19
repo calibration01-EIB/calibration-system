@@ -656,38 +656,6 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #app .ax-actcell .btn-cert { width: auto; padding: 5px 9px; font-size: 12.5px; }
 #app .ax-actcell .btn-del { width: auto; padding: 5px 9px; font-size: 12.5px; line-height: 1.2; }
 
-/* มุมมองการ์ด */
-.ax-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
-.ax-icard {
-  text-align: left; display: flex; flex-direction: column; gap: 12px; width: 100%;
-  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-tile);
-  padding: 14px; cursor: pointer; font-family: inherit;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-.ax-icard:hover { border-color: #cfe0ec; box-shadow: var(--shadow-lg); }
-.ax-icard-top { display: flex; align-items: flex-start; gap: 11px; width: 100%; }
-.ax-icard-hd { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.ax-icard-name {
-  font-family: var(--ff-num); font-size: 15.5px; font-weight: 700; letter-spacing: .02em;
-  color: #0f2837; line-height: 1.25;
-}
-.ax-icard-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px; color: var(--text3); }
-.ax-icard-meta .ax-idtag { font-size: 13px; padding: 3px 8px; border-radius: 6px; }
-.ax-icard-specs {
-  display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
-  border-top: 1px solid #f2f6f9; border-bottom: 1px solid #f2f6f9; padding: 11px 0; width: 100%;
-}
-.ax-icard-specs > span { display: flex; flex-direction: column; gap: 3px; padding: 0 10px; min-width: 0; }
-.ax-icard-specs > span + span { border-left: 1px dashed var(--border); }
-.ax-icard-specs i { font-style: normal; font-size: 11.5px; letter-spacing: .04em; color: var(--text4); }
-/* ค่าหลายย่านเก็บเป็นหลายบรรทัดใน DB — การ์ดต้องคงบรรทัดไว้ */
-.ax-icard-specs b { font-size: 14px; font-weight: 600; color: var(--ink2); line-height: 1.35; white-space: pre-line; }
-.ax-icard-prog { display: flex; flex-direction: column; gap: 7px; width: 100%; }
-.ax-bar { display: block; height: 6px; border-radius: 999px; background: #e9eff5; overflow: hidden; }
-.ax-bar > span { display: block; height: 6px; border-radius: 999px; }
-.ax-icard-dates { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; color: var(--text2); }
-.ax-icard .ax-tagrow { justify-content: flex-start; font-size: 12.5px; }
-
 /* ว่างเปล่า */
 .ax-empty {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
@@ -1260,9 +1228,10 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 
 /* หน้ารายการบนมือถือ — ใช้การ์ดชุดเดิม (#mobileCardList) ที่ router คุมอยู่ */
 @media (max-width: 768px) {
+  /* มือถือไม่ใช้ตาราง — ซ่อนทั้งแท็บมุมมองและตารางทั้งสองแบบ แล้วปล่อยให้
+     #mobileCardList (renderMobileCards ใน 02-dashboard.js) ทำงานแทน */
   #app #pageList .ax-view-tabs,
-  #app #pageList .ax-tablecard,
-  #app #pageList #listCardCard { display: none !important; }
+  #app #pageList .ax-tablecard { display: none !important; }
   .ax-filter-card { padding: 14px; gap: 12px; margin-bottom: 16px; }
   .ax-search { flex: 1 1 100%; min-width: 0; padding: 10px 12px; }
   #app .ax-search input { font-size: 15px; }
