@@ -71,8 +71,8 @@ function certHistGoPage(delta) { certHistPage += delta; loadCertPage(); }
 
 async function loadCertPage() {
   renderCertTypeSelectOptions();
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
-  const fmtDt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric'}) : '–';
+  const fmtDt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
   const yearSel = document.getElementById('certHistoryYear');
   const typeSel = document.getElementById('certHistoryType');
   const limitSel = document.getElementById('certHistoryLimit');

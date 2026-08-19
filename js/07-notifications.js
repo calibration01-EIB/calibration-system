@@ -49,7 +49,7 @@ function renderScanNotifDropdown() {
   const dd = document.getElementById('scanNotifDropdown');
   if (!dd) return;
   const recs = window._scanNotifRecs || [];
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '–';
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory', { day:'numeric', month:'short', year:'numeric' }) : '–';
   if (!recs.length) {
     dd.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">✅ ไม่มีงานรอแนบสแกน — ทุกใบสมบูรณ์แล้ว</div>';
     return;

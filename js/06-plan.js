@@ -247,8 +247,8 @@ async function loadLegacyPlans() {
     const cacheId = 'items_' + p.id;
     planItemsCache[cacheId] = { items, confirm: false };
     const cnt = items.length;
-    const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '–';
-    const created = p.created_at ? new Date(p.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+    const date = p.planned_date ? new Date(p.planned_date).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'long',day:'numeric'}) : '–';
+    const created = p.created_at ? new Date(p.created_at).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric'}) : '–';
     const canAttachCert = p.status === 'planned' && (currentUser?.role === 'editor' || currentUser?.role === 'admin');
 
     return `<div class="plan-card">
@@ -375,7 +375,7 @@ async function loadPlanHistory() {
   el.innerHTML = data.map(log => {
     const ac = actionColor[log.action] || { bg:'#F5F5F5', color:'#666', icon:'ti-notes' };
     const dt = new Date(log.action_at);
-    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const dateStr = dt.toLocaleDateString('th-TH-u-ca-gregory', { year:'numeric', month:'short', day:'numeric' });
     const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
     const planTitle = planMap[log.plan_id] || '(ถูกลบแล้ว)';
     return `<div class="plan-card" style="border-left:4px solid ${ac.color}">
@@ -530,7 +530,7 @@ async function openAuditPlanModal(planId, planTitle) {
 
   el.innerHTML = data.map((log, i) => {
     const dt = new Date(log.action_at);
-    const dateStr = dt.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const dateStr = dt.toLocaleDateString('th-TH-u-ca-gregory', { year:'numeric', month:'short', day:'numeric' });
     const timeStr = dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
     const icon = actionIcon[log.action] || '📝';
     const isLast = i === data.length - 1;

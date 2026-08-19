@@ -20,7 +20,7 @@ function repairStatusBadge(status) {
   return `<span style="font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;background:${bg};color:${fg};white-space:nowrap">${lbl}</span>`;
 }
 function fmtRepairDate(s) {
-  return s ? new Date(s).toLocaleDateString('th-TH', { year: '2-digit', month: 'short', day: 'numeric' }) : '–';
+  return s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory', { year: '2-digit', month: 'short', day: 'numeric' }) : '–';
 }
 function fmtBaht(n) {
   const v = Number(n);
@@ -496,7 +496,7 @@ function aggregateRepairMonthly(orders, now = new Date()) {
     months.push({ y: d.getFullYear(), m: d.getMonth() });
   }
   const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  const labels = months.map(x => TH[x.m] + ' ' + String((x.y + 543) % 100).padStart(2, '0'));
+  const labels = months.map(x => TH[x.m] + ' ' + String(x.y % 100).padStart(2, '0'));
   const counts = months.map(() => 0), costs = months.map(() => 0);
   (orders || []).forEach(o => {
     if (o.status === 'cancelled' || !o.reported_date) return;

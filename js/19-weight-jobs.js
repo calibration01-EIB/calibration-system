@@ -13,7 +13,7 @@ function wjStatusBadge(status) {
 }
 
 function wjFmtDate(s) {
-  return s ? new Date(s).toLocaleDateString('th-TH', { year: '2-digit', month: 'short', day: 'numeric' }) : '–';
+  return s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory', { year: '2-digit', month: 'short', day: 'numeric' }) : '–';
 }
 
 async function loadWeightjobs() {

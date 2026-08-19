@@ -211,7 +211,7 @@ function renderAuditTable() {
   tbody.innerHTML = visibleRows.map(d => {
     const [emoji, tint, color, moduleName] = auditMeta(d.action);
     const dt = d.created_at ? new Date(d.created_at) : null;
-    const date = dt ? dt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
+    const date = dt ? dt.toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
     const time = dt ? dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
     const user = d.username || '–';
     const initial = escapeHtmlText(String(user).charAt(0).toUpperCase() || '?');

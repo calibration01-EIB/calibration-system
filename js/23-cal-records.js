@@ -222,7 +222,7 @@ function renderCalrecsTable() {
   if (!body) return;
   const scope = crcScope();
   const q = (document.getElementById('calrecSearch')?.value || '').trim().toLowerCase();
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
 
   const all = crcModels();
   renderCalrecTiles(all);
@@ -312,7 +312,7 @@ function renderCalrecsTable() {
 async function openCalHistory(instrumentId) {
   const d = allData.find(x => x.id === instrumentId);
   if (!d) return;
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '–';
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric'}) : '–';
 
   document.getElementById('calHistoryTitle').textContent = d.id_code || '–';
   document.getElementById('calHistoryBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">กำลังโหลด...</div>';

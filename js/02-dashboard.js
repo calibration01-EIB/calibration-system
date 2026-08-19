@@ -7,7 +7,7 @@ function renderMonthlyBarChart() {
   if (!allData.length) { setTimeout(renderMonthlyBarChart, 500); return; }
 
   const yearLabel = document.getElementById('monthlyYearLabel');
-  if (yearLabel) yearLabel.textContent = (new Date().getFullYear() + 543).toString();
+  if (yearLabel) yearLabel.textContent = new Date().getFullYear().toString();
 
   const byMonth = Array.from({length: 12}, () => ({ok: 0, warn: 0, over: 0}));
   allData.forEach(d => {
@@ -81,8 +81,8 @@ function renderMobileCards() {
       badgeText = 'ใกล้ครบ';
       daysText = days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน';
     }
-    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
-    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : '-';
+    const calDate = d.cal_date ? new Date(d.cal_date).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric'}) : '-';
+    const dueDate = d.due_date ? new Date(d.due_date).toLocaleDateString('th-TH-u-ca-gregory',{year:'numeric',month:'short',day:'numeric'}) : '-';
     const dueLine = d.due_date && !cancelled ? dueDate + ' (' + daysText + ')' : (cancelled ? daysText : dueDate);
     const displayType = getDisplayInstrumentType(d);
     const typShort = (displayType || d.instrument_type || '-').split(' (')[0];
@@ -587,7 +587,7 @@ function updateStats() {
   const heroDate = document.getElementById('dashHeroDate');
   if (heroDate) {
     const now = new Date();
-    heroDate.textContent = now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    heroDate.textContent = now.toLocaleDateString('th-TH-u-ca-gregory', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
       + ' · อัปเดตล่าสุด ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
   }
   renderDashMiniList();
@@ -626,7 +626,7 @@ function formatDashboardAuditTime(value) {
   if (diffMin < 60) return diffMin + ' นาทีที่แล้ว';
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return diffHour + ' ชม.ที่แล้ว';
-  return date.toLocaleDateString('th-TH', { day:'2-digit', month:'short', year:'numeric' });
+  return date.toLocaleDateString('th-TH-u-ca-gregory', { day:'2-digit', month:'short', year:'numeric' });
 }
 
 function getDashboardAuditStyle(action) {
@@ -743,9 +743,14 @@ function resetFilters() {
   updateStats(); renderTable(); renderListCategoryPills();
 }
 
+/* วันที่บนหน้าจอใช้รูปแบบเดียวกันทั้งแอปตามดีไซน์: "14 ก.ค. 2026"
+   ต้องระบุ -u-ca-gregory เพราะ th-TH เปล่า ๆ จะออกเป็นปีพุทธ (2569)
+   ใช้เฉพาะการแสดงผลบนหน้าจอ — ใบ Cert / xlsx มีตัวจัดรูปแบบของตัวเอง ไม่กระทบ */
 function formatDate(s) {
   if (!s) return '–';
-  return new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const dt = new Date(s);
+  if (isNaN(dt.getTime())) return '–';
+  return dt.toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function renderTable() {

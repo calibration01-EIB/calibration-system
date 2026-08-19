@@ -30,7 +30,7 @@ function aoDueState(p) {
   // รับกลับแล้วเป็นสถานะสูงสุด — ไม่ว่าจะเลยกำหนดหรือไม่ ของกลับมาแล้วก็จบ
   if (p.returned_at) {
     const back = new Date(p.returned_at);
-    let note = 'รับกลับ ' + back.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    let note = 'รับกลับ ' + back.toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' });
     if (p.due_date) {
       const due = new Date(p.due_date); due.setHours(0, 0, 0, 0);
       const b = new Date(p.returned_at); b.setHours(0, 0, 0, 0);
@@ -196,7 +196,7 @@ function renderAssetOutTable() {
   }
   if (!rows.length) { tbody.innerHTML = ''; return; }
 
-  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
+  const fmt = s => s ? new Date(s).toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   const isAdmin = currentUser && currentUser.role === 'admin';
 

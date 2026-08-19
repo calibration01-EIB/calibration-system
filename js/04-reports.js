@@ -280,7 +280,7 @@ let activeMonthCard = null;
 function renderMonthly() {
   if (!allData.length) { setTimeout(renderMonthly, 500); return; }
   const yearLabel = document.getElementById('monthlyYearLabel');
-  if (yearLabel) yearLabel.textContent = (new Date().getFullYear() + 543).toString();
+  if (yearLabel) yearLabel.textContent = new Date().getFullYear().toString();
 
   const byMonth = {};
   for (let i = 0; i < 12; i++) byMonth[i] = [];

@@ -59,7 +59,7 @@ function fmtDateTH(dateStr) {
   if (!dateStr) return '–';
   const p = String(dateStr).split('T')[0].split('-');
   if (p.length < 3) return dateStr;
-  return p[2] + '/' + p[1] + '/' + (parseInt(p[0]) + 543);
+  return p[2] + '/' + p[1] + '/' + parseInt(p[0]);
 }
 
 // ค่าจริง = ค่าพิกัด + ค่าแก้ (correction เก็บหน่วย g → แปลงเข้าหน่วยของ nominal)
