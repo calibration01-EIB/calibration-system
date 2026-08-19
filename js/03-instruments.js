@@ -119,9 +119,41 @@ function updateDeptUnitHint() {
   el.textContent = (code && typeof deptUnitName === 'function') ? deptUnitName(code) : '';
 }
 
-// ===== รูปภาพประกอบเครื่องมือ (hero gallery) =====
+// ===== รูปภาพประกอบเครื่องมือ (4 ช่องตามประเภท) =====
 const INST_PHOTO_MAX = 5;
 function instPhotoFolder(d) { return `photos_${d.id}_${d.id_code}`; }
+
+// ช่องรูปตามดีไซน์ — รูปที่อัปใหม่จะตั้งชื่อขึ้นต้นด้วย key เพื่อให้รู้ประเภท
+const INST_PHOTO_SLOTS = [
+  { k: 'overview', label: 'ภาพรวมเครื่อง' },
+  { k: 'label',    label: 'ป้ายเครื่อง / Serial' },
+  { k: 'sticker',  label: 'สติกเกอร์สอบเทียบ' },
+  { k: 'site',     label: 'จุดติดตั้ง' }
+];
+
+// รูปเก่าชื่อ "{timestamp}_photo.jpg" ไม่มี prefix → คืน null แล้วไปเข้าช่องว่างตามลำดับอัปโหลด
+function instPhotoSlotOf(name) {
+  const m = /^([a-z]+)_/i.exec(name || '');
+  const k = m ? m[1].toLowerCase() : '';
+  return INST_PHOTO_SLOTS.some(s => s.k === k) ? k : null;
+}
+
+/* จัดรูปลง 4 ช่อง โดยไม่ทำให้รูปเดิมหาย:
+   1) รูปที่มี prefix เข้าช่องของตัวเอง
+   2) รูปที่ยังไม่ระบุประเภท เติมช่องที่ยังว่างเรียงตามลำดับอัปโหลด
+      (58 เครื่องที่มีรูปอยู่แล้ว ส่วนใหญ่ถ่ายไว้ 3–4 มุมพอดีกับช่อง)
+   3) ที่เหลือไปอยู่แถว "รูปอื่น ๆ" ไม่ถูกซ่อน */
+function instPhotoArrange(items) {
+  const bySlot = {}, rest = [];
+  items.forEach(it => {
+    const k = instPhotoSlotOf(it.name);
+    if (k && !bySlot[k]) bySlot[k] = it; else rest.push(it);
+  });
+  const spare = rest.filter(it => !instPhotoSlotOf(it.name));
+  const extras = rest.filter(it => instPhotoSlotOf(it.name));
+  INST_PHOTO_SLOTS.forEach(s => { if (!bySlot[s.k] && spare.length) bySlot[s.k] = spare.shift(); });
+  return { bySlot, extras: extras.concat(spare) };
+}
 
 async function loadDetailPhotos(d) {
   const el = document.getElementById('regDetailPhotos');
@@ -138,40 +170,62 @@ async function loadDetailPhotos(d) {
       if (u?.signedUrl) items.push({ name: f.name, url: u.signedUrl });
     }
     const id = Number(d.id) || 0;
-    const cells = items.map(it => `<div class="reg-photo-cell">
+    const { bySlot, extras } = instPhotoArrange(items);
+
+    const filled = it => `
       <img src="${it.url}" onclick="openPhotoFull('${it.url}')" alt="รูปเครื่องมือ">
-      ${canEdit ? `<button class="reg-photo-edit" title="หมุน / ครอปรูป" onclick="editInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✎</button>` : ''}
-      ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✕</button>` : ''}
-    </div>`).join('');
-    const addCell = (canEdit && items.length < INST_PHOTO_MAX)
-      ? `<div class="reg-photo-addcell">
-        <div class="add-title"><span class="ic">＋</span>เพิ่มรูป</div>
-        <div class="add-acts">
-          <button type="button" onclick="uploadInstrumentPhoto(${id}, true)">📷 ถ่ายภาพ</button>
-          <button type="button" onclick="uploadInstrumentPhoto(${id}, false)">🖼 เลือกรูป</button>
-        </div>
-      </div>` : '';
+      ${canEdit ? `<button class="reg-photo-edit" title="หมุน / ครอปรูป" onclick="event.stopPropagation();editInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✎</button>` : ''}
+      ${canEdit ? `<button class="reg-photo-del" title="ลบรูป" onclick="event.stopPropagation();deleteInstrumentPhoto('${folder}','${escapeJsSingle(it.name)}',${id})">✕</button>` : ''}`;
+
+    const cells = INST_PHOTO_SLOTS.map(s => {
+      const it = bySlot[s.k];
+      const inner = it
+        ? filled(it)
+        : (canEdit
+            ? `<div class="reg-slot-drop" onclick="uploadInstrumentPhoto(${id}, false, '${s.k}')">
+                 <span class="reg-slot-ic">🖼</span>
+                 <span class="reg-slot-name">${escapeHtmlText(s.label)}</span>
+                 <span class="reg-slot-hint">or <u>browse files</u></span>
+               </div>
+               <button type="button" class="reg-slot-cam" title="ถ่ายภาพ" onclick="event.stopPropagation();uploadInstrumentPhoto(${id}, true, '${s.k}')">📷</button>`
+            : `<div class="reg-slot-drop reg-slot-drop--ro"><span class="reg-slot-ic">🖼</span><span class="reg-slot-name">${escapeHtmlText(s.label)}</span></div>`);
+      return `<div class="reg-photo-slot">
+        <div class="reg-photo-cell ${it ? 'has' : 'empty'}">${inner}</div>
+        <div class="reg-slot-cap">${escapeHtmlText(s.label)}</div>
+      </div>`;
+    }).join('');
+
+    const extraRow = extras.length
+      ? `<div class="reg-photo-extra">
+          <div class="reg-extra-title">รูปอื่น ๆ (${extras.length})</div>
+          <div class="reg-extra-grid">${extras.map(it => `<div class="reg-photo-cell has">${filled(it)}</div>`).join('')}</div>
+        </div>`
+      : '';
+
     if (!items.length && !canEdit) {
       el.innerHTML = `<div class="reg-photo-empty">ยังไม่มีรูปเครื่องมือ</div>`;
       return;
     }
-    el.innerHTML = `<div class="reg-photo-grid">${cells}${addCell}</div>`;
+    el.innerHTML = `<div class="reg-photo-grid">${cells}</div>${extraRow}`;
   } catch (e) {
     el.innerHTML = `<div class="reg-photo-empty" style="color:var(--red)">โหลดรูปไม่สำเร็จ</div>`;
   }
 }
 function openPhotoFull(url) { if (url) window.open(url, '_blank'); }
 
-function uploadInstrumentPhoto(id, useCamera) {
+function uploadInstrumentPhoto(id, useCamera, slot) {
   const d = (allData || []).find(x => x.id === id); if (!d) return;
   if (!(currentUser?.role === 'admin' || currentUser?.role === 'editor')) { showToast('ไม่มีสิทธิ์อัพโหลด', 'error'); return; }
+  const key = INST_PHOTO_SLOTS.some(s => s.k === slot) ? slot : '';
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
   if (useCamera) inp.setAttribute('capture', 'environment');
   inp.onchange = () => {
     const f = inp.files && inp.files[0]; if (!f) return;
     if (!/^image\//.test(f.type || '')) { showToast('รับเฉพาะไฟล์รูปภาพ', 'error'); return; }
+    // ตั้งชื่อขึ้นต้นด้วย key ของช่อง เพื่อให้รอบหน้ารู้ว่ารูปนี้เป็นประเภทไหน
+    const name = key ? `${key}_${Date.now()}.jpg` : `${Date.now()}_photo.jpg`;
     // เปิดตัวแก้รูปก่อนบันทึก — หมุนรูปที่ถ่ายกลับหัว/แนวนอน + ครอปได้ · บันทึกเป็น JPEG ย่อขนาด
-    openPhotoEditor(f, blob => saveInstrumentPhoto(d, `${Date.now()}_photo.jpg`, blob, true));
+    openPhotoEditor(f, blob => saveInstrumentPhoto(d, name, blob, true));
   };
   inp.click();
 }
@@ -380,10 +434,10 @@ function openInstrumentDetail(id) {
     </div>
 
     <div class="reg-metric-grid">
-      <div class="reg-metric"><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div>
-      <div class="reg-metric"><span>ID.No.</span><strong>${escapeHtmlText(d.id_code || '–')}</strong></div>
-      <div class="reg-metric"><span>วันที่สอบเทียบ</span><strong>${formatDate(d.cal_date)}</strong></div>
-      <div class="reg-metric"><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div>
+      <div class="reg-metric"><span class="reg-metric-ic" style="background:#eaf1f8;color:#2f6fb5">📄</span><div><span>CERT.</span><strong>${escapeHtmlText(d.cert_no || '–')}</strong></div></div>
+      <div class="reg-metric"><span class="reg-metric-ic" style="background:#f1ecfb;color:#6242a8">🆔</span><div><span>ID.No.</span><strong>${escapeHtmlText(d.id_code || '–')}</strong></div></div>
+      <div class="reg-metric"><span class="reg-metric-ic" style="background:#e7f4ee;color:#1f8a4c">📅</span><div><span>วันที่สอบเทียบ</span><strong>${formatDate(d.cal_date)}</strong></div></div>
+      <div class="reg-metric"><span class="reg-metric-ic" style="background:#fdf0e2;color:#b07a10">📅</span><div><span>วันครบกำหนด</span><strong>${formatDate(d.due_date)}${escapeHtmlText(dueExtra)}</strong></div></div>
     </div>
 
     <div class="reg-panel reg-panel--info">

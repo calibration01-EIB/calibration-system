@@ -1334,3 +1334,67 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   body.app-mode #instrumentDetailModal .reg-flag { font-size: 14px; padding: 9px 32px 9px 11px; }
   body.app-mode #instrumentDetailModal .reg-panel { padding: 11px; }
 }
+
+/* ---- 7k-2 · ช่องรูป 4 แบบ + การ์ดตัวเลขมีไอคอน + ปุ่มงาน (ตามดีไซน์) ---- */
+
+#instrumentDetailModal .reg-photo-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;
+}
+#instrumentDetailModal .reg-photo-slot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#instrumentDetailModal .reg-photo-cell {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden;
+  background: #f7fafc; border: 1px solid var(--rp-line);
+}
+#instrumentDetailModal .reg-photo-cell.empty { background: #fbfdfe; border-style: dashed; border-color: #cfdce7; }
+#instrumentDetailModal .reg-photo-cell img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+#instrumentDetailModal .reg-slot-cap {
+  text-align: center; font-size: 13px; font-weight: 600; color: var(--text2);
+}
+
+#instrumentDetailModal .reg-slot-drop {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 5px; cursor: pointer; padding: 10px;
+}
+#instrumentDetailModal .reg-slot-drop--ro { cursor: default; }
+#instrumentDetailModal .reg-slot-ic { font-size: 26px; opacity: .45; line-height: 1; }
+#instrumentDetailModal .reg-slot-name { font-size: 13px; font-weight: 600; color: var(--text2); text-align: center; }
+#instrumentDetailModal .reg-slot-hint { font-size: 12px; color: var(--text3); }
+#instrumentDetailModal .reg-slot-cam {
+  position: absolute; right: 7px; bottom: 7px; width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--rp-line); background: #fff; cursor: pointer; font-size: 14px; line-height: 1;
+}
+#instrumentDetailModal .reg-slot-cam:hover { border-color: var(--accent); }
+
+/* รูปที่เกิน 4 ช่อง — ไม่ซ่อน แสดงต่อท้าย */
+#instrumentDetailModal .reg-photo-extra { margin-top: 14px; border-top: 1px dashed var(--rp-line); padding-top: 12px; }
+#instrumentDetailModal .reg-extra-title { font-size: 12.5px; font-weight: 600; color: var(--text3); margin-bottom: 8px; }
+#instrumentDetailModal .reg-extra-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+
+/* การ์ดตัวเลขบนสุด: ไอคอนซ้าย + label/value ขวา */
+#instrumentDetailModal .reg-metric {
+  display: flex; align-items: center; gap: 11px; min-height: 62px;
+  padding: 10px 13px; border-radius: 12px; border: 1px solid var(--border2); background: #fff;
+}
+#instrumentDetailModal .reg-metric-ic {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  width: 36px; height: 36px; border-radius: 10px; font-size: 16px;
+}
+#instrumentDetailModal .reg-metric > div { min-width: 0; }
+#instrumentDetailModal .reg-metric span { font-size: 12px; font-weight: 600; color: var(--text3); }
+#instrumentDetailModal .reg-metric strong { display: block; margin-top: 1px; font-size: 15px; font-weight: 700; color: var(--ink2); }
+#instrumentDetailModal .reg-metric-grid { gap: 12px; margin-bottom: 4px; }
+
+/* ปุ่มงานให้ใหญ่ขึ้นแบบดีไซน์ */
+#instrumentDetailModal .reg-detail-actions .btn-view {
+  padding: 9px 15px; border-radius: 11px; font-size: 14px; font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  #instrumentDetailModal .reg-photo-grid,
+  #instrumentDetailModal .reg-extra-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  body.app-mode #instrumentDetailModal .reg-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  body.app-mode #instrumentDetailModal .reg-metric-grid { grid-template-columns: 1fr !important; }
+  body.app-mode #instrumentDetailModal .reg-slot-cap { font-size: 12px; }
+}
