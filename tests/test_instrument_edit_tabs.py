@@ -21,6 +21,17 @@ def panel_html(panel_id):
     return match.group(1)
 
 
+def function_body(function_name):
+    match = re.search(
+        rf"function {re.escape(function_name)}\([^)]*\) \{{(.*?)(?=\n\}}\n\nfunction )",
+        JS,
+        re.S,
+    )
+    if not match:
+        raise AssertionError(f"Missing function: {function_name}")
+    return match.group(1)
+
+
 class InstrumentEditTabbedFormTests(unittest.TestCase):
     def test_modal_has_three_accessible_tabs_and_panels(self):
         self.assertIn('id="instrumentTabList" role="tablist"', INDEX)
@@ -94,3 +105,16 @@ class InstrumentEditTabbedFormTests(unittest.TestCase):
             r"@media \(max-width: 767px\)[\s\S]*?#instrumentModal\s+\.instrument-form-grid\s*\{[^}]*1fr",
         )
         self.assertIn("@media (prefers-reduced-motion: reduce)", CSS)
+
+    def test_duplicate_warning_uses_hidden_attribute_for_each_visibility_branch(self):
+        clear_body = function_body("clearInstrumentDuplicateWarning")
+        self.assertIn("box.hidden = true;", clear_body)
+        self.assertNotIn("box.style.display", clear_body)
+
+        render_body = function_body("renderInstrumentDuplicateWarning")
+        self.assertRegex(
+            render_body,
+            r"if \(!matches\.length\) \{\s*box\.hidden = true;[\s\S]*?return;\s*\}"
+            r"\s*box\.hidden = false;",
+        )
+        self.assertNotIn("box.style.display", render_body)

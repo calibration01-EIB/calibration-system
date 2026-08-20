@@ -834,7 +834,7 @@ async function getInstrumentDuplicateMatchesFromDb(idCode, certNo) {
 function clearInstrumentDuplicateWarning() {
   const box = document.getElementById('instrumentDuplicateWarning');
   if (box) {
-    box.style.display = 'none';
+    box.hidden = true;
     box.innerHTML = '';
   }
   lastInstrumentDuplicateToastKey = '';
@@ -844,12 +844,12 @@ function renderInstrumentDuplicateWarning(matches) {
   const box = document.getElementById('instrumentDuplicateWarning');
   if (!box) return;
   if (!matches.length) {
-    box.style.display = 'none';
+    box.hidden = true;
     box.innerHTML = '';
     return;
   }
 
-  box.style.display = 'block';
+  box.hidden = false;
   box.innerHTML = `
     <div style="font-weight:700;margin-bottom:8px">พบข้อมูลซ้ำ กรุณาตรวจสอบก่อนบันทึก</div>
     ${matches.map(({ instrument: d, fields }) => `
