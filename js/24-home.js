@@ -94,6 +94,8 @@ function toggleAxUserMenu(ev) {
   const m = document.getElementById('axUserMenu');
   if (!m) return;
   const open = m.classList.toggle('open');
+  const trigger = document.getElementById('axUser');
+  if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) {
     axSyncUser();
     setTimeout(() => document.addEventListener('click', axCloseUserMenu, { once: true }), 0);
@@ -102,6 +104,8 @@ function toggleAxUserMenu(ev) {
 function axCloseUserMenu() {
   const m = document.getElementById('axUserMenu');
   if (m) m.classList.remove('open');
+  const trigger = document.getElementById('axUser');
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
 }
 function axGo(ev, page) {
   if (ev) ev.stopPropagation();

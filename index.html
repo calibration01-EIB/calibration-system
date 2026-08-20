@@ -2772,39 +2772,41 @@ body.app-mode textarea:focus {
             </button>
 
             <div class="notif-wrapper" id="scanNotifWrapper">
-              <button class="notif-btn" onclick="toggleScanNotifDropdown()" title="สอบเสร็จแล้ว — รอแนบสแกน">
+              <button type="button" class="notif-btn" onclick="toggleScanNotifDropdown()" title="สอบเสร็จแล้ว — รอแนบสแกน" aria-label="รายการสอบเสร็จแล้วที่รอแนบสแกน">
                 📎
                 <span class="notif-badge notif-badge--scan" id="scanNotifBadge"><span id="scanNotifCount">0</span></span>
               </button>
               <div class="notif-dropdown" id="scanNotifDropdown"></div>
             </div>
             <div class="notif-wrapper" id="notifWrapper">
-              <button class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน">
+              <button type="button" class="notif-btn" onclick="toggleNotifDropdown()" title="การแจ้งเตือน" aria-label="การแจ้งเตือน">
                 🔔
                 <span class="notif-badge" id="notifBadge"><span id="notifCount">0</span></span>
               </button>
               <div class="notif-dropdown" id="notifDropdown"></div>
             </div>
 
-            <button type="button" class="ax-icon-btn" onclick="showPage('home')" title="ช่วยเหลือ">❓</button>
+            <button type="button" class="ax-icon-btn" onclick="showPage('home')" title="ช่วยเหลือ" aria-label="ช่วยเหลือ">❓</button>
 
-            <div class="ax-user" id="axUser" onclick="toggleAxUserMenu(event)">
-              <div class="ax-user-av" id="axUserInitial">A</div>
-              <span class="ax-user-txt">
-                <b id="axUserName">Admin</b>
-                <span id="axUserRole">admin</span>
-              </span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8fa3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M6 9.5l6 6 6-6"></path></svg>
-              <div class="ax-menu" id="axUserMenu">
-                <button type="button" class="ax-menu-item" id="axMenuAdmin" onclick="axGo(event,'admin')">
+            <div class="ax-user-wrap">
+              <button type="button" class="ax-user" id="axUser" aria-haspopup="menu" aria-expanded="false" onclick="toggleAxUserMenu(event)">
+                <span class="ax-user-av" id="axUserInitial">A</span>
+                <span class="ax-user-txt">
+                  <b id="axUserName">Admin</b>
+                  <span id="axUserRole">admin</span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8fa3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M6 9.5l6 6 6-6"></path></svg>
+              </button>
+              <div class="ax-menu" id="axUserMenu" role="menu">
+                <button type="button" class="ax-menu-item" role="menuitem" id="axMenuAdmin" onclick="axGo(event,'admin')">
                   <span class="ax-menu-ic">👥</span>
                   <span class="ax-menu-tx"><b>จัดการผู้ใช้</b><span>บัญชีและสิทธิ์การใช้งาน</span></span>
                 </button>
-                <button type="button" class="ax-menu-item" id="axMenuAudit" onclick="axGo(event,'audit')">
+                <button type="button" class="ax-menu-item" role="menuitem" id="axMenuAudit" onclick="axGo(event,'audit')">
                   <span class="ax-menu-ic">📋</span>
                   <span class="ax-menu-tx"><b>Audit Log</b><span>ประวัติการเปลี่ยนแปลง</span></span>
                 </button>
-                <button type="button" class="ax-menu-item is-danger" onclick="axLogout(event)">
+                <button type="button" class="ax-menu-item is-danger" role="menuitem" onclick="axLogout(event)">
                   <span class="ax-menu-ic">↩</span>
                   <span class="ax-menu-tx"><b>ออกจากระบบ</b><span>ออกจากบัญชีนี้</span></span>
                 </button>
@@ -2828,18 +2830,10 @@ body.app-mode textarea:focus {
       <div id="pageHome" class="page-content" style="display:none">
         <div class="ax-home">
 
-          <!-- hero: ข้อความเป็น HTML จริง (แก้คำได้ คมทุกความละเอียด) ทับรูปเวอร์เนียร์ที่ไม่มีตัวหนังสือ -->
-          <section class="ax-hero ax-hero--split">
-            <div class="ax-hero-media">
-              <img src="assets/hero-caliper.png" alt=""
-                   onerror="this.onerror=null;this.src='assets/calibration-lab-hero.png'">
-            </div>
-            <div class="ax-hero-scrim"></div>
-            <div class="ax-hero-copy">
-              <span class="ax-hero-kicker">Welcome</span>
-              <h1>Calibration System</h1>
-              <p>ระบบบริหารจัดการกระบวนการสอบเทียบเครื่องมือวัด<br>ครบถ้วน แม่นยำ เชื่อถือได้</p>
-            </div>
+          <!-- แบนเนอร์ต้นฉบับจาก Calibration App (offline) -->
+          <section class="ax-hero ax-hero--reference">
+            <img src="assets/home-calibration-banner.png"
+                 alt="Calibration System — ระบบบริหารจัดการกระบวนการสอบเทียบเครื่องมือวัด ครบถ้วน แม่นยำ เชื่อถือได้">
           </section>
 
           <section class="ax-tiles" id="axTiles"></section>
