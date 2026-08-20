@@ -9,6 +9,30 @@ CSS = (ROOT / "theme-aqua.css").read_text(encoding="utf-8")
 HOME_JS = (ROOT / "js" / "24-home.js").read_text(encoding="utf-8")
 SERVICE_WORKER = (ROOT / "sw.js").read_text(encoding="utf-8")
 
+TILE_ASSETS = [
+    "01_dashboard.png",
+    "02_instrument_list.png",
+    "03_calibration_tracking.png",
+    "04_cert_number.png",
+    "05_cert_reference.png",
+    "06_calibration_planning.png",
+    "07_daily_scale_record.png",
+    "08_repair.png",
+    "09_offsite_equipment.png",
+    "10_weight_calibration.png",
+]
+
+
+def read_png_ihdr(path):
+    data = path.read_bytes()
+    if data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        raise AssertionError(f"Not a PNG: {path}")
+    return (
+        int.from_bytes(data[16:20], "big"),
+        int.from_bytes(data[20:24], "big"),
+        data[25],
+    )
+
 
 class ReferenceHomeTests(unittest.TestCase):
     def test_reference_header_hooks_are_present(self):
@@ -68,17 +92,34 @@ class ReferenceHomeTests(unittest.TestCase):
         self.assertIn("AX_ART", HOME_JS)
 
     def test_responsive_grid_contract(self):
-        self.assertRegex(CSS, r"\.ax-tiles\s*\{[^}]*repeat\(4")
-        self.assertIn("@media (max-width: 1100px)", CSS)
-        self.assertIn("@media (max-width: 680px)", CSS)
+        self.assertRegex(CSS, r"\.ax-tiles\s*\{[^}]*repeat\(5")
+        self.assertRegex(
+            CSS,
+            r"@media \(max-width: 1100px\)[\s\S]*?\.ax-tiles\s*\{[^}]*repeat\(3",
+        )
         self.assertRegex(
             CSS,
             r"@media \(max-width: 680px\)[\s\S]*?\.ax-tiles\s*\{[^}]*grid-template-columns:\s*1fr",
         )
 
-    def test_reference_banner_is_available_offline(self):
+    def test_soft_3d_tile_assets_are_complete_and_consistent(self):
+        metadata = []
+        for filename in TILE_ASSETS:
+            path = ROOT / "assets" / "tiles" / filename
+            self.assertTrue(path.is_file(), filename)
+            metadata.append(read_png_ihdr(path))
+        self.assertEqual(len(set(metadata)), 1, metadata)
+        width, height, color_type = metadata[0]
+        self.assertGreaterEqual(width, 512)
+        self.assertEqual(width, height)
+        self.assertEqual(color_type, 6, "Images must be RGBA PNGs")
+        self.assertIn("img:'10_weight_calibration'", HOME_JS)
+
+    def test_home_assets_are_available_offline(self):
         self.assertIn("./assets/home-calibration-banner.png", SERVICE_WORKER)
-        self.assertIn("calibration-app-v134", SERVICE_WORKER)
+        for filename in TILE_ASSETS:
+            self.assertIn(f"./assets/tiles/{filename}", SERVICE_WORKER)
+        self.assertIn("calibration-app-v135", SERVICE_WORKER)
 
     def test_user_menu_trigger_is_not_parent_of_menu_items(self):
         self.assertIn('class="ax-user-wrap"', INDEX)
