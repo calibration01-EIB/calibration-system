@@ -29,7 +29,7 @@ Result: 3 tests passed; Node syntax check and diff check exited 0. Git reported 
 
 ## Commit
 
-`dba76170f6e59a993eaf63681c7af827ef92d2f9` (`feat: simplify instrument list scanning`).
+Implementation commit: `72afaf1e06df4515e16ecbb9beb81cb580ba590f` (`feat: simplify instrument list scanning`). The report hash annotation is committed separately.
 
 ## Concerns
 
