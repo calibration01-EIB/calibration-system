@@ -131,19 +131,19 @@ git commit -m "test: define soft 3d home card contract"
 - Consumes: semantic meanings and palette from the approved design spec
 - Produces: ten `1024×1024` RGBA PNG files with transparent backgrounds and consistent camera, lighting, shadow, padding, and Soft 3D style
 
-- [ ] **Step 1: Read the image-generation skill and generate a single ten-object contact sheet**
+- [ ] **Step 1: Read the image-generation skill and generate ten separate transparent assets**
 
 Use the image generation tool with this art direction:
 
 ```text
-Create a clean 5-by-2 contact sheet containing exactly ten isolated Soft 3D icons for an offline calibration-management web app. Transparent background; no text, letters, numbers, logos, UI labels, borders, or watermarks. Consistent isometric front-three-quarter camera, rounded forms, soft studio lighting from upper left, subtle ambient shadow, generous equal padding, Aqua/navy base palette with controlled green, purple, and orange category accents. Cell order left-to-right, top row then bottom row: (1) analytics dashboard with bar chart and gauge, (2) precision measuring instrument with checklist, (3) measuring instrument with status check mark, (4) certificate document with serial-number tokens but no readable characters, (5) reference certificate folder, (6) calendar with measuring instrument, (7) bench scale with logbook, (8) wrench with measuring instrument, (9) instrument case moving through an exit arrow, (10) standard calibration weight with balance/check symbol. Every icon must occupy the same visual volume and remain recognizable at 120 px.
+Create ten separate isolated Soft 3D icons for an offline calibration-management web app, using one built-in image-generation call per icon. Every call must repeat the same shared art direction: transparent background; no text, letters, numbers, logos, UI labels, borders, or watermarks; consistent isometric front-three-quarter camera; rounded forms; soft studio lighting from upper left; subtle ambient shadow; generous equal padding; Aqua/navy base palette with controlled green, purple, and orange category accents; same visual volume; recognizable at 120 px. Subjects in filename order are: (1) analytics dashboard with bar chart and gauge, (2) precision measuring instrument with checklist, (3) measuring instrument with status check mark, (4) certificate document with serial-number tokens but no readable characters, (5) reference certificate folder, (6) calendar with measuring instrument, (7) bench scale with logbook, (8) wrench with measuring instrument, (9) instrument case moving through an exit arrow, (10) standard calibration weight with balance/check symbol.
 ```
 
-Expected: one coherent contact sheet whose ten cells have no embedded text and clearly match the menu semantics.
+Expected: ten coherent source images with no embedded text that clearly match the menu semantics.
 
-- [ ] **Step 2: Split and normalize the contact sheet into ten assets**
+- [ ] **Step 2: Normalize the ten generated images into project assets**
 
-Use the image-generation/editing workflow to crop each cell and export each as `1024×1024` RGBA PNG with transparent corners. Save in the exact filenames listed in this task. Do not resize by stretching; preserve equal padding and center each object on the canvas.
+Copy each selected built-in output into the workspace and export as `1024×1024` RGBA PNG with transparent corners. Save in the exact filenames listed in this task. Do not resize by stretching; preserve equal padding and center each object on the canvas.
 
 - [ ] **Step 3: Run the asset metadata test**
 
