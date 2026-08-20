@@ -423,7 +423,7 @@ function renderCategoryCards() {
 // PAGINATION
 // ====================================================
 let currentPage = 1;
-let pageSize = 100;
+let pageSize = 20;
 
 function changePageSize() {
   pageSize = parseInt(document.getElementById('pageSizeSelect').value);

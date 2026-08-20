@@ -629,6 +629,9 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #app .ax-table tbody tr:nth-child(even) td { background: var(--surface2) !important; }
 #app .ax-table tbody tr { cursor: pointer; }
 #app .ax-table tbody tr:hover td { background: #f6fafd !important; }
+#app #pageList .ax-table td { transition: background-color 120ms ease; }
+#app #pageList .ax-table tbody tr:hover td { background: #dcefed !important; }
+#app #pageList .ax-table tbody tr:hover td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
 #app .ax-table td.c-no { font-family: var(--ff-num); font-weight: 700; color: #3d5a72; }
 #app .ax-table td.c-name, #app .ax-table td.c-id, #app .ax-table td.c-loc { text-align: left; }
 #app .ax-table td.c-name { padding: 12px 14px; }
