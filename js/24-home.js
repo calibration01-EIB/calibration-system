@@ -28,7 +28,7 @@ const AX_TILES = [
   { k:'dailylog',  img:'07_daily_scale_record',   page:'soon',      t:'ใบบันทึกประจำวันเครื่องชั่ง',   d:'จัดเก็บและเพิ่มเอกสารแนบตามหน่วยงาน' },
   { k:'repairs',   img:'08_repair',               page:'repairs',   t:'งานซ่อม',                      d:'จัดการข้อมูลการซ่อมแซมเครื่องมือวัด', badge:'navRepairBadge', tone:'danger' },
   { k:'gate',      img:'09_offsite_equipment',    page:'gate',      t:'นำของออกนอกสถานที่',            d:'บันทึกใบขออนุญาต ติดตามการรับกลับ และประวัติย้อนหลัง' },
-  { k:'weightjobs',img:null,                      page:'weightjobs',t:'สอบเทียบตุ้มน้ำหนัก',           d:'บันทึกและออกผลสอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA)' }
+  { k:'weightjobs',img:'10_weight_calibration', page:'weightjobs',t:'สอบเทียบตุ้มน้ำหนัก', d:'บันทึกและออกผลสอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA)' }
 ];
 
 const AX_ARROW = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16394f" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
