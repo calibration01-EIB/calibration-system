@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v134';
+const CACHE_NAME = 'calibration-app-v135';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -22,6 +22,7 @@ const APP_SHELL = [
   './assets/tiles/07_daily_scale_record.png',
   './assets/tiles/08_repair.png',
   './assets/tiles/09_offsite_equipment.png',
+  './assets/tiles/10_weight_calibration.png',
   './js/00-config.js',
   './js/01-core.js',
   './js/02-dashboard.js',
