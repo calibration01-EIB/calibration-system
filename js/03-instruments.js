@@ -586,14 +586,81 @@ uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classL
 // INSTRUMENT CRUD
 // ====================================================
 let editingInstrumentId = null;
+const INSTRUMENT_MODAL_TABS = ['info', 'spec', 'calibration'];
+let activeInstrumentModalTab = 'info';
+
+function setInstrumentModalTab(tabKey, options = {}) {
+  const nextKey = INSTRUMENT_MODAL_TABS.includes(tabKey) ? tabKey : 'info';
+  const activeIndex = INSTRUMENT_MODAL_TABS.indexOf(nextKey);
+  const buttons = document.querySelectorAll('#instrumentTabList [data-instrument-tab]');
+  const panels = document.querySelectorAll('#instrumentModal .instrument-tab-panel');
+
+  buttons.forEach(button => {
+    const isActive = button.dataset.instrumentTab === nextKey;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+    button.tabIndex = isActive ? 0 : -1;
+  });
+  panels.forEach(panel => {
+    const isActive = panel.id === `instrumentPanel${nextKey === 'info' ? 'Info' : nextKey === 'spec' ? 'Spec' : 'Calibration'}`;
+    panel.classList.toggle('is-active', isActive);
+    panel.hidden = !isActive;
+  });
+
+  const progressLabel = document.getElementById('instrumentTabProgressLabel');
+  if (progressLabel) progressLabel.textContent = `หมวด ${activeIndex + 1} จาก 3`;
+  document.querySelectorAll('#instrumentModal .instrument-progress-dots i').forEach((dot, index) => {
+    dot.classList.toggle('is-active', index === activeIndex);
+  });
+  const content = document.querySelector('#instrumentModal .instrument-modal-content');
+  if (content) content.scrollTop = 0;
+  activeInstrumentModalTab = nextKey;
+
+  if (options.focus) {
+    const activeButton = document.querySelector(`#instrumentTabList [data-instrument-tab="${nextKey}"]`);
+    if (activeButton) activeButton.focus();
+  }
+}
+
+function handleInstrumentTabKeydown(event) {
+  const current = event.currentTarget.dataset.instrumentTab;
+  let index = INSTRUMENT_MODAL_TABS.indexOf(current);
+  if (event.key === 'ArrowRight') index = (index + 1) % INSTRUMENT_MODAL_TABS.length;
+  else if (event.key === 'ArrowLeft') index = (index - 1 + INSTRUMENT_MODAL_TABS.length) % INSTRUMENT_MODAL_TABS.length;
+  else if (event.key === 'Home') index = 0;
+  else if (event.key === 'End') index = INSTRUMENT_MODAL_TABS.length - 1;
+  else return;
+  event.preventDefault();
+  setInstrumentModalTab(INSTRUMENT_MODAL_TABS[index], { focus: true });
+}
+
+function initInstrumentModalTabs() {
+  document.querySelectorAll('#instrumentTabList [data-instrument-tab]').forEach(button => {
+    if (button.dataset.instrumentTabReady) return;
+    button.addEventListener('click', () => setInstrumentModalTab(button.dataset.instrumentTab));
+    button.addEventListener('keydown', handleInstrumentTabKeydown);
+    button.dataset.instrumentTabReady = 'true';
+  });
+}
 
 function openInstrumentModal(instrumentId) {
   editingInstrumentId = instrumentId || null;
+  initInstrumentModalTabs();
+  setInstrumentModalTab('info');
+  const codeChip = document.getElementById('instrumentModalCode');
+  const saveButton = document.getElementById('saveInstrumentBtn');
+  const source = instrumentId ? allData.find(x => x.id === instrumentId) : null;
+  const code = source?.id_code || '';
+  codeChip.textContent = code;
+  codeChip.hidden = !code;
+  document.getElementById('instrumentModalStatus').textContent = instrumentId ? 'ข้อมูลพร้อมแก้ไข' : 'รายการใหม่';
+  saveButton.dataset.idleLabel = instrumentId ? 'บันทึกการแก้ไข' : 'บันทึก';
+  saveButton.textContent = saveButton.dataset.idleLabel;
   clearInstrumentDuplicateWarning();
   document.getElementById('instrumentModalTitle').textContent = instrumentId ? 'แก้ไขเครื่องมือ' : 'เพิ่มเครื่องมือ';
 
   if (instrumentId) {
-    const d = allData.find(x => x.id === instrumentId);
+    const d = source;
     if (!d) return;
 
     const categoryEl = document.getElementById('iCategory');
@@ -763,6 +830,7 @@ function closeInstrumentModal() {
   document.getElementById('instrumentModal').classList.remove('open');
   editingInstrumentId = null;
   clearInstrumentDuplicateWarning();
+  setInstrumentModalTab('info');
 }
 
 let lastInstrumentDuplicateToastKey = '';
@@ -936,7 +1004,12 @@ async function saveInstrument() {
   // หมายเหตุ: range_profile / tolerance_bands ไม่อยู่ใน payload แล้ว (ถอด UI ตารางออก 2026-07)
   // — save จะไม่แตะคอลัมน์เหล่านี้ ค่าเดิมของเครื่อง multi-range ใน DB คงอยู่ให้ balance-cal ใช้ต่อ
 
-  if (!payload.id_code) { showToast('กรุณากรอก ID Code', 'error'); return; }
+  if (!payload.id_code) {
+    setInstrumentModalTab('info');
+    document.getElementById('iIdCode').focus();
+    showToast('กรุณากรอก ID Code', 'error');
+    return;
+  }
 
   const duplicateMatches = checkInstrumentDuplicates(false);
   if (duplicateMatches.length) {
@@ -957,7 +1030,8 @@ async function saveInstrument() {
   }
 
   const btn = document.getElementById('saveInstrumentBtn');
-  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
 
   try {
     if (editingInstrumentId) {
@@ -1005,7 +1079,10 @@ async function saveInstrument() {
       }, 800);
     }
   } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.textContent = 'บันทึก'; }
+  finally {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.idleLabel || 'บันทึก';
+  }
 }
 
 async function deleteInstrument(id, name) {

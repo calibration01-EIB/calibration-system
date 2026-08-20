@@ -118,3 +118,35 @@ class InstrumentEditTabbedFormTests(unittest.TestCase):
             r"\s*box\.hidden = false;",
         )
         self.assertNotIn("box.style.display", render_body)
+
+    def test_tab_controller_updates_accessibility_visibility_and_progress(self):
+        for token in (
+            "const INSTRUMENT_MODAL_TABS = ['info', 'spec', 'calibration']",
+            "function setInstrumentModalTab(tabKey, options = {})",
+            "function handleInstrumentTabKeydown(event)",
+            "function initInstrumentModalTabs()",
+            "button.setAttribute('aria-selected', String(isActive))",
+            "panel.hidden = !isActive",
+            "instrumentTabProgressLabel",
+        ):
+            self.assertIn(token, JS)
+
+    def test_open_resets_first_tab_and_updates_identity_chip(self):
+        body = re.search(r"function openInstrumentModal\(instrumentId\)\s*\{(.*?)\n\}", JS, re.S)
+        self.assertIsNotNone(body)
+        self.assertIn("initInstrumentModalTabs()", body.group(1))
+        self.assertIn("setInstrumentModalTab('info')", body.group(1))
+        self.assertIn("instrumentModalCode", body.group(1))
+        self.assertIn("saveInstrumentBtn", body.group(1))
+
+    def test_missing_id_code_reveals_and_focuses_info_field(self):
+        guard = re.search(r"if \(!payload\.id_code\)\s*\{(.*?)\}", JS, re.S)
+        self.assertIsNotNone(guard)
+        self.assertIn("setInstrumentModalTab('info')", guard.group(1))
+        self.assertIn("document.getElementById('iIdCode').focus()", guard.group(1))
+
+    def test_close_resets_presentation_state_without_resetting_fields(self):
+        body = re.search(r"function closeInstrumentModal\(\)\s*\{(.*?)\n\}", JS, re.S)
+        self.assertIsNotNone(body)
+        self.assertIn("setInstrumentModalTab('info')", body.group(1))
+        self.assertNotIn(".value = ''", body.group(1))
