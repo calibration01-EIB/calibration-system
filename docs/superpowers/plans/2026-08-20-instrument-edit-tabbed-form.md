@@ -87,6 +87,7 @@ class InstrumentEditTabbedFormTests(unittest.TestCase):
                 rf'<section[^>]+id="{panel_id}"[^>]+role="tabpanel"[^>]+'
                 rf'aria-labelledby="{tab_id}"',
             )
+        self.assertEqual(INDEX.count('class="instrument-tab-icon"'), 3)
 
     def test_fields_are_grouped_under_the_correct_panels(self):
         groups = {
@@ -175,17 +176,17 @@ Change the `#instrumentModal` shell in `index.html` to this exact hierarchy:
         <button type="button" class="instrument-tab is-active" id="instrumentTabInfo"
           role="tab" data-instrument-tab="info" aria-selected="true"
           aria-controls="instrumentPanelInfo" tabindex="0">
-          <span class="instrument-tab-number">1</span><span>ข้อมูลเครื่องมือ</span>
+          <span class="instrument-tab-number">1</span><span class="instrument-tab-icon" aria-hidden="true">▤</span><span>ข้อมูลเครื่องมือ</span>
         </button>
         <button type="button" class="instrument-tab" id="instrumentTabSpec"
           role="tab" data-instrument-tab="spec" aria-selected="false"
           aria-controls="instrumentPanelSpec" tabindex="-1">
-          <span class="instrument-tab-number">2</span><span>สเปกการวัด</span>
+          <span class="instrument-tab-number">2</span><span class="instrument-tab-icon" aria-hidden="true">↔</span><span>สเปกการวัด</span>
         </button>
         <button type="button" class="instrument-tab" id="instrumentTabCalibration"
           role="tab" data-instrument-tab="calibration" aria-selected="false"
           aria-controls="instrumentPanelCalibration" tabindex="-1">
-          <span class="instrument-tab-number">3</span><span>การสอบเทียบ</span>
+          <span class="instrument-tab-number">3</span><span class="instrument-tab-icon" aria-hidden="true">◎</span><span>การสอบเทียบ</span>
         </button>
       </div>
       <div class="instrument-tab-progress" aria-hidden="true">
@@ -308,6 +309,7 @@ Append this focused block to `theme-aqua.css`:
   width: 28px; height: 28px; display: inline-grid; place-items: center;
   border: 1px solid #c9dbe4; border-radius: 50%; background: #fff; color: var(--text2);
 }
+#instrumentModal .instrument-tab-icon { color: currentColor; font-size: 18px; line-height: 1; }
 #instrumentModal .instrument-tab.is-active .instrument-tab-number { background: var(--instrument-accent); border-color: var(--instrument-accent); color: #fff; }
 #instrumentModal .instrument-tab-progress { align-self: center; min-width: 112px; color: var(--text3); font-size: 11px; text-align: right; }
 #instrumentModal .instrument-progress-dots { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
