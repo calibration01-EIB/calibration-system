@@ -33,6 +33,11 @@ def function_body(function_name):
 
 
 class InstrumentEditTabbedFormTests(unittest.TestCase):
+    def test_offline_shell_version_refreshes_tabbed_modal_files(self):
+        self.assertIn("calibration-app-v136", SW)
+        for asset in ("./index.html", "./theme-aqua.css", "./js/03-instruments.js"):
+            self.assertIn(asset, SW)
+
     def test_modal_has_three_accessible_tabs_and_panels(self):
         self.assertIn('id="instrumentTabList" role="tablist"', INDEX)
         expected = [

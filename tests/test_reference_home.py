@@ -119,7 +119,7 @@ class ReferenceHomeTests(unittest.TestCase):
         self.assertIn("./assets/home-calibration-banner.png", SERVICE_WORKER)
         for filename in TILE_ASSETS:
             self.assertIn(f"./assets/tiles/{filename}", SERVICE_WORKER)
-        self.assertIn("calibration-app-v135", SERVICE_WORKER)
+        self.assertIn("calibration-app-v136", SERVICE_WORKER)
 
     def test_user_menu_trigger_is_not_parent_of_menu_items(self):
         self.assertIn('class="ax-user-wrap"', INDEX)
