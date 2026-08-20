@@ -4348,16 +4348,50 @@ body.app-mode textarea:focus {
 </div>
 
 <div class="modal-overlay" id="instrumentModal">
-  <div class="modal-box" style="max-width:760px">
-    <div class="modal-header">
-      <h3 id="instrumentModalTitle">เพิ่มเครื่องมือ</h3>
-      <button class="btn-close" onclick="closeInstrumentModal()">×</button>
+  <div class="modal-box instrument-modal-box">
+    <div class="modal-header instrument-modal-header">
+      <div class="instrument-modal-title-row">
+        <h3 id="instrumentModalTitle">เพิ่มเครื่องมือ</h3>
+        <span class="instrument-code-chip" id="instrumentModalCode" hidden></span>
+      </div>
+      <div class="instrument-modal-header-actions">
+        <span class="instrument-modal-status" id="instrumentModalStatus">รายการใหม่</span>
+        <button class="btn-close" type="button" aria-label="ปิดหน้าต่าง" onclick="closeInstrumentModal()">×</button>
+      </div>
     </div>
-    <div class="modal-body">
-      <div id="instrumentDuplicateWarning" style="display:none;margin-bottom:14px;background:#FCEBEB;border:1px solid #F3B7B7;border-left:4px solid var(--red);border-radius:10px;padding:12px 14px;color:#8A1F1F;font-size:13px;line-height:1.55"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="instrument-tabs-shell">
+      <div class="instrument-tabs" id="instrumentTabList" role="tablist" aria-label="หมวดข้อมูลเครื่องมือ">
+        <button type="button" class="instrument-tab is-active" id="instrumentTabInfo"
+          role="tab" data-instrument-tab="info" aria-selected="true"
+          aria-controls="instrumentPanelInfo" tabindex="0">
+          <span class="instrument-tab-number">1</span><span class="instrument-tab-icon" aria-hidden="true">▤</span><span>ข้อมูลเครื่องมือ</span>
+        </button>
+        <button type="button" class="instrument-tab" id="instrumentTabSpec"
+          role="tab" data-instrument-tab="spec" aria-selected="false"
+          aria-controls="instrumentPanelSpec" tabindex="-1">
+          <span class="instrument-tab-number">2</span><span class="instrument-tab-icon" aria-hidden="true">↔</span><span>สเปกการวัด</span>
+        </button>
+        <button type="button" class="instrument-tab" id="instrumentTabCalibration"
+          role="tab" data-instrument-tab="calibration" aria-selected="false"
+          aria-controls="instrumentPanelCalibration" tabindex="-1">
+          <span class="instrument-tab-number">3</span><span class="instrument-tab-icon" aria-hidden="true">◎</span><span>การสอบเทียบ</span>
+        </button>
+      </div>
+      <div class="instrument-tab-progress" aria-hidden="true">
+        <span id="instrumentTabProgressLabel">หมวด 1 จาก 3</span>
+        <span class="instrument-progress-dots"><i class="is-active"></i><i></i><i></i></span>
+      </div>
+    </div>
 
-        <div style="grid-column:span 2;padding-bottom:6px;border-bottom:2px solid var(--accent);font-size:14.5px;font-weight:800;color:#00695C">1) ข้อมูลเครื่องมือ</div>
+    <div class="modal-body instrument-modal-content">
+      <div id="instrumentDuplicateWarning" class="instrument-duplicate-warning" hidden></div>
+      <section class="instrument-tab-panel is-active" id="instrumentPanelInfo"
+        role="tabpanel" aria-labelledby="instrumentTabInfo">
+        <div class="instrument-section-heading">
+          <h4>1 ข้อมูลเครื่องมือ</h4>
+          <p>ข้อมูลพื้นฐานสำหรับระบุและจัดการเครื่องมือ</p>
+        </div>
+        <div class="instrument-form-grid">
         <div class="form-group">
           <label>ประเภทเครื่องมือ</label>
           <select id="iCategory" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
@@ -4431,7 +4465,16 @@ body.app-mode textarea:focus {
           <input type="text" id="iAssetNo" placeholder="เช่น 701267">
         </div>
 
-        <div style="grid-column:span 2;margin-top:6px;padding-bottom:6px;border-bottom:2px solid var(--accent);font-size:14.5px;font-weight:800;color:#00695C">2) สเปกการวัด (ตามบัญชีรายการ)</div>
+        </div>
+      </section>
+
+      <section class="instrument-tab-panel" id="instrumentPanelSpec"
+        role="tabpanel" aria-labelledby="instrumentTabSpec" hidden>
+        <div class="instrument-section-heading">
+          <h4>2 สเปกการวัด</h4>
+          <p>รายละเอียดคุณลักษณะและขอบเขตการวัดของเครื่องมือ</p>
+        </div>
+        <div class="instrument-form-grid">
         <div class="form-group">
           <label>พิกัด Max</label>
           <div style="display:flex;gap:6px;align-items:center">
@@ -4446,7 +4489,7 @@ body.app-mode textarea:focus {
             <select id="iRangeUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
           </div>
         </div>
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group instrument-form-wide" style="grid-column:span 2">
           <label>ความละเอียด (Resolution) — ใส่ได้ถึง 3 ช่วง</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="text" id="iRes1" placeholder="ช่วง 1 เช่น 0.002" style="flex:1;min-width:0" title="ความละเอียดช่วงที่ 1">
@@ -4455,7 +4498,7 @@ body.app-mode textarea:focus {
             <select id="iResUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
           </div>
         </div>
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group instrument-form-wide" style="grid-column:span 2">
           <label>Tolerance (±) — ใส่ได้ถึง 3 ช่วง</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="text" id="iTol1" inputmode="decimal" placeholder="ช่วง 1" style="flex:1;min-width:0" title="ค่ายอมรับช่วงที่ 1">
@@ -4540,7 +4583,7 @@ body.app-mode textarea:focus {
             </select>
           </div>
         </div>
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group instrument-form-wide" style="grid-column:span 2">
           <label>ใช้งานต่ำสุด (Minimum usage) — ช่วง 1/2/3 สัมพันธ์กับ Tolerance ด้านบน</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="text" id="iUsageMin1" placeholder="ช่วง 1 เช่น 150" style="flex:1;min-width:0" title="ใช้งานต่ำสุดช่วงที่ 1">
@@ -4549,7 +4592,7 @@ body.app-mode textarea:focus {
             <select id="iUsageMinUnit" style="flex:0 0 auto;width:auto;padding:12px 10px" title="หน่วยวัด"></select>
           </div>
         </div>
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group instrument-form-wide" style="grid-column:span 2">
           <label>ใช้งานสูงสุด (Maximum usage) — ช่วง 1/2/3 สัมพันธ์กับ Tolerance ด้านบน</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="text" id="iUsageMax1" placeholder="ช่วง 1 เช่น 800" style="flex:1;min-width:0" title="ใช้งานสูงสุดช่วงที่ 1">
@@ -4587,7 +4630,16 @@ body.app-mode textarea:focus {
           </select>
         </div>
 
-        <div style="grid-column:span 2;margin-top:6px;padding-bottom:6px;border-bottom:2px solid var(--accent);font-size:14.5px;font-weight:800;color:#00695C">3) การสอบเทียบ (Calibration)</div>
+        </div>
+      </section>
+
+      <section class="instrument-tab-panel" id="instrumentPanelCalibration"
+        role="tabpanel" aria-labelledby="instrumentTabCalibration" hidden>
+        <div class="instrument-section-heading">
+          <h4>3 การสอบเทียบ</h4>
+          <p>กำหนดรอบ สถานที่ และข้อมูลใบรับรอง</p>
+        </div>
+        <div class="instrument-form-grid">
         <div class="form-group">
           <label>ความถี่สอบเทียบ</label>
           <select id="iCalFrequency" onchange="calcDueDate(document.getElementById('iCalDate').value, this.value)" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none">
@@ -4636,10 +4688,14 @@ body.app-mode textarea:focus {
           <input type="text" id="iRemark" placeholder="หมายเหตุ">
         </div>
 
+        </div>
+      </section>
       </div>
-      <div style="display:flex;gap:10px;margin-top:8px">
-        <button class="btn-primary" id="saveInstrumentBtn" onclick="saveInstrument()">บันทึก</button>
-        <button class="btn-reset" onclick="closeInstrumentModal()" style="flex:none;padding:13px 20px">ยกเลิก</button>
+    <div class="modal-footer instrument-modal-footer">
+      <div class="instrument-footer-hint">ⓘ ตรวจสอบข้อมูลก่อนบันทึก</div>
+      <div class="instrument-footer-actions">
+        <button type="button" class="btn-reset" onclick="closeInstrumentModal()">ยกเลิก</button>
+        <button type="button" class="btn-primary" id="saveInstrumentBtn" onclick="saveInstrument()">บันทึก</button>
       </div>
     </div>
   </div>
