@@ -14,7 +14,6 @@ const AX_ART = {
   dailylog: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#fdeed6"/><rect x="24" y="12" width="48" height="48" rx="6" fill="#e0942a"/><rect x="34" y="24" width="28" height="5" rx="2.5" fill="#fff"/><rect x="34" y="35" width="28" height="5" rx="2.5" fill="#fff"/><rect x="34" y="46" width="16" height="5" rx="2.5" fill="#fff"/></svg>',
   repairs: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#fce3e6"/><path d="M62 16a14 14 0 0 0-12.7 19.9L28 56.4a5.4 5.4 0 0 0 7.6 7.6l20.5-20.4A14 14 0 0 0 74 26.6l-7.4 7.4-7.2-1.8-1.8-7.2z" fill="#e0475b"/></svg>',
   gate: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#e3ecfb"/><rect x="16" y="26" width="34" height="28" rx="5" fill="#3f6fb5"/><path d="M56 40h22M70 32l8 8-8 8" stroke="#1b4f91" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  weightjobs: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#d7f2ee"/><path d="M32 26h32l6 30a4 4 0 0 1-4 4.7H30A4 4 0 0 1 26 56z" fill="#0e9e8e"/><path d="M40 26v-4a8 8 0 0 1 16 0v4" stroke="#0e9e8e" stroke-width="5" stroke-linecap="round" fill="none"/></svg>'
 };
 
 /* ---------- นิยามการ์ดหน้าแรก (ลำดับตามดีไซน์) ---------- */
@@ -28,7 +27,6 @@ const AX_TILES = [
   { k:'dailylog',  img:'07_daily_scale_record',   page:'soon',      t:'ใบบันทึกประจำวันเครื่องชั่ง',   d:'จัดเก็บและเพิ่มเอกสารแนบตามหน่วยงาน' },
   { k:'repairs',   img:'08_repair',               page:'repairs',   t:'งานซ่อม',                      d:'จัดการข้อมูลการซ่อมแซมเครื่องมือวัด', badge:'navRepairBadge', tone:'danger' },
   { k:'gate',      img:'09_offsite_equipment',    page:'gate',      t:'นำของออกนอกสถานที่',            d:'บันทึกใบขออนุญาต ติดตามการรับกลับ และประวัติย้อนหลัง' },
-  { k:'weightjobs',img:'10_weight_calibration', page:'weightjobs',t:'สอบเทียบตุ้มน้ำหนัก', d:'บันทึกและออกผลสอบเทียบตุ้มน้ำหนักมาตรฐาน (ABBA)' }
 ];
 
 const AX_ARROW = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16394f" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';

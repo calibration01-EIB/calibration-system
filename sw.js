@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v138';
+const CACHE_NAME = 'calibration-app-v139';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -21,7 +21,6 @@ const APP_SHELL = [
   './assets/tiles/07_daily_scale_record.png',
   './assets/tiles/08_repair.png',
   './assets/tiles/09_offsite_equipment.png',
-  './assets/tiles/10_weight_calibration.png',
   './js/00-config.js',
   './js/01-core.js',
   './js/02-dashboard.js',
@@ -44,12 +43,8 @@ const APP_SHELL = [
   './js/16-repairs.js',
   './js/17-frm-cross-month.js',
   './js/18-asset-out.js',
-  './js/19-weight-jobs.js',
   './js/22-users.js',
   './js/23-cal-records.js',
-  './weight-cal.html',
-  './js/weight-cal.js',
-  './js/20-weight-cert-xlsx.js',
   './assets/frm-eib04-template.xlsx',
   './assets/frm-asset-out-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT

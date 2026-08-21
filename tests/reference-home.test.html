@@ -37,7 +37,7 @@ function pngHeader(u8, name) {
 
 const TILE_ASSETS = ['01_dashboard.png','02_instrument_list.png','03_calibration_tracking.png',
   '04_cert_number.png','05_cert_reference.png','06_calibration_planning.png',
-  '07_daily_scale_record.png','08_repair.png','09_offsite_equipment.png','10_weight_calibration.png'];
+  '07_daily_scale_record.png','08_repair.png','09_offsite_equipment.png'];
 
 /* ขนาดรูปการ์ด: แสดงจริง 108px (มือถือ 76px) เดิมเป็น 1024px = ใหญ่เกินจำเป็นราว 90 เท่า
    ทำให้ APP_SHELL บวม 16.7MB และ cache.addAll() ซึ่งเป็น all-or-nothing เสี่ยงล้มทั้งชุด
@@ -72,8 +72,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
   t('ลำดับการ์ดและปลายทางตรงกับระบบจริง', () => {
     const expected = [['dashboard','Dashboard'],['list','รายการเครื่องมือ'],['calrecs','ติดตามผลสอบเทียบ'],
       ['cert','ลำดับเลข Cert'],['weights','ใบ Cert Reference'],['plan','วางแผนสอบเทียบ'],
-      ['soon','ใบบันทึกประจำวันเครื่องชั่ง'],['repairs','งานซ่อม'],['gate','นำของออกนอกสถานที่'],
-      ['weightjobs','สอบเทียบตุ้มน้ำหนัก']];
+      ['soon','ใบบันทึกประจำวันเครื่องชั่ง'],['repairs','งานซ่อม'],['gate','นำของออกนอกสถานที่']];
     const pos = expected.map(([page, title]) => {
       const re = new RegExp("page:'" + page + "'[\\s\\S]*?t:'" + title + "'");
       const m = re.exec(HOME_JS);
@@ -115,7 +114,6 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(m.colorType === 6, 'ต้องเป็น RGBA (color type 6) พบ ' + m.colorType);
     ok(m.w >= TILE_MIN, 'เล็กเกินไป (' + m.w + 'px) ต้อง >= ' + TILE_MIN);
     ok(m.w <= TILE_MAX, 'ใหญ่เกินจำเป็น (' + m.w + 'px) ต้อง <= ' + TILE_MAX + ' — APP_SHELL จะบวม');
-    has(HOME_JS, "img:'10_weight_calibration'", 'tile');
     results.push('PASS รูปการ์ดครบ ขนาดเท่ากัน เป็น RGBA และไม่ใหญ่เกินจำเป็น (' + m.w + 'px)');
   } catch (e) {
     results.push('FAIL รูปการ์ดครบ ขนาดเท่ากัน เป็น RGBA และไม่ใหญ่เกินจำเป็น — ' + e.message);
@@ -135,12 +133,13 @@ const TILE_MIN = 216, TILE_MAX = 512;
       'hero-caliper.png อยู่ใน APP_SHELL แต่ไม่มีหน้าไหนอ้างถึง');
   });
 
-  t('เทมเพลตก้อนใหญ่ไม่อยู่ใน precache และ SW เก็บ cache หลังโหลดครั้งแรกได้', () => {
-    // weight-cert-template.xlsx หนัก 4.9MB ใช้เฉพาะตอนออกใบ Cert ตุ้มน้ำหนัก
-    // ไม่ควรบังคับให้ทุกเครื่องโหลดตั้งแต่ติดตั้ง (cache.addAll เป็น all-or-nothing)
-    ok(SW.indexOf('./assets/weight-cert-template.xlsx') === -1,
-      'weight-cert-template.xlsx ไม่ควรอยู่ใน APP_SHELL');
-    // แต่ถอดออกเฉย ๆ ไม่ได้ ถ้า branch สุดท้ายไม่เขียนกลับลง cache จะใช้ออฟไลน์ไม่ได้ถาวร
+  t('SW เก็บ cache หลังโหลดครั้งแรกได้ และไม่มีซากระบบสอบเทียบตุ้มน้ำหนัก', () => {
+    // ระบบสอบเทียบตุ้มน้ำหนัก (ABBA) ถูกล้างออกเพื่อเริ่มใหม่ — ห้ามมีซากค้างใน APP_SHELL
+    ['./weight-cal.html','./js/weight-cal.js','./js/19-weight-jobs.js',
+     './js/20-weight-cert-xlsx.js','./assets/weight-cert-template.xlsx',
+     './assets/tiles/10_weight_calibration.png']
+      .forEach(p => ok(SW.indexOf(p) === -1, 'ยังมี ' + p + ' ค้างใน APP_SHELL'));
+    // branch สุดท้ายต้องเขียนกลับลง cache ไม่งั้นไฟล์นอก APP_SHELL ใช้ออฟไลน์ไม่ได้ถาวร
     ok(/cache\.put\(event\.request, copy\)[\s\S]*?\}\s*return response;\s*\}\);\s*\}\)\);/.test(SW),
       'branch สุดท้ายของ fetch ต้อง cache.put หลังโหลดสำเร็จ');
     ok(/url\.origin === self\.location\.origin/.test(SW),
