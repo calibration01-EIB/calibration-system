@@ -135,6 +135,21 @@ const TILE_MIN = 216, TILE_MAX = 512;
       'hero-caliper.png อยู่ใน APP_SHELL แต่ไม่มีหน้าไหนอ้างถึง');
   });
 
+  t('เทมเพลตก้อนใหญ่ไม่อยู่ใน precache และ SW เก็บ cache หลังโหลดครั้งแรกได้', () => {
+    // weight-cert-template.xlsx หนัก 4.9MB ใช้เฉพาะตอนออกใบ Cert ตุ้มน้ำหนัก
+    // ไม่ควรบังคับให้ทุกเครื่องโหลดตั้งแต่ติดตั้ง (cache.addAll เป็น all-or-nothing)
+    ok(SW.indexOf('./assets/weight-cert-template.xlsx') === -1,
+      'weight-cert-template.xlsx ไม่ควรอยู่ใน APP_SHELL');
+    // แต่ถอดออกเฉย ๆ ไม่ได้ ถ้า branch สุดท้ายไม่เขียนกลับลง cache จะใช้ออฟไลน์ไม่ได้ถาวร
+    ok(/cache\.put\(event\.request, copy\)[\s\S]*?\}\s*return response;\s*\}\);\s*\}\)\);/.test(SW),
+      'branch สุดท้ายของ fetch ต้อง cache.put หลังโหลดสำเร็จ');
+    ok(/url\.origin === self\.location\.origin/.test(SW),
+      'ต้องจำกัดการเก็บ cache เฉพาะ same-origin กันไปเก็บ response ของ Supabase');
+    // เทมเพลตตัวเล็กยังอยู่ใน precache ได้ (18KB / 36KB)
+    has(SW, './assets/frm-eib04-template.xlsx', 'sw');
+    has(SW, './assets/frm-asset-out-template.xlsx', 'sw');
+  });
+
   t('ปุ่มเมนูผู้ใช้ไม่ได้ครอบรายการเมนู', () => {
     has(INDEX, 'class="ax-user-wrap"');
     has(INDEX, '<button type="button" class="ax-user" id="axUser"');

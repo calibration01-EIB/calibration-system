@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v137';
+const CACHE_NAME = 'calibration-app-v138';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -50,7 +50,6 @@ const APP_SHELL = [
   './weight-cal.html',
   './js/weight-cal.js',
   './js/20-weight-cert-xlsx.js',
-  './assets/weight-cert-template.xlsx',
   './assets/frm-eib04-template.xlsx',
   './assets/frm-asset-out-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT
@@ -108,5 +107,18 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
+  // cache-first + เก็บลง cache เมื่อโหลดสำเร็จ
+  // เดิมเป็น `cached || fetch(...)` เฉย ๆ คือถ้าไม่ได้อยู่ใน APP_SHELL จะไม่ถูกเก็บเลยตลอดกาล
+  // ทำให้ไฟล์หนัก ๆ ต้องยัดใส่ APP_SHELL อย่างเดียวถึงจะใช้ออฟไลน์ได้
+  // เก็บเฉพาะ same-origin ที่สำเร็จ — คำขอไปที่ Supabase เป็นคนละ origin จึงไม่ถูกแตะ
+  event.respondWith(caches.match(event.request).then(cached => {
+    if (cached) return cached;
+    return fetch(event.request).then(response => {
+      if (url.origin === self.location.origin && response && response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => undefined);
+      }
+      return response;
+    });
+  }));
 });
