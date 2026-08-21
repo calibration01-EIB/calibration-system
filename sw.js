@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v136';
+const CACHE_NAME = 'calibration-app-v137';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -11,7 +11,6 @@ const APP_SHELL = [
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
   './assets/calibration-lab-hero.png',
-  './assets/hero-caliper.png',
   './assets/home-calibration-banner.png',
   './assets/tiles/01_dashboard.png',
   './assets/tiles/02_instrument_list.png',

@@ -1,0 +1,179 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>instrument edit tabs test</title></head><body>
+<pre id="out"></pre>
+<script>
+/* แปลงมาจาก tests/test_instrument_edit_tabs.py */
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
+function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
+function hasNot(hay, needle, label) { if (hay.indexOf(needle) !== -1) throw new Error('ต้องไม่มี ' + (label || '') + ' ' + JSON.stringify(needle)); }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
+function text(url) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.onload = () => res(x.responseText);
+    x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
+    x.send();
+  });
+}
+
+(async () => {
+  let INDEX, CSS, JS, SW;
+  try {
+    [INDEX, CSS, JS, SW] = await Promise.all([
+      text('../index.html'), text('../theme-aqua.css'),
+      text('../js/03-instruments.js'), text('../sw.js')
+    ]);
+  } catch (e) {
+    document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
+    document.title = 'FAIL';
+    return;
+  }
+
+  function panelHtml(panelId) {
+    const re = new RegExp('<section[^>]+id="' + panelId + '"[\\s\\S]*?</section>');
+    const m = re.exec(INDEX);
+    if (!m) throw new Error('ไม่เจอ panel ' + panelId);
+    return m[0];
+  }
+  function functionBody(name) {
+    const re = new RegExp('function ' + name + '\\([^)]*\\) \\{([\\s\\S]*?)\\n\\}');
+    const m = re.exec(JS);
+    if (!m) throw new Error('ไม่เจอฟังก์ชัน ' + name);
+    return m[1];
+  }
+
+  t('ไฟล์ที่แก้อยู่ใน APP_SHELL และ CACHE_NAME ถูกรูปแบบ', () => {
+    ['./index.html','./theme-aqua.css','./js/03-instruments.js'].forEach(a => has(SW, a, 'sw'));
+    // ไม่ผูกเลขเวอร์ชันตายตัว (เดิมเช็ค calibration-app-v136) ไม่งั้นต้องแก้เทสต์ทุกครั้งที่ bump
+    ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'CACHE_NAME ต้องเป็นรูปแบบ calibration-app-vN');
+  });
+
+  t('มี 3 แท็บพร้อม role/aria ครบ', () => {
+    has(INDEX, 'id="instrumentTabList" role="tablist"');
+    [['info','instrumentTabInfo','instrumentPanelInfo'],
+     ['spec','instrumentTabSpec','instrumentPanelSpec'],
+     ['calibration','instrumentTabCalibration','instrumentPanelCalibration']].forEach(([key, tabId, panelId]) => {
+      ok(new RegExp('<button[^>]+id="' + tabId + '"[^>]+role="tab"[^>]+data-instrument-tab="' + key + '"[^>]+aria-controls="' + panelId + '"').test(INDEX),
+        'ปุ่มแท็บ ' + key + ' ต้องมี role/data/aria-controls ครบ');
+      ok(new RegExp('<section[^>]+id="' + panelId + '"[^>]+role="tabpanel"[^>]+aria-labelledby="' + tabId + '"').test(INDEX),
+        'panel ' + panelId + ' ต้องมี role/aria-labelledby');
+    });
+    eq((INDEX.match(/class="instrument-tab-icon"/g) || []).length, 3, 'ไอคอนแท็บ');
+  });
+
+  t('ทุกช่องอยู่ในแท็บที่ถูกต้อง', () => {
+    const groups = {
+      instrumentPanelInfo: ['iCategory','iProductGroup','iName','iMachineName','iIdCode','iSerial',
+        'iBrand','iModel','iDept','iDivision','iCostCenter','iAssetNo'],
+      instrumentPanelSpec: ['iCapacity','iCapacityUnit','iRange','iRangeUnit',
+        'iRes1','iRes2','iRes3','iResUnit','iTol1','iTol2','iTol3','iTolUnit',
+        'iUsageMin1','iUsageMin2','iUsageMin3','iUsageMinUnit',
+        'iUsageMax1','iUsageMax2','iUsageMax3','iUsageMaxUnit',
+        'iUsageFreq','iUspType','iBalanceType'],
+      instrumentPanelCalibration: ['iCalFrequency','iCalType','iLocation','iCertNo',
+        'iCalDate','iDueDate','iPrevCertNo','iPrevCalDate','iRemark']
+    };
+    Object.keys(groups).forEach(panelId => {
+      const markup = panelHtml(panelId);
+      groups[panelId].forEach(id => has(markup, 'id="' + id + '"', panelId + ' ->'));
+    });
+  });
+
+  t('โครง modal มีชิปรหัส ตัวบอกความคืบหน้า พื้นที่เลื่อน และ footer', () => {
+    ['class="modal-box instrument-modal-box"','id="instrumentModalCode"','id="instrumentModalStatus"',
+     'id="instrumentTabProgressLabel"','class="modal-body instrument-modal-content"',
+     'class="modal-footer instrument-modal-footer"','id="saveInstrumentBtn"']
+      .forEach(h => has(INDEX, h, 'modal'));
+    const modalAt = INDEX.indexOf('id="instrumentModal"');
+    const footerAt = INDEX.indexOf('class="modal-footer instrument-modal-footer"', modalAt);
+    const saveAt = INDEX.indexOf('id="saveInstrumentBtn"', modalAt);
+    ok(footerAt !== -1 && saveAt > footerAt, 'ปุ่มบันทึกต้องอยู่ใน footer (นอกพื้นที่เลื่อน) จะได้กดได้เสมอ');
+  });
+
+  t('CSS ของ modal จำกัดขอบเขตและ responsive', () => {
+    has(CSS, '#instrumentModal .instrument-modal-box');
+    ok(/#instrumentModal\s+\.instrument-form-grid\s*\{[^}]*repeat\(3/.test(CSS), 'จอใหญ่ 3 คอลัมน์');
+    ok(/@media \(max-width: 1199px\)[\s\S]*?#instrumentModal\s+\.instrument-form-grid\s*\{[^}]*repeat\(2/.test(CSS), '<=1199px 2 คอลัมน์');
+    ok(/@media \(max-width: 767px\)[\s\S]*?#instrumentModal\s+\.instrument-form-grid\s*\{[^}]*1fr/.test(CSS), '<=767px 1 คอลัมน์');
+    has(CSS, '@media (prefers-reduced-motion: reduce)');
+  });
+
+  t('ช่องกว้างในแท็บสเปกไม่ override กริดด้วย inline style', () => {
+    const spec = panelHtml('instrumentPanelSpec');
+    const wide = [...spec.matchAll(/<div class="form-group instrument-form-wide"([^>]*)>/g)].map(m => m[1]);
+    eq(wide.length, 4, 'จำนวนกลุ่มกว้าง');
+    wide.forEach(attr => hasNot(attr, 'grid-column', 'inline'));
+  });
+
+  t('Remark ในแท็บสอบเทียบไม่ยึดคอลัมน์เอง', () => {
+    const cal = panelHtml('instrumentPanelCalibration');
+    const m = /<div class="form-group"([^>]*)>\s*<label>Remark<\/label>\s*<input type="text" id="iRemark"/.exec(cal);
+    ok(m, 'ไม่เจอกลุ่ม Remark');
+    hasNot(m[1], 'grid-column', 'inline');
+  });
+
+  t('footer บนมือถือทับกริด 2 คอลัมน์ของ modal ส่วนกลาง', () => {
+    ok(/@media \(max-width: 767px\) \{[\s\S]*?#instrumentModal\s+\.instrument-modal-footer\s*\{[^}]*grid-template-columns:\s*1fr\s*!important/.test(CSS),
+      'footer ต้องบังคับ 1 คอลัมน์');
+    ok(/@media \(max-width: 767px\) \{[\s\S]*?#instrumentModal\s+\.instrument-footer-actions\s*\{[^}]*grid-template-columns:\s*1fr\s+1fr/.test(CSS),
+      'ปุ่มใน footer ต้องเป็น 1fr 1fr');
+  });
+
+  t('กล่องเตือนข้อมูลซ้ำใช้ attribute hidden ทุกทางแยก', () => {
+    // เคยพลาดมาแล้ว: ถ้าเหลือ inline style="display:none" ไว้ การตั้ง hidden=false จะไม่ทำให้โผล่
+    const clear = functionBody('clearInstrumentDuplicateWarning');
+    has(clear, 'box.hidden = true;');
+    hasNot(clear, 'box.style.display');
+    const render = functionBody('renderInstrumentDuplicateWarning');
+    ok(/if \(!matches\.length\) \{\s*box\.hidden = true;[\s\S]*?return;\s*\}\s*box\.hidden = false;/.test(render),
+      'ต้องมีทั้งกิ่งซ่อนและกิ่งแสดง');
+    hasNot(render, 'box.style.display');
+    // และต้องมีกฎ CSS กัน [hidden] ถูก display อื่นทับ
+    ok(/\.instrument-tab-panel\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(CSS),
+      'ต้องมี .instrument-tab-panel[hidden] { display:none !important }');
+  });
+
+  t('ตัวคุมแท็บอัปเดต a11y การมองเห็น และความคืบหน้า', () => {
+    ["const INSTRUMENT_MODAL_TABS = ['info', 'spec', 'calibration']",
+     'function setInstrumentModalTab(tabKey, options = {})',
+     'function handleInstrumentTabKeydown(event)',
+     'function initInstrumentModalTabs()',
+     "button.setAttribute('aria-selected', String(isActive))",
+     'panel.hidden = !isActive',
+     'instrumentTabProgressLabel'].forEach(tok => has(JS, tok, 'tab controller'));
+  });
+
+  t('เปิด modal แล้วรีเซ็ตไปแท็บแรกและอัปเดตชิปรหัส', () => {
+    const m = /function openInstrumentModal\(instrumentId\)\s*\{([\s\S]*?)\n\}/.exec(JS);
+    ok(m, 'ไม่เจอ openInstrumentModal');
+    ['initInstrumentModalTabs()', "setInstrumentModalTab('info')", 'instrumentModalCode', 'saveInstrumentBtn']
+      .forEach(tok => has(m[1], tok, 'open'));
+  });
+
+  t('ไม่กรอก ID Code แล้วเด้งกลับแท็บแรกพร้อมโฟกัสช่อง', () => {
+    const g = /if \(!payload\.id_code\)\s*\{([\s\S]*?)\}/.exec(JS);
+    ok(g, 'ไม่เจอ guard id_code');
+    has(g[1], "setInstrumentModalTab('info')");
+    has(g[1], "document.getElementById('iIdCode').focus()");
+  });
+
+  t('ปิด modal รีเซ็ตเฉพาะสถานะการแสดงผล ไม่ล้างค่าในช่อง', () => {
+    const m = /function closeInstrumentModal\(\)\s*\{([\s\S]*?)\n\}/.exec(JS);
+    ok(m, 'ไม่เจอ closeInstrumentModal');
+    has(m[1], "setInstrumentModalTab('info')");
+    hasNot(m[1], ".value = ''", 'close ไม่ควรล้างค่า');
+  });
+
+  t('สถานะยกเลิกสอบเทียบยังต่อกับฟอร์มได้ (10-router ฉีด #iCalStatus ตอน runtime)', () => {
+    // saveInstrument อ่าน #iCalStatus แบบ optional chaining ถ้าฟิลด์หาย
+    // cal_status จะกลายเป็น 'active' เสมอ = แก้เครื่องที่ยกเลิกแล้วจะถูกปลดยกเลิกเงียบ ๆ
+    has(JS, "document.getElementById('iCalStatus')?.value === 'cancelled'");
+    has(INDEX, 'id="iDueDate"');
+  });
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script></body></html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>instrument list ui test</title></head><body>
+<pre id="out"></pre>
+<script>
+/* แปลงมาจาก tests/test_instrument_list_ui.py */
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
+function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
+function text(url) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.onload = () => res(x.responseText);
+    x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
+    x.send();
+  });
+}
+
+(async () => {
+  let INDEX, REPORTS_JS, CSS;
+  try {
+    [INDEX, REPORTS_JS, CSS] = await Promise.all([
+      text('../index.html'), text('../js/04-reports.js'), text('../theme-aqua.css')
+    ]);
+  } catch (e) {
+    document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
+    document.title = 'FAIL';
+    return;
+  }
+
+  t('ค่าเริ่มต้นต่อหน้า = 20 และตรงกับตัวเลือกใน dropdown', () => {
+    ok(/let\s+pageSize\s*=\s*20\s*;/.test(REPORTS_JS), 'pageSize ต้องเริ่มที่ 20');
+    const sel = /<select\s+id="pageSizeSelect"[^>]*>([\s\S]*?)<\/select>/.exec(INDEX);
+    ok(sel, 'ไม่เจอ #pageSizeSelect');
+    const opts = [...sel[1].matchAll(/<option\s+value="(\d+)"([^>]*)>/g)].map(m => [m[1], m[2]]);
+    eq(opts.map(o => o[0]), ['20','50','100'], 'ตัวเลือกต่อหน้า');
+    eq(opts.filter(o => o[1].indexOf('selected') !== -1).map(o => o[0]), ['20'],
+      'ตัวที่ถูกเลือกไว้ต้องตรงกับค่าเริ่มต้นของ pageSize ไม่งั้น dropdown โชว์เลขไม่ตรงกับที่แสดงจริง');
+  });
+
+  t('เปลี่ยนจำนวนต่อหน้าแล้วรีเซ็ตไปหน้า 1 และวาดตารางใหม่', () => {
+    const body = /function\s+changePageSize\(\)\s*\{([\s\S]*?)\}/.exec(REPORTS_JS);
+    ok(body, 'ไม่เจอ changePageSize()');
+    has(body[1], "pageSize = parseInt(document.getElementById('pageSizeSelect').value)");
+    has(body[1], 'currentPage = 1');
+    has(body[1], 'renderTable()');
+  });
+
+  t('hover ของตารางชัดและจำกัดเฉพาะหน้ารายการเครื่องมือ', () => {
+    has(CSS, '#app #pageList .ax-table td { transition: background-color 120ms ease; }');
+    has(CSS, '#app #pageList .ax-table tbody tr:hover td { background: #dcefed !important; }');
+    has(CSS, '#app #pageList .ax-table tbody tr:hover td:first-child { box-shadow: inset 4px 0 0 var(--accent); }');
+  });
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script></body></html>

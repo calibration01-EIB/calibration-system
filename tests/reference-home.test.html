@@ -1,0 +1,148 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>reference home test</title></head><body>
+<pre id="out"></pre>
+<script>
+/* แปลงมาจาก tests/test_reference_home.py — เครื่องนี้ไม่มี Python และ run-tests.ps1
+   เก็บเฉพาะ *.test.html เทสต์เดิมจึงไม่เคยถูกรันเลย */
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
+function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
+
+function text(url) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.onload = () => res(x.responseText);
+    x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
+    x.send();
+  });
+}
+function bytes(url) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', url); x.responseType = 'arraybuffer';
+    x.onload = () => x.response ? res(new Uint8Array(x.response)) : rej(new Error('ว่าง ' + url));
+    x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
+    x.send();
+  });
+}
+// อ่านหัว PNG: กว้าง สูง bit depth และ color type (byte 25, 6 = RGBA)
+function pngHeader(u8, name) {
+  const sig = [137,80,78,71,13,10,26,10];
+  for (let i = 0; i < 8; i++) if (u8[i] !== sig[i]) throw new Error(name + ' ไม่ใช่ PNG');
+  const be = o => (u8[o]<<24 >>> 0) + (u8[o+1]<<16) + (u8[o+2]<<8) + u8[o+3];
+  return { w: be(16), h: be(20), depth: u8[24], colorType: u8[25] };
+}
+
+const TILE_ASSETS = ['01_dashboard.png','02_instrument_list.png','03_calibration_tracking.png',
+  '04_cert_number.png','05_cert_reference.png','06_calibration_planning.png',
+  '07_daily_scale_record.png','08_repair.png','09_offsite_equipment.png','10_weight_calibration.png'];
+
+/* ขนาดรูปการ์ด: แสดงจริง 108px (มือถือ 76px) เดิมเป็น 1024px = ใหญ่เกินจำเป็นราว 90 เท่า
+   ทำให้ APP_SHELL บวม 16.7MB และ cache.addAll() ซึ่งเป็น all-or-nothing เสี่ยงล้มทั้งชุด
+   ล็อกช่วงไว้: อย่างน้อย 2 เท่าของขนาดแสดงผล (จอ retina) และห้ามเกิน 512 กันบวมกลับ */
+const TILE_MIN = 216, TILE_MAX = 512;
+
+(async () => {
+  let INDEX, CSS, HOME_JS, SW;
+  try {
+    [INDEX, CSS, HOME_JS, SW] = await Promise.all([
+      text('../index.html'), text('../theme-aqua.css'),
+      text('../js/24-home.js'), text('../sw.js')
+    ]);
+  } catch (e) {
+    document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
+    document.title = 'FAIL';
+    return;
+  }
+
+  t('header hooks ครบ', () => {
+    ['class="ax-header"','class="ax-brand"','id="axHomeBtn"','aria-label="การแจ้งเตือน"',
+     'aria-label="ช่วยเหลือ"','id="axUserName"','id="axUserRole"','id="axUserMenu"']
+      .forEach(h => has(INDEX, h, 'header'));
+  });
+
+  t('ส่วนประกอบหน้า Home ครบ', () => {
+    ['id="pageHome"','class="ax-home"','class="ax-hero ax-hero--reference"',
+     'src="assets/home-calibration-banner.png"','id="axTiles"']
+      .forEach(h => has(INDEX, h, 'home'));
+  });
+
+  t('ลำดับการ์ดและปลายทางตรงกับระบบจริง', () => {
+    const expected = [['dashboard','Dashboard'],['list','รายการเครื่องมือ'],['calrecs','ติดตามผลสอบเทียบ'],
+      ['cert','ลำดับเลข Cert'],['weights','ใบ Cert Reference'],['plan','วางแผนสอบเทียบ'],
+      ['soon','ใบบันทึกประจำวันเครื่องชั่ง'],['repairs','งานซ่อม'],['gate','นำของออกนอกสถานที่'],
+      ['weightjobs','สอบเทียบตุ้มน้ำหนัก']];
+    const pos = expected.map(([page, title]) => {
+      const re = new RegExp("page:'" + page + "'[\\s\\S]*?t:'" + title + "'");
+      const m = re.exec(HOME_JS);
+      if (!m) throw new Error('ไม่เจอการ์ด ' + page + ' / ' + title);
+      return m.index;
+    });
+    eq(pos, pos.slice().sort((a,b) => a-b), 'ลำดับการ์ดต้องเรียงตามนี้');
+  });
+
+  t('ตัวเชื่อมกับระบบเดิมยังอยู่', () => {
+    ['syncAxTileBadges','axSyncUser','toggleAxUserMenu','axLogout','showPage','AX_ART']
+      .forEach(tok => has(HOME_JS, tok, 'integration'));
+  });
+
+  t('กริดการ์ด responsive 5 / 3 / 1', () => {
+    ok(/\.ax-tiles\s*\{[^}]*repeat\(5/.test(CSS), 'จอใหญ่ต้อง 5 คอลัมน์');
+    ok(/@media \(max-width: 1100px\)[\s\S]*?\.ax-tiles\s*\{[^}]*repeat\(3/.test(CSS), '<=1100px ต้อง 3 คอลัมน์');
+    ok(/@media \(max-width: 680px\)[\s\S]*?\.ax-tiles\s*\{[^}]*grid-template-columns:\s*1fr/.test(CSS), '<=680px ต้อง 1 คอลัมน์');
+  });
+
+  t('แบนเนอร์ Home ต้องไม่ถูกครอปด้านข้าง (ข้อความฝังอยู่ในภาพ)', () => {
+    // ล็อกสัดส่วนกล่องให้เท่ารูป — ถ้ากลับไปตั้ง height คงที่ ข้อความจะโดนตัดอีก
+    ok(/\.ax-hero--reference\s*\{[^}]*aspect-ratio:\s*2172\s*\/\s*500/.test(CSS),
+      '.ax-hero--reference ต้องล็อก aspect-ratio ตามรูป');
+    ok(!/\.ax-hero--reference\s*\{[^}]*height:\s*clamp/.test(CSS),
+      '.ax-hero--reference ต้องไม่บังคับ height แบบ clamp');
+    ok(/\.ax-hero:not\(\.ax-hero--reference\)\s*\{[^}]*height:/.test(CSS),
+      'กฎ .ax-hero ในเลเยอร์มือถือต้องยกเว้น --reference ไม่งั้นทับ aspect-ratio');
+  });
+
+  // เช็ครูปต้องรอ I/O จึงไม่ใช้ t() (ซึ่งเป็น sync) แต่ทำ try/catch เองแล้ว push ผลตรง ๆ
+  try {
+    const metas = [];
+    for (const f of TILE_ASSETS) metas.push(pngHeader(await bytes('../assets/tiles/' + f), f));
+    const uniq = new Set(metas.map(m => m.w + 'x' + m.h + ':' + m.colorType));
+    ok(uniq.size === 1, 'รูปการ์ดต้องขนาด/ชนิดเดียวกันทั้งหมด — พบ ' + [...uniq].join(', '));
+    const m = metas[0];
+    ok(m.w === m.h, 'ต้องเป็นสี่เหลี่ยมจัตุรัส');
+    ok(m.colorType === 6, 'ต้องเป็น RGBA (color type 6) พบ ' + m.colorType);
+    ok(m.w >= TILE_MIN, 'เล็กเกินไป (' + m.w + 'px) ต้อง >= ' + TILE_MIN);
+    ok(m.w <= TILE_MAX, 'ใหญ่เกินจำเป็น (' + m.w + 'px) ต้อง <= ' + TILE_MAX + ' — APP_SHELL จะบวม');
+    has(HOME_JS, "img:'10_weight_calibration'", 'tile');
+    results.push('PASS รูปการ์ดครบ ขนาดเท่ากัน เป็น RGBA และไม่ใหญ่เกินจำเป็น (' + m.w + 'px)');
+  } catch (e) {
+    results.push('FAIL รูปการ์ดครบ ขนาดเท่ากัน เป็น RGBA และไม่ใหญ่เกินจำเป็น — ' + e.message);
+  }
+
+  t('รูปหน้า Home อยู่ใน APP_SHELL ครบ', () => {
+    has(SW, './assets/home-calibration-banner.png', 'sw');
+    TILE_ASSETS.forEach(f => has(SW, './assets/tiles/' + f, 'sw'));
+    // เดิมเทสต์ผูกเลขเวอร์ชันตายตัว (calibration-app-v136) ทำให้ต้องแก้เทสต์ทุกครั้งที่ bump
+    // เช็คแค่รูปแบบพอ — เนื้อหาที่ต้องคุมจริงคือรายการไฟล์ด้านบน
+    ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'CACHE_NAME ต้องเป็นรูปแบบ calibration-app-vN');
+  });
+
+  t('ไม่มีไฟล์กำพร้าใน APP_SHELL (ทุก path ต้องมีคนอ้างถึง)', () => {
+    // hero-caliper.png เคยค้างอยู่ใน APP_SHELL ทั้งที่ไม่มีหน้าไหนใช้ = โหลดฟรี 1.3MB
+    ok(SW.indexOf('./assets/hero-caliper.png') === -1 || INDEX.indexOf('hero-caliper') !== -1,
+      'hero-caliper.png อยู่ใน APP_SHELL แต่ไม่มีหน้าไหนอ้างถึง');
+  });
+
+  t('ปุ่มเมนูผู้ใช้ไม่ได้ครอบรายการเมนู', () => {
+    has(INDEX, 'class="ax-user-wrap"');
+    has(INDEX, '<button type="button" class="ax-user" id="axUser"');
+    has(INDEX, '<div class="ax-menu" id="axUserMenu" role="menu">');
+    has(INDEX, 'class="ax-menu-item" role="menuitem"');
+  });
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script></body></html>
