@@ -111,6 +111,40 @@ class InstrumentEditTabbedFormTests(unittest.TestCase):
         )
         self.assertIn("@media (prefers-reduced-motion: reduce)", CSS)
 
+    def test_wide_spec_groups_do_not_override_the_three_column_layout_inline(self):
+        spec_markup = panel_html("instrumentPanelSpec")
+        wide_group_attributes = re.findall(
+            r'<div class="form-group instrument-form-wide"([^>]*)>', spec_markup,
+        )
+        self.assertEqual(len(wide_group_attributes), 4)
+        for attributes in wide_group_attributes:
+            self.assertNotIn("grid-column", attributes)
+
+    def test_calibration_remark_completes_the_third_desktop_column(self):
+        calibration_markup = panel_html("instrumentPanelCalibration")
+        remark_group = re.search(
+            r'<div class="form-group"([^>]*)>\s*<label>Remark</label>'
+            r'\s*<input type="text" id="iRemark"',
+            calibration_markup,
+            re.S,
+        )
+        self.assertIsNotNone(remark_group)
+        self.assertNotIn("grid-column", remark_group.group(1))
+
+    def test_mobile_footer_overrides_the_global_two_column_modal_grid(self):
+        self.assertRegex(
+            CSS,
+            r"@media \(max-width: 767px\) \{[\s\S]*?"
+            r"#instrumentModal\s+\.instrument-modal-footer\s*\{[^}]*"
+            r"grid-template-columns:\s*1fr\s*!important",
+        )
+        self.assertRegex(
+            CSS,
+            r"@media \(max-width: 767px\) \{[\s\S]*?"
+            r"#instrumentModal\s+\.instrument-footer-actions\s*\{[^}]*"
+            r"grid-template-columns:\s*1fr\s+1fr",
+        )
+
     def test_duplicate_warning_uses_hidden_attribute_for_each_visibility_branch(self):
         clear_body = function_body("clearInstrumentDuplicateWarning")
         self.assertIn("box.hidden = true;", clear_body)

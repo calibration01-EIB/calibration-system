@@ -1504,9 +1504,9 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   #instrumentModal .instrument-modal-content { padding: 16px 14px; }
   #instrumentModal .instrument-form-grid { grid-template-columns: 1fr; gap: 13px; }
   #instrumentModal .instrument-form-wide { grid-column: auto; }
-  #instrumentModal .instrument-modal-footer { display: grid; grid-template-columns: 1fr; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #instrumentModal .instrument-modal-footer { display: grid; grid-template-columns: 1fr !important; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
   #instrumentModal .instrument-footer-hint { display: none; }
-  #instrumentModal .instrument-footer-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  #instrumentModal .instrument-footer-actions { display: grid; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   #instrumentModal .instrument-footer-actions button { width: 100%; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
