@@ -210,7 +210,7 @@ a:hover { color: var(--accent-h); }
 .ax-home { display: flex; flex-direction: column; gap: 32px; }
 
 /* ฐานของ hero — โหมดรูปเดียวเต็มใบ (ข้อความฝังในภาพ)
-   ตอนนี้หน้า Home ใช้ .ax-hero--split ด้านล่างแทน เก็บไว้เผื่อสลับกลับ */
+   ตอนนี้หน้า Home ใช้ .ax-hero--reference (ดูบล็อกถัดไป) */
 .ax-hero {
   display: block; border-radius: var(--r-card); overflow: hidden;
   background: #000814; height: clamp(200px, 30vw, 540px);
@@ -234,7 +234,10 @@ a:hover { color: var(--accent-h); }
 }
 .ax-hero--reference img { object-fit: contain; object-position: center; }
 
-/* hero แบบข้อความ HTML ทับรูป (แทนแบนเนอร์ที่ฝังข้อความในภาพ) */
+/* hero แบบข้อความ HTML ทับรูป — ตอนนี้ยังไม่มี markup ไหนใช้ (หน้า Home ใช้ --reference)
+   ตั้งใจเก็บไว้ ไม่ใช่โค้ดตกค้าง: เป็นโครงสำหรับเปลี่ยนไปใช้รูปที่ไม่มีตัวหนังสือ
+   ซึ่งแก้ปัญหาข้อความโดนครอปที่ต้นเหตุ แทนที่จะล็อก aspect-ratio อย่างที่ทำชั่วคราวอยู่
+   ใช้คู่กับ .ax-hero-media / -scrim / -copy / -kicker ด้านล่าง */
 .ax-hero--split {
   position: relative; height: auto; min-height: 300px;
   background: #12324b; display: flex; align-items: stretch;

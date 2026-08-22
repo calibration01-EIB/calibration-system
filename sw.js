@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v139';
+const CACHE_NAME = 'calibration-app-v140';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -43,8 +43,15 @@ const APP_SHELL = [
   './js/16-repairs.js',
   './js/17-frm-cross-month.js',
   './js/18-asset-out.js',
+  './js/13-cmc.js',
+  './js/14-cal-presets.js',
   './js/22-users.js',
   './js/23-cal-records.js',
+  // หน้าสอบเทียบเครื่องชั่ง = งานหลัก เปิดเป็นแท็บใหม่จาก openBalanceCal()
+  // ไม่เคยอยู่ใน APP_SHELL เลย (ขณะที่ weight-cal.html ที่เพิ่งถอดออกกลับเคยอยู่)
+  // ถ้าไม่ precache ช่างที่ออกไปหน้างานแล้วเน็ตไม่ถึงจะเปิดหน้าสอบเทียบไม่ได้
+  './balance-cal.html',
+  './js/balance-cal.js',
   './assets/frm-eib04-template.xlsx',
   './assets/frm-asset-out-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT

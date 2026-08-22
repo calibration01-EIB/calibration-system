@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','monthly','plan','weights','cert','calrecs','repairs','gate','kpi'];
+  const pages = ['dashboard','list','audit','admin','plan','weights','cert','calrecs','repairs','gate','kpi'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -18,7 +18,6 @@ function showPage(page) {
     list: ['รายการเครื่องมือ','ค้นหา กรอง และจัดการรายการ'],
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
-    monthly: ['รายงานรายเดือน','แผนสอบเทียบ'],
     plan: ['📅 วางแผนสอบเทียบ','กำหนดตารางและ Export FRM-EIB04'],
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
