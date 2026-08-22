@@ -1,5 +1,21 @@
 -- ล้างข้อมูลระบบสอบเทียบตุ้มน้ำหนัก (ABBA) เพื่อเริ่มนับ 1 ใหม่
--- เตรียมไว้ 2026-08-21 ตอนถอดโค้ดออก — ยังไม่ได้รัน เพราะ Supabase หลุดการเชื่อมต่อ
+--
+-- ***** รันไปแล้ว 2026-08-21 (ขั้นที่ 1-3) — เก็บไว้เป็นบันทึกและไว้ย้อนกลับ *****
+--
+-- สิ่งที่พบตอนรันขั้นที่ 1: ข้อมูลน้อยกว่าที่คิดมาก
+--   weight_cal_jobs   1 แถว  (cert 26M001-0-0 วันที่ 2026-07-29 ลูกค้าสะกดผิด = งานทดลอง)
+--   weight_cal_points 1 แถว  (จุด 1000 g)
+--   mass_comparators  4 แถว
+--
+-- สิ่งที่ทำจริง ต่างจากแผนเดิม 1 จุด:
+--   **ไม่ได้ลบ mass_comparators** เพราะเปิดดูแล้วไม่ใช่ข้อมูลงาน แต่เป็นทะเบียน
+--   เครื่องเปรียบเทียบมวลจริงของแล็บ 4 เครื่อง (AT21 / AT1005 / PR5003 / ID7+KA30-3/P)
+--   พร้อมสเปกทางมาตรวิทยาที่ต้องกรอกจากคู่มือ/ใบ cert — resolution, repeatability,
+--   linearity, ย่านการวัด, serial, ID code ตามระบบทะเบียนเครื่องมือ
+--   ลบทิ้งแล้วต้องกรอกใหม่ทั้งหมดและเสี่ยงพิมพ์ผิด ถ้าจะลบจริงดูขั้นที่ 3ข ท้ายไฟล์
+--
+-- ตรวจ FK แล้ว: ไม่มีตารางนอกกลุ่มนี้ชี้เข้ามา (มีแต่ points -> jobs และ points -> comparators)
+-- สำเนาอยู่ที่สคีมา weight_cal_backup (jobs 1 / points 1 / comparators 4)
 --
 -- อ่านให้จบก่อนรัน แล้วรันทีละขั้นใน Supabase SQL Editor
 --
@@ -58,11 +74,10 @@ begin;
 delete from public.weight_cal_points;
 delete from public.weight_cal_jobs;
 
--- mass_comparators = ทะเบียนเครื่องเปรียบเทียบมวล ใช้เฉพาะระบบนี้
--- ถ้าอยากเก็บรายการเครื่องไว้ใช้ต่อ ให้คอมเมนต์บรรทัดนี้ทิ้ง
-delete from public.mass_comparators;
+-- mass_comparators ไม่ได้ลบ (ดูเหตุผลหัวไฟล์) — เป็นทะเบียนเครื่องจริง ไม่ใช่ข้อมูลงาน
+-- delete from public.mass_comparators;
 
--- ตรวจก่อน commit — ทั้ง 3 ต้องเป็น 0 และตารางที่ต้องคงไว้ต้องไม่เปลี่ยน
+-- ตรวจก่อน commit — jobs/points ต้องเป็น 0 · comparators คงไว้ 4 · ที่เหลือต้องไม่เปลี่ยน
 select 'weight_cal_points' as tbl, count(*) from public.weight_cal_points
 union all select 'weight_cal_jobs', count(*) from public.weight_cal_jobs
 union all select 'mass_comparators', count(*) from public.mass_comparators
@@ -82,3 +97,18 @@ commit;
 -- drop table if exists public.weight_cal_points;
 -- drop table if exists public.weight_cal_jobs;
 -- drop table if exists public.mass_comparators;
+
+
+-- ---------- ขั้นที่ 3ข (ทางเลือก): ถ้าตัดสินใจจะลบทะเบียนเครื่องด้วย ----------
+-- สำเนาอยู่ใน weight_cal_backup.mass_comparators_20260821 แล้ว กู้กลับได้
+-- begin;
+--   delete from public.mass_comparators;
+--   select count(*) from public.mass_comparators;   -- ต้องเป็น 0
+-- commit;
+
+
+-- ---------- กู้ข้อมูลกลับจากสำเนา ----------
+-- insert into public.mass_comparators  select * from weight_cal_backup.mass_comparators_20260821;
+-- insert into public.weight_cal_jobs   select * from weight_cal_backup.weight_cal_jobs_20260821;
+-- insert into public.weight_cal_points select * from weight_cal_backup.weight_cal_points_20260821;
+-- หมายเหตุ: jobs/points ใช้ id เดิม ถ้ามีข้อมูลใหม่ชนกันต้องจัดการ sequence ก่อน
