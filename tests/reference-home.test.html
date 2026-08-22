@@ -64,8 +64,8 @@ const TILE_MIN = 216, TILE_MAX = 512;
   });
 
   t('ส่วนประกอบหน้า Home ครบ', () => {
-    ['id="pageHome"','class="ax-home"','class="ax-hero ax-hero--reference"',
-     'src="assets/home-calibration-banner.png"','id="axTiles"']
+    ['id="pageHome"','class="ax-home"','class="ax-hero ax-hero--split"',
+     'src="assets/hero-lab.jpg"','id="axTiles"']
       .forEach(h => has(INDEX, h, 'home'));
   });
 
@@ -93,14 +93,22 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/@media \(max-width: 680px\)[\s\S]*?\.ax-tiles\s*\{[^}]*grid-template-columns:\s*1fr/.test(CSS), '<=680px ต้อง 1 คอลัมน์');
   });
 
-  t('แบนเนอร์ Home ต้องไม่ถูกครอปด้านข้าง (ข้อความฝังอยู่ในภาพ)', () => {
-    // ล็อกสัดส่วนกล่องให้เท่ารูป — ถ้ากลับไปตั้ง height คงที่ ข้อความจะโดนตัดอีก
-    ok(/\.ax-hero--reference\s*\{[^}]*aspect-ratio:\s*2172\s*\/\s*500/.test(CSS),
-      '.ax-hero--reference ต้องล็อก aspect-ratio ตามรูป');
-    ok(!/\.ax-hero--reference\s*\{[^}]*height:\s*clamp/.test(CSS),
-      '.ax-hero--reference ต้องไม่บังคับ height แบบ clamp');
-    ok(/\.ax-hero:not\(\.ax-hero--reference\)\s*\{[^}]*height:/.test(CSS),
-      'กฎ .ax-hero ในเลเยอร์มือถือต้องยกเว้น --reference ไม่งั้นทับ aspect-ratio');
+  t('ข้อความ hero ต้องเป็น HTML จริง ไม่ใช่ตัวหนังสือฝังในภาพ', () => {
+    /* รูปที่ฝังข้อความไว้ในตัวมีปัญหา 2 อย่างซึ่งวัดได้จริงมาแล้ว:
+       - ขนาดตัวอักษรผูกกับความกว้างรูป จอ 542px บรรทัดรองเหลือสูง 6.9px อ่านไม่ออก
+       - object-fit: cover ครอปด้านข้างทิ้ง จอ 880px หายไปข้างละ 18% หัวเรื่องขาด
+       จึงต้องใช้รูปที่ไม่มีตัวหนังสือ (hero-lab.jpg) แล้ววางข้อความเป็น HTML ทับ */
+    ['ax-hero-media','ax-hero-scrim','ax-hero-copy','ax-hero-kicker']
+      .forEach(c => has(INDEX, c, 'hero'));
+    ok(/<h1>Calibration System<\/h1>/.test(INDEX), 'หัวเรื่องต้องเป็น <h1> ใน HTML');
+    // ขนาดตัวอักษรต้องเป็นค่าคงที่ ไม่ใช่หน่วยที่ผูกกับความกว้างจอ (vw)
+    ok(/\.ax-hero-copy h1\s*\{[^}]*font-size:\s*\d+px/.test(CSS), 'h1 ต้องกำหนดขนาดเป็น px');
+    ok(/@media \(max-width: 900px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*\d+px/.test(CSS),
+      'มือถือต้องมีขนาดตัวอักษรของตัวเอง');
+    // แบนเนอร์แบบฝังข้อความต้องไม่กลับมา
+    // เช็คที่ src ไม่ใช่ทั้งไฟล์ — ชื่อไฟล์เดิมยังถูกอ้างในคอมเมนต์เพื่อบอกที่มาของรูปที่ตัดมา
+    ok(INDEX.indexOf('src="assets/home-calibration-banner.png"') === -1,
+      'index.html ไม่ควรกลับไปใช้แบนเนอร์ที่ฝังข้อความในภาพ');
   });
 
   // เช็ครูปต้องรอ I/O จึงไม่ใช้ t() (ซึ่งเป็น sync) แต่ทำ try/catch เองแล้ว push ผลตรง ๆ
@@ -120,7 +128,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
   }
 
   t('รูปหน้า Home อยู่ใน APP_SHELL ครบ', () => {
-    has(SW, './assets/home-calibration-banner.png', 'sw');
+    has(SW, './assets/hero-lab.jpg', 'sw');
     TILE_ASSETS.forEach(f => has(SW, './assets/tiles/' + f, 'sw'));
     // เดิมเทสต์ผูกเลขเวอร์ชันตายตัว (calibration-app-v136) ทำให้ต้องแก้เทสต์ทุกครั้งที่ bump
     // เช็คแค่รูปแบบพอ — เนื้อหาที่ต้องคุมจริงคือรายการไฟล์ด้านบน

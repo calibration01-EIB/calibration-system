@@ -2829,10 +2829,21 @@ body.app-mode textarea:focus {
       <div id="pageHome" class="page-content" style="display:none">
         <div class="ax-home">
 
-          <!-- แบนเนอร์ต้นฉบับจาก Calibration App (offline) -->
-          <section class="ax-hero ax-hero--reference">
-            <img src="assets/home-calibration-banner.png"
-                 alt="Calibration System — ระบบบริหารจัดการกระบวนการสอบเทียบเครื่องมือวัด ครบถ้วน แม่นยำ เชื่อถือได้">
+          <!-- hero: ข้อความเป็น HTML จริงทับรูปถ่ายที่ไม่มีตัวหนังสือ
+               (hero-lab.jpg = ครึ่งขวาของ home-calibration-banner.png ที่ตัดส่วนข้อความออก)
+               แบบฝังข้อความในภาพจะอ่านไม่ออกบนมือถือ เพราะขนาดตัวอักษรผูกกับความกว้างรูป
+               วัดได้: บรรทัดรองเหลือสูง 6.9px ที่จอ 542px -->
+          <section class="ax-hero ax-hero--split">
+            <div class="ax-hero-media">
+              <img src="assets/hero-lab.jpg" alt=""
+                   onerror="this.onerror=null;this.src='assets/calibration-lab-hero.png'">
+            </div>
+            <div class="ax-hero-scrim"></div>
+            <div class="ax-hero-copy">
+              <span class="ax-hero-kicker">Welcome</span>
+              <h1>Calibration System</h1>
+              <p>ระบบบริหารจัดการกระบวนการสอบเทียบเครื่องมือวัด<br>ครบถ้วน แม่นยำ เชื่อถือได้</p>
+            </div>
           </section>
 
           <section class="ax-tiles" id="axTiles"></section>
