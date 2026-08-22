@@ -11,3 +11,6 @@ constanz.ttf
 # preview harness (dev only)
 __inside_preview.html
 home-preview.html
+
+# ตั้งค่าเฉพาะเครื่อง ไม่ควรเข้า git
+.claude/settings.local.json
