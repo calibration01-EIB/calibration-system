@@ -1,0 +1,78 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>weight clean slate</title></head><body>
+<pre id="out"></pre>
+<script>
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
+function has(text, token, label) { ok(text.indexOf(token) !== -1, (label || 'source') + ' must contain ' + JSON.stringify(token)); }
+function lacks(text, token, label) { ok(text.indexOf(token) === -1, (label || 'source') + ' must not contain ' + JSON.stringify(token)); }
+function text(url) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => resolve(request.responseText);
+    request.onerror = () => reject(new Error('cannot read ' + url));
+    request.send();
+  });
+}
+function missing(url) {
+  return new Promise(resolve => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => resolve(request.status === 404 || request.status === 0 && !request.responseText);
+    request.onerror = () => resolve(true);
+    request.send();
+  });
+}
+
+(async () => {
+  let certPrint, index, router, home, weights, serviceWorker;
+  try {
+    [certPrint, index, router, home, weights, serviceWorker] = await Promise.all([
+      text('../cert-print.html'), text('../index.html'), text('../js/10-router.js'),
+      text('../js/24-home.js'), text('../js/08-weights.js'), text('../sw.js')
+    ]);
+  } catch (error) {
+    document.getElementById('out').textContent = 'FAIL source files unavailable — ' + error.message;
+    document.title = 'FAIL';
+    return;
+  }
+
+  const legacyCertTokens = [
+    'WEIGHT_CERT_TOTAL', 'pageWeightCertBody', 'pageWeightResults', 'WC_REC_PER_PAGE',
+    'wcRecordBlock', 'pageWeightRecord', 'WC_UNC_PER_PAGE', 'wcUncBlock',
+    'pageWeightUnc', "CAL.doc_type === 'weight'", 'wtDoc'
+  ];
+  const legacyAppTokens = [
+    'weightjobs', 'weight-cal.html', 'js/weight-cal.js', 'js/19-weight-jobs.js',
+    'js/20-weight-cert-xlsx.js', 'weight-cert-template.xlsx'
+  ];
+  const legacyCardTen = /(?:card\s*10|card10|10_weight_calibration)/i;
+
+  t('cert-print has no legacy weight certificate renderer', () => {
+    legacyCertTokens.forEach(token => lacks(certPrint, token, 'cert-print.html'));
+  });
+  t('main app sources have no retired weight workflow paths or card 10', () => {
+    [index, router, home, serviceWorker].forEach((source, i) => {
+      legacyAppTokens.forEach(token => lacks(source, token, ['index.html', '10-router.js', '24-home.js', 'sw.js'][i]));
+      ok(!legacyCardTen.test(source), ['index.html', '10-router.js', '24-home.js', 'sw.js'][i] + ' must not contain legacy card 10');
+    });
+  });
+  t('standard weight register remains wired into the app shell', () => {
+    has(index, 'pageWeights', 'index.html');
+    has(index, 'nav-weights', 'index.html');
+    has(router, 'loadStandardWeights', '10-router.js');
+    has(weights, 'swCertPath', '08-weights.js');
+    has(serviceWorker, './js/08-weights.js', 'sw.js');
+  });
+
+  // The synchronous assertion receives the resolved result only after the file probe finishes.
+  const oldBuilderIsMissing = await missing('../tools/build-weight-cert-template.ps1');
+  t('old weight certificate workbook builder is absent', () => ok(oldBuilderIsMissing, 'tools/build-weight-cert-template.ps1 still exists'));
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script>
+</body></html>

@@ -48,8 +48,7 @@ const APP_SHELL = [
   './js/22-users.js',
   './js/23-cal-records.js',
   // หน้าสอบเทียบเครื่องชั่ง = งานหลัก เปิดเป็นแท็บใหม่จาก openBalanceCal()
-  // ไม่เคยอยู่ใน APP_SHELL เลย (ขณะที่ weight-cal.html ที่เพิ่งถอดออกกลับเคยอยู่)
-  // ถ้าไม่ precache ช่างที่ออกไปหน้างานแล้วเน็ตไม่ถึงจะเปิดหน้าสอบเทียบไม่ได้
+  // จึงต้อง precache เพื่อให้ช่างหน้างานใช้งานได้แม้เครือข่ายไม่พร้อม
   './balance-cal.html',
   './js/balance-cal.js',
   './assets/frm-eib04-template.xlsx',
