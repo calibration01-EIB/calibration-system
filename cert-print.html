@@ -443,6 +443,7 @@ function pageEIB55(CAL, rows, rangeTxt, pageNo, total) {
   </section>`;
 }
 
+function rangePages(CAL, opt) {
   opt = opt || {};
   const CERT_TOTAL = opt.certTotal || 3, WS_TOTAL = opt.wsTotal || 6;
   const CERT_NO = opt.certNo || 2, WS_NO = opt.wsNo || 1;

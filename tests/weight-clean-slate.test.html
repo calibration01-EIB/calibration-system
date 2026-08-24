@@ -53,6 +53,14 @@ function missing(url) {
   t('cert-print has no legacy weight certificate renderer', () => {
     legacyCertTokens.forEach(token => lacks(certPrint, token, 'cert-print.html'));
   });
+  t('cert-print retains the balance range renderer declaration', () => {
+    has(certPrint, 'function rangePages(CAL, opt) {', 'cert-print.html');
+  });
+  t('cert-print inline script compiles', () => {
+    const match = /<script>([\s\S]*)<\/script>\s*<\/body>/i.exec(certPrint);
+    ok(match, 'cert-print.html inline script not found');
+    new Function(match[1]);
+  });
   t('main app sources have no retired weight workflow paths or card 10', () => {
     [index, router, home, serviceWorker].forEach((source, i) => {
       legacyAppTokens.forEach(token => lacks(source, token, ['index.html', '10-router.js', '24-home.js', 'sw.js'][i]));
@@ -60,10 +68,10 @@ function missing(url) {
     });
   });
   t('standard weight register remains wired into the app shell', () => {
-    has(index, 'pageWeights', 'index.html');
-    has(index, 'nav-weights', 'index.html');
-    has(router, 'loadStandardWeights', '10-router.js');
-    has(weights, 'swCertPath', '08-weights.js');
+    has(index, 'id="pageWeights"', 'index.html');
+    has(index, 'id="nav-weights"', 'index.html');
+    has(weights, 'async function loadStandardWeights', '08-weights.js');
+    has(weights, 'function swCertPath', '08-weights.js');
     has(serviceWorker, './js/08-weights.js', 'sw.js');
   });
 
