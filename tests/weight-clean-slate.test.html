@@ -49,9 +49,16 @@ function missing(url) {
     'js/20-weight-cert-xlsx.js', 'weight-cert-template.xlsx'
   ];
   const legacyCardTen = /(?:card\s*10|card10|10_weight_calibration)/i;
+  const legacyRuntimePaths = [
+    '../weight-cal.html', '../js/weight-cal.js', '../js/19-weight-jobs.js',
+    '../js/20-weight-cert-xlsx.js', '../assets/weight-cert-template.xlsx',
+    '../assets/tiles/10_weight_calibration.png'
+  ];
 
   t('cert-print has no legacy weight certificate renderer', () => {
     legacyCertTokens.forEach(token => lacks(certPrint, token, 'cert-print.html'));
+    ['ใบ Cert เฉพาะตุ้มน้ำหนัก', '.ct-title2', '.ct-ind']
+      .forEach(token => lacks(certPrint, token, 'cert-print.html'));
   });
   t('cert-print retains the balance range renderer declaration', () => {
     has(certPrint, 'function rangePages(CAL, opt) {', 'cert-print.html');
@@ -78,6 +85,11 @@ function missing(url) {
   // The synchronous assertion receives the resolved result only after the file probe finishes.
   const oldBuilderIsMissing = await missing('../tools/build-weight-cert-template.ps1');
   t('old weight certificate workbook builder is absent', () => ok(oldBuilderIsMissing, 'tools/build-weight-cert-template.ps1 still exists'));
+
+  const legacyRuntimeFilesAreMissing = await Promise.all(legacyRuntimePaths.map(missing));
+  t('retired weight runtime, template, and Home card files are absent', () => {
+    legacyRuntimePaths.forEach((path, index) => ok(legacyRuntimeFilesAreMissing[index], path + ' still exists'));
+  });
 
   document.getElementById('out').textContent = results.join('\n');
   document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
