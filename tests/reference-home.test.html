@@ -155,6 +155,11 @@ const TILE_MIN = 216, TILE_MAX = 512;
     // เทมเพลตตัวเล็กยังอยู่ใน precache ได้ (18KB / 36KB)
     has(SW, './assets/frm-eib04-template.xlsx', 'sw');
     has(SW, './assets/frm-asset-out-template.xlsx', 'sw');
+    ok(SW.indexOf('weight-cal.html ที่เพิ่งถอดออก') === -1,
+      'ยังมีคอมเมนต์ runtime เก่าของ weight-cal ใน Service Worker');
+    has(SW, './js/08-weights.js', 'ทะเบียน Cert Reference ต้องใช้งานออฟไลน์');
+    const cacheVersion = Number((/calibration-app-v(\d+)/.exec(SW) || [])[1]);
+    ok(cacheVersion >= 142, 'การเปลี่ยน sw.js ต้อง bump cache เป็น v142 หรือสูงกว่า');
   });
 
   t('ปุ่มเมนูผู้ใช้ไม่ได้ครอบรายการเมนู', () => {
