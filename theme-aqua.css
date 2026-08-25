@@ -219,7 +219,7 @@ a:hover { color: var(--accent-h); }
 
 
 /* hero ของหน้า Home: ภาพเต็มใบ + ข้อความ HTML จริงบนพื้นที่ว่างฝั่งซ้าย */
-.ax-hero--split {
+#app .ax-hero--split {
   position: relative; height: 260px; min-height: 0;
   background: #eef5f8; display: flex; align-items: stretch;
 }
@@ -249,7 +249,7 @@ a:hover { color: var(--accent-h); }
 }
 
 @media (max-width: 1023px) {
-  .ax-hero--split { height: 220px; }
+  #app .ax-hero--split { height: 220px; }
   .ax-hero-copy { width: 58%; padding: 24px 30px; }
   .ax-hero-copy h1 { font-size: 36px; }
   .ax-hero-copy p { font-size: 15px; }
@@ -259,7 +259,7 @@ a:hover { color: var(--accent-h); }
 }
 
 @media (max-width: 767px) {
-  .ax-hero--split { height: 180px; }
+  #app .ax-hero--split { height: 180px; }
   .ax-hero-media img { object-position: 63% 58%; }
   .ax-hero-copy { width: 68%; padding: 18px 20px; gap: 5px; }
   .ax-hero-kicker { font-size: 14px; }

@@ -126,6 +126,12 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/\.ax-hero-media img\s*\{[^}]*object-fit:\s*cover/.test(CSS), 'image cover');
   });
 
+  t('Hero compact มี specificity สูงกว่ากฎ responsive .ax-hero เดิม', () => {
+    ok(/#app \.ax-hero--split\s*\{[^}]*height:\s*260px/.test(CSS), 'desktop scoped hero');
+    ok(/@media \(max-width: 1023px\)[\s\S]*?#app \.ax-hero--split\s*\{[^}]*height:\s*220px/.test(CSS), 'tablet scoped hero');
+    ok(/@media \(max-width: 767px\)[\s\S]*?#app \.ax-hero--split\s*\{[^}]*height:\s*180px/.test(CSS), 'mobile scoped hero');
+  });
+
   try {
     const heroBytes = await bytes('../assets/home-hero-calibration-lab-v2.webp');
     const heroMeta = await imageMeta('../assets/home-hero-calibration-lab-v2.webp');
