@@ -18,10 +18,11 @@ function text(url) {
 }
 
 (async () => {
-  let INDEX, REPORTS_JS, CSS;
+  let INDEX, REPORTS_JS, LIST_JS, CSS;
   try {
-    [INDEX, REPORTS_JS, CSS] = await Promise.all([
-      text('../index.html'), text('../js/04-reports.js'), text('../theme-aqua.css')
+    [INDEX, REPORTS_JS, LIST_JS, CSS] = await Promise.all([
+      text('../index.html'), text('../js/04-reports.js'),
+      text('../js/26-list-ui.js'), text('../theme-aqua.css')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -51,6 +52,76 @@ function text(url) {
     has(CSS, '#app #pageList .ax-table td { transition: background-color 120ms ease; }');
     has(CSS, '#app #pageList .ax-table tbody tr:hover td { background: #dcefed !important; }');
     has(CSS, '#app #pageList .ax-table tbody tr:hover td:first-child { box-shadow: inset 4px 0 0 var(--accent); }');
+  });
+
+  t('โครงสร้างตัวกรองขั้นสูงเข้าถึงได้และปิดไว้ตั้งแต่โหลด', () => {
+    ['id="listAdvancedToggle"', 'aria-controls="listAdvancedPanel"',
+     'aria-expanded="false"', 'id="listAdvancedPanel"',
+     'id="listFilterSummary"', 'id="listResetButton"']
+      .forEach(token => has(INDEX, token, 'list filter hook'));
+    ok(/id="listAdvancedPanel"[^>]*hidden/.test(INDEX), 'panel ต้องมี hidden ตั้งแต่ HTML แรก');
+    ok(/id="listResetButton"[^>]*hidden/.test(INDEX), 'reset ต้องซ่อนเมื่อยังไม่กรอง');
+  });
+
+  t('ตัวควบคุมใช้ filterData เดิมและไม่เก็บสถานะ panel', () => {
+    ['function listToggleAdvancedFilters', 'function listGetActiveFilterLabels',
+     'function listHasActiveFilters', 'function syncListFilterUi',
+     'syncListFilterUi();'].forEach(token => has(LIST_JS, token, 'list ui controller'));
+    ok(LIST_JS.indexOf("localStorage.setItem('listAdvanced") === -1,
+      'สถานะเปิด panel ต้องไม่บันทึกใน localStorage');
+    has(LIST_JS, "if (typeof filterData === 'function') filterData();", 'existing filter flow');
+  });
+
+  t('CSS จำกัดผลเฉพาะ pageList และ panel ขยายลงด้านล่าง', () => {
+    has(CSS, '#app #pageList .ax-filter-card--list', 'scoped list filter');
+    has(CSS, '#app #pageList .ax-filter-advanced[hidden]', 'hidden panel');
+    ok(/@media \(max-width: 767px\)[\s\S]*?#app #pageList \.ax-filter-row/.test(CSS),
+      'mobile filter layout');
+  });
+
+  const fixture = document.createElement('section');
+  fixture.innerHTML = `
+    <input id="searchInput" value="">
+    <select id="typeFilter"><option value="">ทุกประเภท</option><option value="Balance">Balance</option></select>
+    <select id="unitFilter"><option value="">ทุกหน่วยงาน</option><option value="WRM1">WRM1</option></select>
+    <select id="monthFilter"><option value="">ทุกเดือน</option><option value="8">สิงหาคม</option></select>
+    <select id="statusFilter"><option value="">ทุกสถานะ</option><option value="warning">ใกล้ครบ</option></select>
+    <button id="listAdvancedToggle" aria-expanded="false"><span>เปิดหมวดและสถานะ</span></button>
+    <button id="listResetButton" hidden></button>
+    <div id="listFilterSummary" hidden></div>
+    <div id="listAdvancedPanel" hidden></div>`;
+  document.body.appendChild(fixture);
+  eval(LIST_JS);
+
+  t('panel เปิดปิดได้และเริ่มต้นปิด', () => {
+    syncListFilterUi();
+    ok(document.getElementById('listAdvancedPanel').hidden, 'เริ่มต้นต้องปิด');
+    eq(document.getElementById('listAdvancedToggle').getAttribute('aria-expanded'), 'false');
+    listToggleAdvancedFilters();
+    ok(!document.getElementById('listAdvancedPanel').hidden, 'กดแล้วต้องเปิด');
+    eq(document.getElementById('listAdvancedToggle').getAttribute('aria-expanded'), 'true');
+  });
+
+  t('summary แสดงหมวดและสถานะเมื่อปิด panel', () => {
+    document.getElementById('typeFilter').value = 'Balance';
+    document.getElementById('statusFilter').value = 'warning';
+    listToggleAdvancedFilters(false);
+    const summary = document.getElementById('listFilterSummary');
+    ok(!summary.hidden, 'summary ต้องแสดง');
+    has(summary.textContent, 'Balance');
+    has(summary.textContent, 'ใกล้ครบ');
+  });
+
+  t('reset แสดงเมื่อ filter ใด ๆ ทำงานและซ่อนเมื่อว่าง', () => {
+    const reset = document.getElementById('listResetButton');
+    ok(!reset.hidden, 'มี type/status แล้ว reset ต้องแสดง');
+    ['searchInput','typeFilter','unitFilter','monthFilter','statusFilter']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    syncListFilterUi();
+    ok(reset.hidden, 'ไม่มี filter แล้ว reset ต้องซ่อน');
+    document.getElementById('searchInput').value = 'balance';
+    syncListFilterUi();
+    ok(!reset.hidden, 'มีคำค้นแล้ว reset ต้องแสดง');
   });
 
   document.getElementById('out').textContent = results.join('\n');

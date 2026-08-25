@@ -2991,8 +2991,8 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
-        <!-- การ์ดตัวกรอง: ค้นหา → พิลหมวด → ชิปสถานะ -->
-        <div class="ax-filter-card">
+        <!-- การ์ดตัวกรองหลัก + หมวด/สถานะแบบพับได้ -->
+        <div class="ax-filter-card ax-filter-card--list">
           <div class="ax-filter-row">
             <label class="ax-search">
               <span aria-hidden="true">🔍</span>
@@ -3009,8 +3009,7 @@ body.app-mode textarea:focus {
               <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
               <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
             </select>
-            <button type="button" class="ax-ghost-btn" onclick="resetFilters()">ล้างตัวกรอง</button>
-            <!-- สถานะเลือกผ่านชิปด้านล่าง — select นี้เก็บไว้ให้ filterData()/filterByStatus() ใช้ -->
+            <!-- สถานะเลือกผ่านชิปใน panel — select นี้เก็บไว้ให้ filterData()/filterByStatus() ใช้ -->
             <select id="statusFilter" onchange="filterData()" class="ax-hidden-field" tabindex="-1" aria-hidden="true">
               <option value="">ทุกสถานะ</option>
               <option value="overdue">เลยกำหนด</option>
@@ -3019,10 +3018,21 @@ body.app-mode textarea:focus {
               <option value="cancelled">ยกเลิกสอบเทียบ</option>
             </select>
           </div>
-
-          <nav id="listCategoryStrip" class="reg-pills ax-catpills" aria-label="หมวดเครื่องมือ"></nav>
-
-          <div class="ax-chips" id="listStatusChips"></div>
+          <div class="ax-filter-meta">
+            <div id="listFilterSummary" class="ax-filter-summary" aria-live="polite" hidden></div>
+            <div class="ax-filter-meta-actions">
+              <button type="button" id="listResetButton" class="ax-filter-reset" onclick="resetFilters()" hidden>ล้างตัวกรอง</button>
+              <button type="button" id="listAdvancedToggle" class="ax-filter-toggle"
+                      aria-expanded="false" aria-controls="listAdvancedPanel"
+                      onclick="listToggleAdvancedFilters()">
+                <span>เปิดหมวดและสถานะ</span><span aria-hidden="true">⌄</span>
+              </button>
+            </div>
+          </div>
+          <div id="listAdvancedPanel" class="ax-filter-advanced" hidden>
+            <nav id="listCategoryStrip" class="reg-pills ax-catpills" aria-label="หมวดเครื่องมือ"></nav>
+            <div class="ax-chips" id="listStatusChips"></div>
+          </div>
         </div>
 
         <!-- สลับมุมมอง: สเปก / บัญชีรายการ (จอมือถือซ่อนทั้งแท็บและตาราง ใช้การ์ดแทน) -->

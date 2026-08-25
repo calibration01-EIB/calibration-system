@@ -503,6 +503,64 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 .ax-primary-btn:hover { background: var(--accent-h); }
 .ax-hidden-field { display: none !important; }
 
+#app #pageList > .ax-page-head { margin-bottom: 14px; }
+#app #pageList .ax-filter-card--list {
+  gap: 12px; padding: 16px 18px; margin-bottom: 12px;
+}
+#app #pageList .ax-filter-row {
+  display: grid; grid-template-columns: minmax(300px, 1.45fr) repeat(3, minmax(170px, .75fr));
+  gap: 12px;
+}
+#app #pageList .ax-filter-row > .ax-search,
+#app #pageList .ax-filter-row > select { min-width: 0; width: 100%; }
+#app #pageList .ax-filter-meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+#app #pageList .ax-filter-summary {
+  min-width: 0; color: var(--accent-h); font-size: 14px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#app #pageList .ax-filter-meta-actions { display: flex; gap: 8px; margin-left: auto; }
+#app #pageList .ax-filter-toggle,
+#app #pageList .ax-filter-reset {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 38px; padding: 8px 13px; border: 1px solid var(--line);
+  border-radius: var(--r-ctl); background: var(--surface); color: var(--ink2);
+  font: 600 14px/1.2 inherit; cursor: pointer;
+}
+#app #pageList .ax-filter-toggle:hover,
+#app #pageList .ax-filter-reset:hover {
+  border-color: var(--accent-br); color: var(--accent-h); background: var(--accent-light);
+}
+#app #pageList .ax-filter-toggle[aria-expanded="true"] {
+  border-color: var(--accent-br); color: var(--accent-h);
+}
+#app #pageList .ax-filter-summary[hidden],
+#app #pageList .ax-filter-reset[hidden],
+#app #pageList .ax-filter-advanced[hidden] { display: none !important; }
+#app #pageList .ax-filter-advanced {
+  display: flex; flex-direction: column; gap: 14px;
+  padding-top: 14px; border-top: 1px solid #e8f0f5;
+}
+#app #pageList .ax-filter-advanced .ax-catpills { padding-bottom: 14px; }
+#app #pageList .ax-view-tabs { margin-bottom: 12px; }
+
+@media (max-width: 1100px) {
+  #app #pageList .ax-filter-row {
+    grid-template-columns: minmax(260px, 1fr) minmax(180px, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  #app #pageList > .ax-page-head { align-items: flex-start; }
+  #app #pageList .ax-head-actions { width: 100%; }
+  #app #pageList .ax-filter-card--list { padding: 14px; }
+  #app #pageList .ax-filter-row { grid-template-columns: minmax(0, 1fr); }
+  #app #pageList .ax-filter-meta { align-items: stretch; flex-direction: column; }
+  #app #pageList .ax-filter-summary { white-space: normal; }
+  #app #pageList .ax-filter-meta-actions { width: 100%; margin-left: 0; }
+  #app #pageList .ax-filter-toggle { flex: 1; }
+}
+
 /* การ์ดตัวกรอง */
 .ax-filter-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);

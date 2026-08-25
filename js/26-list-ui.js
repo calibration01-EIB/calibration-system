@@ -28,6 +28,55 @@ const LIST_STATUS_CHIPS = [
   { v: 'cancelled', emoji: '⛔', label: 'ยกเลิกสอบเทียบ', bg: '#eef0f3', fg: '#5f6b7a', bd: '#dfe4ea' }
 ];
 
+let listAdvancedFiltersOpen = false;
+
+function listControlValue(id) {
+  const el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+function listGetActiveFilterLabels() {
+  const labels = [];
+  const type = listControlValue('typeFilter');
+  const status = listControlValue('statusFilter');
+  if (type) labels.push(type.split(' (')[0]);
+  if (status) {
+    const chip = LIST_STATUS_CHIPS.find(item => item.v === status);
+    if (chip) labels.push(chip.label);
+  }
+  return labels;
+}
+
+function listHasActiveFilters() {
+  return ['searchInput', 'typeFilter', 'unitFilter', 'monthFilter', 'statusFilter']
+    .some(id => listControlValue(id) !== '');
+}
+
+function syncListFilterUi() {
+  const panel = document.getElementById('listAdvancedPanel');
+  const toggle = document.getElementById('listAdvancedToggle');
+  const summary = document.getElementById('listFilterSummary');
+  const reset = document.getElementById('listResetButton');
+  const labels = listGetActiveFilterLabels();
+
+  if (panel) panel.hidden = !listAdvancedFiltersOpen;
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(listAdvancedFiltersOpen));
+    const label = toggle.querySelector('span');
+    if (label) label.textContent = listAdvancedFiltersOpen ? 'ซ่อนหมวดและสถานะ' : 'เปิดหมวดและสถานะ';
+  }
+  if (summary) {
+    summary.textContent = labels.length ? `กำลังกรอง: ${labels.join(' · ')}` : '';
+    summary.hidden = listAdvancedFiltersOpen || labels.length === 0;
+  }
+  if (reset) reset.hidden = !listHasActiveFilters();
+}
+
+function listToggleAdvancedFilters(force) {
+  listAdvancedFiltersOpen = typeof force === 'boolean' ? force : !listAdvancedFiltersOpen;
+  syncListFilterUi();
+}
+
 /* ---------- helper ---------- */
 
 function listLines(value) {
@@ -313,6 +362,7 @@ function renderListPage() {
   }
 
   renderListStatusChips();
+  syncListFilterUi();
   if (typeof updatePaginationUI === 'function') updatePaginationUI();
   if (typeof updateFileCounts === 'function' && listView === 'spec') updateFileCounts(pageRows);
   if (typeof renderMobileCards === 'function') renderMobileCards();
@@ -326,6 +376,8 @@ renderTable = window.renderTable = renderListPage;
    ซึ่งเร็วกว่าไฟล์นี้ — ตัวที่ทำงานจริงคือของ 03-instruments.js เสมอ */
 
 document.addEventListener('DOMContentLoaded', () => {
+  listAdvancedFiltersOpen = false;
   renderListViewTabs();
   renderListStatusChips();
+  syncListFilterUi();
 });
