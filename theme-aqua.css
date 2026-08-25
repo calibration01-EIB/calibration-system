@@ -224,8 +224,9 @@ a:hover { color: var(--accent-h); }
   background: #eef5f8; display: flex; align-items: stretch;
 }
 .ax-hero-media { position: absolute; inset: 0; }
+.ax-hero-media picture { display: block; width: 100%; height: 100%; }
 .ax-hero-media img {
-  width: 100%; height: 100%; object-fit: cover; object-position: center 58%; display: block;
+  width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;
 }
 .ax-hero-scrim {
   position: absolute; inset: 0; pointer-events: none;
@@ -250,6 +251,7 @@ a:hover { color: var(--accent-h); }
 
 @media (max-width: 1023px) {
   #app .ax-hero--split { height: 220px; }
+  .ax-hero-media img { object-position: center 58%; }
   .ax-hero-copy { width: 58%; padding: 24px 30px; }
   .ax-hero-copy h1 { font-size: 36px; }
   .ax-hero-copy p { font-size: 15px; }
