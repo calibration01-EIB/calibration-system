@@ -218,49 +218,56 @@ a:hover { color: var(--accent-h); }
 .ax-hero img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 
 
-/* hero ของหน้า Home: ข้อความเป็น HTML จริงทับรูปถ่ายที่ไม่มีตัวหนังสือ
-   ขนาดตัวอักษรจึงคงที่ ไม่ผูกกับความกว้างรูป — แบบฝังข้อความในภาพเคยเหลือสูง
-   6.9px ที่จอ 542px จนอ่านไม่ออก และโดนครอปข้างละ 18% ที่จอ 880px
-   scrim ไล่สีน้ำเงินเข้มทับซ้ายเพื่อให้ตัวอักษรขาวอ่านออกบนรูปสว่าง */
+/* hero ของหน้า Home: ภาพเต็มใบ + ข้อความ HTML จริงบนพื้นที่ว่างฝั่งซ้าย */
 .ax-hero--split {
-  position: relative; height: auto; min-height: 300px;
-  background: #12324b; display: flex; align-items: stretch;
+  position: relative; height: 260px; min-height: 0;
+  background: #eef5f8; display: flex; align-items: stretch;
 }
-.ax-hero-media { position: absolute; inset: 0 0 0 42%; }
-.ax-hero-media img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.ax-hero-media { position: absolute; inset: 0; }
+.ax-hero-media img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center 58%; display: block;
+}
 .ax-hero-scrim {
   position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(90deg,
-    #0f2c43 0%, #0f2c43 40%,
-    rgba(15,44,67,.92) 52%,
-    rgba(15,44,67,.35) 72%,
-    rgba(15,44,67,.10) 100%);
+    rgba(247,250,252,.99) 0%, rgba(247,250,252,.96) 32%,
+    rgba(247,250,252,.72) 44%, rgba(247,250,252,.18) 63%, transparent 78%);
 }
 .ax-hero-copy {
-  position: relative; z-index: 1; max-width: 720px; pointer-events: none;
-  padding: 52px 56px; display: flex; flex-direction: column;
-  justify-content: center; gap: 14px;
+  position: relative; z-index: 1; width: min(48%, 650px); pointer-events: none;
+  padding: 30px 48px; display: flex; flex-direction: column;
+  justify-content: center; gap: 8px;
 }
-.ax-hero-kicker { font-family: var(--ff-num); font-weight: 700; font-size: 24px; color: #5fd4c4; }
+.ax-hero-kicker { font-family: var(--ff-num); font-weight: 700; font-size: 20px; color: var(--accent); }
 .ax-hero-copy h1 {
   margin: 0; font-family: var(--ff-num); font-weight: 800;
-  font-size: 60px; line-height: 1.08; letter-spacing: -.015em; color: #fff;
+  font-size: 48px; line-height: 1.05; letter-spacing: -.015em; color: var(--text);
 }
 .ax-hero-copy p {
-  margin: 6px 0 0; font-size: 20px; line-height: 1.55;
-  color: #cfe0ec; max-width: 560px; text-wrap: pretty;
+  margin: 4px 0 0; font-size: 17px; line-height: 1.45;
+  color: var(--text2); max-width: 520px; text-wrap: pretty;
 }
 
-@media (max-width: 900px) {
-  .ax-hero--split { min-height: 240px; }
-  .ax-hero-media { inset: 0; }
+@media (max-width: 1023px) {
+  .ax-hero--split { height: 220px; }
+  .ax-hero-copy { width: 58%; padding: 24px 30px; }
+  .ax-hero-copy h1 { font-size: 36px; }
+  .ax-hero-copy p { font-size: 15px; }
   .ax-hero-scrim {
-    background: linear-gradient(180deg, rgba(15,44,67,.94) 0%, rgba(15,44,67,.86) 55%, rgba(15,44,67,.62) 100%);
+    background: linear-gradient(90deg, rgba(247,250,252,.99) 0%, rgba(247,250,252,.94) 45%, rgba(247,250,252,.30) 72%, transparent 88%);
   }
-  .ax-hero-copy { padding: 32px 24px; max-width: 100%; }
-  .ax-hero-kicker { font-size: 18px; }
-  .ax-hero-copy h1 { font-size: 34px; }
-  .ax-hero-copy p { font-size: 16px; }
+}
+
+@media (max-width: 767px) {
+  .ax-hero--split { height: 180px; }
+  .ax-hero-media img { object-position: 63% 58%; }
+  .ax-hero-copy { width: 68%; padding: 18px 20px; gap: 5px; }
+  .ax-hero-kicker { font-size: 14px; }
+  .ax-hero-copy h1 { font-size: 28px; }
+  .ax-hero-copy p { margin-top: 2px; font-size: 13px; line-height: 1.35; }
+  .ax-hero-scrim {
+    background: linear-gradient(90deg, rgba(247,250,252,.99) 0%, rgba(247,250,252,.96) 55%, rgba(247,250,252,.48) 82%, rgba(247,250,252,.12) 100%);
+  }
 }
 
 .ax-tiles { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 20px; }

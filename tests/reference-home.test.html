@@ -12,7 +12,7 @@ function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new 
 function text(url) {
   return new Promise((res, rej) => {
     const x = new XMLHttpRequest();
-    x.open('GET', url);
+    x.open('GET', url + '?test=' + Date.now());
     x.onload = () => res(x.responseText);
     x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
     x.send();
@@ -25,6 +25,14 @@ function bytes(url) {
     x.onload = () => x.response ? res(new Uint8Array(x.response)) : rej(new Error('ว่าง ' + url));
     x.onerror = () => rej(new Error('อ่านไม่ได้ ' + url));
     x.send();
+  });
+}
+function imageMeta(url) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => rej(new Error('โหลดรูปไม่ได้ ' + url));
+    img.src = url;
   });
 }
 // อ่านหัว PNG: กว้าง สูง bit depth และ color type (byte 25, 6 = RGBA)
@@ -65,7 +73,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
 
   t('ส่วนประกอบหน้า Home ครบ', () => {
     ['id="pageHome"','class="ax-home"','class="ax-hero ax-hero--split"',
-     'src="assets/hero-lab.jpg"','id="axTiles"']
+     'src="assets/home-hero-calibration-lab-v2.webp"','id="axTiles"']
       .forEach(h => has(INDEX, h, 'home'));
   });
 
@@ -97,19 +105,37 @@ const TILE_MIN = 216, TILE_MAX = 512;
     /* รูปที่ฝังข้อความไว้ในตัวมีปัญหา 2 อย่างซึ่งวัดได้จริงมาแล้ว:
        - ขนาดตัวอักษรผูกกับความกว้างรูป จอ 542px บรรทัดรองเหลือสูง 6.9px อ่านไม่ออก
        - object-fit: cover ครอปด้านข้างทิ้ง จอ 880px หายไปข้างละ 18% หัวเรื่องขาด
-       จึงต้องใช้รูปที่ไม่มีตัวหนังสือ (hero-lab.jpg) แล้ววางข้อความเป็น HTML ทับ */
+       จึงต้องใช้รูปที่ไม่มีตัวหนังสือ แล้ววางข้อความเป็น HTML ทับ */
     ['ax-hero-media','ax-hero-scrim','ax-hero-copy','ax-hero-kicker']
       .forEach(c => has(INDEX, c, 'hero'));
     ok(/<h1>Calibration System<\/h1>/.test(INDEX), 'หัวเรื่องต้องเป็น <h1> ใน HTML');
     // ขนาดตัวอักษรต้องเป็นค่าคงที่ ไม่ใช่หน่วยที่ผูกกับความกว้างจอ (vw)
     ok(/\.ax-hero-copy h1\s*\{[^}]*font-size:\s*\d+px/.test(CSS), 'h1 ต้องกำหนดขนาดเป็น px');
-    ok(/@media \(max-width: 900px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*\d+px/.test(CSS),
+    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*\d+px/.test(CSS),
       'มือถือต้องมีขนาดตัวอักษรของตัวเอง');
     // แบนเนอร์แบบฝังข้อความต้องไม่กลับมา
     // เช็คที่ src ไม่ใช่ทั้งไฟล์ — ชื่อไฟล์เดิมยังถูกอ้างในคอมเมนต์เพื่อบอกที่มาของรูปที่ตัดมา
     ok(INDEX.indexOf('src="assets/home-calibration-banner.png"') === -1,
       'index.html ไม่ควรกลับไปใช้แบนเนอร์ที่ฝังข้อความในภาพ');
   });
+
+  t('Hero ใช้ความสูง compact ตาม breakpoint ที่อนุมัติ', () => {
+    ok(/\.ax-hero--split\s*\{[^}]*height:\s*260px/.test(CSS), 'desktop 260px');
+    ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero--split\s*\{[^}]*height:\s*220px/.test(CSS), 'tablet 220px');
+    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero--split\s*\{[^}]*height:\s*180px/.test(CSS), 'mobile 180px');
+    ok(/\.ax-hero-media img\s*\{[^}]*object-fit:\s*cover/.test(CSS), 'image cover');
+  });
+
+  try {
+    const heroBytes = await bytes('../assets/home-hero-calibration-lab-v2.webp');
+    const heroMeta = await imageMeta('../assets/home-hero-calibration-lab-v2.webp');
+    ok(heroBytes.length <= 350 * 1024, 'Hero ใหญ่เกิน 350KB: ' + heroBytes.length);
+    ok(heroMeta.w >= 1600, 'Hero กว้างต่ำกว่า 1600px: ' + heroMeta.w);
+    ok(heroMeta.w / heroMeta.h >= 2.2, 'Hero ไม่ใช่ภาพแนวนอนกว้าง');
+    results.push('PASS Hero WebP คมชัดและไม่เกิน 350KB');
+  } catch (e) {
+    results.push('FAIL Hero WebP คมชัดและไม่เกิน 350KB — ' + e.message);
+  }
 
   // เช็ครูปต้องรอ I/O จึงไม่ใช้ t() (ซึ่งเป็น sync) แต่ทำ try/catch เองแล้ว push ผลตรง ๆ
   try {
@@ -128,11 +154,18 @@ const TILE_MIN = 216, TILE_MAX = 512;
   }
 
   t('รูปหน้า Home อยู่ใน APP_SHELL ครบ', () => {
-    has(SW, './assets/hero-lab.jpg', 'sw');
+    has(SW, './assets/home-hero-calibration-lab-v2.webp', 'sw');
     TILE_ASSETS.forEach(f => has(SW, './assets/tiles/' + f, 'sw'));
     // เดิมเทสต์ผูกเลขเวอร์ชันตายตัว (calibration-app-v136) ทำให้ต้องแก้เทสต์ทุกครั้งที่ bump
     // เช็คแค่รูปแบบพอ — เนื้อหาที่ต้องคุมจริงคือรายการไฟล์ด้านบน
     ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'CACHE_NAME ต้องเป็นรูปแบบ calibration-app-vN');
+  });
+
+  t('รูป Hero ใหม่อยู่ใน APP_SHELL โดยไม่มีรูป Hero เก่าค้าง', () => {
+    has(SW, './assets/home-hero-calibration-lab-v2.webp', 'sw');
+    ok(SW.indexOf('./assets/hero-lab.jpg') === -1, 'hero-lab.jpg ไม่ควรอยู่ใน APP_SHELL');
+    ok(SW.indexOf('./assets/calibration-lab-hero.png') === -1, 'fallback เก่าไม่ควรอยู่ใน APP_SHELL');
+    has(SW, "const CACHE_NAME = 'calibration-app-v143';", 'cache bump');
   });
 
   t('ไม่มีไฟล์กำพร้าใน APP_SHELL (ทุก path ต้องมีคนอ้างถึง)', () => {
