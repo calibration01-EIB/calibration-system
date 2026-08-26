@@ -3,6 +3,7 @@
 <script>
 const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+async function ta(name, fn) { try { await fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
 function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
 function text(url) {
@@ -77,6 +78,40 @@ function text(url) {
     has(CORE, "button.setAttribute('aria-pressed', String(reveal))", 'aria pressed');
     has(CORE, "button.setAttribute('aria-label', reveal ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน')", 'aria label');
     ok(CORE.indexOf("input.value =") === -1, 'toggle ห้ามแก้ค่ารหัสผ่าน');
+  });
+  await ta('runtime login keeps B3 button structure after invalid credentials', async () => {
+    const fixture = document.createElement('div');
+    fixture.hidden = true;
+    fixture.innerHTML = '<input id="loginUsername" value="tester"><input id="loginPassword" type="password" value="sample-secret"><div id="loginError" style="display:none"></div><button class="cal-submit" id="loginBtn"><span>เข้าสู่ระบบ</span><span class="cal-submit-arrow" aria-hidden="true">→</span></button><button class="cal-password-toggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false"></button>';
+    document.body.appendChild(fixture);
+    const calls = [];
+    const runtime = new Function('calCreateClient', 'showToast', CORE + '\nreturn { toggleLoginPassword, doLogin };')(
+      () => ({ rpc: async (name, payload) => { calls.push({ name, payload }); return { data: null, error: null }; } }),
+      () => {}
+    );
+    try {
+      const password = fixture.querySelector('#loginPassword');
+      const passwordToggle = fixture.querySelector('.cal-password-toggle');
+      runtime.toggleLoginPassword(passwordToggle);
+      ok(password.type === 'text', 'toggle ต้องแสดงรหัสผ่าน');
+      ok(passwordToggle.getAttribute('aria-pressed') === 'true', 'toggle ต้องประกาศสถานะแสดง');
+      ok(password.value === 'sample-secret', 'toggle ห้ามแก้ค่ารหัสผ่าน');
+      runtime.toggleLoginPassword(passwordToggle);
+      ok(password.type === 'password', 'toggle ต้องซ่อนรหัสผ่าน');
+      ok(passwordToggle.getAttribute('aria-pressed') === 'false', 'toggle ต้องประกาศสถานะซ่อน');
+      ok(password.value === 'sample-secret', 'toggle ซ้ำห้ามแก้ค่ารหัสผ่าน');
+      const button = fixture.querySelector('#loginBtn');
+      const arrow = button.querySelector('.cal-submit-arrow');
+      await runtime.doLogin();
+      ok(fixture.querySelector('#loginError').style.display === 'block', 'invalid login ต้องแสดงข้อความผิดพลาด');
+      ok(button.disabled === false, 'invalid login ต้องเปิดปุ่มอีกครั้ง');
+      ok(button.querySelector('span:not(.cal-submit-arrow)').textContent === 'เข้าสู่ระบบ', 'label ต้องกลับเป็นข้อความเดิม');
+      ok(button.querySelector('.cal-submit-arrow') === arrow, 'ลูกศรเดิมต้องไม่ถูกแทนที่');
+      ok(calls.length === 1 && calls[0].name === 'app_login', 'ต้องเรียก app_login หนึ่งครั้ง');
+      ok(calls[0].payload.p_username === 'tester' && /^[a-f0-9]{64}$/.test(calls[0].payload.p_password_hash), 'RPC payload ต้องมี username และ password hash');
+    } finally {
+      fixture.remove();
+    }
   });
   document.getElementById('out').textContent = results.join('\n');
   document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';

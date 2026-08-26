@@ -35,13 +35,18 @@ function toggleLoginPassword(button) {
   button.setAttribute('aria-label', reveal ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
 }
 
+function setLoginButtonLabel(button, text) {
+  const label = button.querySelector('span:not(.cal-submit-arrow)');
+  if (label) label.textContent = text;
+}
+
 async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
   if (!username || !password) return;
 
   const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+  btn.disabled = true; setLoginButtonLabel(btn, 'กำลังตรวจสอบ...');
   document.getElementById('loginError').style.display = 'none';
 
   try {
@@ -62,7 +67,7 @@ async function doLogin() {
   } catch(e) {
     showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
   } finally {
-    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+    btn.disabled = false; setLoginButtonLabel(btn, 'เข้าสู่ระบบ');
   }
 }
 
