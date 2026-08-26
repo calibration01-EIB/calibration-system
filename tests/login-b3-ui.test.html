@@ -53,6 +53,13 @@ function text(url) {
     has(SW, "'./assets/calibration-lab-hero.png'", 'login hero cache');
     ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'cache version');
   });
+  t('ปุ่มแสดงรหัสผ่านเปลี่ยนเฉพาะ type และ aria', () => {
+    has(CORE, 'function toggleLoginPassword(button)', 'toggle helper');
+    has(CORE, "input.type = reveal ? 'text' : 'password'", 'type toggle');
+    has(CORE, "button.setAttribute('aria-pressed', String(reveal))", 'aria pressed');
+    has(CORE, "button.setAttribute('aria-label', reveal ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน')", 'aria label');
+    ok(CORE.indexOf("input.value =") === -1, 'toggle ห้ามแก้ค่ารหัสผ่าน');
+  });
   document.getElementById('out').textContent = results.join('\n');
   document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
 })();

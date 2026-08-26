@@ -26,6 +26,15 @@ async function sha256(str) {
 // ====================================================
 // LOGIN
 // ====================================================
+function toggleLoginPassword(button) {
+  const input = document.getElementById('loginPassword');
+  if (!input || !button) return;
+  const reveal = input.type === 'password';
+  input.type = reveal ? 'text' : 'password';
+  button.setAttribute('aria-pressed', String(reveal));
+  button.setAttribute('aria-label', reveal ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+}
+
 async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
