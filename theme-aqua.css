@@ -373,11 +373,6 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 .plan-panel-title i { color: var(--accent) !important; }
 .status-dot.ok { background: var(--accent) !important; }
 
-/* login ให้เข้าโทน navy/teal */
-#loginPage {
-  background: linear-gradient(145deg,var(--navy-1) 0%,var(--navy-2) 52%,var(--accent) 100%) !important;
-}
-
 /* ---------- 7b) DASHBOARD ตามดีไซน์ ---------- */
 .ax-ghost-btn {
   display: flex; align-items: center; gap: 9px; padding: 12px 20px;
