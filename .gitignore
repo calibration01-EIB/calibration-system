@@ -7,6 +7,7 @@ constanb.ttf
 constani.ttf
 constanz.ttf
 .superpowers/
+.worktrees/
 
 # preview harness (dev only)
 __inside_preview.html
