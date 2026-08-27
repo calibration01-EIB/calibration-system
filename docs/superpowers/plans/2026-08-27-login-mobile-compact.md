@@ -39,8 +39,8 @@ Add this test after the existing `stage เกือบเต็ม viewport แ
   t('Mobile Compact ใช้ขนาดจริงและคง touch target', () => {
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-card\{[^}]*transform:\s*none[^}]*width:\s*min\(calc\(100%\s*-\s*44px\),390px\)[^}]*padding:\s*26px 22px/.test(INDEX), 'mobile card uses real width and padding without scale');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-logo img\{[^}]*width:\s*min\(224px,82%\)/.test(INDEX), 'mobile logo 224px');
-    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-control\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile control 46px');
-    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-input\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile input 46px');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-control\{[^}]*height:\s*46px[^}]*min-height:\s*46px/.test(INDEX), 'mobile control visible height 46px');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-input\{[^}]*min-height:\s*44px/.test(INDEX), 'mobile input fits inside bordered control');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-password-toggle\{[^}]*width:\s*44px[^}]*height:\s*44px/.test(INDEX), 'password toggle 44px');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-submit\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile submit 46px');
     ok(/@media\(max-width:420px\)\{[\s\S]*?\.cal-login-card\{[^}]*width:\s*calc\(100%\s*-\s*48px\)[^}]*padding:\s*24px 16px/.test(INDEX), 'small mobile card gutters and padding');
@@ -75,9 +75,9 @@ Use this CSS, keeping it inside `<style id="calibrationLoginRefresh">`:
   .cal-login-logo img{width:min(224px,82%)}
   .cal-field{gap:7px;margin-bottom:16px}
   .cal-field label{font-size:12px}
-  .cal-control{min-height:46px;padding:0 14px}
+  .cal-control{height:46px;min-height:46px;padding:0 14px}
   .cal-control--password{padding-right:52px}
-  .cal-login-input{min-height:46px;font-size:13px}
+  .cal-login-input{min-height:44px;font-size:13px}
   .cal-password-toggle{right:4px;width:44px;height:44px}
   .cal-submit{min-height:46px;font-size:13px}
   .cal-support{margin-top:14px;padding:10px 13px;font-size:10px}
