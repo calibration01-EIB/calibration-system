@@ -13,10 +13,10 @@ function text(url) {
   });
 }
 (async () => {
-  let INDEX, CORE, CSS, SW;
+  let INDEX, CORE, ROUTER, CSS, SW;
   try {
-    [INDEX, CORE, CSS, SW] = await Promise.all([
-      text('../index.html'), text('../js/01-core.js'), text('../theme-aqua.css'), text('../sw.js')
+    [INDEX, CORE, ROUTER, CSS, SW] = await Promise.all([
+      text('../index.html'), text('../js/01-core.js'), text('../js/10-router.js'), text('../theme-aqua.css'), text('../sw.js')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -61,14 +61,18 @@ function text(url) {
   t('stage เป็น Full-Bleed และการ์ด Desktop ยังคงกะทัดรัด', () => {
     ok(/#loginPage\s*\{[^}]*min-height:\s*100svh[^}]*display:\s*block!important[^}]*padding:\s*0[^}]*overflow-x:\s*hidden[^}]*overflow-y:\s*auto/.test(INDEX),
       'login page ต้องเต็ม viewport และเลื่อนเฉพาะแนวตั้ง');
+    ok(/body\.login-mode\s+#loginPage\s*\{[^}]*display:\s*block\s*!important/.test(INDEX),
+      'login-mode ต้องไม่ทับ page กลับเป็น grid ซึ่งทำให้ mobile width 100% ยุบ');
+    has(ROUTER, "document.getElementById('loginPage')?.style.setProperty('display', 'block', 'important')",
+      'router ต้องเปิด login ด้วย block เพื่อไม่ทับ Full-Bleed layout');
     ok(/\.cal-login-stage\s*\{[^}]*width:\s*100vw[^}]*max-width:\s*none[^}]*height:\s*100svh[^}]*min-height:\s*604px[^}]*border-radius:\s*0[^}]*box-shadow:\s*none/.test(INDEX),
       'desktop stage ต้องเต็มจอ ไม่มีกรอบโค้งและเงานอก');
     ok(!/\.cal-login-stage\s*\{[^}]*max-width:\s*1180px/.test(INDEX),
       'stage ต้องไม่จำกัดความกว้าง 1180px');
     ok(/\.cal-login-card\s*\{[^}]*right:\s*clamp\(24px,3vw,56px\)[^}]*top:\s*50%[^}]*bottom:\s*auto[^}]*width:\s*398px[^}]*height:\s*552px[^}]*transform:\s*translateY\(-50%\)/.test(INDEX),
       'desktop card ต้องกว้าง 398px สูง 552px และอยู่กึ่งกลางแนวตั้ง');
-    ok(/@media\(max-width:820px\)\s*\{[\s\S]*?\.cal-login-stage\s*\{[^}]*width:\s*100vw[^}]*height:\s*max\(690px,100svh\)[^}]*min-height:\s*690px/.test(INDEX),
-      'mobile stage ต้องเต็มกว้างและสูงอย่างน้อย 690px');
+    ok(/@media\(max-width:820px\)\s*\{[\s\S]*?\.cal-login-stage\s*\{[^}]*width:\s*100%[^}]*height:\s*max\(690px,100svh\)[^}]*min-height:\s*690px/.test(INDEX),
+      'mobile stage ต้องเต็ม client width โดยไม่รวม scrollbar และสูงอย่างน้อย 690px');
     ok(/@media\(max-width:820px\)\s*\{[\s\S]*?\.cal-login-card\s*\{[^}]*left:\s*15px[^}]*right:\s*15px[^}]*top:\s*96px[^}]*bottom:\s*auto[^}]*width:\s*auto[^}]*height:\s*579px[^}]*transform:\s*none/.test(INDEX),
       'mobile card ต้องใช้ gutter 15px และไม่ใช้ desktop centering');
   });

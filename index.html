@@ -856,7 +856,7 @@ html,body{overflow-x:hidden;}#loadingOverlay{display:none;position:fixed;inset:0
 .cal-field{display:grid;gap:6px;margin-bottom:13px}.cal-field label{color:#2c4e60;font-size:12px;font-weight:850}.cal-control{position:relative;display:flex;align-items:center;min-height:50px;padding:0 42px 0 46px;border:1.5px solid #d1e1e6;border-radius:12px;background:#fff;box-shadow:0 5px 14px rgba(22,68,88,.035)}.cal-control:focus-within{border-color:#21ada3;box-shadow:0 0 0 4px rgba(33,173,163,.10)}.cal-input-icon{position:absolute;left:13px;width:23px;height:23px;display:grid;place-items:center;border-radius:7px;background:#e9f7f5;color:#078e84;font-size:12px;font-weight:900}.cal-login-input{width:100%;min-height:50px;border:0!important;outline:0!important;background:transparent!important;padding:0!important;color:#17384a!important}.cal-password-toggle{position:absolute;right:9px;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:#68818e;cursor:pointer}
 .cal-login-card .alert-error{display:none;margin:0 0 13px;padding:9px 11px;border-radius:10px;background:#fdecea;color:#bf4e37;border:1px solid #f5c6c4;font-size:12px}.cal-submit{width:100%;min-height:50px;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:12px;background:linear-gradient(135deg,#008e83,#1bb9ad);color:#fff;box-shadow:0 13px 27px rgba(0,142,131,.24);font-size:13px;font-weight:900;cursor:pointer}.cal-submit-arrow{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.16)}
 .cal-support{margin-top:15px;padding:10px 11px;display:flex;align-items:center;gap:9px;border-radius:11px;background:#f1f8f8;color:#607985;font-size:10px}.cal-support>span{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:#fff;color:#078e84}.cal-support p{margin:0}.cal-support b{color:#087f77}.cal-login-meta{display:flex;justify-content:space-between;margin-top:auto;padding-top:11px;color:#8aa0aa;font-size:9px;letter-spacing:.04em}
-@media(max-width:820px){#loginPage{padding:0}.cal-login-stage{width:100vw;height:max(690px,100svh);min-height:690px}.cal-login-topline{left:18px;right:18px}.cal-secure,.cal-login-brand{display:none}.cal-company-logo img{width:180px}.cal-login-card{left:15px;right:15px;top:96px;bottom:auto;width:auto;height:579px;transform:none}}
+@media(max-width:820px){#loginPage{padding:0}.cal-login-stage{width:100%;height:max(690px,100svh);min-height:690px}.cal-login-topline{left:18px;right:18px}.cal-secure,.cal-login-brand{display:none}.cal-company-logo img{width:180px}.cal-login-card{left:15px;right:15px;top:96px;bottom:auto;width:auto;height:579px;transform:none}}
 @media(max-width:420px){.cal-login-card{padding:20px 18px 17px}.cal-login-heading h2{font-size:24px}.cal-company-logo img{width:160px}}
 </style>
 <style id="calibrationLoginB3Safety">
@@ -865,7 +865,7 @@ html,body{overflow-x:hidden;}#loadingOverlay{display:none;position:fixed;inset:0
 <style id="codexDashboardPolish">
 body.app-mode #loginPage { display: none !important; }
 body.app-mode #app { display: block !important; }
-body.login-mode #loginPage { display: grid !important; }
+body.login-mode #loginPage { display: block !important; }
 body.login-mode #app { display: none !important; }
 :root {
   --bg: #f4f8f7;
