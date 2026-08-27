@@ -13,10 +13,10 @@ function text(url) {
   });
 }
 (async () => {
-  let INDEX, CORE, CSS, SW;
+  let INDEX, CORE, ROUTER, CSS, SW;
   try {
-    [INDEX, CORE, CSS, SW] = await Promise.all([
-      text('../index.html'), text('../js/01-core.js'), text('../theme-aqua.css'), text('../sw.js')
+    [INDEX, CORE, ROUTER, CSS, SW] = await Promise.all([
+      text('../index.html'), text('../js/01-core.js'), text('../js/10-router.js'), text('../theme-aqua.css'), text('../sw.js')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -70,6 +70,8 @@ function text(url) {
   });
   t('stage เกือบเต็ม viewport และ mobile ไม่ล้น', () => {
     ok(/#loginPage\s*\{[^}]*padding:\s*8px/.test(INDEX), 'outer safe spacing 8px');
+    has(ROUTER, "document.getElementById('loginPage')?.style.setProperty('display', 'block', 'important')",
+      'router ต้องเปิด login ด้วย block เพื่อรักษาความกว้างบน mobile');
     ok(/\.cal-login-stage\s*\{[^}]*width:\s*calc\(100vw\s*-\s*16px\)[^}]*min-height:\s*calc\(100svh\s*-\s*16px\)/.test(INDEX), 'near-full viewport stage');
     ok(/\.cal-login-stage\s*\{[^}]*border-radius:\s*24px/.test(INDEX), 'stage radius 24px');
     ok(/\.cal-login-card\s*\{[^}]*top:\s*50%[^}]*transform:\s*translateY\(-50%\)/.test(INDEX), 'desktop card vertical center');

@@ -487,7 +487,7 @@ function bootApp() {
   } else {
     document.body.classList.add('login-mode');
     document.body.classList.remove('app-mode');
-    document.getElementById('loginPage')?.style.setProperty('display', 'grid', 'important');
+    document.getElementById('loginPage')?.style.setProperty('display', 'block', 'important');
     document.getElementById('app')?.style.setProperty('display', 'none', 'important');
   }
 }
