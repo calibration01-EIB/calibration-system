@@ -77,7 +77,17 @@ function text(url) {
     ok(/\.cal-login-card\s*\{[^}]*top:\s*50%[^}]*transform:\s*translateY\(-50%\)/.test(INDEX), 'desktop card vertical center');
     ok(/\.cal-login-card\s*\{[^}]*height:\s*clamp\(560px,65svh,670px\)[^}]*min-height:\s*560px/.test(INDEX), 'desktop card capped responsive height');
     ok(/@media\(max-width:820px\)\s*\{[\s\S]*?\.cal-login-brand\s*\{[^}]*display:\s*none/.test(INDEX), 'mobile hides editorial brand');
-    ok(/@media\(max-width:420px\)\s*\{[\s\S]*?\.cal-login-card\s*\{[^}]*width:\s*calc\(100%\s*-\s*20px\)/.test(INDEX), '320px card gutters');
+    ok(/@media\(max-width:420px\)\s*\{[\s\S]*?\.cal-login-card\s*\{[^}]*width:\s*calc\(100%\s*-\s*48px\)/.test(INDEX), '320px compact card gutters');
+  });
+  t('Mobile Compact ใช้ขนาดจริงและคง touch target', () => {
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-card\{[^}]*transform:\s*none[^}]*width:\s*min\(calc\(100%\s*-\s*44px\),390px\)[^}]*padding:\s*26px 22px/.test(INDEX), 'mobile card uses real width and padding without scale');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-logo img\{[^}]*width:\s*min\(224px,82%\)/.test(INDEX), 'mobile logo 224px');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-control\{[^}]*height:\s*46px[^}]*min-height:\s*46px/.test(INDEX), 'mobile control visible height 46px');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-input\{[^}]*min-height:\s*44px/.test(INDEX), 'mobile input fits inside bordered control');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-password-toggle\{[^}]*width:\s*44px[^}]*height:\s*44px/.test(INDEX), 'password toggle 44px');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-submit\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile submit 46px');
+    ok(/@media\(max-width:420px\)\{[\s\S]*?\.cal-login-card\{[^}]*width:\s*calc\(100%\s*-\s*48px\)[^}]*padding:\s*24px 16px/.test(INDEX), 'small mobile card gutters and padding');
+    ok(/@media\(max-width:420px\)\{[\s\S]*?\.cal-login-logo img\{[^}]*width:\s*190px/.test(INDEX), 'small mobile logo 190px');
   });
   t('theme ภายนอกไม่ทับ Hero ใหม่', () => {
     ok(!/#loginPage\s*\{[^}]*background:\s*linear-gradient\(145deg,var\(--navy-1\)/.test(CSS), 'theme-aqua ยังทับพื้นหลัง login');
