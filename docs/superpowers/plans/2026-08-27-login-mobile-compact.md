@@ -37,8 +37,7 @@ Add this test after the existing `stage เกือบเต็ม viewport แ
 
 ```html
   t('Mobile Compact ใช้ขนาดจริงและคง touch target', () => {
-    ok(!/@media\(max-width:820px\)[\s\S]*?transform:\s*scale\(/.test(INDEX), 'mobile ห้ามใช้ transform scale');
-    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-card\{[^}]*width:\s*min\(calc\(100%\s*-\s*44px\),390px\)[^}]*padding:\s*26px 22px/.test(INDEX), 'mobile card width and padding');
+    ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-card\{[^}]*transform:\s*none[^}]*width:\s*min\(calc\(100%\s*-\s*44px\),390px\)[^}]*padding:\s*26px 22px/.test(INDEX), 'mobile card uses real width and padding without scale');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-logo img\{[^}]*width:\s*min\(224px,82%\)/.test(INDEX), 'mobile logo 224px');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-control\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile control 46px');
     ok(/@media\(max-width:820px\)\{[\s\S]*?\.cal-login-input\{[^}]*min-height:\s*46px/.test(INDEX), 'mobile input 46px');
