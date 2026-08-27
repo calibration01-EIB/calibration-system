@@ -208,12 +208,12 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'CACHE_NAME ต้องเป็นรูปแบบ calibration-app-vN');
   });
 
-  t('Home Hero และ Login Hero อยู่ใน APP_SHELL v146 ครบ', () => {
+  t('Home Hero และ Login Hero อยู่ใน APP_SHELL v147 ครบ', () => {
     has(SW, './assets/home-hero-calibration-lab-wide.webp', 'desktop home hero');
     has(SW, './assets/home-hero-calibration-lab-v2.webp', 'home hero');
     has(SW, './assets/calibration-lab-hero.png', 'login and splash hero');
     ok(SW.indexOf('./assets/hero-lab.jpg') === -1, 'hero-lab.jpg ไม่ควรอยู่ใน APP_SHELL');
-    has(SW, "const CACHE_NAME = 'calibration-app-v146';", 'cache bump');
+    has(SW, "const CACHE_NAME = 'calibration-app-v147';", 'cache bump');
   });
 
   t('ไม่มีไฟล์กำพร้าใน APP_SHELL (ทุก path ต้องมีคนอ้างถึง)', () => {
