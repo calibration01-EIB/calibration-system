@@ -75,9 +75,9 @@ function text(url) {
   t('theme ภายนอกไม่ทับ Hero ใหม่', () => {
     ok(!/#loginPage\s*\{[^}]*background:\s*linear-gradient\(145deg,var\(--navy-1\)/.test(CSS), 'theme-aqua ยังทับพื้นหลัง login');
   });
-  t('offline cache มี Hero ของ Login', () => {
+  t('offline cache มี Login Hero และใช้ namespace v146', () => {
     has(SW, "'./assets/calibration-lab-hero.png'", 'login hero cache');
-    ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'cache version');
+    has(SW, "const CACHE_NAME = 'calibration-app-v146';", 'cache v146');
   });
   t('ปุ่มแสดงรหัสผ่านเปลี่ยนเฉพาะ type และ aria', () => {
     has(CORE, 'function toggleLoginPassword(button)', 'toggle helper');
