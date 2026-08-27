@@ -2714,29 +2714,18 @@ body.app-mode textarea:focus {
 <!-- LOGIN -->
 <div id="loginPage">
   <section class="cal-login-stage" aria-label="ระบบบริหารจัดการงานสอบเทียบ">
-    <div class="cal-login-topline">
-      <span class="cal-company-logo"><img src="assets/ilc-logo-full.png" alt="International Laboratories Corp., Ltd."></span>
-      <span class="cal-secure"><i aria-hidden="true"></i> SECURE CALIBRATION PORTAL</span>
+    <div class="cal-login-brand" aria-label="Welcome to Calibration Management System">
+      <span class="cal-brand-welcome">WELCOME</span>
+      <strong class="cal-brand-calibration">CALIBRATION</strong>
+      <span class="cal-brand-system">MANAGEMENT SYSTEM</span>
     </div>
-    <div class="cal-login-brand">
-      <p class="cal-brand-eyebrow">ILC DIGITAL LABORATORY</p>
-      <h1>Calibration<span>Management System</span></h1>
-      <div class="cal-brand-rule" aria-hidden="true"></div>
-      <p class="cal-brand-tagline">Precision you can trust.</p>
-      <p class="cal-brand-thai">ระบบบริหารจัดการงานสอบเทียบที่แม่นยำ เป็นระบบ และตรวจสอบย้อนหลังได้</p>
-    </div>
-    <div class="cal-login-card">
-      <div class="cal-login-status"><span><i aria-hidden="true"></i> ระบบพร้อมใช้งาน</span><b>ILC · INTERNAL</b></div>
-      <div class="cal-login-heading">
-        <span class="cal-ilc-mark" data-login-ilc-crop aria-hidden="true"><img src="assets/ilc-logo-full.png" alt=""></span>
-        <div><h2>เข้าสู่ระบบ</h2><p>Calibration Management Portal</p></div>
-      </div>
+    <div class="cal-login-card" aria-label="เข้าสู่ระบบ">
+      <div class="cal-login-logo"><img src="assets/ilc-logo-full.png" alt="International Laboratories Corp., Ltd."></div>
+      <div class="cal-field"><label for="loginUsername">Username</label><div class="cal-control"><input class="cal-login-input" type="text" id="loginUsername" placeholder="รหัสพนักงานหรือชื่อผู้ใช้" autocomplete="username"></div></div>
+      <div class="cal-field"><label for="loginPassword">Password</label><div class="cal-control cal-control--password"><input class="cal-login-input" type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()"><button type="button" class="cal-password-toggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false" onclick="toggleLoginPassword(this)">◉</button></div></div>
       <div class="alert alert-error" id="loginError">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
-      <div class="cal-field"><label for="loginUsername">ชื่อผู้ใช้</label><div class="cal-control"><span class="cal-input-icon" aria-hidden="true">U</span><input class="cal-login-input" type="text" id="loginUsername" placeholder="รหัสพนักงานหรือชื่อผู้ใช้" autocomplete="username"></div></div>
-      <div class="cal-field"><label for="loginPassword">รหัสผ่าน</label><div class="cal-control cal-control--password"><span class="cal-input-icon" aria-hidden="true">•</span><input class="cal-login-input" type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()"><button type="button" class="cal-password-toggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false" onclick="toggleLoginPassword(this)">◉</button></div></div>
-      <button class="cal-submit" id="loginBtn" onclick="doLogin()"><span>เข้าสู่ระบบ</span><span class="cal-submit-arrow" aria-hidden="true">→</span></button>
-      <div class="cal-support"><span aria-hidden="true">?</span><p>พบปัญหาในการเข้าสู่ระบบ<br><b>ติดต่อผู้ดูแลระบบ 7401, 7402</b></p></div>
-      <div class="cal-login-meta"><span>AUTHORIZED EMPLOYEE ACCESS</span><span>v2.0</span></div>
+      <button class="cal-submit" id="loginBtn" onclick="doLogin()"><span>เข้าสู่ระบบ</span></button>
+      <div class="cal-support"><p>พบปัญหาในการเข้าสู่ระบบ<br><b>ติดต่อผู้ดูแลระบบ 7401, 7402</b></p></div>
     </div>
   </section>
 </div>

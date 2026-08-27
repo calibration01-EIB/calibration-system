@@ -22,24 +22,31 @@ function text(url) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
     document.title = 'FAIL'; return;
   }
-  t('โครงสร้าง B3 Clean Frost ครบ', () => {
+  const LOGIN = INDEX.slice(INDEX.indexOf('<!-- LOGIN -->'), INDEX.indexOf('<!-- APP -->'));
+  t('โครงสร้าง Editorial Glass ครบ', () => {
     ['class="cal-login-stage"','class="cal-login-brand"','class="cal-login-card"',
-     'class="cal-login-status"','class="cal-ilc-mark"','class="cal-support"']
+     'class="cal-login-logo"','class="cal-support"']
       .forEach(token => has(INDEX, token, 'login markup'));
-    has(INDEX, 'Calibration<span>Management System</span>', 'system title');
-    has(INDEX, 'Precision you can trust.', 'tagline');
+    has(INDEX, '<span class="cal-brand-welcome">WELCOME</span>', 'welcome line');
+    has(INDEX, '<strong class="cal-brand-calibration">CALIBRATION</strong>', 'calibration line');
+    has(INDEX, '<span class="cal-brand-system">MANAGEMENT SYSTEM</span>', 'system line');
+    has(INDEX, '<label for="loginUsername">Username</label>', 'Username label');
+    has(INDEX, '<label for="loginPassword">Password</label>', 'Password label');
   });
-  t('ใช้ asset ภายในเครื่องและตรา ILC ที่อนุมัติ', () => {
-    has(INDEX, 'src="assets/ilc-logo-full.png"', 'ILC logo');
+  t('ใช้ asset ภายในเครื่องและตัดองค์ประกอบ B3 ที่ไม่อนุมัติ', () => {
+    has(INDEX, 'src="assets/ilc-logo-full.png"', 'full ILC logo');
     has(INDEX, 'assets/calibration-lab-hero.png', 'hero');
-    has(INDEX, 'data-login-ilc-crop', 'ILC crop hook');
-    ok(/\.cal-ilc-mark img\s*\{[^}]*left:\s*6px[^}]*top:\s*5px/.test(INDEX), 'ตำแหน่ง ILC ต้องเป็น 6px / 5px');
+    ['cal-login-status','cal-ilc-mark','cal-login-heading','cal-submit-arrow',
+     'cal-login-meta','Precision you can trust.','ILC DIGITAL LABORATORY','ILC · INTERNAL']
+      .forEach(token => ok(LOGIN.indexOf(token) === -1, 'ยังพบองค์ประกอบเก่า ' + token));
   });
   t('integration Login เดิมยังครบ', () => {
     ['id="loginError"','id="loginUsername"','id="loginPassword"','id="loginBtn"',
-     "if(event.key==='Enter') doLogin()",'onclick="doLogin()"']
+     "if(event.key==='Enter') doLogin()",'onclick="doLogin()"',
+     'onclick="toggleLoginPassword(this)"']
       .forEach(token => has(INDEX, token, 'login integration'));
     has(CORE, 'async function doLogin()', 'doLogin');
+    has(CORE, 'function toggleLoginPassword(button)', 'password toggle');
   });
   t('responsive และ touch target ครบ', () => {
     ok(/@media\(max-width:820px\)/.test(INDEX), 'ต้องมี mobile breakpoint 820px');
@@ -79,10 +86,10 @@ function text(url) {
     has(CORE, "button.setAttribute('aria-label', reveal ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน')", 'aria label');
     ok(CORE.indexOf("input.value =") === -1, 'toggle ห้ามแก้ค่ารหัสผ่าน');
   });
-  await ta('runtime login keeps B3 button structure after invalid credentials', async () => {
+  await ta('runtime login keeps editorial submit label after invalid credentials', async () => {
     const fixture = document.createElement('div');
     fixture.hidden = true;
-    fixture.innerHTML = '<input id="loginUsername" value="tester"><input id="loginPassword" type="password" value="sample-secret"><div id="loginError" style="display:none"></div><button class="cal-submit" id="loginBtn"><span>เข้าสู่ระบบ</span><span class="cal-submit-arrow" aria-hidden="true">→</span></button><button class="cal-password-toggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false"></button>';
+    fixture.innerHTML = '<input id="loginUsername" value="tester"><input id="loginPassword" type="password" value="sample-secret"><div id="loginError" style="display:none"></div><button class="cal-submit" id="loginBtn"><span>เข้าสู่ระบบ</span></button><button class="cal-password-toggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false"></button>';
     document.body.appendChild(fixture);
     const calls = [];
     const runtime = new Function('calCreateClient', 'showToast', CORE + '\nreturn { toggleLoginPassword, doLogin };')(
@@ -101,12 +108,11 @@ function text(url) {
       ok(passwordToggle.getAttribute('aria-pressed') === 'false', 'toggle ต้องประกาศสถานะซ่อน');
       ok(password.value === 'sample-secret', 'toggle ซ้ำห้ามแก้ค่ารหัสผ่าน');
       const button = fixture.querySelector('#loginBtn');
-      const arrow = button.querySelector('.cal-submit-arrow');
       await runtime.doLogin();
       ok(fixture.querySelector('#loginError').style.display === 'block', 'invalid login ต้องแสดงข้อความผิดพลาด');
       ok(button.disabled === false, 'invalid login ต้องเปิดปุ่มอีกครั้ง');
-      ok(button.querySelector('span:not(.cal-submit-arrow)').textContent === 'เข้าสู่ระบบ', 'label ต้องกลับเป็นข้อความเดิม');
-      ok(button.querySelector('.cal-submit-arrow') === arrow, 'ลูกศรเดิมต้องไม่ถูกแทนที่');
+      ok(button.querySelector('span').textContent === 'เข้าสู่ระบบ', 'label ต้องกลับเป็นข้อความเดิม');
+      ok(button.querySelector('.cal-submit-arrow') === null, 'ปุ่มใหม่ต้องไม่มีลูกศร B3');
       ok(calls.length === 1 && calls[0].name === 'app_login', 'ต้องเรียก app_login หนึ่งครั้ง');
       ok(calls[0].payload.p_username === 'tester' && /^[a-f0-9]{64}$/.test(calls[0].payload.p_password_hash), 'RPC payload ต้องมี username และ password hash');
     } finally {
