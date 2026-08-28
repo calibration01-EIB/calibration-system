@@ -98,4 +98,3 @@ git diff --check
 ```
 
 Expected: ทุกคำสั่ง exit `0` และ Browser suite ไม่มี `FAIL`
-
