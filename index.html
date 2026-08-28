@@ -2825,6 +2825,8 @@ body.app-mode textarea:focus {
               </div>
             </div>
 
+            <button type="button" class="ax-mobile-logout" onclick="doLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ">↩</button>
+
             <div class="db-status"><div class="status-dot" id="statusDot"></div><span id="statusText">กำลังเชื่อมต่อ...</span></div>
           </div>
         </div>
@@ -4129,46 +4131,26 @@ body.app-mode textarea:focus {
       </div>
 
 <!-- BOTTOM NAV (mobile only) -->
-<div class="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1E1E1E;border-top:1px solid #333;z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px)">
-  <div class="mobile-nav-item" data-page="dashboard" onclick="showPage('dashboard')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📊</div>
-    <div style="font-size:10px;color:#69F0AE;font-weight:600">Dashboard</div>
-  </div>
-  <div class="mobile-nav-item" data-page="list" onclick="showPage('list')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📑</div>
-    <div style="font-size:10px;color:#888">รายการ</div>
-  </div>
-  <div class="mobile-nav-item" data-page="plan" onclick="showPage('plan')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📅</div>
-    <div style="font-size:10px;color:#888">วางแผน</div>
-  </div>
-  <div class="mobile-nav-item" data-page="admin" onclick="showPage('admin')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-admin">
-    <div style="font-size:22px">👥</div>
-    <div style="font-size:10px;color:#888">ผู้ใช้</div>
-  </div>
-  <div class="mobile-nav-item" data-page="audit" onclick="showPage('audit')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;display:none" id="bnav-audit">
-    <div style="font-size:22px">📋</div>
-    <div style="font-size:10px;color:#888">Audit Log</div>
-  </div>
-  <div class="mobile-nav-item" data-page="cert" onclick="showPage('cert')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">🏷️</div>
-    <div style="font-size:10px;color:#888">Cert</div>
-  </div>
-  <div class="mobile-nav-item" data-page="calrecs" onclick="showPage('calrecs')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📋</div>
-    <div style="font-size:10px;color:#888">ติดตามผล</div>
-  </div>
-  <div class="mobile-nav-item" data-page="repairs" onclick="showPage('repairs')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer;position:relative">
-    <div style="font-size:18px">🔧</div><div style="font-size:10px">งานซ่อม</div>
-    <span id="bnavRepairBadge" style="display:none;position:absolute;top:2px;right:18%;background:#E53935;color:#fff;font-size:9px;font-weight:600;padding:0 5px;border-radius:20px">0</span>
-  </div>
-  <div class="mobile-nav-item" data-page="weights" onclick="showPage('weights')" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">📜</div>
-    <div style="font-size:10px;color:#888">Cert Ref</div>
-  </div>
-  <div class="mobile-nav-item" onclick="doLogout()" style="flex:1;text-align:center;padding:6px 0;cursor:pointer">
-    <div style="font-size:22px">↩️</div>
-    <div style="font-size:10px;color:#888">ออกจากระบบ</div>
+<div class="bottom-nav" style="display:none">
+  <button type="button" class="mobile-nav-item" data-page="home" onclick="showPage('home')"><span>⌂</span><span>หน้าแรก</span></button>
+  <button type="button" class="mobile-nav-item" data-page="list" onclick="showPage('list')"><span>📑</span><span>รายการ</span></button>
+  <button type="button" class="mobile-nav-item" data-page="plan" onclick="showPage('plan')"><span>📅</span><span>วางแผน</span></button>
+  <button type="button" class="mobile-nav-item" data-page="calrecs" onclick="showPage('calrecs')"><span>📋</span><span>ติดตาม</span></button>
+  <button type="button" class="mobile-nav-item" id="axMobileMoreBtn" onclick="toggleAxMobileMore(event)" aria-haspopup="dialog" aria-expanded="false"><span>•••</span><span>เพิ่มเติม</span></button>
+</div>
+
+<div class="ax-mobile-more" id="axMobileMore" aria-hidden="true">
+  <button type="button" class="ax-mobile-more-scrim" onclick="closeAxMobileMore()" aria-label="ปิดเมนูเพิ่มเติม"></button>
+  <div class="ax-mobile-more-sheet" role="dialog" aria-modal="true" aria-label="เมนูเพิ่มเติม">
+    <div class="ax-mobile-more-head"><strong>เมนูเพิ่มเติม</strong><button type="button" onclick="closeAxMobileMore()" aria-label="ปิดเมนู">×</button></div>
+    <div class="ax-mobile-more-grid">
+      <button type="button" onclick="axMobileGo('dashboard')"><span>📊</span><b>Dashboard</b></button>
+      <button type="button" onclick="axMobileGo('cert')"><span>🏷️</span><b>ลำดับเลข Cert</b></button>
+      <button type="button" onclick="axMobileGo('repairs')" class="ax-mobile-more-repair"><span>🔧</span><b>งานซ่อม</b><i id="bnavRepairBadge">0</i></button>
+      <button type="button" onclick="axMobileGo('weights')"><span>📜</span><b>Cert Reference</b></button>
+      <button type="button" onclick="axMobileGo('admin')" id="axMobileMoreAdmin" style="display:none"><span>👥</span><b>จัดการผู้ใช้</b></button>
+      <button type="button" onclick="axMobileGo('audit')" id="axMobileMoreAudit" style="display:none"><span>📋</span><b>Audit Log</b></button>
+    </div>
   </div>
 </div>
 
