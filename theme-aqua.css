@@ -1607,6 +1607,10 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   .ax-user > svg,
   .ax-actions .db-status { display: none !important; }
   .ax-user-wrap { flex: 0 0 auto; }
+  .ax-menu {
+    position: fixed; top: 62px; right: 10px;
+    width: min(290px, calc(100vw - 20px));
+  }
   .ax-user {
     width: 38px; height: 38px; padding: 0;
     justify-content: center; border-radius: 11px;

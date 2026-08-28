@@ -117,6 +117,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
     has(INDEX, 'id="axMobileMoreBtn"', 'mobile more trigger');
     ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode #app \.sidebar\s*\{[^}]*display:\s*none\s*!important/.test(CSS), 'hide duplicate sidebar');
     ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-header-inner\s*\{[^}]*height:\s*56px/.test(CSS), 'compact white header');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-menu\s*\{[^}]*position:\s*fixed[^}]*top:\s*62px[^}]*right:\s*10px[^}]*width:\s*min\(290px,\s*calc\(100vw - 20px\)\)/.test(CSS), 'mobile user menu stays inside viewport');
     ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode \.bottom-nav\s*\{[^}]*position:\s*fixed\s*!important[^}]*bottom:\s*0\s*!important[^}]*grid-template-columns:\s*repeat\(5,\s*1fr\)[^}]*overflow:\s*visible\s*!important/.test(CSS), 'five fixed nav items');
     ['home','list','plan','calrecs'].forEach(page => has(INDEX, 'data-page="' + page + '"', 'primary mobile nav ' + page));
     ['toggleAxMobileMore','closeAxMobileMore','syncAxMobileNav'].forEach(name => has(HOME_JS, name, 'mobile more behavior'));
