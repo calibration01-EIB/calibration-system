@@ -105,10 +105,22 @@ const TILE_MIN = 216, TILE_MAX = 512;
       .forEach(tok => has(HOME_JS, tok, 'integration'));
   });
 
-  t('กริดการ์ด responsive 5 / 3 / 1', () => {
+  t('กริดการ์ด responsive 5 / 3 / 2', () => {
     ok(/\.ax-tiles\s*\{[^}]*repeat\(5/.test(CSS), 'จอใหญ่ต้อง 5 คอลัมน์');
     ok(/@media \(max-width: 1100px\)[\s\S]*?\.ax-tiles\s*\{[^}]*repeat\(3/.test(CSS), '<=1100px ต้อง 3 คอลัมน์');
-    ok(/@media \(max-width: 680px\)[\s\S]*?\.ax-tiles\s*\{[^}]*grid-template-columns:\s*1fr/.test(CSS), '<=680px ต้อง 1 คอลัมน์');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-tiles\s*\{[^}]*grid-template-columns:\s*repeat\(2,minmax\(0,1fr\)\)/.test(CSS), '<=768px ต้อง 2 คอลัมน์');
+  });
+
+  t('HOME Mobile แบบ B กระชับและไม่มี Header ซ้ำ', () => {
+    has(INDEX, 'class="ax-mobile-logout"', 'mobile logout');
+    has(INDEX, 'id="axMobileMore"', 'mobile more menu');
+    has(INDEX, 'id="axMobileMoreBtn"', 'mobile more trigger');
+    ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode #app \.sidebar\s*\{[^}]*display:\s*none\s*!important/.test(CSS), 'hide duplicate sidebar');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-header-inner\s*\{[^}]*height:\s*56px/.test(CSS), 'compact white header');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-menu\s*\{[^}]*position:\s*fixed[^}]*top:\s*62px[^}]*right:\s*10px[^}]*width:\s*min\(290px,\s*calc\(100vw - 20px\)\)/.test(CSS), 'mobile user menu stays inside viewport');
+    ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode \.bottom-nav\s*\{[^}]*position:\s*fixed\s*!important[^}]*bottom:\s*0\s*!important[^}]*grid-template-columns:\s*repeat\(5,\s*1fr\)[^}]*overflow:\s*visible\s*!important/.test(CSS), 'five fixed nav items');
+    ['home','list','plan','calrecs'].forEach(page => has(INDEX, 'data-page="' + page + '"', 'primary mobile nav ' + page));
+    ['toggleAxMobileMore','closeAxMobileMore','syncAxMobileNav'].forEach(name => has(HOME_JS, name, 'mobile more behavior'));
   });
 
   t('ข้อความ hero ต้องเป็น HTML จริง ไม่ใช่ตัวหนังสือฝังในภาพ', () => {
@@ -136,31 +148,31 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero-kicker\s*\{[^}]*font-size:\s*18px/.test(CSS), 'tablet Welcome 18px');
     ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*40px/.test(CSS), 'tablet heading 40px');
     ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero-copy p\s*\{[^}]*font-size:\s*16px/.test(CSS), 'tablet supporting copy 16px');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-kicker\s*\{[^}]*font-size:\s*15px/.test(CSS), 'mobile Welcome 15px');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*30px/.test(CSS), 'mobile heading 30px');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-copy p\s*\{[^}]*font-size:\s*13px[^}]*line-height:\s*1\.3/.test(CSS), 'mobile supporting copy 13px / 1.3');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero-kicker\s*\{[^}]*font-size:\s*11px/.test(CSS), 'mobile Welcome 11px');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero-copy h1\s*\{[^}]*font-size:\s*24px/.test(CSS), 'mobile heading 24px');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero-copy p\s*\{[^}]*font-size:\s*10\.5px[^}]*line-height:\s*1\.3/.test(CSS), 'mobile supporting copy 10.5px / 1.3');
   });
 
   t('Hero แบบ Bold Clean มีเส้น Teal และระยะ Responsive ที่อนุมัติ', () => {
     ok(/\.ax-hero-copy p::after\s*\{[^}]*content:\s*""[^}]*width:\s*72px[^}]*height:\s*4px[^}]*margin-top:\s*15px/.test(CSS), 'desktop accent 72x4 / 15px');
     ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero-copy p::after\s*\{[^}]*width:\s*58px[^}]*height:\s*3px[^}]*margin-top:\s*10px/.test(CSS), 'tablet accent 58x3 / 10px');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-copy p::after\s*\{[^}]*width:\s*44px[^}]*height:\s*3px[^}]*margin-top:\s*7px/.test(CSS), 'mobile accent 44x3 / 7px');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero-copy p::after\s*\{[^}]*width:\s*32px[^}]*height:\s*3px[^}]*margin-top:\s*5px/.test(CSS), 'mobile accent 32x3 / 5px');
     ok(/\.ax-hero-copy\s*\{[^}]*width:\s*min\(54%,\s*700px\)/.test(CSS), 'desktop copy width');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero-copy\s*\{[^}]*padding:\s*10px 18px[^}]*gap:\s*4px/.test(CSS), 'mobile compact spacing');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero-copy\s*\{[^}]*padding:\s*12px 14px[^}]*gap:\s*3px/.test(CSS), 'mobile compact spacing');
     has(CSS, 'rgba(247,250,252,.80) 46%', 'desktop stronger scrim');
   });
 
   t('Hero ใช้ความสูง compact ตาม breakpoint ที่อนุมัติ', () => {
     ok(/\.ax-hero--split\s*\{[^}]*height:\s*260px/.test(CSS), 'desktop 260px');
     ok(/@media \(max-width: 1023px\)[\s\S]*?\.ax-hero--split\s*\{[^}]*height:\s*220px/.test(CSS), 'tablet 220px');
-    ok(/@media \(max-width: 767px\)[\s\S]*?\.ax-hero--split\s*\{[^}]*height:\s*180px/.test(CSS), 'mobile 180px');
+    ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-hero--split\s*\{[^}]*height:\s*140px/.test(CSS), 'mobile 140px');
     ok(/\.ax-hero-media img\s*\{[^}]*object-fit:\s*cover/.test(CSS), 'image cover');
   });
 
   t('Hero compact มี specificity สูงกว่ากฎ responsive .ax-hero เดิม', () => {
     ok(/#app \.ax-hero--split\s*\{[^}]*height:\s*260px/.test(CSS), 'desktop scoped hero');
     ok(/@media \(max-width: 1023px\)[\s\S]*?#app \.ax-hero--split\s*\{[^}]*height:\s*220px/.test(CSS), 'tablet scoped hero');
-    ok(/@media \(max-width: 767px\)[\s\S]*?#app \.ax-hero--split\s*\{[^}]*height:\s*180px/.test(CSS), 'mobile scoped hero');
+    ok(/@media \(max-width: 768px\)[\s\S]*?#app \.ax-hero--split\s*\{[^}]*height:\s*140px/.test(CSS), 'mobile scoped hero');
   });
 
   try {
@@ -208,12 +220,12 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/const CACHE_NAME = 'calibration-app-v\d+';/.test(SW), 'CACHE_NAME ต้องเป็นรูปแบบ calibration-app-vN');
   });
 
-  t('Home Hero และ Login Hero อยู่ใน APP_SHELL v147 ครบ', () => {
+  t('Home Hero และ Login Hero อยู่ใน APP_SHELL v148 ครบ', () => {
     has(SW, './assets/home-hero-calibration-lab-wide.webp', 'desktop home hero');
     has(SW, './assets/home-hero-calibration-lab-v2.webp', 'home hero');
     has(SW, './assets/calibration-lab-hero.png', 'login and splash hero');
     ok(SW.indexOf('./assets/hero-lab.jpg') === -1, 'hero-lab.jpg ไม่ควรอยู่ใน APP_SHELL');
-    has(SW, "const CACHE_NAME = 'calibration-app-v147';", 'cache bump');
+    has(SW, "const CACHE_NAME = 'calibration-app-v148';", 'cache bump');
   });
 
   t('ไม่มีไฟล์กำพร้าใน APP_SHELL (ทุก path ต้องมีคนอ้างถึง)', () => {

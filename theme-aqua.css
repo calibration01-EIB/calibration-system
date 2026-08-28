@@ -1575,3 +1575,168 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 @media (prefers-reduced-motion: reduce) {
   #instrumentModal .instrument-tab { transition: none; }
 }
+
+/* ============================================================
+   HOME Mobile · แบบ B — Compact Brand Header
+   ============================================================ */
+.ax-mobile-logout,
+.ax-mobile-more { display: none; }
+
+@media (max-width: 768px) {
+  body.app-mode #app .sidebar { display: none !important; }
+  body.app-mode #app .main-content {
+    padding-top: 0 !important;
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .ax-header { position: sticky; top: 0; z-index: 120; }
+  .ax-header-inner { height: 56px; padding: 0 10px; gap: 8px; }
+  .ax-brand {
+    flex: 1 1 auto; min-width: 0; max-width: calc(100% - 82px);
+    margin: 0; padding: 4px; gap: 7px;
+  }
+  .ax-brand img { height: 32px; }
+  .ax-brand-txt { display: flex !important; }
+  .ax-brand-txt b { font-size: 13px; }
+  .ax-brand-txt span { font-size: 8px; margin-top: 2px; }
+  .ax-actions { gap: 6px; }
+  .ax-home-btn,
+  .ax-actions .notif-wrapper,
+  .ax-icon-btn,
+  .ax-user-txt,
+  .ax-user > svg,
+  .ax-actions .db-status { display: none !important; }
+  .ax-user-wrap { flex: 0 0 auto; }
+  .ax-menu {
+    position: fixed; top: 62px; right: 10px;
+    width: min(290px, calc(100vw - 20px));
+  }
+  .ax-user {
+    width: 38px; height: 38px; padding: 0;
+    justify-content: center; border-radius: 11px;
+    background: var(--accent-light);
+  }
+  .ax-user-av { width: 36px; height: 36px; font-size: 16px; }
+  .ax-mobile-logout {
+    display: inline-grid; place-items: center; flex: 0 0 auto;
+    width: 36px; height: 36px; padding: 0;
+    border: 0; border-radius: 11px; background: var(--accent-light);
+    color: var(--accent-h); font: 700 18px var(--ff-num); cursor: pointer;
+  }
+
+  #app .page-content { padding: 10px 10px 72px; }
+  .ax-home { gap: 10px; }
+  #app .ax-hero--split { height: 140px; border-radius: 16px; }
+  .ax-hero-media img { object-position: 66% 58%; }
+  .ax-hero-copy { width: 65%; padding: 12px 14px; gap: 3px; }
+  .ax-hero-kicker { font-size: 11px; letter-spacing: .04em; }
+  .ax-hero-copy h1 { font-size: 24px; line-height: 1.02; }
+  .ax-hero-copy p { margin-top: 1px; font-size: 10.5px; line-height: 1.3; }
+  .ax-hero-copy p::after { width: 32px; height: 3px; margin-top: 5px; }
+  .ax-hero-scrim {
+    background: linear-gradient(90deg, rgba(247,250,252,.99) 0%, rgba(247,250,252,.98) 48%, rgba(247,250,252,.62) 74%, rgba(247,250,252,.12) 100%);
+  }
+
+  .ax-tiles { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .ax-tile {
+    display: grid; grid-template-columns: 44px minmax(0,1fr);
+    align-items: center; min-height: 76px; padding: 9px; gap: 7px;
+    border-radius: 13px; box-shadow: 0 6px 16px rgba(20, 57, 81, .07);
+  }
+  .ax-tile-art,
+  .ax-tile-art img,
+  .ax-tile-art svg { width: 44px; height: 44px; }
+  .ax-tile-art { grid-column: 1; grid-row: 1; }
+  .ax-tile-txt { grid-column: 2; grid-row: 1; min-width: 0; gap: 0; }
+  .ax-tile h3 {
+    overflow: hidden; font-size: 12px; line-height: 1.25;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ax-tile p,
+  .ax-tile-go { display: none; }
+  .ax-tile-badge {
+    top: -5px; right: -3px; min-width: 24px; height: 24px;
+    padding: 0 6px; border-radius: 12px; font-size: 11px;
+  }
+
+  body.app-mode .bottom-nav {
+    display: grid !important;
+    position: fixed !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
+    z-index: 180 !important;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: stretch !important; justify-content: stretch !important;
+    gap: 0 !important; overflow: visible !important;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(255,255,255,.98) !important;
+    border-top: 1px solid var(--border) !important;
+    box-shadow: 0 -10px 26px rgba(15, 39, 58, .12) !important;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item {
+    appearance: none; border: 0; background: transparent;
+    min-width: 0 !important; min-height: 48px !important;
+    display: grid !important; place-items: center !important; align-content: center !important;
+    gap: 1px; padding: 3px 2px !important; border-radius: 10px !important;
+    color: var(--text3); font-family: var(--ff); cursor: pointer;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item > span:first-child { font-size: 17px; line-height: 1; }
+  body.app-mode .bottom-nav .mobile-nav-item > span:last-child {
+    color: inherit; font-size: 9px; font-weight: 700; line-height: 1.15;
+  }
+  body.app-mode .bottom-nav .mobile-nav-item.active {
+    color: var(--accent); background: var(--accent-light) !important;
+    box-shadow: inset 0 0 0 1px rgba(8,145,178,.16);
+  }
+
+  .ax-mobile-more {
+    position: fixed; inset: 0; z-index: 190;
+    display: block; visibility: hidden; pointer-events: none;
+  }
+  .ax-mobile-more.open { visibility: visible; pointer-events: auto; }
+  .ax-mobile-more-scrim {
+    position: absolute; inset: 0; width: 100%; height: 100%; padding: 0;
+    border: 0; background: rgba(8, 28, 43, .42); opacity: 0; cursor: pointer;
+    transition: opacity .18s ease;
+  }
+  .ax-mobile-more.open .ax-mobile-more-scrim { opacity: 1; }
+  .ax-mobile-more-sheet {
+    position: absolute; right: 8px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); left: 8px;
+    padding: 14px; border: 1px solid var(--border); border-radius: 18px;
+    background: var(--surface); box-shadow: 0 20px 50px rgba(9, 31, 48, .24);
+    transform: translateY(14px); opacity: 0;
+    transition: transform .18s ease, opacity .18s ease;
+  }
+  .ax-mobile-more.open .ax-mobile-more-sheet { transform: translateY(0); opacity: 1; }
+  .ax-mobile-more-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; color: var(--text); font-size: 14px;
+  }
+  .ax-mobile-more-head button {
+    width: 36px; height: 36px; border: 0; border-radius: 10px;
+    background: var(--bg); color: var(--text2); font-size: 22px; cursor: pointer;
+  }
+  .ax-mobile-more-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .ax-mobile-more-grid > button {
+    position: relative; min-height: 54px; display: flex; align-items: center; gap: 9px;
+    padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface2); color: var(--text); font-family: var(--ff); cursor: pointer;
+  }
+  .ax-mobile-more-grid > button > span { font-size: 18px; }
+  .ax-mobile-more-grid > button > b { min-width: 0; font-size: 11px; text-align: left; }
+  .ax-mobile-more-grid > button > i {
+    display: none; position: absolute; top: 3px; right: 5px;
+    min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+    background: var(--danger); color: #fff; font: normal 700 10px/20px var(--ff-num);
+  }
+}
+
+@media (max-width: 360px) {
+  .ax-brand-txt b { font-size: 12px; }
+  .ax-brand-txt span { font-size: 7.5px; }
+  .ax-hero-copy { width: 69%; padding-inline: 12px; }
+  .ax-hero-copy h1 { font-size: 22px; }
+  .ax-tile { grid-template-columns: 40px minmax(0,1fr); padding: 8px; gap: 6px; }
+  .ax-tile-art,
+  .ax-tile-art img,
+  .ax-tile-art svg { width: 40px; height: 40px; }
+  .ax-tile h3 { font-size: 11px; }
+}

@@ -85,6 +85,8 @@ function axSyncUser() {
   };
   mirror('axMenuAdmin', 'sidebarAdminBtn');
   mirror('axMenuAudit', 'nav-audit');
+  mirror('axMobileMoreAdmin', 'sidebarAdminBtn');
+  mirror('axMobileMoreAudit', 'nav-audit');
 }
 
 function toggleAxUserMenu(ev) {
@@ -114,6 +116,41 @@ function axLogout(ev) {
   if (ev) ev.stopPropagation();
   axCloseUserMenu();
   if (typeof doLogout === 'function') doLogout();
+}
+
+/* ---------- mobile: bottom navigation + เมนูเพิ่มเติม ---------- */
+function toggleAxMobileMore(ev) {
+  if (ev) ev.stopPropagation();
+  const menu = document.getElementById('axMobileMore');
+  const button = document.getElementById('axMobileMoreBtn');
+  if (!menu || !button) return;
+  const open = menu.classList.toggle('open');
+  menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+  button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) axSyncUser();
+}
+
+function closeAxMobileMore() {
+  const menu = document.getElementById('axMobileMore');
+  const button = document.getElementById('axMobileMoreBtn');
+  if (menu) {
+    menu.classList.remove('open');
+    menu.setAttribute('aria-hidden', 'true');
+  }
+  if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+function axMobileGo(page) {
+  closeAxMobileMore();
+  showPage(page);
+}
+
+function syncAxMobileNav(page) {
+  document.querySelectorAll('.bottom-nav .mobile-nav-item[data-page]').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-page') === page);
+  });
+  const more = document.getElementById('axMobileMoreBtn');
+  if (more) more.classList.toggle('active', ['dashboard', 'cert', 'repairs', 'weights', 'admin', 'audit'].indexOf(page) !== -1);
 }
 
 /* ---------- หน้า placeholder (ตามดีไซน์ isSoon) ---------- */
@@ -163,6 +200,8 @@ function axEnsureSoonPage() {
 
     const hb = document.getElementById('axHomeBtn');
     if (hb) hb.classList.toggle('is-on', page === 'home');
+    closeAxMobileMore();
+    syncAxMobileNav(page);
     axSyncUser();
     window.scrollTo(0, 0);
   };
@@ -171,6 +210,9 @@ function axEnsureSoonPage() {
 document.addEventListener('DOMContentLoaded', () => {
   axEnsureSoonPage();
   axSyncUser();
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') closeAxMobileMore();
+  });
   // badge ของการ์ดตามค่าล่าสุด
   setInterval(syncAxTileBadges, 4000);
 });
