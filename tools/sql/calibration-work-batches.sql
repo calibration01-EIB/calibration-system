@@ -106,6 +106,23 @@ create unique index if not exists calibration_work_documents_version_uidx
   on public.calibration_work_documents
     (batch_id, coalesce(item_id, '00000000-0000-0000-0000-000000000000'::uuid), document_kind, version_number);
 
+create table if not exists public.calibration_work_cleanup_claims (
+  id uuid primary key default gen_random_uuid(),
+  batch_id uuid not null references public.calibration_work_batches(id) on delete restrict,
+  bucket_id text not null check (bucket_id = 'calibration-work-batches'),
+  storage_path text not null check (btrim(storage_path) <> ''),
+  status text not null default 'pending'
+    check (status in ('pending','succeeded','failed')),
+  attempt_count integer not null default 1 check (attempt_count > 0),
+  requested_by text not null,
+  requested_at timestamptz not null default now(),
+  request_reason text not null check (btrim(request_reason) <> ''),
+  finalized_at timestamptz,
+  failure_detail text,
+  updated_at timestamptz not null default now(),
+  unique (bucket_id, storage_path)
+);
+
 create table if not exists public.calibration_work_audit (
   id uuid primary key default gen_random_uuid(),
   batch_id uuid not null references public.calibration_work_batches(id) on delete cascade,
@@ -122,6 +139,8 @@ create index if not exists calibration_work_items_batch_idx
   on public.calibration_work_items(batch_id);
 create index if not exists calibration_work_documents_batch_idx
   on public.calibration_work_documents(batch_id, item_id, document_kind, version_number desc);
+create index if not exists calibration_work_cleanup_claims_batch_idx
+  on public.calibration_work_cleanup_claims(batch_id, status, requested_at desc);
 create index if not exists calibration_work_audit_batch_idx
   on public.calibration_work_audit(batch_id, occurred_at desc);
 
@@ -650,6 +669,12 @@ begin
     and o.name = p_storage_path
   for key share;
   if not found then raise exception 'uploaded Storage object not found'; end if;
+  if exists (
+    select 1 from public.calibration_work_cleanup_claims
+    where bucket_id = 'calibration-work-batches'
+      and storage_path = p_storage_path
+      and status = 'pending'
+  ) then raise exception 'cleanup is pending for storage path'; end if;
   if v_storage_mime is distinct from 'application/pdf'
      or v_storage_size is null or v_storage_size <= 0 or v_storage_size > 52428800 then
     raise exception 'Storage object is not an allowed PDF';
@@ -954,13 +979,15 @@ begin
 end;
 $$;
 
-create or replace function public.cw_cleanup_orphan_document(
+drop function if exists public.cw_cleanup_orphan_document(text, text, text, text);
+
+create or replace function public.cw_request_orphan_cleanup(
   p_token text,
   p_bucket_id text,
   p_storage_path text,
   p_reason text
 )
-returns boolean
+returns public.calibration_work_cleanup_claims
 language plpgsql security definer set search_path = public
 as $$
 declare
@@ -968,6 +995,7 @@ declare
   v_batch_id uuid;
   v_batch public.calibration_work_batches%rowtype;
   v_object storage.objects%rowtype;
+  v_claim public.calibration_work_cleanup_claims%rowtype;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   if nullif(btrim(p_reason), '') is null then raise exception 'cleanup reason is required'; end if;
@@ -977,26 +1005,119 @@ begin
   end if;
   v_batch_id := split_part(p_storage_path, '/', 1)::uuid;
 
-  -- Registration and cleanup both serialize batch first, then lock the Storage row.
+  -- Registration and cleanup requests serialize on the batch before inspecting Storage.
   select * into strict v_batch from public.calibration_work_batches
   where id = v_batch_id for update;
   select * into strict v_object from storage.objects o
   where o.bucket_id = p_bucket_id and o.name = p_storage_path
-  for update;
+  for key share;
   if exists (
     select 1 from public.calibration_work_documents d
     where d.storage_path = p_storage_path
   ) then raise exception 'object is referenced by document history'; end if;
 
-  delete from storage.objects
-  where id = v_object.id and bucket_id = p_bucket_id and name = p_storage_path;
-  if not found then raise exception 'orphan object changed during cleanup'; end if;
+  select * into v_claim
+  from public.calibration_work_cleanup_claims
+  where bucket_id = p_bucket_id and storage_path = p_storage_path
+  for update;
+  if found and v_claim.status = 'pending' then
+    return v_claim;
+  elsif found then
+    update public.calibration_work_cleanup_claims
+    set status = 'pending', attempt_count = attempt_count + 1,
+        requested_by = v_actor.username, requested_at = now(),
+        request_reason = btrim(p_reason), finalized_at = null,
+        failure_detail = null, updated_at = now()
+    where id = v_claim.id
+    returning * into v_claim;
+  else
+    insert into public.calibration_work_cleanup_claims
+      (batch_id, bucket_id, storage_path, requested_by, request_reason)
+    values
+      (v_batch.id, p_bucket_id, p_storage_path, v_actor.username, btrim(p_reason))
+    returning * into v_claim;
+  end if;
   insert into public.calibration_work_audit
     (batch_id, action, actor, before_data, after_data, reason)
   values
-    (v_batch.id, 'cleanup_orphan_document', v_actor.username,
-     to_jsonb(v_object), null, btrim(p_reason));
-  return true;
+    (v_batch.id, 'request_orphan_cleanup', v_actor.username,
+     jsonb_build_object('storage_object_id', v_object.id,
+                        'bucket_id', v_object.bucket_id,
+                        'storage_path', v_object.name),
+     to_jsonb(v_claim), btrim(p_reason));
+  return v_claim;
+end;
+$$;
+
+-- Trusted service contract: fetch a pending claim, call the Supabase Storage API,
+-- then finalize it. Leave the claim pending whenever the API outcome is uncertain.
+create or replace function public.cw_finalize_orphan_cleanup(
+  p_claim_id uuid,
+  p_succeeded boolean,
+  p_failure_detail text default null
+)
+returns public.calibration_work_cleanup_claims
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_role text;
+  v_batch_id uuid;
+  v_batch public.calibration_work_batches%rowtype;
+  v_claim public.calibration_work_cleanup_claims%rowtype;
+  v_after public.calibration_work_cleanup_claims%rowtype;
+begin
+  v_role := coalesce(
+    nullif(current_setting('request.jwt.claim.role', true), ''),
+    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'),
+    ''
+  );
+  if v_role <> 'service_role' then raise exception 'service role required'; end if;
+  if p_succeeded is null then raise exception 'cleanup outcome is required'; end if;
+
+  select batch_id into strict v_batch_id
+  from public.calibration_work_cleanup_claims
+  where id = p_claim_id;
+  select * into strict v_batch from public.calibration_work_batches
+  where id = v_batch_id for update;
+  select * into strict v_claim
+  from public.calibration_work_cleanup_claims
+  where id = p_claim_id for update;
+
+  if v_claim.status <> 'pending' then
+    if (p_succeeded and v_claim.status = 'succeeded')
+       or (not p_succeeded and v_claim.status = 'failed') then
+      return v_claim;
+    end if;
+    raise exception 'cleanup claim is already finalized';
+  end if;
+
+  if p_succeeded then
+    if exists (
+      select 1 from storage.objects o
+      where o.bucket_id = v_claim.bucket_id and o.name = v_claim.storage_path
+    ) then raise exception 'Storage API deletion is not confirmed'; end if;
+    update public.calibration_work_cleanup_claims
+    set status = 'succeeded', finalized_at = now(), failure_detail = null, updated_at = now()
+    where id = p_claim_id returning * into v_after;
+  else
+    if nullif(btrim(p_failure_detail), '') is null then
+      raise exception 'cleanup failure detail is required';
+    end if;
+    update public.calibration_work_cleanup_claims
+    set status = 'failed', finalized_at = now(), failure_detail = btrim(p_failure_detail),
+        updated_at = now()
+    where id = p_claim_id returning * into v_after;
+  end if;
+
+  insert into public.calibration_work_audit
+    (batch_id, action, actor, before_data, after_data, reason)
+  values
+    (v_batch.id,
+     case when p_succeeded then 'cleanup_orphan_document_succeeded'
+          else 'cleanup_orphan_document_failed' end,
+     'service_role', to_jsonb(v_claim), to_jsonb(v_after),
+     case when p_succeeded then v_claim.request_reason else btrim(p_failure_detail) end);
+  return v_after;
 end;
 $$;
 
@@ -1004,6 +1125,7 @@ alter table public.calibration_work_batches enable row level security;
 alter table public.calibration_work_items enable row level security;
 alter table public.calibration_work_instrument_locks enable row level security;
 alter table public.calibration_work_documents enable row level security;
+alter table public.calibration_work_cleanup_claims enable row level security;
 alter table public.calibration_work_audit enable row level security;
 
 drop policy if exists calibration_work_batches_read on public.calibration_work_batches;
@@ -1068,12 +1190,15 @@ revoke all on public.calibration_work_batches from anon, authenticated;
 revoke all on public.calibration_work_items from anon, authenticated;
 revoke all on public.calibration_work_instrument_locks from anon, authenticated;
 revoke all on public.calibration_work_documents from anon, authenticated;
+revoke all on public.calibration_work_cleanup_claims from anon, authenticated;
 revoke all on public.calibration_work_audit from anon, authenticated;
+revoke all on public.calibration_work_cleanup_claims from service_role;
 grant select on public.calibration_work_batches to anon, authenticated;
 grant select on public.calibration_work_items to anon, authenticated;
 grant select on public.calibration_work_instrument_locks to anon, authenticated;
 grant select on public.calibration_work_documents to anon, authenticated;
 grant select on public.calibration_work_audit to anon, authenticated;
+grant select on public.calibration_work_cleanup_claims to service_role;
 
 revoke all on function public.cw_actor(text, boolean) from public;
 revoke all on function public.cw_request_token() from public;
@@ -1090,7 +1215,9 @@ revoke all on function public.cw_skip_item(text, uuid, text) from public;
 revoke all on function public.cw_reset_item_result(text, uuid, text) from public;
 revoke all on function public.cw_complete_batch(text, uuid) from public;
 revoke all on function public.cw_cancel_batch(text, uuid, text) from public;
-revoke all on function public.cw_cleanup_orphan_document(text, text, text, text) from public;
+revoke all on function public.cw_request_orphan_cleanup(text, text, text, text) from public;
+revoke all on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) from public;
+revoke all on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) from anon, authenticated;
 grant execute on function public.cw_actor(text, boolean) to anon, authenticated;
 grant execute on function public.cw_request_token() to anon, authenticated;
 grant execute on function public.cw_create_batch(text, text, text, text, jsonb) to anon, authenticated;
@@ -1104,4 +1231,5 @@ grant execute on function public.cw_skip_item(text, uuid, text) to anon, authent
 grant execute on function public.cw_reset_item_result(text, uuid, text) to anon, authenticated;
 grant execute on function public.cw_complete_batch(text, uuid) to anon, authenticated;
 grant execute on function public.cw_cancel_batch(text, uuid, text) to anon, authenticated;
-grant execute on function public.cw_cleanup_orphan_document(text, text, text, text) to anon, authenticated;
+grant execute on function public.cw_request_orphan_cleanup(text, text, text, text) to anon, authenticated;
+grant execute on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) to service_role;
