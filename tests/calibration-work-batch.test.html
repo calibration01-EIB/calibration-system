@@ -40,6 +40,14 @@ function text(url) {
     ok(end !== -1, name + ' function terminator not found');
     return lower.slice(start, end + 3).replace(/\s+/g, ' ');
   }
+  function policy(name) {
+    const marker = 'create policy ' + name;
+    const start = lower.indexOf(marker);
+    ok(start !== -1, name + ' policy not found');
+    const end = lower.indexOf(';', start + marker.length);
+    ok(end !== -1, name + ' policy terminator not found');
+    return lower.slice(start, end + 1).replace(/\s+/g, ' ');
+  }
 
   t('defines all UUID-backed workflow tables and lock uniqueness', () => {
     [
@@ -130,11 +138,19 @@ function text(url) {
     has(fn, 'already referenced', 'duplicate evidence rejection');
   });
 
-  t('allows Storage INSERT only and rejects object mutation policies', () => {
-    has(normalized, 'create policy calibration_work_storage_insert', 'insert-only storage policy');
+  t('allows immutable Storage INSERT and narrowly scoped orphan cleanup', () => {
+    has(normalized, 'create policy calibration_work_storage_insert', 'immutable storage insert');
     has(normalized, "name ~ '^", 'versioned storage path check');
     lacks(normalized, 'create policy calibration_work_storage_update', 'storage policies');
-    lacks(normalized, 'create policy calibration_work_storage_delete', 'storage policies');
+    lacks(normalized, 'create policy calibration_work_storage_delete on', 'broad storage delete');
+    const orphan = policy('calibration_work_storage_delete_orphan');
+    [
+      "bucket_id = 'calibration-work-batches'",
+      'cw_actor(public.cw_request_token(), true)',
+      "name ~ '^",
+      'not exists ( select 1 from public.calibration_work_documents d where d.storage_path = name'
+    ].forEach(token => has(orphan, token, token));
+    lacks(orphan, 'is_current', 'orphan cleanup must protect current and historical evidence');
   });
 
   t('soft-removes reset items while preserving historical rows and documents', () => {
@@ -190,21 +206,43 @@ function text(url) {
     });
   });
 
-  t('has one initial closure transition and preserves closure provenance', () => {
+  t('atomically completes on initial closure and preserves replacement provenance', () => {
     const register = body('cw_register_document');
-    lacks(register, "set status = 'completed'", 'document registration');
-    lacks(register, 'delete from public.calibration_work_instrument_locks', 'document registration');
+    has(register, "v_batch.status = 'awaiting_closure_pdf'", 'initial closure state gate');
+    has(register, "set status = 'completed', completed_by = v_actor.username", 'atomic closure completion');
+    has(register, 'delete from public.calibration_work_instrument_locks', 'atomic lock release');
+    has(register, "'complete_batch'", 'atomic closure transition audit');
+    has(register, "v_batch.status = 'completed'", 'replacement state branch');
+    has(register, 'set updated_at = now()', 'replacement-only batch update');
     const complete = body('cw_complete_batch');
-    has(complete, "v_before.status <> 'awaiting_closure_pdf'", 'single completion state guard');
-    has(complete, "document_kind = 'closure' and is_current", 'current closure gate');
-    has(complete, "set status = 'completed', completed_by = v_actor.username", 'completion provenance');
+    lacks(complete, 'update public.calibration_work_batches', 'compatibility RPC');
+    has(complete, 'completion occurs atomically when closure is registered', 'duplicate transition rejection');
+  });
+
+  t('invalidates stale pending closure evidence on mutable result paths', () => {
+    has(body('cw_mutate_items'), "'invalidate_closure_document'", 'full-set mutation closure invalidation');
+    has(body('cw_reset_item_result'), "'invalidate_closure_document'", 'reset closure invalidation');
+    const register = body('cw_register_document');
+    has(register, 'o.created_at', 'trusted upload timestamp');
+    has(register, 'v_storage_created_at < v_batch.updated_at', 'workflow-version evidence gate');
+    has(register, 'uploaded evidence predates the current batch version', 'stale upload rejection');
+  });
+
+  t('clears saved in-progress results but rejects no-op reset', () => {
+    const fn = body('cw_reset_item_result');
+    has(fn, "v_before.result_status = 'in_progress'", 'in-progress reset eligibility');
+    has(fn, 'v_before.cert_no is not null', 'saved certificate number eligibility');
+    has(fn, 'v_before.calibration_date is not null', 'saved calibration date eligibility');
+    has(fn, "d.document_kind in ('certificate','overdue')", 'saved evidence eligibility');
+    has(fn, 'nothing to reset', 'no-op reset rejection');
+    has(fn, "'reset_item_result'", 'reasoned reset audit');
   });
 
   t('audits evidence invalidation and instrument and closure transitions distinctly', () => {
     has(body('cw_mutate_items'), "'invalidate_acknowledgement_document'", 'acknowledgement invalidation audit');
     has(body('cw_reset_item_result'), "'reset_invalidate_documents'", 'reset document invalidation audit');
     has(body('cw_complete_item'), "'update_instrument_result'", 'instrument before/after audit');
-    has(body('cw_complete_batch'), "'complete_batch'", 'batch closure transition audit');
+    has(body('cw_register_document'), "'complete_batch'", 'batch closure transition audit');
   });
 
   t('revokes PUBLIC execute on every SECURITY DEFINER function', () => {
@@ -235,12 +273,13 @@ function text(url) {
     [
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
-      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+      'cw_reset_item_result', 'cw_cancel_batch'
     ].forEach(name => {
       const fn = body(name);
       has(fn, 'from public.cw_actor(p_token, true)', name + ' authorization');
       has(fn, 'insert into public.calibration_work_audit', name + ' audit');
     });
+    has(body('cw_complete_batch'), 'from public.cw_actor(p_token, true)', 'completion compatibility authorization');
   });
 
   document.getElementById('out').textContent = results.join('\n');
