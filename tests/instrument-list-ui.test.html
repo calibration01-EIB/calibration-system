@@ -4,9 +4,21 @@
 /* แปลงมาจาก tests/test_instrument_list_ui.py */
 const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+async function ta(name, fn) { try { await fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
 function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
 function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
+function functionBody(src, name) {
+  const start = src.indexOf('function ' + name + '(');
+  if (start < 0) return '';
+  const open = src.indexOf('{', start);
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    if (src[i] === '}' && --depth === 0) return src.slice(open + 1, i);
+  }
+  return '';
+}
 function text(url) {
   return new Promise((res, rej) => {
     const x = new XMLHttpRequest();
@@ -18,11 +30,11 @@ function text(url) {
 }
 
 (async () => {
-  let INDEX, REPORTS_JS, LIST_JS, CSS;
+  let INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, CSS;
   try {
-    [INDEX, REPORTS_JS, LIST_JS, CSS] = await Promise.all([
+    [INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, CSS] = await Promise.all([
       text('../index.html'), text('../js/04-reports.js'),
-      text('../js/26-list-ui.js'), text('../theme-aqua.css')
+      text('../js/03-instruments.js'), text('../js/26-list-ui.js'), text('../theme-aqua.css')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -79,6 +91,38 @@ function text(url) {
       'mobile filter layout');
   });
 
+  t('มุมมองสเปกใช้ catalog grid และการ์ดไม่แสดงชื่อเครื่องมือ', () => {
+    has(INDEX, 'id="listSpecGrid"', 'catalog grid host');
+    has(LIST_JS, 'function listSpecCardHtml', 'catalog renderer');
+    const cardBody = functionBody(LIST_JS, 'listSpecCardHtml');
+    has(cardBody, '<button type="button"', 'native keyboard control');
+    has(cardBody, 'aria-label="ดูรายละเอียดเครื่องมือ', 'button accessible name');
+    ok(!/<article[^>]*(role="button"|tabindex=)/.test(cardBody), 'article must not nest an interactive role around button');
+    has(cardBody, 'ดูรายละเอียด', 'detail button');
+    ok(!/instrument_name|Electronic Balance/.test(cardBody),
+      'catalog card must omit instrument name/type');
+  });
+
+  t('รูปปกโหลดแบบ lazy มี cache และแยก failure รายการ', () => {
+    ['ยังไม่มีรูปเครื่องมือ', 'IntersectionObserver', 'const LIST_PHOTO_CACHE = new Map()',
+     'function loadListSpecPhoto', 'function renderListSpecPhoto',
+     'function observeListSpecPhotos', 'function invalidateListPhotoCache',
+     'const LIST_PHOTO_GENERATION = new Map()', 'LIST_PHOTO_ERROR_TTL_MS', "return { state: 'stale' }",
+     'bySlot.overview', 'createSignedUrl', 'expiresAt', "img.loading = 'lazy'", "img.decoding = 'async'",
+     'message.remove()']
+      .forEach(token => has(LIST_JS, token, 'photo contract'));
+    has(INSTRUMENTS_JS, 'invalidateListPhotoCache(d.id)', 'photo mutation invalidation');
+  });
+
+  t('catalog card มี CSS 4/2/1 คอลัมน์และ state ครบ', () => {
+    ['.ax-spec-grid', '.ax-spec-card', '.ax-spec-media', '.ax-spec-id',
+     '.ax-spec-cert', '.ax-spec-due', '.ax-spec-detail', '.is-loading', '.is-empty']
+      .forEach(token => has(CSS, token, 'catalog CSS'));
+    ok(/\.ax-spec-grid\s*\{[^}]*repeat\(4\s*,\s*minmax\(0\s*,\s*1fr\)\)/.test(CSS), 'desktop 4 columns');
+    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?\.ax-spec-grid\s*\{[^}]*repeat\(2\s*,\s*minmax\(0\s*,\s*1fr\)\)/.test(CSS), 'tablet 2 columns');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?\.ax-spec-grid\s*\{[^}]*minmax\(0\s*,\s*1fr\)/.test(CSS), 'mobile 1 column');
+  });
+
   const fixture = document.createElement('section');
   fixture.innerHTML = `
     <input id="searchInput" value="">
@@ -91,7 +135,60 @@ function text(url) {
     <div id="listFilterSummary" hidden></div>
     <div id="listAdvancedPanel" hidden></div>`;
   document.body.appendChild(fixture);
+  window.escapeHtmlText = value => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  window.escapeHtmlAttr = window.escapeHtmlText;
+  window.formatDate = value => value || '–';
+  window.openInstrumentDetail = () => {};
+  window.instPhotoFolder = d => `photos_${d.id}_${d.id_code}`;
+  window.INST_PHOTO_MAX = 5;
+  window.instPhotoArrange = items => ({ bySlot: { overview: items.find(item => /^overview_/.test(item.name)) } });
   eval(LIST_JS);
+
+  t('renderer สร้าง native Detail button โดยไม่มี nested interactive card', () => {
+    const html = listSpecCardHtml({ id: 7, id_code: 'PFP3BB03-WI01', cert_no: 'CAL-7', due_date: '2027-08-24', days_left: 40, instrument_name: 'Electronic Balance' });
+    has(html, '<article class="ax-spec-card" data-instrument-id="7"');
+    ok(!/<article[^>]*(role="button"|tabindex=)/.test(html), 'article must be non-interactive');
+    has(html, '<button type="button" class="ax-spec-detail" aria-label="ดูรายละเอียดเครื่องมือ PFP3BB03-WI01"');
+    ok(html.indexOf('Electronic Balance') === -1, 'must omit instrument name');
+  });
+
+  await ta('photo loader เลือก overview และ discard request ก่อน invalidation', async () => {
+    let release;
+    window.sb = { storage: { from: () => ({
+      list: () => new Promise(resolve => { release = resolve; }),
+      createSignedUrl: path => Promise.resolve({ data: { signedUrl: 'signed:' + path } })
+    }) } };
+    const row = { id: 9101, id_code: 'RACE' };
+    const pending = loadListSpecPhoto(row, true);
+    invalidateListPhotoCache(row.id);
+    release({ data: [{ name: '100_photo.jpg' }, { name: 'overview_200.jpg' }] });
+    eq((await pending).state, 'stale', 'superseded request');
+
+    const emptyRow = { id: 9103, id_code: 'FIRST' };
+    const pendingEmpty = loadListSpecPhoto(emptyRow, true);
+    invalidateListPhotoCache(emptyRow.id);
+    release({ data: [] });
+    eq((await pendingEmpty).state, 'stale', 'superseded empty-folder request');
+
+    window.sb = { storage: { from: () => ({
+      list: () => Promise.resolve({ data: [{ name: '100_photo.jpg' }, { name: 'overview_200.jpg' }] }),
+      createSignedUrl: path => Promise.resolve({ data: { signedUrl: 'signed:' + path } })
+    }) } };
+    const ready = await loadListSpecPhoto(row, true);
+    eq(ready.name, 'overview_200.jpg', 'overview cover');
+  });
+
+  await ta('Storage failure แยกจาก confirmed empty และ force retry ได้', async () => {
+    let fail = true;
+    window.sb = { storage: { from: () => ({
+      list: () => fail ? Promise.resolve({ error: new Error('temporary') }) : Promise.resolve({ data: [] }),
+      createSignedUrl: () => Promise.resolve({})
+    }) } };
+    const row = { id: 9102, id_code: 'ERR' };
+    eq((await loadListSpecPhoto(row, true)).state, 'error', 'transient error state');
+    fail = false;
+    eq((await loadListSpecPhoto(row, true)).state, 'empty', 'confirmed empty state after retry');
+  });
 
   t('panel เปิดปิดได้และเริ่มต้นปิด', () => {
     syncListFilterUi();

@@ -2696,7 +2696,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css">
+<link rel="stylesheet" href="theme-aqua.css?v=20260831-spec-cards">
 </head>
 <body>
 
@@ -3050,32 +3050,12 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
-        <!-- สลับมุมมอง: สเปก / บัญชีรายการ (จอมือถือซ่อนทั้งแท็บและตาราง ใช้การ์ดแทน) -->
+        <!-- สลับมุมมอง: สเปกแบบการ์ด / บัญชีรายการแบบตารางเดิม -->
         <div class="ax-view-tabs" id="listViewTabs"></div>
 
-        <!-- มุมมองสเปก -->
+        <!-- มุมมองสเปก: catalog cards -->
         <div class="ax-tablecard" id="listSpecCard">
-          <div class="table-wrap">
-            <table class="ax-table ax-table-spec">
-              <thead>
-                <tr>
-                  <th class="c-no">ลำดับที่<span>(No.)</span></th>
-                  <th class="c-name">เครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(Instrument / Brand / Model)</span></th>
-                  <th class="c-cert">เลขที่ Cert<span>(Certificate No.)</span></th>
-                  <th class="c-id">รหัสเครื่องตรวจ เครื่องวัดและเครื่องทดสอบ<span>(ID.CODE / MACHINE CODE)</span></th>
-                  <th class="c-range">ย่านการวัด<span>(Range)</span></th>
-                  <th class="c-res">ความละเอียด<span>(Resolution)</span></th>
-                  <th class="c-tol">ค่ายอมรับ<span>(Tolerance)</span></th>
-                  <th class="c-cal">วันที่สอบเทียบ<span>(Cal. date)</span></th>
-                  <th class="c-due">ครบกำหนด<span>(Due date)</span></th>
-                  <th class="c-method">การสอบเทียบ / ความถี่<span>(Method · Frequency)</span></th>
-                  <th class="c-status">สถานะ<span>(Status)</span></th>
-                  <th class="c-act">งาน<span>(Actions)</span></th>
-                </tr>
-              </thead>
-              <tbody id="dataTable"><tr><td colspan="12" class="no-data">กำลังโหลดข้อมูล...</td></tr></tbody>
-            </table>
-          </div>
+          <div class="ax-spec-grid" id="listSpecGrid" aria-label="มุมมองสเปกเครื่องมือ"></div>
         </div>
 
         <!-- มุมมองบัญชีรายการ (ทุกคอลัมน์ตามฟอร์ม) -->
@@ -4794,7 +4774,7 @@ body.app-mode textarea:focus {
 <script src="js/23-cal-records.js?v=20260803-split"></script>
 <script src="js/24-home.js?v=20260817-home"></script>
 <script src="js/25-dashboard-ui.js?v=20260817-dash"></script>
-<script src="js/26-list-ui.js?v=20260819-noCardTab"></script>
+<script src="js/26-list-ui.js?v=20260831-spec-cards"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260819-kpi"></script>
 

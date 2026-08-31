@@ -242,6 +242,7 @@ async function saveInstrumentPhoto(d, name, blob, isNew) {
     const { error } = await sb.storage.from('certificates').upload(`${folder}/${name}`, blob, { upsert: true, contentType: 'image/jpeg' });
     if (error) throw error;
     showToast('บันทึกรูปแล้ว', 'success');
+    if (typeof window.invalidateListPhotoCache === 'function') window.invalidateListPhotoCache(d.id);
     await loadDetailPhotos(d);
   } catch (e) { showToast('บันทึกรูปไม่สำเร็จ: ' + (e.message || ''), 'error'); }
   finally { hideLoading(); }
@@ -352,7 +353,10 @@ async function deleteInstrumentPhoto(folder, name, id) {
     if (error) throw error;
     showToast('ลบรูปแล้ว', 'success');
     const d = (allData || []).find(x => x.id === id);
-    if (d) await loadDetailPhotos(d);
+    if (d) {
+      if (typeof window.invalidateListPhotoCache === 'function') window.invalidateListPhotoCache(d.id);
+      await loadDetailPhotos(d);
+    }
   } catch (e) { showToast('ลบไม่สำเร็จ: ' + (e.message || ''), 'error'); }
   finally { hideLoading(); }
 }

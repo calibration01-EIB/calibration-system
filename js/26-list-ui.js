@@ -227,56 +227,153 @@ function listSetView(view) {
 
 /* ---------- มุมมองสเปก ---------- */
 
-function renderListSpec(rows, start) {
-  const tbody = document.getElementById('dataTable');
-  if (!tbody) return;
-  tbody.innerHTML = rows.map((d, i) => {
-    const id = Number(d.id) || 0;
-    const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
-    const [letter, , color] = regTypeMeta(displayType, d);
-    const p = listStatusPill(d);
-    const brandModel = [d.brand, d.model].filter(Boolean).map(escapeHtmlText).join(' ') || '–';
-    return `<tr class="${p.cancelled ? 'reg-cancelled' : ''}" onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" title="คลิกเพื่อดูรายละเอียด">
-      <td class="c-no">${start + i + 1}</td>
-      <td class="c-name">
-        <div class="ax-namecell">
-          <span class="ax-tletter" style="background:${color}1a;color:${color}">${escapeHtmlText(letter)}</span>
-          <span class="ax-nametx">
-            ${listMultiHtml(d.instrument_name)}
-            <span class="ax-sub">${brandModel}</span>
-          </span>
-        </div>
-      </td>
-      <td class="c-cert"><span class="ax-mono">${escapeHtmlText(d.cert_no || '–')}</span></td>
-      <td class="c-id">
-        <span class="ax-idcell">
-          ${listLines(d.id_code).map(t => `<span class="ax-idtag">${escapeHtmlText(t)}</span>`).join('')}
-          <span class="ax-sub">${escapeHtmlText(d.machine_name || '–')}</span>
-        </span>
-      </td>
-      <td class="c-range">${listMultiHtml(listRangeText(d))}</td>
-      <td class="c-res">${listMultiHtml(d.resolution_text || d.resolution)}</td>
-      <td class="c-tol">${listMultiHtml(d.tolerance)}</td>
-      <td class="c-cal"><b>${formatDate(d.cal_date)}</b></td>
-      <td class="c-due">
-        <span class="ax-duecell">
-          <b>${p.cancelled ? '–' : formatDate(d.due_date)}</b>
-          <span style="color:${p.fg}">${escapeHtmlText(p.days)}</span>
-        </span>
-      </td>
-      <td class="c-method">
-        <span class="ax-tagrow">
-          <span class="ax-tag">${escapeHtmlText(d.cal_type || '–')}</span>
-          <span class="ax-tag">${escapeHtmlText(d.cal_frequency || '–')}</span>
-        </span>
-      </td>
-      <td class="c-status">
-        <span class="ax-pill" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span>
-        ${typeof repairBadgeHtml === 'function' && repairBadgeHtml(d.id) ? '<br>' + repairBadgeHtml(d.id) : ''}
-      </td>
-      <td class="c-act">${listActionCell(d)}</td>
-    </tr>`;
-  }).join('');
+const LIST_PHOTO_CACHE = new Map();
+const LIST_PHOTO_GENERATION = new Map();
+const LIST_PHOTO_TTL_MS = 600000;
+const LIST_PHOTO_REFRESH_MARGIN_MS = 60000;
+const LIST_PHOTO_EMPTY_TTL_MS = 300000;
+const LIST_PHOTO_ERROR_TTL_MS = 30000;
+let listPhotoObserver = null;
+
+function listSpecCardHtml(d) {
+  const id = Number(d.id) || 0;
+  const p = listStatusPill(d);
+  const idCode = escapeHtmlText(d.id_code || '–');
+  const cert = escapeHtmlText(d.cert_no || '–');
+  const due = p.cancelled ? '–' : formatDate(d.due_date);
+  return `<article class="ax-spec-card${p.cancelled ? ' is-cancelled' : ''}" data-instrument-id="${id}"
+      onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})">
+    <div class="ax-spec-media is-loading" data-list-photo-id="${id}" aria-label="กำลังโหลดรูปเครื่องมือ">
+      <span class="ax-spec-photo-message">กำลังโหลดรูป...</span>
+      <span class="ax-spec-status" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span>
+    </div>
+    <div class="ax-spec-body">
+      <strong class="ax-spec-id" title="${escapeHtmlAttr(d.id_code || '–')}">${idCode}</strong>
+      <span class="ax-spec-cert" title="${escapeHtmlAttr(d.cert_no || '–')}">Cert: ${cert}</span>
+      <span class="ax-spec-due" style="color:${p.fg}">Due: ${escapeHtmlText(due)}</span>
+      <button type="button" class="ax-spec-detail" aria-label="ดูรายละเอียดเครื่องมือ ${idCode}" onclick="event.stopPropagation();openInstrumentDetail(${id})">ดูรายละเอียด</button>
+    </div>
+  </article>`;
+}
+
+function listPhotoFallbackResult(id, state, generation) {
+  const ttl = state === 'error' ? LIST_PHOTO_ERROR_TTL_MS : LIST_PHOTO_EMPTY_TTL_MS;
+  const result = { state, expiresAt: Date.now() + ttl };
+  if ((LIST_PHOTO_GENERATION.get(Number(id)) || 0) === generation) LIST_PHOTO_CACHE.set(Number(id), result);
+  return result;
+}
+
+async function loadListSpecPhoto(d, forceRefresh = false) {
+  const id = Number(d.id) || 0;
+  const generation = LIST_PHOTO_GENERATION.get(id) || 0;
+  const cached = LIST_PHOTO_CACHE.get(id);
+  const cacheFresh = cached && (cached.state === 'ready'
+    ? cached.expiresAt - LIST_PHOTO_REFRESH_MARGIN_MS > Date.now()
+    : cached.expiresAt > Date.now());
+  if (!forceRefresh && cacheFresh) return cached;
+  try {
+    const folder = instPhotoFolder(d);
+    const { data, error } = await sb.storage.from('certificates').list(folder);
+    if (error) throw error;
+    const imgs = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder' && /\.(jpe?g|png|webp|gif)$/i.test(f.name)).slice(0, INST_PHOTO_MAX);
+    if ((LIST_PHOTO_GENERATION.get(id) || 0) !== generation) return { state: 'stale' };
+    if (!imgs.length) return listPhotoFallbackResult(id, 'empty', generation);
+    const { bySlot } = instPhotoArrange(imgs.map(f => ({ name: f.name })));
+    const cover = bySlot.overview || imgs[0];
+    const { data: signed, error: signError } = await sb.storage.from('certificates').createSignedUrl(`${folder}/${cover.name}`, 600);
+    if (signError || !signed?.signedUrl) throw (signError || new Error('no signed url'));
+    if ((LIST_PHOTO_GENERATION.get(id) || 0) !== generation) return { state: 'stale' };
+    const result = { state: 'ready', name: cover.name, url: signed.signedUrl, expiresAt: Date.now() + LIST_PHOTO_TTL_MS };
+    LIST_PHOTO_CACHE.set(id, result);
+    return result;
+  } catch (e) {
+    if ((LIST_PHOTO_GENERATION.get(id) || 0) !== generation) return { state: 'stale' };
+    return listPhotoFallbackResult(id, 'error', generation);
+  }
+}
+
+function listSpecPhotoEmpty(media) {
+  if (!media) return;
+  media.classList.remove('is-loading');
+  media.classList.add('is-empty');
+  media.setAttribute('aria-label', 'ยังไม่มีรูปเครื่องมือ');
+  media.querySelectorAll('img').forEach(img => img.remove());
+  let message = media.querySelector('.ax-spec-photo-message');
+  if (!message) {
+    message = document.createElement('span');
+    message.className = 'ax-spec-photo-message';
+    media.insertBefore(message, media.querySelector('.ax-spec-status'));
+  }
+  message.textContent = 'ยังไม่มีรูปเครื่องมือ';
+}
+
+function renderListSpecPhoto(id, result, refreshed = false) {
+  const media = document.querySelector(`[data-list-photo-id="${Number(id)}"]`);
+  if (!media) return;
+  if (result?.state === 'stale') return;
+  if (!result || result.state !== 'ready') { listSpecPhotoEmpty(media); return; }
+  media.classList.remove('is-loading', 'is-empty');
+  media.setAttribute('aria-label', 'รูปเครื่องมือ');
+  const old = media.querySelector('img');
+  if (old) old.remove();
+  const img = document.createElement('img');
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.alt = '';
+  img.src = result.url;
+  img.addEventListener('load', () => { const message = media.querySelector('.ax-spec-photo-message'); if (message) message.remove(); });
+  img.addEventListener('error', async () => {
+    img.remove();
+    LIST_PHOTO_CACHE.delete(Number(id));
+    if (refreshed) { listSpecPhotoEmpty(media); return; }
+    const d = (typeof filteredData !== 'undefined' ? filteredData : []).find(row => Number(row.id) === Number(id));
+    if (!d) { listSpecPhotoEmpty(media); return; }
+    renderListSpecPhoto(id, await loadListSpecPhoto(d, true), true);
+  });
+  media.insertBefore(img, media.firstChild);
+}
+
+function observeListSpecPhotos(root) {
+  if (listPhotoObserver) listPhotoObserver.disconnect();
+  const nodes = [...root.querySelectorAll('[data-list-photo-id]')];
+  const loadNode = async node => {
+    const id = Number(node.dataset.listPhotoId) || 0;
+    const d = (typeof filteredData !== 'undefined' ? filteredData : []).find(row => Number(row.id) === id);
+    if (d) renderListSpecPhoto(id, await loadListSpecPhoto(d));
+  };
+  if (!('IntersectionObserver' in window)) { nodes.forEach(loadNode); return; }
+  listPhotoObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    listPhotoObserver.unobserve(entry.target);
+    loadNode(entry.target);
+  }), { rootMargin: '240px 0px' });
+  nodes.forEach(node => listPhotoObserver.observe(node));
+}
+
+function invalidateListPhotoCache(id) {
+  const key = Number(id) || 0;
+  LIST_PHOTO_GENERATION.set(key, (LIST_PHOTO_GENERATION.get(key) || 0) + 1);
+  LIST_PHOTO_CACHE.delete(key);
+  const media = document.querySelector(`[data-list-photo-id="${key}"]`);
+  if (!media) return;
+  media.classList.remove('is-empty');
+  media.classList.add('is-loading');
+  let message = media.querySelector('.ax-spec-photo-message');
+  if (!message) {
+    message = document.createElement('span');
+    message.className = 'ax-spec-photo-message';
+    media.insertBefore(message, media.querySelector('.ax-spec-status'));
+  }
+  message.textContent = 'กำลังโหลดรูป...';
+  observeListSpecPhotos(document.getElementById('listSpecGrid'));
+}
+window.invalidateListPhotoCache = invalidateListPhotoCache;
+
+function renderListSpec(rows) {
+  const grid = document.getElementById('listSpecGrid');
+  if (!grid) return;
+  grid.innerHTML = rows.map(listSpecCardHtml).join('');
+  observeListSpecPhotos(grid);
 }
 
 /* ---------- มุมมองบัญชีรายการ ---------- */
@@ -343,8 +440,8 @@ function renderListPage() {
   show('listEmpty', empty);
 
   if (empty) {
-    const tb = document.getElementById('dataTable');
-    if (tb) tb.innerHTML = '<tr><td colspan="12" class="no-data">ไม่พบข้อมูล</td></tr>';
+    const grid = document.getElementById('listSpecGrid');
+    if (grid) grid.innerHTML = '';
     const tf = document.getElementById('dataTableFull');
     if (tf) tf.innerHTML = '<tr><td colspan="19" class="no-data">ไม่พบข้อมูล</td></tr>';
   } else if (listView === 'full') {
