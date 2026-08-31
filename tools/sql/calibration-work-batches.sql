@@ -36,17 +36,47 @@ create table if not exists public.calibration_work_items (
   skip_reason text,
   completed_by text,
   completed_at timestamptz,
+  is_active boolean not null default true,
+  removed_by text,
+  removed_at timestamptz,
+  removal_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (batch_id, instrument_id)
+  unique (batch_id, instrument_id),
+  unique (batch_id, id, instrument_id)
 );
+
+alter table public.calibration_work_items add column if not exists is_active boolean not null default true;
+alter table public.calibration_work_items add column if not exists removed_by text;
+alter table public.calibration_work_items add column if not exists removed_at timestamptz;
+alter table public.calibration_work_items add column if not exists removal_reason text;
+create unique index if not exists calibration_work_items_lock_tuple_uidx
+  on public.calibration_work_items(batch_id, id, instrument_id);
 
 create table if not exists public.calibration_work_instrument_locks (
   instrument_id bigint primary key references public.instruments(id) on delete restrict,
   batch_id uuid not null references public.calibration_work_batches(id) on delete cascade,
-  item_id uuid not null unique references public.calibration_work_items(id) on delete cascade,
-  locked_at timestamptz not null default now()
+  item_id uuid not null unique,
+  locked_at timestamptz not null default now(),
+  constraint calibration_work_instrument_locks_tuple_fkey
+  foreign key (batch_id, item_id, instrument_id)
+    references public.calibration_work_items(batch_id, id, instrument_id) on delete cascade
 );
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.calibration_work_instrument_locks'::regclass
+      and conname = 'calibration_work_instrument_locks_tuple_fkey'
+  ) then
+    alter table public.calibration_work_instrument_locks
+      add constraint calibration_work_instrument_locks_tuple_fkey
+      foreign key (batch_id, item_id, instrument_id)
+      references public.calibration_work_items(batch_id, id, instrument_id) on delete cascade;
+  end if;
+end;
+$$;
 
 create table if not exists public.calibration_work_documents (
   id uuid primary key default gen_random_uuid(),
@@ -144,7 +174,6 @@ declare
   v_total integer;
   v_resolved integer;
   v_has_ack boolean;
-  v_has_closure boolean;
   v_status text;
 begin
   select * into strict v_batch
@@ -159,21 +188,14 @@ begin
   select count(*), count(*) filter (where result_status in ('completed','skipped'))
     into v_total, v_resolved
   from public.calibration_work_items
-  where batch_id = p_batch_id;
+  where batch_id = p_batch_id and is_active;
 
   select exists (
     select 1 from public.calibration_work_documents
     where batch_id = p_batch_id and item_id is null
       and document_kind = 'acknowledgement' and is_current
   ) into v_has_ack;
-  select exists (
-    select 1 from public.calibration_work_documents
-    where batch_id = p_batch_id and item_id is null
-      and document_kind = 'closure' and is_current
-  ) into v_has_closure;
-
   v_status := case
-    when v_has_closure and v_total > 0 and v_total = v_resolved then 'completed'
     when v_batch.confirmed_at is null then 'draft'
     when not v_has_ack then 'awaiting_acknowledgement_pdf'
     when v_total > 0 and v_total = v_resolved then 'awaiting_closure_pdf'
@@ -211,7 +233,7 @@ begin
      or nullif(btrim(p_instrument_type), '') is null then
     raise exception 'title, unit code, and instrument type are required';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'at least one item is required';
   end if;
   if (select count(*) from jsonb_array_elements(p_items)) <>
@@ -257,6 +279,53 @@ begin
 end;
 $$;
 
+create or replace function public.cw_update_batch_draft(
+  p_token text,
+  p_batch_id uuid,
+  p_title text,
+  p_unit_code text,
+  p_instrument_type text,
+  p_expected_updated_at timestamptz
+)
+returns public.calibration_work_batches
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_actor record;
+  v_before public.calibration_work_batches%rowtype;
+  v_after public.calibration_work_batches%rowtype;
+begin
+  select * into v_actor from public.cw_actor(p_token, true);
+  select * into strict v_before from public.calibration_work_batches
+  where id = p_batch_id for update;
+  if p_expected_updated_at is null or v_before.updated_at <> p_expected_updated_at then
+    raise exception 'stale batch edit';
+  end if;
+  if v_before.status <> 'draft' then raise exception 'only draft metadata can be edited'; end if;
+  if nullif(btrim(p_title), '') is null
+     or nullif(btrim(p_unit_code), '') is null
+     or nullif(btrim(p_instrument_type), '') is null then
+    raise exception 'title, unit code, and instrument type are required';
+  end if;
+  if exists (
+    select 1
+    from public.calibration_work_items wi
+    join public.instruments i on i.id = wi.instrument_id
+    where wi.batch_id = p_batch_id and wi.is_active
+      and (i.department <> p_unit_code or i.instrument_type <> p_instrument_type)
+  ) then raise exception 'active instruments do not match the new batch group'; end if;
+
+  update public.calibration_work_batches
+  set title = btrim(p_title), unit_code = btrim(p_unit_code),
+      instrument_type = btrim(p_instrument_type), updated_at = now()
+  where id = p_batch_id returning * into v_after;
+  insert into public.calibration_work_audit(batch_id, action, actor, before_data, after_data)
+  values (p_batch_id, 'update_batch_metadata', v_actor.username,
+          to_jsonb(v_before), to_jsonb(v_after));
+  return v_after;
+end;
+$$;
+
 create or replace function public.cw_confirm_batch(p_token text, p_batch_id uuid)
 returns public.calibration_work_batches
 language plpgsql security definer set search_path = public
@@ -270,7 +339,7 @@ begin
   select * into strict v_before from public.calibration_work_batches
   where id = p_batch_id for update;
   if v_before.status <> 'draft' then raise exception 'batch is not draft'; end if;
-  if not exists (select 1 from public.calibration_work_items where batch_id = p_batch_id) then
+  if not exists (select 1 from public.calibration_work_items where batch_id = p_batch_id and is_active) then
     raise exception 'batch has no items';
   end if;
   update public.calibration_work_batches
@@ -283,10 +352,12 @@ begin
 end;
 $$;
 
+drop function if exists public.cw_mutate_items(text, uuid, jsonb, text);
 create or replace function public.cw_mutate_items(
   p_token text,
   p_batch_id uuid,
   p_items jsonb,
+  p_expected_updated_at timestamptz,
   p_reason text default null
 )
 returns public.calibration_work_batches
@@ -301,12 +372,19 @@ declare
   v_before jsonb;
   v_after jsonb;
   v_had_ack boolean;
+  v_ack_before public.calibration_work_documents%rowtype;
+  v_ack_after public.calibration_work_documents%rowtype;
+  v_removed_before jsonb;
+  v_removed_after jsonb;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   select * into strict v_batch from public.calibration_work_batches
   where id = p_batch_id for update;
+  if p_expected_updated_at is null or v_batch.updated_at <> p_expected_updated_at then
+    raise exception 'stale batch edit';
+  end if;
   if v_batch.status in ('completed','cancelled') then raise exception 'batch is closed'; end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'at least one item is required';
   end if;
   if (select count(*) from jsonb_array_elements(p_items)) <>
@@ -329,7 +407,8 @@ begin
   end loop;
 
   select coalesce(jsonb_agg(to_jsonb(i) order by i.created_at), '[]'::jsonb)
-    into v_before from public.calibration_work_items i where i.batch_id = p_batch_id;
+    into v_before from public.calibration_work_items i
+    where i.batch_id = p_batch_id and i.is_active;
   select exists (
     select 1 from public.calibration_work_documents
     where batch_id = p_batch_id and item_id is null and document_kind = 'acknowledgement'
@@ -339,7 +418,27 @@ begin
   end if;
   if exists (
     select 1 from public.calibration_work_items i
-    where i.batch_id = p_batch_id
+    where i.batch_id = p_batch_id and i.is_active
+      and exists (
+        select 1 from jsonb_array_elements(p_items) requested(x)
+        where (requested.x ->> 'instrument_id')::bigint = i.instrument_id
+          and i.planned_date is distinct from (requested.x ->> 'planned_date')::date
+      )
+      and (
+        i.result_status <> 'in_progress' or i.cert_no is not null or i.calibration_date is not null
+        or i.overdue_reason is not null or i.skip_reason is not null
+        or exists (
+          select 1 from public.calibration_work_documents d
+          where d.item_id = i.id and d.is_current
+            and d.document_kind in ('certificate','overdue')
+        )
+      )
+  ) then
+    raise exception 'reset item result before changing planned date';
+  end if;
+  if exists (
+    select 1 from public.calibration_work_items i
+    where i.batch_id = p_batch_id and i.is_active
       and not exists (
         select 1 from jsonb_array_elements(p_items) x
         where (x ->> 'instrument_id')::bigint = i.instrument_id
@@ -347,43 +446,84 @@ begin
       and (
         i.result_status <> 'in_progress' or i.cert_no is not null or i.calibration_date is not null
         or i.overdue_reason is not null or i.skip_reason is not null
-        or exists (select 1 from public.calibration_work_documents d where d.item_id = i.id)
+        or exists (
+          select 1 from public.calibration_work_documents d
+          where d.item_id = i.id and d.is_current
+            and d.document_kind in ('certificate','overdue')
+        )
       )
   ) then
-    raise exception 'cannot remove an item with saved results or documents';
+    raise exception 'reset item result before removal';
   end if;
 
   delete from public.calibration_work_instrument_locks where batch_id = p_batch_id;
-  delete from public.calibration_work_items i
-  where i.batch_id = p_batch_id
+  select coalesce(jsonb_agg(to_jsonb(i) order by i.created_at), '[]'::jsonb)
+    into v_removed_before
+  from public.calibration_work_items i
+  where i.batch_id = p_batch_id and i.is_active
     and not exists (
       select 1 from jsonb_array_elements(p_items) x
       where (x ->> 'instrument_id')::bigint = i.instrument_id
     );
+  update public.calibration_work_items i
+  set is_active = false, removed_by = v_actor.username, removed_at = now(),
+      removal_reason = nullif(btrim(p_reason), ''), updated_at = now()
+  where i.batch_id = p_batch_id and i.is_active
+    and not exists (
+      select 1 from jsonb_array_elements(p_items) x
+      where (x ->> 'instrument_id')::bigint = i.instrument_id
+    );
+  if v_removed_before <> '[]'::jsonb then
+    select coalesce(jsonb_agg(to_jsonb(i) order by i.created_at), '[]'::jsonb)
+      into v_removed_after
+    from public.calibration_work_items i
+    where i.batch_id = p_batch_id and not i.is_active
+      and i.removed_at = (select max(removed_at) from public.calibration_work_items where batch_id = p_batch_id);
+    insert into public.calibration_work_audit(batch_id, action, actor, before_data, after_data, reason)
+    values (p_batch_id, 'remove_items', v_actor.username, v_removed_before,
+            v_removed_after, nullif(btrim(p_reason), ''));
+  end if;
 
   for v_json in select value from jsonb_array_elements(p_items)
   loop
     insert into public.calibration_work_items(batch_id, instrument_id, planned_date)
     values (p_batch_id, (v_json ->> 'instrument_id')::bigint, (v_json ->> 'planned_date')::date)
     on conflict (batch_id, instrument_id) do update
-      set planned_date = excluded.planned_date, updated_at = now()
+      set planned_date = excluded.planned_date, is_active = true,
+          removed_by = null, removed_at = null, removal_reason = null, updated_at = now()
     returning id into v_item_id;
     insert into public.calibration_work_instrument_locks(instrument_id, batch_id, item_id)
     values ((v_json ->> 'instrument_id')::bigint, p_batch_id, v_item_id);
   end loop;
 
   if v_had_ack then
+    select * into v_ack_before from public.calibration_work_documents
+    where batch_id = p_batch_id and item_id is null
+      and document_kind = 'acknowledgement' and is_current for update;
     update public.calibration_work_documents
     set is_current = false
     where batch_id = p_batch_id and item_id is null
-      and document_kind = 'acknowledgement' and is_current;
+      and document_kind = 'acknowledgement' and is_current
+    returning * into v_ack_after;
+    if v_ack_before.id is not null then
+      insert into public.calibration_work_audit
+        (batch_id, action, actor, before_data, after_data, reason)
+      values
+        (p_batch_id, 'invalidate_acknowledgement_document', v_actor.username,
+         to_jsonb(v_ack_before), to_jsonb(v_ack_after), btrim(p_reason));
+    end if;
   end if;
   update public.calibration_work_batches
   set status = case when confirmed_at is null then 'draft' else 'awaiting_acknowledgement_pdf' end,
       updated_at = now()
   where id = p_batch_id;
   select coalesce(jsonb_agg(to_jsonb(i) order by i.created_at), '[]'::jsonb)
-    into v_after from public.calibration_work_items i where i.batch_id = p_batch_id;
+    into v_after from public.calibration_work_items i
+    where i.batch_id = p_batch_id and i.is_active;
+  if not exists (
+    select 1 from public.calibration_work_items
+    where batch_id = p_batch_id and is_active
+  ) then raise exception 'batch must retain at least one active item'; end if;
   insert into public.calibration_work_audit(batch_id, action, actor, before_data, after_data, reason)
   values (p_batch_id, 'mutate_items', v_actor.username, v_before, v_after, nullif(btrim(p_reason), ''));
   select * into v_batch from public.calibration_work_batches where id = p_batch_id;
@@ -414,6 +554,9 @@ declare
   v_version integer;
   v_total integer;
   v_resolved integer;
+  v_expected_path text;
+  v_storage_mime text;
+  v_storage_size bigint;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   select * into strict v_batch from public.calibration_work_batches
@@ -421,21 +564,19 @@ begin
   if p_document_kind not in ('acknowledgement','closure','certificate','overdue') then
     raise exception 'invalid document kind';
   end if;
-  if p_mime_type <> 'application/pdf' or p_file_size <= 0 or p_file_size > 52428800
-     or p_original_filename !~* '\.pdf$' or p_storage_path !~* '\.pdf$'
-     or p_sha256 !~ '^[0-9A-Fa-f]{64}$' then
+  if p_original_filename !~* '\.pdf$' or p_sha256 !~ '^[0-9A-Fa-f]{64}$' then
     raise exception 'invalid PDF metadata';
-  end if;
-  if p_storage_path not like p_batch_id::text || '/%' then
-    raise exception 'storage path must be rooted by batch id';
   end if;
   if (p_document_kind in ('acknowledgement','closure') and p_item_id is not null)
      or (p_document_kind in ('certificate','overdue') and p_item_id is null) then
     raise exception 'invalid document scope';
   end if;
-  if p_item_id is not null and not exists (
-    select 1 from public.calibration_work_items where id = p_item_id and batch_id = p_batch_id
-  ) then raise exception 'item does not belong to batch'; end if;
+  if p_item_id is not null then
+    perform 1 from public.calibration_work_items
+    where id = p_item_id and batch_id = p_batch_id and is_active
+    for update;
+    if not found then raise exception 'active item does not belong to batch'; end if;
+  end if;
   if v_batch.status = 'cancelled' then raise exception 'batch is cancelled'; end if;
   if p_document_kind = 'acknowledgement' and v_batch.status in ('draft','completed') then
     raise exception 'acknowledgement is not allowed in this state';
@@ -449,8 +590,12 @@ begin
   end if;
   if p_document_kind = 'closure' then
     select count(*), count(*) filter (where result_status in ('completed','skipped'))
-      into v_total, v_resolved from public.calibration_work_items where batch_id = p_batch_id;
+      into v_total, v_resolved from public.calibration_work_items
+      where batch_id = p_batch_id and is_active;
     if v_total = 0 or v_total <> v_resolved then raise exception 'all items must be resolved'; end if;
+    if v_batch.status not in ('awaiting_closure_pdf','completed') then
+      raise exception 'closure is not allowed in this state';
+    end if;
   end if;
 
   select * into v_before from public.calibration_work_documents
@@ -464,6 +609,30 @@ begin
   from public.calibration_work_documents
   where batch_id = p_batch_id and item_id is not distinct from p_item_id
     and document_kind = p_document_kind;
+  v_expected_path := case
+    when p_item_id is null then
+      p_batch_id::text || '/batch/' || p_document_kind || '/v' || lpad(v_version::text, 4, '0') || '.pdf'
+    else
+      p_batch_id::text || '/items/' || p_item_id::text || '/' || p_document_kind ||
+      '/v' || lpad(v_version::text, 4, '0') || '.pdf'
+  end;
+  if p_storage_path <> v_expected_path then
+    raise exception 'storage path does not match batch, item, kind, and version';
+  end if;
+  if exists (
+    select 1 from public.calibration_work_documents where storage_path = p_storage_path
+  ) then raise exception 'storage path is already referenced'; end if;
+  select lower(o.metadata ->> 'mimetype'), (o.metadata ->> 'size')::bigint
+    into v_storage_mime, v_storage_size
+  from storage.objects o
+  where o.bucket_id = 'calibration-work-batches'
+    and o.name = p_storage_path
+  for key share;
+  if not found then raise exception 'uploaded Storage object not found'; end if;
+  if v_storage_mime is distinct from 'application/pdf'
+     or v_storage_size is null or v_storage_size <= 0 or v_storage_size > 52428800 then
+    raise exception 'Storage object is not an allowed PDF';
+  end if;
   update public.calibration_work_documents set is_current = false
   where batch_id = p_batch_id and item_id is not distinct from p_item_id
     and document_kind = p_document_kind and is_current;
@@ -472,18 +641,14 @@ begin
      original_filename, mime_type, file_size, sha256, uploaded_by, replacement_reason)
   values
     (p_batch_id, p_item_id, p_document_kind, p_storage_path, v_version, true,
-     p_original_filename, p_mime_type, p_file_size, lower(p_sha256), v_actor.username,
+     p_original_filename, v_storage_mime, v_storage_size, lower(p_sha256), v_actor.username,
      nullif(btrim(p_replacement_reason), ''))
   returning * into v_document;
 
-  if p_document_kind = 'closure' then
-    update public.calibration_work_batches
-    set status = 'completed', completed_by = v_actor.username,
-        completed_at = coalesce(completed_at, now()), updated_at = now()
-    where id = p_batch_id;
-    delete from public.calibration_work_instrument_locks where batch_id = p_batch_id;
-  else
+  if p_document_kind <> 'closure' then
     perform public.cw_refresh_batch_status(p_batch_id);
+  else
+    update public.calibration_work_batches set updated_at = now() where id = p_batch_id;
   end if;
   insert into public.calibration_work_audit
     (batch_id, item_id, action, actor, before_data, after_data, reason)
@@ -510,11 +675,14 @@ declare
   v_before public.calibration_work_items%rowtype;
   v_after public.calibration_work_items%rowtype;
   v_batch public.calibration_work_batches%rowtype;
+  v_batch_id uuid;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
+  select batch_id into strict v_batch_id from public.calibration_work_items where id = p_item_id;
+  select * into strict v_batch from public.calibration_work_batches where id = v_batch_id for update;
   select * into strict v_before from public.calibration_work_items where id = p_item_id for update;
-  select * into strict v_batch from public.calibration_work_batches where id = v_before.batch_id for update;
-  if v_before.result_status <> 'in_progress' or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled')
+  if not v_before.is_active or v_before.result_status <> 'in_progress'
+     or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled')
      or not exists (
        select 1 from public.calibration_work_documents
        where batch_id = v_before.batch_id and item_id is null
@@ -524,6 +692,7 @@ begin
   set cert_no = nullif(btrim(p_cert_no), ''), calibration_date = p_calibration_date,
       overdue_reason = nullif(btrim(p_overdue_reason), ''), updated_at = now()
   where id = p_item_id returning * into v_after;
+  perform public.cw_refresh_batch_status(v_before.batch_id);
   insert into public.calibration_work_audit(batch_id, item_id, action, actor, before_data, after_data)
   values (v_after.batch_id, p_item_id, 'save_item_draft', v_actor.username,
           to_jsonb(v_before), to_jsonb(v_after));
@@ -540,11 +709,16 @@ declare
   v_item public.calibration_work_items%rowtype;
   v_after public.calibration_work_items%rowtype;
   v_batch public.calibration_work_batches%rowtype;
+  v_batch_id uuid;
+  v_instrument_before jsonb;
+  v_instrument_after jsonb;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
+  select batch_id into strict v_batch_id from public.calibration_work_items where id = p_item_id;
+  select * into strict v_batch from public.calibration_work_batches where id = v_batch_id for update;
   select * into strict v_item from public.calibration_work_items where id = p_item_id for update;
-  select * into strict v_batch from public.calibration_work_batches where id = v_item.batch_id for update;
-  if v_item.result_status <> 'in_progress' or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled') then
+  if not v_item.is_active or v_item.result_status <> 'in_progress'
+     or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled') then
     raise exception 'item cannot be completed';
   end if;
   if nullif(btrim(v_item.cert_no), '') is null or v_item.calibration_date is null then
@@ -563,12 +737,23 @@ begin
     )
   ) then raise exception 'overdue reason and current overdue document are required'; end if;
 
+  select jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
+    into v_instrument_before
+  from public.instruments where id = v_item.instrument_id for update;
+  if not found then raise exception 'instrument not found'; end if;
   -- Preserve instruments.due_date: this workflow owns only the certificate and calibration date.
   update public.instruments
   set cert_no = v_item.cert_no,
       cal_date = v_item.calibration_date
   where id = v_item.instrument_id;
-  if not found then raise exception 'instrument not found'; end if;
+  select jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
+    into v_instrument_after
+  from public.instruments where id = v_item.instrument_id;
+  insert into public.calibration_work_audit
+    (batch_id, item_id, action, actor, before_data, after_data)
+  values
+    (v_item.batch_id, p_item_id, 'update_instrument_result', v_actor.username,
+     v_instrument_before, v_instrument_after);
   update public.calibration_work_items
   set result_status = 'completed', completed_by = v_actor.username,
       completed_at = now(), skip_reason = null, updated_at = now()
@@ -590,12 +775,15 @@ declare
   v_before public.calibration_work_items%rowtype;
   v_after public.calibration_work_items%rowtype;
   v_batch public.calibration_work_batches%rowtype;
+  v_batch_id uuid;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   if nullif(btrim(p_reason), '') is null then raise exception 'skip reason is required'; end if;
+  select batch_id into strict v_batch_id from public.calibration_work_items where id = p_item_id;
+  select * into strict v_batch from public.calibration_work_batches where id = v_batch_id for update;
   select * into strict v_before from public.calibration_work_items where id = p_item_id for update;
-  select * into strict v_batch from public.calibration_work_batches where id = v_before.batch_id for update;
-  if v_before.result_status <> 'in_progress' or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled') then
+  if not v_before.is_active or v_before.result_status <> 'in_progress'
+     or v_batch.status in ('draft','awaiting_acknowledgement_pdf','completed','cancelled') then
     raise exception 'item cannot be skipped';
   end if;
   update public.calibration_work_items
@@ -619,16 +807,38 @@ declare
   v_before public.calibration_work_items%rowtype;
   v_after public.calibration_work_items%rowtype;
   v_batch public.calibration_work_batches%rowtype;
+  v_batch_id uuid;
+  v_docs_before jsonb;
+  v_docs_after jsonb;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   if nullif(btrim(p_reason), '') is null then raise exception 'reset reason is required'; end if;
+  select batch_id into strict v_batch_id from public.calibration_work_items where id = p_item_id;
+  select * into strict v_batch from public.calibration_work_batches where id = v_batch_id for update;
   select * into strict v_before from public.calibration_work_items where id = p_item_id for update;
-  select * into strict v_batch from public.calibration_work_batches where id = v_before.batch_id for update;
-  if v_before.result_status not in ('completed','skipped') or v_batch.status in ('completed','cancelled') then
+  if not v_before.is_active or v_before.result_status not in ('completed','skipped')
+     or v_batch.status in ('completed','cancelled') then
     raise exception 'item cannot be reset';
   end if;
+  select coalesce(jsonb_agg(to_jsonb(d) order by d.uploaded_at), '[]'::jsonb)
+    into v_docs_before
+  from public.calibration_work_documents d
+  where d.item_id = p_item_id and d.document_kind in ('certificate','overdue') and d.is_current;
   update public.calibration_work_documents set is_current = false
   where item_id = p_item_id and document_kind in ('certificate','overdue') and is_current;
+  if v_docs_before <> '[]'::jsonb then
+    select coalesce(jsonb_agg(to_jsonb(d) order by d.uploaded_at), '[]'::jsonb)
+      into v_docs_after
+    from public.calibration_work_documents d
+    where d.id in (
+      select (x ->> 'id')::uuid from jsonb_array_elements(v_docs_before) x
+    );
+    insert into public.calibration_work_audit
+      (batch_id, item_id, action, actor, before_data, after_data, reason)
+    values
+      (v_before.batch_id, p_item_id, 'reset_invalidate_documents', v_actor.username,
+       v_docs_before, v_docs_after, btrim(p_reason));
+  end if;
   update public.calibration_work_items
   set result_status = 'in_progress', cert_no = null, calibration_date = null,
       overdue_reason = null, skip_reason = null, completed_by = null,
@@ -656,9 +866,12 @@ begin
   select * into v_actor from public.cw_actor(p_token, true);
   select * into strict v_before from public.calibration_work_batches
   where id = p_batch_id for update;
-  if v_before.status = 'cancelled' then raise exception 'batch is cancelled'; end if;
+  if v_before.status <> 'awaiting_closure_pdf' then
+    raise exception 'batch is not awaiting initial closure completion';
+  end if;
   select count(*), count(*) filter (where result_status in ('completed','skipped'))
-    into v_total, v_resolved from public.calibration_work_items where batch_id = p_batch_id;
+    into v_total, v_resolved from public.calibration_work_items
+    where batch_id = p_batch_id and is_active;
   if v_total = 0 or v_total <> v_resolved then raise exception 'all items must be resolved'; end if;
   if not exists (
     select 1 from public.calibration_work_documents
@@ -666,8 +879,8 @@ begin
       and document_kind = 'closure' and is_current
   ) then raise exception 'current closure document is required'; end if;
   update public.calibration_work_batches
-  set status = 'completed', completed_by = coalesce(completed_by, v_actor.username),
-      completed_at = coalesce(completed_at, now()), updated_at = now()
+  set status = 'completed', completed_by = v_actor.username,
+      completed_at = now(), updated_at = now()
   where id = p_batch_id returning * into v_after;
   delete from public.calibration_work_instrument_locks where batch_id = p_batch_id;
   insert into public.calibration_work_audit(batch_id, action, actor, before_data, after_data)
@@ -753,33 +966,17 @@ create policy calibration_work_storage_insert on storage.objects
   with check (
     bucket_id = 'calibration-work-batches'
     and exists (select 1 from public.cw_actor(public.cw_request_token(), true))
+    and name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(batch/(acknowledgement|closure)|items/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificate|overdue))/v[0-9]{4}\.pdf$'
     and exists (
       select 1 from public.calibration_work_batches b
       where b.id::text = (storage.foldername(name))[1]
+    )
+    and not exists (
+      select 1 from public.calibration_work_documents d where d.storage_path = name
     )
   );
 drop policy if exists calibration_work_storage_update on storage.objects;
-create policy calibration_work_storage_update on storage.objects
-  for update to anon, authenticated
-  using (
-    bucket_id = 'calibration-work-batches'
-    and exists (select 1 from public.cw_actor(public.cw_request_token(), true))
-  )
-  with check (
-    bucket_id = 'calibration-work-batches'
-    and exists (select 1 from public.cw_actor(public.cw_request_token(), true))
-    and exists (
-      select 1 from public.calibration_work_batches b
-      where b.id::text = (storage.foldername(name))[1]
-    )
-  );
 drop policy if exists calibration_work_storage_delete on storage.objects;
-create policy calibration_work_storage_delete on storage.objects
-  for delete to anon, authenticated
-  using (
-    bucket_id = 'calibration-work-batches'
-    and exists (select 1 from public.cw_actor(public.cw_request_token(), true))
-  );
 
 revoke all on public.calibration_work_batches from anon, authenticated;
 revoke all on public.calibration_work_items from anon, authenticated;
@@ -792,13 +989,27 @@ grant select on public.calibration_work_instrument_locks to anon, authenticated;
 grant select on public.calibration_work_documents to anon, authenticated;
 grant select on public.calibration_work_audit to anon, authenticated;
 
+revoke all on function public.cw_actor(text, boolean) from public;
+revoke all on function public.cw_request_token() from public;
 revoke all on function public.cw_next_batch_no() from public;
 revoke all on function public.cw_refresh_batch_status(uuid) from public;
+revoke all on function public.cw_create_batch(text, text, text, text, jsonb) from public;
+revoke all on function public.cw_update_batch_draft(text, uuid, text, text, text, timestamptz) from public;
+revoke all on function public.cw_confirm_batch(text, uuid) from public;
+revoke all on function public.cw_mutate_items(text, uuid, jsonb, timestamptz, text) from public;
+revoke all on function public.cw_register_document(text, uuid, uuid, text, text, text, text, bigint, text, text) from public;
+revoke all on function public.cw_save_item_draft(text, uuid, text, date, text) from public;
+revoke all on function public.cw_complete_item(text, uuid) from public;
+revoke all on function public.cw_skip_item(text, uuid, text) from public;
+revoke all on function public.cw_reset_item_result(text, uuid, text) from public;
+revoke all on function public.cw_complete_batch(text, uuid) from public;
+revoke all on function public.cw_cancel_batch(text, uuid, text) from public;
 grant execute on function public.cw_actor(text, boolean) to anon, authenticated;
 grant execute on function public.cw_request_token() to anon, authenticated;
 grant execute on function public.cw_create_batch(text, text, text, text, jsonb) to anon, authenticated;
+grant execute on function public.cw_update_batch_draft(text, uuid, text, text, text, timestamptz) to anon, authenticated;
 grant execute on function public.cw_confirm_batch(text, uuid) to anon, authenticated;
-grant execute on function public.cw_mutate_items(text, uuid, jsonb, text) to anon, authenticated;
+grant execute on function public.cw_mutate_items(text, uuid, jsonb, timestamptz, text) to anon, authenticated;
 grant execute on function public.cw_register_document(text, uuid, uuid, text, text, text, text, bigint, text, text) to anon, authenticated;
 grant execute on function public.cw_save_item_draft(text, uuid, text, date, text) to anon, authenticated;
 grant execute on function public.cw_complete_item(text, uuid) to anon, authenticated;

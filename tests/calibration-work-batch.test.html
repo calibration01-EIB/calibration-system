@@ -6,6 +6,7 @@ const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
 function has(text, token, label) { ok(text.indexOf(token) !== -1, (label || 'source') + ' must contain ' + JSON.stringify(token)); }
+function lacks(text, token, label) { ok(text.indexOf(token) === -1, (label || 'source') + ' must not contain ' + JSON.stringify(token)); }
 function count(text, pattern) { return (text.match(pattern) || []).length; }
 function text(url) {
   return new Promise((resolve, reject) => {
@@ -30,6 +31,15 @@ function text(url) {
   }
 
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
+  const lower = sql.toLowerCase();
+  function body(name) {
+    const marker = 'create or replace function public.' + name;
+    const start = lower.indexOf(marker);
+    ok(start !== -1, name + ' function not found');
+    const end = lower.indexOf('$$;', start + marker.length);
+    ok(end !== -1, name + ' function terminator not found');
+    return lower.slice(start, end + 3).replace(/\s+/g, ' ');
+  }
 
   t('defines all UUID-backed workflow tables and lock uniqueness', () => {
     [
@@ -65,9 +75,8 @@ function text(url) {
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item',
       'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
     ].forEach(name => {
-      has(normalized, 'create or replace function public.' + name, name);
-      const body = new RegExp('create or replace function public\\.' + name + '[\\s\\S]*?security definer');
-      ok(body.test(sql.toLowerCase()), name + ' must be SECURITY DEFINER');
+      const fn = body(name);
+      has(fn, 'security definer', name);
     });
     has(normalized, 'from public.app_validate_token(p_token)', 'token validation');
     has(normalized, "u.role in ('admin','editor')", 'write role validation');
@@ -102,6 +111,136 @@ function text(url) {
       'grant execute on function public.cw_create_batch',
       'grant select on public.calibration_work_batches'
     ].forEach(token => has(normalized, token, token));
+  });
+
+  t('verifies uploaded evidence against immutable Storage objects', () => {
+    const fn = body('cw_register_document');
+    [
+      'from storage.objects o',
+      "o.bucket_id = 'calibration-work-batches'",
+      'o.name = p_storage_path',
+      "o.metadata ->> 'mimetype'",
+      "o.metadata ->> 'size'",
+      'v_expected_path',
+      'p_storage_path <> v_expected_path',
+      'storage_path = p_storage_path',
+      "v_storage_mime is distinct from 'application/pdf'",
+      'v_storage_size is null'
+    ].forEach(token => has(fn, token, token));
+    has(fn, 'already referenced', 'duplicate evidence rejection');
+  });
+
+  t('allows Storage INSERT only and rejects object mutation policies', () => {
+    has(normalized, 'create policy calibration_work_storage_insert', 'insert-only storage policy');
+    has(normalized, "name ~ '^", 'versioned storage path check');
+    lacks(normalized, 'create policy calibration_work_storage_update', 'storage policies');
+    lacks(normalized, 'create policy calibration_work_storage_delete', 'storage policies');
+  });
+
+  t('soft-removes reset items while preserving historical rows and documents', () => {
+    [
+      'is_active boolean not null default true',
+      'removed_by text',
+      'removed_at timestamptz',
+      'removal_reason text'
+    ].forEach(token => has(normalized, token, token));
+    const fn = body('cw_mutate_items');
+    lacks(fn, 'delete from public.calibration_work_items', 'full-set mutation');
+    has(fn, 'is_active = false', 'soft removal');
+    has(fn, 'removal_reason', 'reasoned removal');
+    has(fn, 'insert into public.calibration_work_audit', 'removal audit');
+  });
+
+  t('rejects null or empty item sets and counts active items only', () => {
+    ['cw_create_batch', 'cw_mutate_items'].forEach(name => {
+      const fn = body(name);
+      has(fn, 'p_items is null', name + ' null guard');
+      has(fn, 'jsonb_array_length(p_items) = 0', name + ' empty guard');
+    });
+    has(body('cw_mutate_items'), 'where batch_id = p_batch_id and is_active', 'active item invariant');
+  });
+
+  t('requires reset before changing resolved or result-bearing planned dates', () => {
+    const fn = body('cw_mutate_items');
+    has(fn, 'planned_date is distinct from', 'planned-date change detection');
+    has(fn, "result_status <> 'in_progress'", 'resolved item guard');
+    has(fn, 'd.is_current', 'current result document guard');
+    has(fn, 'reset item result before changing planned date', 'actionable rejection');
+  });
+
+  t('uses optimistic concurrency for full-set mutation', () => {
+    const fn = body('cw_mutate_items');
+    has(fn, 'p_expected_updated_at timestamptz', 'mutation signature');
+    has(fn, 'p_expected_updated_at is null', 'required version guard');
+    has(fn, 'v_batch.updated_at <> p_expected_updated_at', 'stale comparison');
+    has(fn, 'stale batch edit', 'stale rejection');
+  });
+
+  t('advances the batch version for draft and closure document writes', () => {
+    has(body('cw_save_item_draft'), 'cw_refresh_batch_status(v_before.batch_id)', 'draft version bump');
+    has(body('cw_register_document'), 'set updated_at = now()', 'closure registration version bump');
+  });
+
+  t('locks each batch before its item in result RPCs', () => {
+    ['cw_save_item_draft', 'cw_complete_item', 'cw_skip_item', 'cw_reset_item_result'].forEach(name => {
+      const fn = body(name);
+      const batchLock = fn.indexOf('from public.calibration_work_batches');
+      const itemLock = fn.indexOf('from public.calibration_work_items where id = p_item_id for update');
+      ok(batchLock !== -1 && itemLock !== -1 && batchLock < itemLock, name + ' must lock batch before item');
+    });
+  });
+
+  t('has one initial closure transition and preserves closure provenance', () => {
+    const register = body('cw_register_document');
+    lacks(register, "set status = 'completed'", 'document registration');
+    lacks(register, 'delete from public.calibration_work_instrument_locks', 'document registration');
+    const complete = body('cw_complete_batch');
+    has(complete, "v_before.status <> 'awaiting_closure_pdf'", 'single completion state guard');
+    has(complete, "document_kind = 'closure' and is_current", 'current closure gate');
+    has(complete, "set status = 'completed', completed_by = v_actor.username", 'completion provenance');
+  });
+
+  t('audits evidence invalidation and instrument and closure transitions distinctly', () => {
+    has(body('cw_mutate_items'), "'invalidate_acknowledgement_document'", 'acknowledgement invalidation audit');
+    has(body('cw_reset_item_result'), "'reset_invalidate_documents'", 'reset document invalidation audit');
+    has(body('cw_complete_item'), "'update_instrument_result'", 'instrument before/after audit');
+    has(body('cw_complete_batch'), "'complete_batch'", 'batch closure transition audit');
+  });
+
+  t('revokes PUBLIC execute on every SECURITY DEFINER function', () => {
+    [
+      'cw_actor', 'cw_request_token', 'cw_next_batch_no', 'cw_refresh_batch_status',
+      'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
+      'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
+      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+    ].forEach(name => has(normalized, 'revoke all on function public.' + name, name + ' PUBLIC revoke'));
+  });
+
+  t('provides an authorized audited draft metadata edit RPC', () => {
+    const fn = body('cw_update_batch_draft');
+    has(fn, 'security definer', 'draft metadata RPC');
+    has(fn, 'from public.cw_actor(p_token, true)', 'draft metadata authorization');
+    has(fn, "v_before.status <> 'draft'", 'draft-only guard');
+    has(fn, "'update_batch_metadata'", 'metadata audit');
+    has(fn, 'p_expected_updated_at', 'metadata concurrency');
+  });
+
+  t('database-enforces the complete lock tuple invariant', () => {
+    has(normalized, 'unique (batch_id, id, instrument_id)', 'referenced item tuple');
+    has(normalized, 'foreign key (batch_id, item_id, instrument_id)', 'lock tuple foreign key');
+    has(normalized, 'references public.calibration_work_items(batch_id, id, instrument_id)', 'lock tuple target');
+  });
+
+  t('each write RPC owns its authorization and audit', () => {
+    [
+      'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
+      'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
+      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+    ].forEach(name => {
+      const fn = body(name);
+      has(fn, 'from public.cw_actor(p_token, true)', name + ' authorization');
+      has(fn, 'insert into public.calibration_work_audit', name + ' audit');
+    });
   });
 
   document.getElementById('out').textContent = results.join('\n');
