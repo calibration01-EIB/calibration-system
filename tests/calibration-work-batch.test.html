@@ -1,10 +1,14 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>calibration work batch SQL contract</title></head><body>
 <pre id="out"></pre>
+<script>window.CW_TEST_MODE = true;</script>
+<script src="../js/29-calibration-work.js"></script>
 <script>
 const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
+function eq(actual, expected, message) { ok(actual === expected, (message || 'values differ') + ': expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual)); }
+function throws(fn, message) { let failed = false; try { fn(); } catch (_) { failed = true; } ok(failed, message || 'expected function to throw'); }
 function has(text, token, label) { ok(text.indexOf(token) !== -1, (label || 'source') + ' must contain ' + JSON.stringify(token)); }
 function lacks(text, token, label) { ok(text.indexOf(token) === -1, (label || 'source') + ' must not contain ' + JSON.stringify(token)); }
 function count(text, pattern) { return (text.match(pattern) || []).length; }
@@ -21,11 +25,15 @@ function text(url) {
 }
 
 (async () => {
-  let sql;
+  let sql, indexSource, swSource;
   try {
-    sql = await text('../tools/sql/calibration-work-batches.sql');
+    [sql, indexSource, swSource] = await Promise.all([
+      text('../tools/sql/calibration-work-batches.sql'),
+      text('../index.html'),
+      text('../sw.js')
+    ]);
   } catch (error) {
-    document.getElementById('out').textContent = 'FAIL SQL source unavailable — ' + error.message;
+    document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
     document.title = 'FAIL';
     return;
   }
@@ -48,6 +56,94 @@ function text(url) {
     ok(end !== -1, name + ' policy terminator not found');
     return lower.slice(start, end + 1).replace(/\s+/g, ' ');
   }
+
+  t('exposes an immutable Thai status palette', () => {
+    ok(Object.isFrozen(CW_STATUS), 'CW_STATUS must be immutable');
+    [
+      'draft', 'awaiting_acknowledgement_pdf', 'awaiting_calibration',
+      'partially_completed', 'awaiting_closure_pdf', 'completed', 'cancelled',
+      'in_progress', 'overdue', 'skipped'
+    ].forEach(key => {
+      ok(Object.isFrozen(CW_STATUS[key]), key + ' status metadata must be immutable');
+      ok(/[\u0E00-\u0E7F]/.test(CW_STATUS[key].label), key + ' must have a Thai label');
+      ok(/^#[0-9A-Fa-f]{6}$/.test(CW_STATUS[key].color), key + ' must have a hex color');
+    });
+  });
+
+  t('formats today as a stable Bangkok ISO date', () => {
+    const actual = cwTodayISO();
+    ok(/^\d{4}-\d{2}-\d{2}$/.test(actual), 'Bangkok today must be YYYY-MM-DD');
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const expected = ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('-');
+    eq(actual, expected, 'Bangkok date');
+  });
+
+  t('derives item display status with terminal and active-overdue precedence', () => {
+    eq(cwItemDisplayStatus({result_status:'completed'}, '2026-08-31'), 'completed');
+    eq(cwItemDisplayStatus({result_status:'skipped', planned_date:'2026-08-01'}, '2026-08-31'), 'skipped');
+    eq(cwItemDisplayStatus({result_status:'in_progress', planned_date:'2026-08-30'}, '2026-08-31'), 'overdue');
+    eq(cwItemDisplayStatus({result_status:'in_progress', planned_date:'2026-08-31'}, '2026-08-31'), 'in_progress');
+    eq(cwItemDisplayStatus({result_status:'in_progress', planned_date:'2026-09-01'}, '2026-08-31'), 'in_progress');
+    eq(cwItemDisplayStatus({result_status:'in_progress', planned_date:'2026-08-01', is_active:false}, '2026-08-31'), 'in_progress');
+  });
+
+  t('derives batch progress only from active calibration-stage items', () => {
+    eq(cwBatchDerivedStatus({status:'awaiting_calibration'}, [
+      {result_status:'completed'}, {result_status:'in_progress'}
+    ], []), 'partially_completed');
+    eq(cwBatchDerivedStatus({status:'awaiting_calibration'}, [
+      {result_status:'completed'}, {result_status:'skipped'}
+    ], []), 'awaiting_closure_pdf');
+    eq(cwBatchDerivedStatus({status:'partially_completed'}, [
+      {result_status:'completed'}, {result_status:'in_progress', is_active:false}, {result_status:'in_progress'}
+    ], []), 'partially_completed');
+    eq(cwBatchDerivedStatus({status:'awaiting_calibration'}, [
+      {result_status:'in_progress'}
+    ], []), 'awaiting_calibration');
+  });
+
+  t('preserves draft terminal and document-gate batch statuses', () => {
+    ['draft', 'awaiting_acknowledgement_pdf', 'awaiting_closure_pdf', 'completed', 'cancelled'].forEach(status => {
+      eq(cwBatchDerivedStatus({status}, [{result_status:'completed'}], []), status, status);
+    });
+  });
+
+  t('validates exact PDF extension MIME and 50 MiB size boundary', () => {
+    eq(cwValidatePdf({name:'certificate.PDF', type:'application/pdf', size:52428800}), null, 'maximum PDF');
+    [
+      {name:'certificate.txt', type:'application/pdf', size:10},
+      {name:'certificate.pdf', type:'text/plain', size:10},
+      {name:'certificate.pdf', type:'application/pdf', size:0},
+      {name:'certificate.pdf', type:'application/pdf', size:52428801}
+    ].forEach(file => {
+      const error = cwValidatePdf(file);
+      ok(typeof error === 'string' && /[\u0E00-\u0E7F]/.test(error), 'invalid PDF must return a Thai error');
+    });
+  });
+
+  t('builds UUID-safe bucket-relative document paths with exact scope', () => {
+    const batchId = '11111111-1111-1111-1111-111111111111';
+    const itemId = '22222222-2222-2222-2222-222222222222';
+    eq(cwDocumentPath(batchId, null, 'acknowledgement', 2),
+      batchId + '/batch/acknowledgement/v0002.pdf');
+    eq(cwDocumentPath(batchId, itemId, 'certificate', 12),
+      batchId + '/items/' + itemId + '/certificate/v0012.pdf');
+    throws(() => cwDocumentPath('b1', null, 'acknowledgement', 2), 'non-UUID batch must fail');
+    throws(() => cwDocumentPath(batchId, itemId, 'closure', 2), 'batch kind with item must fail');
+    throws(() => cwDocumentPath(batchId, null, 'overdue', 2), 'item kind without item must fail');
+    throws(() => cwDocumentPath(batchId, itemId, 'certificate', 0), 'zero version must fail');
+    throws(() => cwDocumentPath(batchId, itemId, 'certificate', 10000), 'five-digit version must fail');
+  });
+
+  t('registers the status engine after KPI in the exact offline cache generation', () => {
+    const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260831-cw1"></' + 'script>');
+    ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v150';", 'cache v150');
+    has(swSource, "'./js/29-calibration-work.js'", 'status engine APP_SHELL entry');
+  });
 
   t('defines all UUID-backed workflow tables and lock uniqueness', () => {
     [

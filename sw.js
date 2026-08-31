@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v149';
+const CACHE_NAME = 'calibration-app-v150';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -39,6 +39,7 @@ const APP_SHELL = [
   './js/26-list-ui.js',
   './js/27-asset-out-page.js',
   './js/28-kpi.js',
+  './js/29-calibration-work.js',
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',
