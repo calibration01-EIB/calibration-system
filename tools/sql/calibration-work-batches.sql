@@ -1103,6 +1103,12 @@ begin
     if nullif(btrim(p_failure_detail), '') is null then
       raise exception 'cleanup failure detail is required';
     end if;
+    if not exists (
+      select 1 from storage.objects o
+      where o.bucket_id = v_claim.bucket_id and o.name = v_claim.storage_path
+    ) then
+      raise exception 'Storage cleanup failure is not confirmed because object is absent';
+    end if;
     update public.calibration_work_cleanup_claims
     set status = 'failed', finalized_at = now(), failure_detail = btrim(p_failure_detail),
         updated_at = now()

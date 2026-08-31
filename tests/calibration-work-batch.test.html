@@ -224,6 +224,23 @@ function text(url) {
       'finalizer client grant');
   });
 
+  t('keeps cleanup pending when a failed Storage deletion cannot be confirmed', () => {
+    const fn = body('cw_finalize_orphan_cleanup');
+    const failureStart = fn.indexOf("else if nullif(btrim(p_failure_detail), '') is null");
+    const auditStart = fn.indexOf('insert into public.calibration_work_audit', failureStart);
+    ok(failureStart !== -1 && auditStart !== -1, 'failure branch must be independently inspectable');
+    const failure = fn.slice(failureStart, auditStart);
+    [
+      'if not exists ( select 1 from storage.objects o',
+      'o.bucket_id = v_claim.bucket_id',
+      'o.name = v_claim.storage_path',
+      'storage cleanup failure is not confirmed because object is absent',
+      "set status = 'failed'"
+    ].forEach(token => has(failure, token, token));
+    ok(failure.indexOf('if not exists ( select 1 from storage.objects o') < failure.indexOf("set status = 'failed'"),
+      'Storage presence must be verified before the claim is failed');
+  });
+
   t('soft-removes reset items while preserving historical rows and documents', () => {
     [
       'is_active boolean not null default true',
