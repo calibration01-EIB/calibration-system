@@ -81,7 +81,8 @@ function text(url) {
     [
       'cw_actor', 'cw_create_batch', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item',
-      'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+      'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch',
+      'cw_cleanup_orphan_document'
     ].forEach(name => {
       const fn = body(name);
       has(fn, 'security definer', name);
@@ -138,19 +139,40 @@ function text(url) {
     has(fn, 'already referenced', 'duplicate evidence rejection');
   });
 
-  t('allows immutable Storage INSERT and narrowly scoped orphan cleanup', () => {
+  t('allows immutable Storage INSERT without any direct client mutation policy', () => {
     has(normalized, 'create policy calibration_work_storage_insert', 'immutable storage insert');
     has(normalized, "name ~ '^", 'versioned storage path check');
     lacks(normalized, 'create policy calibration_work_storage_update', 'storage policies');
-    lacks(normalized, 'create policy calibration_work_storage_delete on', 'broad storage delete');
-    const orphan = policy('calibration_work_storage_delete_orphan');
+    lacks(normalized, 'for delete to anon, authenticated', 'direct client storage delete');
+    lacks(normalized, 'create policy calibration_work_storage_delete_orphan', 'orphan delete policy');
+  });
+
+  t('serializes audited orphan cleanup against evidence registration', () => {
+    const cleanup = body('cw_cleanup_orphan_document');
     [
-      "bucket_id = 'calibration-work-batches'",
-      'cw_actor(public.cw_request_token(), true)',
-      "name ~ '^",
-      'not exists ( select 1 from public.calibration_work_documents d where d.storage_path = name'
-    ].forEach(token => has(orphan, token, token));
-    lacks(orphan, 'is_current', 'orphan cleanup must protect current and historical evidence');
+      'from public.cw_actor(p_token, true)',
+      "p_bucket_id <> 'calibration-work-batches'",
+      "p_storage_path !~ '^",
+      'items/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+      'from public.calibration_work_batches',
+      'from storage.objects o',
+      'for update',
+      'from public.calibration_work_documents d',
+      'd.storage_path = p_storage_path',
+      'object is referenced by document history',
+      'delete from storage.objects',
+      "'cleanup_orphan_document'",
+      'insert into public.calibration_work_audit'
+    ].forEach(token => has(cleanup, token, token));
+    lacks(cleanup, 'is_current', 'cleanup reference guard must cover current and historical evidence');
+    const cleanupBatchLock = cleanup.indexOf('from public.calibration_work_batches');
+    const cleanupObjectLock = cleanup.indexOf('from storage.objects o');
+    ok(cleanupBatchLock < cleanupObjectLock, 'cleanup must lock batch before Storage object');
+    const register = body('cw_register_document');
+    const registerBatchLock = register.indexOf('from public.calibration_work_batches');
+    const registerObjectLock = register.indexOf('from storage.objects o');
+    ok(registerBatchLock < registerObjectLock && register.indexOf('for key share') > registerObjectLock,
+      'registration must lock batch before Storage object with a conflicting lock');
   });
 
   t('soft-removes reset items while preserving historical rows and documents', () => {
@@ -250,7 +272,7 @@ function text(url) {
       'cw_actor', 'cw_request_token', 'cw_next_batch_no', 'cw_refresh_batch_status',
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
-      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch', 'cw_cleanup_orphan_document'
     ].forEach(name => has(normalized, 'revoke all on function public.' + name, name + ' PUBLIC revoke'));
   });
 
@@ -273,7 +295,7 @@ function text(url) {
     [
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
-      'cw_reset_item_result', 'cw_cancel_batch'
+      'cw_reset_item_result', 'cw_cancel_batch', 'cw_cleanup_orphan_document'
     ].forEach(name => {
       const fn = body(name);
       has(fn, 'from public.cw_actor(p_token, true)', name + ' authorization');

@@ -954,6 +954,52 @@ begin
 end;
 $$;
 
+create or replace function public.cw_cleanup_orphan_document(
+  p_token text,
+  p_bucket_id text,
+  p_storage_path text,
+  p_reason text
+)
+returns boolean
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_actor record;
+  v_batch_id uuid;
+  v_batch public.calibration_work_batches%rowtype;
+  v_object storage.objects%rowtype;
+begin
+  select * into v_actor from public.cw_actor(p_token, true);
+  if nullif(btrim(p_reason), '') is null then raise exception 'cleanup reason is required'; end if;
+  if p_bucket_id <> 'calibration-work-batches' then raise exception 'invalid cleanup bucket'; end if;
+  if p_storage_path !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(batch/(acknowledgement|closure)|items/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificate|overdue))/v[0-9]{4}\.pdf$' then
+    raise exception 'invalid cleanup path';
+  end if;
+  v_batch_id := split_part(p_storage_path, '/', 1)::uuid;
+
+  -- Registration and cleanup both serialize batch first, then lock the Storage row.
+  select * into strict v_batch from public.calibration_work_batches
+  where id = v_batch_id for update;
+  select * into strict v_object from storage.objects o
+  where o.bucket_id = p_bucket_id and o.name = p_storage_path
+  for update;
+  if exists (
+    select 1 from public.calibration_work_documents d
+    where d.storage_path = p_storage_path
+  ) then raise exception 'object is referenced by document history'; end if;
+
+  delete from storage.objects
+  where id = v_object.id and bucket_id = p_bucket_id and name = p_storage_path;
+  if not found then raise exception 'orphan object changed during cleanup'; end if;
+  insert into public.calibration_work_audit
+    (batch_id, action, actor, before_data, after_data, reason)
+  values
+    (v_batch.id, 'cleanup_orphan_document', v_actor.username,
+     to_jsonb(v_object), null, btrim(p_reason));
+  return true;
+end;
+$$;
+
 alter table public.calibration_work_batches enable row level security;
 alter table public.calibration_work_items enable row level security;
 alter table public.calibration_work_instrument_locks enable row level security;
@@ -1017,20 +1063,6 @@ create policy calibration_work_storage_insert on storage.objects
 drop policy if exists calibration_work_storage_update on storage.objects;
 drop policy if exists calibration_work_storage_delete on storage.objects;
 drop policy if exists calibration_work_storage_delete_orphan on storage.objects;
-create policy calibration_work_storage_delete_orphan on storage.objects
-  for delete to anon, authenticated
-  using (
-    bucket_id = 'calibration-work-batches'
-    and exists (select 1 from public.cw_actor(public.cw_request_token(), true))
-    and name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(batch/(acknowledgement|closure)|items/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificate|overdue))/v[0-9]{4}\.pdf$'
-    and exists (
-      select 1 from public.calibration_work_batches b
-      where b.id::text = (storage.foldername(name))[1]
-    )
-    and not exists (
-      select 1 from public.calibration_work_documents d where d.storage_path = name
-    )
-  );
 
 revoke all on public.calibration_work_batches from anon, authenticated;
 revoke all on public.calibration_work_items from anon, authenticated;
@@ -1058,6 +1090,7 @@ revoke all on function public.cw_skip_item(text, uuid, text) from public;
 revoke all on function public.cw_reset_item_result(text, uuid, text) from public;
 revoke all on function public.cw_complete_batch(text, uuid) from public;
 revoke all on function public.cw_cancel_batch(text, uuid, text) from public;
+revoke all on function public.cw_cleanup_orphan_document(text, text, text, text) from public;
 grant execute on function public.cw_actor(text, boolean) to anon, authenticated;
 grant execute on function public.cw_request_token() to anon, authenticated;
 grant execute on function public.cw_create_batch(text, text, text, text, jsonb) to anon, authenticated;
@@ -1071,3 +1104,4 @@ grant execute on function public.cw_skip_item(text, uuid, text) to anon, authent
 grant execute on function public.cw_reset_item_result(text, uuid, text) to anon, authenticated;
 grant execute on function public.cw_complete_batch(text, uuid) to anon, authenticated;
 grant execute on function public.cw_cancel_batch(text, uuid, text) to anon, authenticated;
+grant execute on function public.cw_cleanup_orphan_document(text, text, text, text) to anon, authenticated;
