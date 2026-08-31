@@ -1,0 +1,111 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>calibration work batch SQL contract</title></head><body>
+<pre id="out"></pre>
+<script>
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
+function has(text, token, label) { ok(text.indexOf(token) !== -1, (label || 'source') + ' must contain ' + JSON.stringify(token)); }
+function count(text, pattern) { return (text.match(pattern) || []).length; }
+function text(url) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => request.status === 200 || request.status === 0 && request.responseText
+      ? resolve(request.responseText)
+      : reject(new Error('cannot read ' + url));
+    request.onerror = () => reject(new Error('cannot read ' + url));
+    request.send();
+  });
+}
+
+(async () => {
+  let sql;
+  try {
+    sql = await text('../tools/sql/calibration-work-batches.sql');
+  } catch (error) {
+    document.getElementById('out').textContent = 'FAIL SQL source unavailable — ' + error.message;
+    document.title = 'FAIL';
+    return;
+  }
+
+  const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
+
+  t('defines all UUID-backed workflow tables and lock uniqueness', () => {
+    [
+      'create table if not exists public.calibration_work_batches',
+      'create table if not exists public.calibration_work_items',
+      'create table if not exists public.calibration_work_instrument_locks',
+      'create table if not exists public.calibration_work_documents',
+      'create table if not exists public.calibration_work_audit',
+      'instrument_id bigint primary key',
+      'unique (batch_id, instrument_id)',
+      'before_data jsonb',
+      'after_data jsonb'
+    ].forEach(token => has(normalized, token, token));
+    ok(count(normalized, /id uuid primary key/g) >= 4, 'workflow tables must use UUID primary keys');
+  });
+
+  t('constrains exact workflow statuses and PDF metadata', () => {
+    [
+      "'draft','awaiting_acknowledgement_pdf','awaiting_calibration','partially_completed','awaiting_closure_pdf','completed','cancelled'",
+      "'in_progress','completed','skipped'",
+      "'acknowledgement','closure','certificate','overdue'",
+      'check (file_size > 0 and file_size <= 52428800)',
+      "check (mime_type = 'application/pdf')",
+      'check (version_number > 0)',
+      'create unique index if not exists calibration_work_documents_version_uidx',
+      'create unique index if not exists calibration_work_documents_current_uidx'
+    ].forEach(token => has(normalized, token, token));
+  });
+
+  t('defines guarded SECURITY DEFINER workflow RPCs', () => {
+    [
+      'cw_actor', 'cw_create_batch', 'cw_confirm_batch', 'cw_mutate_items',
+      'cw_register_document', 'cw_save_item_draft', 'cw_complete_item',
+      'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch'
+    ].forEach(name => {
+      has(normalized, 'create or replace function public.' + name, name);
+      const body = new RegExp('create or replace function public\\.' + name + '[\\s\\S]*?security definer');
+      ok(body.test(sql.toLowerCase()), name + ' must be SECURITY DEFINER');
+    });
+    has(normalized, 'from public.app_validate_token(p_token)', 'token validation');
+    has(normalized, "u.role in ('admin','editor')", 'write role validation');
+  });
+
+  t('uses atomic Bangkok-year numbering, transactional locks, and audits', () => {
+    [
+      "timezone('asia/bangkok', now())",
+      'pg_advisory_xact_lock',
+      "'plan-'",
+      'insert into public.calibration_work_instrument_locks',
+      'delete from public.calibration_work_instrument_locks',
+      'insert into public.calibration_work_audit'
+    ].forEach(token => has(normalized, token, token));
+  });
+
+  t('requires current evidence and protects instrument due dates', () => {
+    has(normalized, "document_kind = 'certificate'", 'certificate evidence');
+    has(normalized, "document_kind = 'overdue'", 'overdue evidence');
+    has(normalized, 'v_item.calibration_date > v_item.planned_date', 'overdue date rule');
+    has(normalized, 'set cert_no = v_item.cert_no, cal_date = v_item.calibration_date', 'instrument result update');
+    has(normalized, 'due_date', 'explicit due-date safeguard');
+    ok(!/update\s+public\.instruments[\s\S]*?due_date\s*=/.test(sql.toLowerCase()), 'RPC must never update due_date');
+  });
+
+  t('installs idempotent RLS, storage policies, bucket, and grants', () => {
+    [
+      'enable row level security',
+      "values ('calibration-work-batches', 'calibration-work-batches'",
+      'on storage.objects',
+      'drop policy if exists',
+      'grant execute on function public.cw_create_batch',
+      'grant select on public.calibration_work_batches'
+    ].forEach(token => has(normalized, token, token));
+  });
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script>
+</body></html>
