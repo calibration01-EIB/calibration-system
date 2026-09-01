@@ -2696,7 +2696,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260831-spec-cards">
+<link rel="stylesheet" href="theme-aqua.css?v=20260901-cw3">
 </head>
 <body>
 
@@ -2750,7 +2750,7 @@ body.app-mode textarea:focus {
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
         <div class="nav-item" onclick="showPage('list')" id="nav-list"><span class="nav-icon">📑</span> รายการเครื่องมือ</div>
         <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
-        <div class="nav-item" onclick="showPage('calwork')" id="nav-calwork"><span class="nav-icon">🧰</span> ชุดงานสอบเทียบ</div>
+        <button type="button" class="nav-item" onclick="showPage('calwork')" id="nav-calwork"><span class="nav-icon">🧰</span> ชุดงานสอบเทียบ</button>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
@@ -4777,7 +4777,7 @@ body.app-mode textarea:focus {
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260803-deadcode"></script>
 <script src="js/09-cert.js?v=20260803-deadcode"></script>
-<script src="js/10-router.js?v=20260721-repairs"></script>
+<script src="js/10-router.js?v=20260901-cw3"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260803-deadcode"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
@@ -4793,7 +4793,7 @@ body.app-mode textarea:focus {
 <script src="js/26-list-ui.js?v=20260831-spec-cards"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260819-kpi"></script>
-<script src="js/29-calibration-work.js?v=20260831-cw1"></script>
+<script src="js/29-calibration-work.js?v=20260901-cw3"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">

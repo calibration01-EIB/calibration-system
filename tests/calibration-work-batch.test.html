@@ -151,9 +151,11 @@ function text(url) {
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260831-cw1"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw3"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v150';", 'cache v150');
+    has(indexSource, 'href="theme-aqua.css?v=20260901-cw3"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v151';", 'cache v151');
     has(swSource, "'./js/29-calibration-work.js'", 'status engine APP_SHELL entry');
   });
 
@@ -180,7 +182,9 @@ function text(url) {
           ],
           documents:[
             {id:'d1', item_id:null, document_kind:'acknowledgement', version_number:2, is_current:true, original_filename:'ack-v2.pdf', storage_path:firstId + '/batch/acknowledgement/v0002.pdf', uploaded_by:'editor'},
-            {id:'d0', item_id:null, document_kind:'acknowledgement', version_number:1, is_current:false, original_filename:'ack-<old>.pdf', storage_path:firstId + '/batch/acknowledgement/v0001.pdf', uploaded_by:'owner', replacement_reason:'แก้ชื่อ'}
+            {id:'d0', item_id:null, document_kind:'acknowledgement', version_number:1, is_current:false, original_filename:'ack-<old>.pdf', storage_path:firstId + '/batch/acknowledgement/v0001.pdf', uploaded_by:'owner', replacement_reason:'แก้ชื่อ'},
+            {id:'dc1', item_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', document_kind:'certificate', version_number:1, is_current:true, original_filename:'certificate.pdf', storage_path:firstId + '/items/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/certificate/v0001.pdf', uploaded_by:'editor', uploaded_at:'2026-08-31T18:30:00Z'},
+            {id:'dc2', item_id:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', document_kind:'certificate', version_number:1, is_current:true, original_filename:'certificate.pdf', storage_path:firstId + '/items/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/certificate/v0001.pdf', uploaded_by:'editor', uploaded_at:'2026-08-31T19:30:00Z'}
           ],
           audit:[{id:'a1', action:'confirm_batch', actor:'editor', occurred_at:'2026-08-31T10:00:00Z', reason:'<checked>'}]
         },
@@ -205,6 +209,8 @@ function text(url) {
     has(routerSource, "page === 'calwork'", 'router load branch');
     has(routerSource, 'loadCalibrationWorkPage()', 'router loader call');
     has(routerSource, 'setTimeout(() => waitAndLoad', 'router waits for app data/client');
+    ok(/<button\s+type="button"\s+class="nav-item"\s+onclick="showPage\('calwork'\)"\s+id="nav-calwork">/.test(indexSource),
+      'desktop navigation must use a native button');
   });
 
   t('renders dashboard tabs metrics progress document gates and hostile text safely', () => {
@@ -243,6 +249,26 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  t('implements the ARIA tabs keyboard focus and selection model', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      const tab = key => document.querySelector('#cwTabs [data-cw-tab="' + key + '"]');
+      tab('active').focus();
+      tab('active').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
+      eq(document.activeElement, tab('waiting'), 'ArrowRight moves focus');
+      eq(tab('waiting').getAttribute('aria-selected'), 'true', 'ArrowRight selects next tab');
+      eq(tab('active').tabIndex, -1, 'previous tab leaves tab order');
+      tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
+      eq(document.activeElement, tab('history'), 'End moves to last tab');
+      tab('history').dispatchEvent(new KeyboardEvent('keydown', {key:'Home', bubbles:true}));
+      eq(document.activeElement, tab('active'), 'Home moves to first tab');
+      tab('active').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
+      eq(document.activeElement, tab('history'), 'ArrowLeft wraps to last tab');
+      eq(tab('history').tabIndex, 0, 'selected tab is the only tab stop');
+    } finally { cleanup(); }
+  });
+
   t('renders visible empty and escaped error states', () => {
     const cleanup = cwMountFixture();
     try {
@@ -255,20 +281,124 @@ function text(url) {
     } finally { cleanup(); }
   });
 
-  await ta('loads the complete read model with the existing client and shows query errors', async () => {
+  function cwUuid(number) {
+    return '00000000-0000-0000-0000-' + String(number).padStart(12, '0');
+  }
+
+  function cwPagedClient(rowsByTable, ranges, errorsByTable) {
+    return { from(table) {
+      return { select() { return { order() { return { async range(from, to) {
+        ranges.push(table + ':' + from + '-' + to);
+        const error = errorsByTable && errorsByTable[table];
+        if (error) return {data:null, error:{message:error}};
+        return {data:(rowsByTable[table] || []).slice(from, to + 1), error:null};
+      } }; } }; } };
+    } };
+  }
+
+  function cwDeferred() {
+    let resolve;
+    return { promise:new Promise(done => { resolve = done; }), resolve };
+  }
+
+  function cwDeferredClient(deferredByTable) {
+    return { from(table) {
+      return { select() { return { order() { return { range() { return deferredByTable[table].promise; } }; } }; } };
+    } };
+  }
+
+  await ta('pages every table to exhaustion and loads the actual instrument relation and history', async () => {
     const cleanup = cwMountFixture();
     try {
-      const tables = [];
-      const client = { from(table) {
-        tables.push(table);
-        return { select() { return { order: async () => ({data:null, error:{message:'DB <offline>'}}) }; } };
-      } };
+      const firstId = cwUuid(1);
+      const batches = [{id:firstId, batch_no:'LIVE-1', title:'Newest relation', status:'awaiting_calibration'}];
+      for (let number = 2; number <= 201; number += 1) {
+        batches.push({id:cwUuid(number), batch_no:'OLD-' + number, title:'Historical', status:'completed'});
+      }
+      const rows = {
+        calibration_work_batches:batches,
+        calibration_work_items:[
+          {id:cwUuid(301), batch_id:firstId, instrument_id:91, is_active:true, result_status:'in_progress', instruments:{id:91,id_code:'ACT-91',instrument_name:'Actual relation'}},
+          {id:cwUuid(302), batch_id:firstId, instrument_id:92, is_active:false, result_status:'completed', removal_reason:'เก็บประวัติ', instruments:{id:92,id_code:'OLD-92',instrument_name:'Historical relation'}}
+        ],
+        calibration_work_documents:[{id:cwUuid(401), batch_id:firstId, item_id:cwUuid(302), document_kind:'certificate', version_number:1, is_current:false, original_filename:'old.pdf', uploaded_at:'2026-08-31T18:30:00Z'}],
+        calibration_work_audit:[]
+      };
+      const ranges = [];
+      await loadCalibrationWorkPage(cwPagedClient(rows, ranges));
+      eq(ranges.filter(value => value.startsWith('calibration_work_batches:')).join(','),
+        'calibration_work_batches:0-199,calibration_work_batches:200-399', 'batch pagination and short-page stop');
+      ['calibration_work_items','calibration_work_documents','calibration_work_audit'].forEach(table =>
+        eq(ranges.filter(value => value.startsWith(table + ':')).join(','), table + ':0-199', table + ' empty/short-page stop'));
+      has(document.getElementById('cwBatchList').textContent, 'LIVE-1', 'first paged batch');
+      await cwOpenBatch(firstId);
+      const detail = document.getElementById('cwBatchDetail').textContent;
+      ['ACT-91', 'Actual relation', 'OLD-92', 'Historical relation', 'นำออกแล้ว', 'old.pdf']
+        .forEach(value => has(detail, value, 'normalized relation/history detail'));
+    } finally { cleanup(); }
+  });
+
+  await ta('loads the complete read model with the existing client and shows mixed query errors', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const ranges = [];
+      const tables = ['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'];
+      const rows = Object.fromEntries(tables.map(table => [table, []]));
+      const client = cwPagedClient(rows, ranges, {calibration_work_documents:'DB <offline>'});
       await loadCalibrationWorkPage(client);
-      ['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit']
-        .forEach(table => ok(tables.includes(table), table + ' query missing'));
+      tables.forEach(table => ok(ranges.some(value => value.startsWith(table + ':')), table + ' query missing'));
       const list = document.getElementById('cwBatchList');
       has(list.textContent, 'DB <offline>', 'query error state');
       ok(!list.querySelector('offline'), 'query error must be text only');
+    } finally { cleanup(); }
+  });
+
+  await ta('ignores stale overlapping load success and restores the list before refresh', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const oldId = cwUuid(501);
+      const newId = cwUuid(502);
+      cwRenderDashboard({batches:[{id:oldId,batch_no:'OPEN-ME',status:'draft',items:[],documents:[],audit:[]}]});
+      await cwOpenBatch(oldId);
+      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+      const staleLoad = loadCalibrationWorkPage(cwDeferredClient(deferred));
+      eq(document.getElementById('cwBatchDetail').hidden, true, 'refresh hides stale detail');
+      eq(document.getElementById('cwBatchList').hidden, false, 'refresh restores list surface');
+      has(document.getElementById('cwBatchList').textContent, 'กำลังโหลด', 'refresh shows loading state');
+      const rows = {
+        calibration_work_batches:[{id:newId,batch_no:'NEWEST',status:'draft'}],
+        calibration_work_items:[], calibration_work_documents:[], calibration_work_audit:[]
+      };
+      await loadCalibrationWorkPage(cwPagedClient(rows, []));
+      deferred.calibration_work_batches.resolve({data:[{id:oldId,batch_no:'STALE',status:'draft'}],error:null});
+      deferred.calibration_work_items.resolve({data:[],error:null});
+      deferred.calibration_work_documents.resolve({data:[],error:null});
+      deferred.calibration_work_audit.resolve({data:[],error:null});
+      await staleLoad;
+      const list = document.getElementById('cwBatchList').textContent;
+      has(list, 'NEWEST', 'newest load survives');
+      lacks(list, 'STALE', 'stale success cannot overwrite');
+    } finally { cleanup(); }
+  });
+
+  await ta('ignores a stale overlapping load error after a newer success', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+      const staleLoad = loadCalibrationWorkPage(cwDeferredClient(deferred));
+      const rows = {
+        calibration_work_batches:[{id:cwUuid(601),batch_no:'CURRENT',status:'draft'}],
+        calibration_work_items:[], calibration_work_documents:[], calibration_work_audit:[]
+      };
+      await loadCalibrationWorkPage(cwPagedClient(rows, []));
+      deferred.calibration_work_batches.resolve({data:null,error:{message:'STALE ERROR'}});
+      deferred.calibration_work_items.resolve({data:[],error:null});
+      deferred.calibration_work_documents.resolve({data:[],error:null});
+      deferred.calibration_work_audit.resolve({data:[],error:null});
+      await staleLoad;
+      const list = document.getElementById('cwBatchList').textContent;
+      has(list, 'CURRENT', 'newer success remains visible');
+      lacks(list, 'STALE ERROR', 'stale error cannot overwrite');
     } finally { cleanup(); }
   });
 
@@ -288,6 +418,14 @@ function text(url) {
       ok(!detail.querySelector('input,select,textarea'), 'Task 3 detail must be read-only');
       has(detail.querySelector('.cw-current-docs').textContent, 'PDF รับทราบแผน', 'current batch PDF');
       has(detail.querySelector('.cw-current-docs').textContent, 'ยังไม่มี PDF ปิดแผน', 'missing closure PDF');
+      const certificateRows = [...detail.querySelectorAll('.cw-doc-history li')]
+        .filter(row => row.textContent.includes('certificate.pdf'));
+      eq(certificateRows.length, 2, 'ambiguous filenames must remain distinguishable');
+      has(certificateRows[0].textContent + certificateRows[1].textContent, 'WRM-11', 'first item document identity');
+      has(certificateRows[0].textContent + certificateRows[1].textContent, 'WRM-12', 'second item document identity');
+      has(certificateRows[0].textContent + certificateRows[1].textContent, 'Balance <หนึ่ง>', 'item instrument name');
+      has(certificateRows[0].textContent + certificateRows[1].textContent, '2569', 'Bangkok upload year');
+      has(certificateRows[0].textContent + certificateRows[1].textContent, '01:30', 'Bangkok upload time');
     } finally { cleanup(); }
   });
 

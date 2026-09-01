@@ -98,7 +98,8 @@
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
     Object.freeze({ key: 'history', label: 'ประวัติทั้งหมด' })
   ]);
-  const cwUiState = { model: { batches: [] }, tab: 'active', openBatchId: null };
+  const CW_READ_PAGE_SIZE = 200;
+  const cwUiState = { model: { batches: [] }, tab: 'active', openBatchId: null, loadGeneration: 0 };
 
   function cwEscapeHtml(value) {
     return String(value == null ? '' : value)
@@ -154,7 +155,7 @@
       return '<button type="button" class="cw-tab' + (selected ? ' is-active' : '') + '" role="tab"'
         + ' aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '"'
         + ' data-cw-tab="' + tab.key + '" data-count="' + total + '"'
-        + ' onclick="cwSetDashboardTab(this.dataset.cwTab)">'
+        + ' onclick="cwSetDashboardTab(this.dataset.cwTab)" onkeydown="cwHandleTabKey(event)">'
         + '<span>' + tab.label + '</span><strong>' + total + '</strong></button>';
     }).join('');
   }
@@ -250,6 +251,23 @@
     cwRenderBatchList();
   }
 
+  function cwHandleTabKey(event) {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!event || !keys.includes(event.key)) return;
+    const currentKey = event.currentTarget && event.currentTarget.dataset.cwTab;
+    let index = CW_TABS.findIndex(tab => tab.key === currentKey);
+    if (index < 0) return;
+    if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = CW_TABS.length - 1;
+    else if (event.key === 'ArrowRight') index = (index + 1) % CW_TABS.length;
+    else index = (index - 1 + CW_TABS.length) % CW_TABS.length;
+    event.preventDefault();
+    const nextKey = CW_TABS[index].key;
+    cwSetDashboardTab(nextKey);
+    const nextTab = document.querySelector('#cwTabs [data-cw-tab="' + nextKey + '"]');
+    if (nextTab) nextTab.focus();
+  }
+
   function cwNormalizeReadModel(batches, items, documents, audit) {
     const byBatch = new Map((batches || []).map(batch => [batch.id, {
       ...batch, items: [], documents: [], audit: []
@@ -263,19 +281,28 @@
   }
 
   async function cwReadTable(client, table, columns, orderColumn, ascending) {
-    const response = await client.from(table).select(columns).order(orderColumn, { ascending });
-    if (response.error) throw new Error(response.error.message || 'Supabase query failed');
-    return response.data || [];
+    const rows = [];
+    let from = 0;
+    while (true) {
+      const response = await client.from(table).select(columns).order(orderColumn, { ascending })
+        .range(from, from + CW_READ_PAGE_SIZE - 1);
+      if (response.error) throw new Error(response.error.message || 'Supabase query failed');
+      const page = response.data || [];
+      rows.push(...page);
+      if (page.length < CW_READ_PAGE_SIZE) return rows;
+      from += CW_READ_PAGE_SIZE;
+    }
   }
 
   async function loadCalibrationWorkPage(client) {
+    const generation = ++cwUiState.loadGeneration;
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
-    const detail = document.getElementById('cwBatchDetail');
+    cwUiState.openBatchId = null;
+    cwShowDashboardSurface();
     if (tabs) tabs.innerHTML = '';
     if (metrics) metrics.innerHTML = '';
-    if (detail) detail.hidden = true;
     if (list) list.innerHTML = '<div class="cw-state" role="status"><strong>กำลังโหลดชุดงานสอบเทียบ...</strong></div>';
     try {
       const source = client || (typeof sb !== 'undefined' ? sb : null);
@@ -286,8 +313,10 @@
         cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false),
         cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false)
       ]);
+      if (generation !== cwUiState.loadGeneration) return;
       cwRenderDashboard(cwNormalizeReadModel(batches, items, documents, audit));
     } catch (error) {
+      if (generation !== cwUiState.loadGeneration) return;
       cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' });
     }
   }
@@ -351,11 +380,21 @@
 
   function cwRenderDocumentHistory(batch) {
     const documents = [...(batch.documents || [])].sort((a, b) => Number(b.version_number || 0) - Number(a.version_number || 0));
-    const rows = documents.map(documentRow => '<li><div><b>' + cwEscapeHtml(cwDocumentKindLabel(documentRow.document_kind))
-      + ' · เวอร์ชัน ' + cwEscapeHtml(documentRow.version_number || '–') + '</b><span>'
-      + cwEscapeHtml(documentRow.original_filename || documentRow.storage_path || '–') + '</span></div><small>'
-      + (documentRow.is_current ? 'ฉบับใช้งาน' : 'ประวัติ') + ' · โดย ' + cwEscapeHtml(documentRow.uploaded_by || '–')
-      + (documentRow.replacement_reason ? ' · ' + cwEscapeHtml(documentRow.replacement_reason) : '') + '</small></li>').join('');
+    const rows = documents.map(documentRow => {
+      const item = documentRow.item_id == null ? null
+        : (batch.items || []).find(candidate => candidate.id === documentRow.item_id);
+      const instrument = cwItemInstrument(item);
+      const scope = item
+        ? (instrument.id_code || item.instrument_id || documentRow.item_id) + ' · ' + (instrument.instrument_name || 'ไม่ระบุชื่อเครื่องมือ')
+        : 'ระดับชุดงาน';
+      return '<li><div><b>' + cwEscapeHtml(cwDocumentKindLabel(documentRow.document_kind))
+        + ' · เวอร์ชัน ' + cwEscapeHtml(documentRow.version_number || '–') + '</b><span>'
+        + cwEscapeHtml(documentRow.original_filename || documentRow.storage_path || '–') + '</span><span>'
+        + cwEscapeHtml(scope) + '</span></div><small>'
+        + (documentRow.is_current ? 'ฉบับใช้งาน' : 'ประวัติ') + ' · โดย ' + cwEscapeHtml(documentRow.uploaded_by || '–')
+        + ' · อัปโหลด ' + cwEscapeHtml(cwFormatBangkokDateTime(documentRow.uploaded_at))
+        + (documentRow.replacement_reason ? ' · ' + cwEscapeHtml(documentRow.replacement_reason) : '') + '</small></li>';
+    }).join('');
     return '<section class="cw-panel cw-doc-history"><div class="cw-panel-head"><h2>เวอร์ชันเอกสารทั้งหมด</h2></div><ul>'
       + (rows || '<li>ยังไม่มีเอกสาร</li>') + '</ul></section>';
   }
@@ -411,6 +450,7 @@
   global.loadCalibrationWorkPage = loadCalibrationWorkPage;
   global.cwRenderDashboard = cwRenderDashboard;
   global.cwSetDashboardTab = cwSetDashboardTab;
+  global.cwHandleTabKey = cwHandleTabKey;
   global.cwOpenBatch = cwOpenBatch;
   global.cwCloseBatch = cwCloseBatch;
 

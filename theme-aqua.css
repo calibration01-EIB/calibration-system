@@ -1800,6 +1800,10 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 
 /* Calibration work batches — Task 3 read-only dashboard */
 #app #pageCalwork { overflow-x: hidden; }
+#app .sidebar-nav > button.nav-item {
+  width: 100%; border-top: 0; border-right: 0; border-bottom: 0; background: transparent;
+  font: inherit; text-align: left; appearance: none;
+}
 #app #pageCalwork .cw-page-head {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   margin-bottom: 18px; padding: 22px 24px; border: 1px solid var(--border);
