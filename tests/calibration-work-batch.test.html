@@ -155,8 +155,15 @@ function text(url) {
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
     has(indexSource, 'href="theme-aqua.css?v=20260901-cw3"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v151';", 'cache v151');
-    has(swSource, "'./js/29-calibration-work.js'", 'status engine APP_SHELL entry');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v152';", 'cache v152');
+    [
+      'theme-aqua.css?v=20260901-cw3',
+      'js/10-router.js?v=20260901-cw3',
+      'js/29-calibration-work.js?v=20260901-cw3'
+    ].forEach(assetUrl => {
+      has(indexSource, assetUrl, assetUrl + ' index request');
+      has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
+    });
   });
 
   function cwMountFixture() {
@@ -285,14 +292,35 @@ function text(url) {
     return '00000000-0000-0000-0000-' + String(number).padStart(12, '0');
   }
 
-  function cwPagedClient(rowsByTable, ranges, errorsByTable) {
+  function cwPagedClient(rowsByTable, ranges, errorsByTable, queryLog) {
     return { from(table) {
-      return { select() { return { order() { return { async range(from, to) {
-        ranges.push(table + ':' + from + '-' + to);
-        const error = errorsByTable && errorsByTable[table];
-        if (error) return {data:null, error:{message:error}};
-        return {data:(rowsByTable[table] || []).slice(from, to + 1), error:null};
-      } }; } }; } };
+      return { select() {
+        const orders = [];
+        const upperBounds = [];
+        const query = {
+          lte(column, value) { upperBounds.push({column, value}); return query; },
+          order(column, options) { orders.push({column, ascending:options.ascending}); return query; },
+          async range(from, to) {
+            ranges.push(table + ':' + from + '-' + to);
+            if (queryLog) queryLog.push({table, from, to, orders:[...orders], upperBounds:[...upperBounds]});
+            const error = errorsByTable && errorsByTable[table];
+            if (error) return {data:null, error:{message:error}};
+            let data = [...(rowsByTable[table] || [])];
+            upperBounds.forEach(bound => {
+              data = data.filter(row => row[bound.column] == null || String(row[bound.column]) <= bound.value);
+            });
+            data.sort((left, right) => {
+              for (const order of orders) {
+                const comparison = String(left[order.column] || '').localeCompare(String(right[order.column] || ''));
+                if (comparison) return order.ascending ? comparison : -comparison;
+              }
+              return 0;
+            });
+            return {data:data.slice(from, to + 1), error:null};
+          }
+        };
+        return query;
+      } };
     } };
   }
 
@@ -303,17 +331,26 @@ function text(url) {
 
   function cwDeferredClient(deferredByTable) {
     return { from(table) {
-      return { select() { return { order() { return { range() { return deferredByTable[table].promise; } }; } }; } };
+      return { select() {
+        const query = {
+          lte() { return query; },
+          order() { return query; },
+          range() { return deferredByTable[table].promise; }
+        };
+        return query;
+      } };
     } };
   }
 
-  await ta('pages every table to exhaustion and loads the actual instrument relation and history', async () => {
+  await ta('pages a fixed snapshot with timestamp and unique-id ordering across tied rows', async () => {
     const cleanup = cwMountFixture();
     try {
       const firstId = cwUuid(1);
-      const batches = [{id:firstId, batch_no:'LIVE-1', title:'Newest relation', status:'awaiting_calibration'}];
-      for (let number = 2; number <= 201; number += 1) {
-        batches.push({id:cwUuid(number), batch_no:'OLD-' + number, title:'Historical', status:'completed'});
+      const tiedTimestamp = '2026-08-31T10:00:00.000Z';
+      const batches = [{id:cwUuid(999), batch_no:'FUTURE', status:'draft', updated_at:'9999-12-31T23:59:59.999Z'}];
+      for (let number = 201; number >= 1; number -= 1) {
+        batches.push({id:cwUuid(number), batch_no:number === 1 ? 'LIVE-1' : 'TIED-' + number,
+          title:number === 1 ? 'Newest relation' : 'Tied timestamp', status:'draft', updated_at:tiedTimestamp});
       }
       const rows = {
         calibration_work_batches:batches,
@@ -325,12 +362,24 @@ function text(url) {
         calibration_work_audit:[]
       };
       const ranges = [];
-      await loadCalibrationWorkPage(cwPagedClient(rows, ranges));
+      const queryLog = [];
+      await loadCalibrationWorkPage(cwPagedClient(rows, ranges, null, queryLog));
       eq(ranges.filter(value => value.startsWith('calibration_work_batches:')).join(','),
         'calibration_work_batches:0-199,calibration_work_batches:200-399', 'batch pagination and short-page stop');
       ['calibration_work_items','calibration_work_documents','calibration_work_audit'].forEach(table =>
         eq(ranges.filter(value => value.startsWith(table + ':')).join(','), table + ':0-199', table + ' empty/short-page stop'));
-      has(document.getElementById('cwBatchList').textContent, 'LIVE-1', 'first paged batch');
+      const batchQueries = queryLog.filter(query => query.table === 'calibration_work_batches');
+      eq(batchQueries[0].orders.map(order => order.column + ':' + (order.ascending ? 'asc' : 'desc')).join(','),
+        'updated_at:desc,id:asc', 'deterministic total order');
+      ok(batchQueries.every(query => query.upperBounds.length === 1 && query.upperBounds[0].column === 'updated_at'),
+        'every page must use a timestamp snapshot boundary');
+      eq(new Set(queryLog.map(query => query.upperBounds[0] && query.upperBounds[0].value)).size, 1,
+        'all tables and pages share one load snapshot');
+      const cards = [...document.querySelectorAll('#cwBatchList .cw-batch-card')];
+      eq(cards.length, 201, 'future mutation is outside the snapshot');
+      eq(cards[0].dataset.batchId, cwUuid(1), 'id tie-breaker orders first tied row');
+      eq(cards[200].dataset.batchId, cwUuid(201), 'id tie-breaker crosses page boundary without gaps');
+      lacks(document.getElementById('cwBatchList').textContent, 'FUTURE', 'post-snapshot row excluded');
       await cwOpenBatch(firstId);
       const detail = document.getElementById('cwBatchDetail').textContent;
       ['ACT-91', 'Actual relation', 'OLD-92', 'Historical relation', 'นำออกแล้ว', 'old.pdf']

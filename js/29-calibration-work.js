@@ -280,11 +280,12 @@
     return { batches: [...byBatch.values()] };
   }
 
-  async function cwReadTable(client, table, columns, orderColumn, ascending) {
+  async function cwReadTable(client, table, columns, orderColumn, ascending, snapshot) {
     const rows = [];
     let from = 0;
     while (true) {
-      const response = await client.from(table).select(columns).order(orderColumn, { ascending })
+      const response = await client.from(table).select(columns).lte(orderColumn, snapshot)
+        .order(orderColumn, { ascending }).order('id', { ascending: true })
         .range(from, from + CW_READ_PAGE_SIZE - 1);
       if (response.error) throw new Error(response.error.message || 'Supabase query failed');
       const page = response.data || [];
@@ -296,6 +297,7 @@
 
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
+    const snapshot = new Date().toISOString();
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -308,10 +310,10 @@
       const source = client || (typeof sb !== 'undefined' ? sb : null);
       if (!source || typeof source.from !== 'function') throw new Error('ยังไม่พร้อมเชื่อมต่อฐานข้อมูล');
       const [batches, items, documents, audit] = await Promise.all([
-        cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false),
-        cwReadTable(source, 'calibration_work_items', '*, instruments(id,id_code,instrument_name)', 'created_at', true),
-        cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false),
-        cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false)
+        cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false, snapshot),
+        cwReadTable(source, 'calibration_work_items', '*, instruments(id,id_code,instrument_name)', 'created_at', true, snapshot),
+        cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false, snapshot),
+        cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false, snapshot)
       ]);
       if (generation !== cwUiState.loadGeneration) return;
       cwRenderDashboard(cwNormalizeReadModel(batches, items, documents, audit));
