@@ -22,13 +22,13 @@
     skipped: Object.freeze({ label: 'ไม่ได้ดำเนินการ', color: '#6B7280' })
   });
 
-  function cwTodayISO() {
+  function cwTodayISO(date) {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Bangkok',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
-    }).formatToParts(new Date());
+    }).formatToParts(date instanceof Date ? date : new Date());
     const part = type => parts.find(value => value.type === type).value;
     return part('year') + '-' + part('month') + '-' + part('day');
   }
@@ -57,7 +57,7 @@
     if (stored !== 'awaiting_calibration' && stored !== 'partially_completed') return stored;
 
     const activeItems = (Array.isArray(items) ? items : []).filter(item => item && item.is_active !== false);
-    if (activeItems.length === 0) return stored;
+    if (activeItems.length === 0) return 'awaiting_calibration';
     const resolved = activeItems.filter(item => item.result_status === 'completed' || item.result_status === 'skipped').length;
     if (resolved === activeItems.length) return 'awaiting_closure_pdf';
     if (resolved > 0) return 'partially_completed';

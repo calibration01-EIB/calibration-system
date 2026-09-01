@@ -71,13 +71,11 @@ function text(url) {
   });
 
   t('formats today as a stable Bangkok ISO date', () => {
-    const actual = cwTodayISO();
+    const instant = new Date('2001-12-31T18:00:00.000Z');
+    const actual = cwTodayISO(instant);
     ok(/^\d{4}-\d{2}-\d{2}$/.test(actual), 'Bangkok today must be YYYY-MM-DD');
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date());
-    const expected = ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('-');
-    eq(actual, expected, 'Bangkok date');
+    eq(actual, '2002-01-01', 'fixed UTC instant must roll into the next Bangkok date');
+    ok(/^\d{4}-\d{2}-\d{2}$/.test(cwTodayISO()), 'zero-argument behavior must remain available');
   });
 
   t('derives item display status with terminal and active-overdue precedence', () => {
@@ -102,6 +100,17 @@ function text(url) {
     eq(cwBatchDerivedStatus({status:'awaiting_calibration'}, [
       {result_status:'in_progress'}
     ], []), 'awaiting_calibration');
+  });
+
+  t('derives awaiting calibration for an empty active-item set', () => {
+    eq(cwBatchDerivedStatus({status:'partially_completed'}, [], []),
+      'awaiting_calibration', 'empty item set must clear stale partial status');
+  });
+
+  t('derives awaiting calibration when every item is inactive', () => {
+    eq(cwBatchDerivedStatus({status:'partially_completed'}, [
+      {result_status:'completed', is_active:false}, {result_status:'skipped', is_active:false}
+    ], []), 'awaiting_calibration', 'all-inactive item set must clear stale partial status');
   });
 
   t('preserves draft terminal and document-gate batch statuses', () => {
