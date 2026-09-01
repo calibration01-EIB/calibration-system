@@ -280,24 +280,34 @@
     return { batches: [...byBatch.values()] };
   }
 
-  async function cwReadTable(client, table, columns, orderColumn, ascending, snapshot) {
+  function cwSortReadRows(rows, orderColumn, ascending) {
+    return rows.sort((left, right) => {
+      const comparison = String(left[orderColumn] || '').localeCompare(String(right[orderColumn] || ''));
+      if (comparison) return ascending ? comparison : -comparison;
+      return String(left.id || '').localeCompare(String(right.id || ''));
+    });
+  }
+
+  async function cwReadTable(client, table, columns, orderColumn, ascending) {
     const rows = [];
-    let from = 0;
+    let afterId = null;
     while (true) {
-      const response = await client.from(table).select(columns).lte(orderColumn, snapshot)
-        .order(orderColumn, { ascending }).order('id', { ascending: true })
-        .range(from, from + CW_READ_PAGE_SIZE - 1);
+      let query = client.from(table).select(columns).order('id', { ascending: true });
+      if (afterId) query = query.gt('id', afterId);
+      const response = await query.limit(CW_READ_PAGE_SIZE);
       if (response.error) throw new Error(response.error.message || 'Supabase query failed');
       const page = response.data || [];
       rows.push(...page);
-      if (page.length < CW_READ_PAGE_SIZE) return rows;
-      from += CW_READ_PAGE_SIZE;
+      if (page.length < CW_READ_PAGE_SIZE) break;
+      const nextId = page[page.length - 1] && page[page.length - 1].id;
+      if (!nextId || nextId === afterId) throw new Error('Invalid calibration work pagination cursor');
+      afterId = nextId;
     }
+    return cwSortReadRows(rows, orderColumn, ascending);
   }
 
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
-    const snapshot = new Date().toISOString();
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -310,10 +320,10 @@
       const source = client || (typeof sb !== 'undefined' ? sb : null);
       if (!source || typeof source.from !== 'function') throw new Error('ยังไม่พร้อมเชื่อมต่อฐานข้อมูล');
       const [batches, items, documents, audit] = await Promise.all([
-        cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false, snapshot),
-        cwReadTable(source, 'calibration_work_items', '*, instruments(id,id_code,instrument_name)', 'created_at', true, snapshot),
-        cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false, snapshot),
-        cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false, snapshot)
+        cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false),
+        cwReadTable(source, 'calibration_work_items', '*, instruments(id,id_code,instrument_name)', 'created_at', true),
+        cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false),
+        cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false)
       ]);
       if (generation !== cwUiState.loadGeneration) return;
       cwRenderDashboard(cwNormalizeReadModel(batches, items, documents, audit));
