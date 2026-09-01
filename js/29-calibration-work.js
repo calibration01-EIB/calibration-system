@@ -11,7 +11,7 @@
 
   const CW_STATUS = Object.freeze({
     draft: Object.freeze({ label: 'ร่าง', color: '#64748B' }),
-    awaiting_acknowledgement_pdf: Object.freeze({ label: 'รอแนบแผนรับทราบ', color: '#B45309' }),
+    awaiting_acknowledgement_pdf: Object.freeze({ label: 'รอ PDF รับทราบแผน', color: '#B45309' }),
     awaiting_calibration: Object.freeze({ label: 'รอสอบเทียบ', color: '#2563EB' }),
     partially_completed: Object.freeze({ label: 'ดำเนินการบางส่วน', color: '#7C3AED' }),
     awaiting_closure_pdf: Object.freeze({ label: 'รอแนบแผนยืนยัน', color: '#C2410C' }),
@@ -99,7 +99,12 @@
     Object.freeze({ key: 'history', label: 'ประวัติทั้งหมด' })
   ]);
   const CW_READ_PAGE_SIZE = 200;
-  const cwUiState = { model: { batches: [] }, tab: 'active', openBatchId: null, loadGeneration: 0 };
+  const cwUiState = { model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null, loadGeneration: 0 };
+  const cwWizardState = {
+    mode: 'create', step: 1, title: '', unitCode: '', instrumentType: '', search: '',
+    selected: new Map(), batchId: null, expectedUpdatedAt: null, hadAcknowledgement: false,
+    currentAcknowledgement: false, submitting: false, returnFocus: null
+  };
 
   function cwEscapeHtml(value) {
     return String(value == null ? '' : value)
@@ -108,6 +113,38 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function cwActor() {
+    if (typeof currentUser !== 'undefined' && currentUser) return currentUser;
+    return global.currentUser || null;
+  }
+
+  function cwRegistry() {
+    if (typeof allData !== 'undefined' && Array.isArray(allData)) return allData;
+    return Array.isArray(global.allData) ? global.allData : [];
+  }
+
+  function cwCanManage() {
+    const role = cwActor() && cwActor().role;
+    return role === 'admin' || role === 'editor';
+  }
+
+  function cwResolveClient(client) {
+    if (client) return client;
+    if (typeof sb !== 'undefined') return sb;
+    return global.sb || null;
+  }
+
+  function cwValidISODate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+    const date = new Date(value + 'T00:00:00.000Z');
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+
+  function cwSetCreateAccess() {
+    const button = document.getElementById('cwCreateButton');
+    if (button) button.hidden = !cwCanManage() || cwUiState.model.locksReady !== true;
   }
 
   function cwActiveItems(batch) {
@@ -225,10 +262,14 @@
   }
 
   function cwRenderDashboard(model) {
-    cwUiState.model = model && Array.isArray(model.batches) ? model : { batches: [] };
+    const hasLocks = Boolean(model && Array.isArray(model.locks));
+    cwUiState.model = model && Array.isArray(model.batches)
+      ? { ...model, locks: hasLocks ? model.locks : [], locksReady: hasLocks && model.locksReady !== false }
+      : { batches: [], locks: [], locksReady: false };
     cwUiState.tab = 'active';
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
+    cwSetCreateAccess();
     const list = document.getElementById('cwBatchList');
     if (model && model.error) {
       const tabs = document.getElementById('cwTabs');
@@ -268,7 +309,7 @@
     if (nextTab) nextTab.focus();
   }
 
-  function cwNormalizeReadModel(batches, items, documents, audit) {
+  function cwNormalizeReadModel(batches, items, locks, documents, audit) {
     const byBatch = new Map((batches || []).map(batch => [batch.id, {
       ...batch, items: [], documents: [], audit: []
     }]));
@@ -277,7 +318,7 @@
       if (byBatch.has(documentRow.batch_id)) byBatch.get(documentRow.batch_id).documents.push(documentRow);
     });
     (audit || []).forEach(event => { if (byBatch.has(event.batch_id)) byBatch.get(event.batch_id).audit.push(event); });
-    return { batches: [...byBatch.values()] };
+    return { batches: [...byBatch.values()], locks: Array.isArray(locks) ? locks : [], locksReady: true };
   }
 
   function cwSortReadRows(rows, orderColumn, ascending) {
@@ -288,20 +329,21 @@
     });
   }
 
-  async function cwReadTable(client, table, columns, orderColumn, ascending) {
+  async function cwReadTable(client, table, columns, orderColumn, ascending, cursorColumn) {
     const rows = [];
-    let afterId = null;
+    const cursor = cursorColumn || 'id';
+    let afterValue = null;
     while (true) {
-      let query = client.from(table).select(columns).order('id', { ascending: true });
-      if (afterId) query = query.gt('id', afterId);
+      let query = client.from(table).select(columns).order(cursor, { ascending: true });
+      if (afterValue != null) query = query.gt(cursor, afterValue);
       const response = await query.limit(CW_READ_PAGE_SIZE);
       if (response.error) throw new Error(response.error.message || 'Supabase query failed');
       const page = response.data || [];
       rows.push(...page);
       if (page.length < CW_READ_PAGE_SIZE) break;
-      const nextId = page[page.length - 1] && page[page.length - 1].id;
-      if (!nextId || nextId === afterId) throw new Error('Invalid calibration work pagination cursor');
-      afterId = nextId;
+      const nextValue = page[page.length - 1] && page[page.length - 1][cursor];
+      if (nextValue == null || nextValue === afterValue) throw new Error('Invalid calibration work pagination cursor');
+      afterValue = nextValue;
     }
     return cwSortReadRows(rows, orderColumn, ascending);
   }
@@ -312,6 +354,8 @@
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
     cwUiState.openBatchId = null;
+    cwUiState.model = { ...cwUiState.model, locksReady: false };
+    cwSetCreateAccess();
     cwShowDashboardSurface();
     if (tabs) tabs.innerHTML = '';
     if (metrics) metrics.innerHTML = '';
@@ -319,17 +363,20 @@
     try {
       const source = client || (typeof sb !== 'undefined' ? sb : null);
       if (!source || typeof source.from !== 'function') throw new Error('ยังไม่พร้อมเชื่อมต่อฐานข้อมูล');
-      const [batches, items, documents, audit] = await Promise.all([
+      const [batches, items, locks, documents, audit] = await Promise.all([
         cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false),
         cwReadTable(source, 'calibration_work_items', '*, instruments(id,id_code,instrument_name)', 'created_at', true),
+        cwReadTable(source, 'calibration_work_instrument_locks', '*', 'instrument_id', true, 'instrument_id'),
         cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false),
         cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false)
       ]);
-      if (generation !== cwUiState.loadGeneration) return;
-      cwRenderDashboard(cwNormalizeReadModel(batches, items, documents, audit));
+      if (generation !== cwUiState.loadGeneration) return false;
+      cwRenderDashboard(cwNormalizeReadModel(batches, items, locks, documents, audit));
+      return true;
     } catch (error) {
-      if (generation !== cwUiState.loadGeneration) return;
+      if (generation !== cwUiState.loadGeneration) return false;
       cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' });
+      return false;
     }
   }
 
@@ -421,6 +468,27 @@
       + (rows || '<li>ยังไม่มีกิจกรรม</li>') + '</ol></section>';
   }
 
+  function cwShowActionError(message) {
+    const root = document.getElementById('cwActionError');
+    if (!root) return;
+    root.textContent = message || '';
+    root.hidden = !message;
+  }
+
+  function cwBatchActionMarkup(batch) {
+    if (!cwCanManage() || !batch || !UUID_PATTERN.test(batch.id || '')) return '';
+    const status = cwBatchStatus(batch);
+    if (status === 'completed' || status === 'cancelled') return '';
+    const id = batch.id;
+    return '<div class="cw-detail-actions">'
+      + '<button type="button" data-cw-action="edit" data-batch-id="' + id
+      + '" onclick="cwEditBatchItems(this.dataset.batchId)">แก้ไขรายการ</button>'
+      + (status === 'draft' ? '<button type="button" data-cw-action="confirm" data-batch-id="' + id
+        + '" onclick="cwConfirmBatch(this.dataset.batchId)">ยืนยันรายการแผน</button>' : '')
+      + '<button type="button" class="cw-danger" data-cw-action="cancel" data-batch-id="' + id
+      + '" onclick="cwRequestCancel(this.dataset.batchId)">ยกเลิกชุดงาน</button></div>';
+  }
+
   async function cwOpenBatch(batchId) {
     if (!UUID_PATTERN.test(batchId || '')) throw new Error('Invalid batch UUID');
     const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
@@ -434,10 +502,12 @@
     const status = cwBatchStatus(batch);
     const meta = CW_STATUS[status] || { label: status || '–', color: '#64748B' };
     cwUiState.openBatchId = batchId;
-    detail.innerHTML = '<header class="cw-detail-head"><button type="button" onclick="cwCloseBatch()" aria-label="กลับไปรายการชุดงาน">← กลับ</button>'
+    cwShowActionError('');
+    detail.innerHTML = '<header class="cw-detail-head" tabindex="-1"><button type="button" onclick="cwCloseBatch()" aria-label="กลับไปรายการชุดงาน">← กลับ</button>'
       + '<div><span>' + cwEscapeHtml(batch.batch_no || '–') + '</span><h1>' + cwEscapeHtml(batch.title || 'ไม่มีชื่อชุดงาน') + '</h1>'
       + '<p>' + cwEscapeHtml(batch.unit_code || '–') + ' · ' + cwEscapeHtml(batch.instrument_type || '–') + '</p></div>'
-      + '<span class="cw-status" style="--cw-status:' + meta.color + '">' + cwEscapeHtml(meta.label) + '</span></header>'
+      + '<aside class="cw-detail-side"><span class="cw-status" style="--cw-status:' + meta.color + '">' + cwEscapeHtml(meta.label)
+      + '</span>' + cwBatchActionMarkup(batch) + '</aside></header>'
       + '<section class="cw-detail-progress"><div><span>ความคืบหน้า</span><b>' + progress.completed + ' / ' + progress.total + '</b></div>'
       + '<span class="cw-progress" aria-label="ความคืบหน้า ' + progress.percent + '%"><span style="width:' + progress.percent + '%"></span></span></section>'
       + '<div class="cw-detail-grid"><div>' + cwRenderItems(batch) + cwRenderAudit(batch) + '</div><aside>'
@@ -446,11 +516,600 @@
     if (metrics) metrics.hidden = true;
     if (list) list.hidden = true;
     detail.hidden = false;
+    const detailHead = detail.querySelector('.cw-detail-head');
+    if (detailHead) detailHead.focus();
   }
 
   function cwCloseBatch() {
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
+  }
+
+  function cwShowCreateError(message) {
+    const root = document.getElementById('cwCreateError');
+    if (!root) return;
+    root.textContent = message || '';
+    root.hidden = !message;
+  }
+
+  function cwResetWizard(mode, batch) {
+    cwWizardState.mode = mode;
+    cwWizardState.step = mode === 'edit' ? 2 : 1;
+    cwWizardState.title = batch && batch.title || '';
+    cwWizardState.unitCode = batch && batch.unit_code || '';
+    cwWizardState.instrumentType = batch && batch.instrument_type || '';
+    cwWizardState.search = '';
+    cwWizardState.selected = new Map();
+    cwWizardState.batchId = batch && batch.id || null;
+    cwWizardState.expectedUpdatedAt = batch && batch.updated_at || null;
+    cwWizardState.hadAcknowledgement = Boolean(batch && (batch.documents || [])
+      .some(documentRow => documentRow && documentRow.item_id == null
+        && documentRow.document_kind === 'acknowledgement'));
+    cwWizardState.currentAcknowledgement = Boolean(batch && (batch.documents || [])
+      .some(documentRow => documentRow && documentRow.item_id == null
+        && documentRow.document_kind === 'acknowledgement' && documentRow.is_current === true));
+    cwWizardState.reason = '';
+    cwWizardState.submitting = false;
+    if (batch) {
+      cwActiveItems(batch).forEach(item => {
+        cwWizardState.selected.set(String(item.instrument_id), {
+          instrumentId: Number(item.instrument_id), plannedDate: item.planned_date || '', item
+        });
+      });
+    }
+  }
+
+  function cwRegistryGroups() {
+    const seen = new Set();
+    return cwRegistry().reduce((groups, instrument) => {
+      const unit = String(instrument && instrument.department || '');
+      const type = String(instrument && instrument.instrument_type || '');
+      const key = unit + '\u0000' + type;
+      if (unit && type && !seen.has(key)) {
+        seen.add(key);
+        groups.push({ unit, type });
+      }
+      return groups;
+    }, []).sort((left, right) => left.unit.localeCompare(right.unit) || left.type.localeCompare(right.type));
+  }
+
+  function cwInstrumentId(value) {
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number > 0 ? number : null;
+  }
+
+  function cwInstrumentCandidates() {
+    const byId = new Map();
+    const registryById = new Map();
+    cwRegistry().forEach(instrument => {
+      const id = cwInstrumentId(instrument && instrument.id);
+      if (id == null) return;
+      registryById.set(String(id), instrument);
+      if (instrument.department !== cwWizardState.unitCode
+          || instrument.instrument_type !== cwWizardState.instrumentType) return;
+      byId.set(String(id), { ...instrument, id });
+    });
+    if (cwWizardState.mode === 'edit') {
+      const batch = (cwUiState.model.batches || []).find(row => row.id === cwWizardState.batchId);
+      cwActiveItems(batch).forEach(item => {
+        const id = cwInstrumentId(item.instrument_id);
+        if (id == null || byId.has(String(id))) return;
+        const relation = cwItemInstrument(item);
+        const registryRow = registryById.get(String(id));
+        byId.set(String(id), {
+          id,
+          department: registryRow && registryRow.department,
+          instrument_type: registryRow && registryRow.instrument_type,
+          id_code: registryRow && registryRow.id_code || relation.id_code || id,
+          instrument_name: registryRow && registryRow.instrument_name || relation.instrument_name || 'ไม่ระบุชื่อเครื่องมือ',
+          staleRegistry: true
+        });
+      });
+    }
+    return [...byId.values()].sort((left, right) =>
+      String(left.id_code || '').localeCompare(String(right.id_code || '')) || left.id - right.id);
+  }
+
+  function cwLockFor(instrumentId) {
+    return (cwUiState.model.locks || []).find(lock =>
+      String(lock && lock.instrument_id) === String(instrumentId)) || null;
+  }
+
+  function cwBlockingLock(instrumentId) {
+    const lock = cwLockFor(instrumentId);
+    if (!lock) return null;
+    if (cwWizardState.mode === 'edit' && lock.batch_id === cwWizardState.batchId) return null;
+    return lock;
+  }
+
+  function cwLockOwner(lock) {
+    if (!lock) return '';
+    const batch = (cwUiState.model.batches || []).find(row => row.id === lock.batch_id);
+    return batch && batch.batch_no || lock.batch_id || 'ชุดงานอื่น';
+  }
+
+  function cwItemHasResults(item) {
+    if (!item) return false;
+    if (item.result_status !== 'in_progress' || item.cert_no != null || item.calibration_date != null
+        || item.overdue_reason != null || item.skip_reason != null) return true;
+    const batch = (cwUiState.model.batches || []).find(row => row.id === cwWizardState.batchId);
+    return Boolean(batch && (batch.documents || []).some(documentRow =>
+      documentRow && documentRow.item_id === item.id && documentRow.is_current === true
+      && ITEM_DOCUMENT_KINDS.has(documentRow.document_kind)));
+  }
+
+  function cwSelectOptions(values, selected, placeholder) {
+    return '<option value="">' + cwEscapeHtml(placeholder) + '</option>' + values.map(value =>
+      '<option value="' + cwEscapeHtml(value) + '"' + (value === selected ? ' selected' : '') + '>'
+      + cwEscapeHtml(value) + '</option>').join('');
+  }
+
+  function cwRenderCreateSteps() {
+    const root = document.getElementById('cwCreateSteps');
+    if (!root) return;
+    if (cwWizardState.mode === 'edit') {
+      root.innerHTML = '<span class="cw-step is-active">แก้ไขรายการแบบทั้งชุด</span>';
+      return;
+    }
+    const labels = ['1. กลุ่มชุดงาน', '2. เลือกเครื่องมือ', '3. ตรวจสอบ'];
+    root.innerHTML = labels.map((label, index) => '<span class="cw-step'
+      + (cwWizardState.step === index + 1 ? ' is-active' : '') + '">' + label + '</span>').join('');
+  }
+
+  function cwRenderCreateGroup() {
+    const groups = cwRegistryGroups();
+    const units = [...new Set(groups.map(group => group.unit))];
+    const types = groups.filter(group => group.unit === cwWizardState.unitCode).map(group => group.type);
+    return '<div class="cw-form-grid"><label class="cw-field"><span>ชื่อชุดงาน</span><input id="cwCreateTitle" type="text" maxlength="200" value="'
+      + cwEscapeHtml(cwWizardState.title) + '" oninput="cwSetCreateTitle(this.value)" required></label>'
+      + '<label class="cw-field"><span>หน่วยงาน</span><select id="cwCreateUnit" onchange="cwChooseCreateUnit(this.value)">'
+      + cwSelectOptions(units, cwWizardState.unitCode, 'เลือกหน่วยงาน') + '</select></label>'
+      + '<label class="cw-field"><span>ประเภทเครื่องมือ</span><select id="cwCreateType" onchange="cwChooseCreateType(this.value)"'
+      + (cwWizardState.unitCode ? '' : ' disabled') + '>'
+      + cwSelectOptions(types, cwWizardState.instrumentType, 'เลือกประเภท') + '</select></label></div>';
+  }
+
+  function cwRenderCreateItems() {
+    const query = cwWizardState.search.trim().toLocaleLowerCase();
+    const candidates = cwInstrumentCandidates().filter(instrument => {
+      if (!query) return true;
+      return [instrument.id_code, instrument.instrument_name].some(value =>
+        String(value || '').toLocaleLowerCase().includes(query));
+    });
+    const rows = candidates.map(instrument => {
+      const key = String(instrument.id);
+      const selection = cwWizardState.selected.get(key);
+      const blockingLock = cwBlockingLock(instrument.id);
+      const protectedItem = selection && cwItemHasResults(selection.item);
+      const disabled = Boolean(blockingLock || protectedItem || instrument.staleRegistry);
+      return '<article class="cw-instrument-row' + (disabled ? ' is-locked' : '')
+        + '" data-cw-instrument-id="' + instrument.id + '"><label><input type="checkbox" data-instrument-id="'
+        + instrument.id + '"' + (selection ? ' checked' : '') + (disabled ? ' disabled' : '')
+        + ' onchange="cwToggleCreateItem(Number(this.dataset.instrumentId),this.checked)"><span><b>'
+        + cwEscapeHtml(instrument.id_code || instrument.id) + '</b><small>'
+        + cwEscapeHtml(instrument.instrument_name || 'ไม่ระบุชื่อ') + '</small>'
+        + (blockingLock ? '<em>ถูกล็อกโดย ' + cwEscapeHtml(cwLockOwner(blockingLock)) + '</em>' : '')
+        + (instrument.staleRegistry ? '<em>ข้อมูลทะเบียนไม่ตรงกลุ่มชุดงาน กรุณารีเฟรช</em>' : '')
+        + (protectedItem ? '<em>มีผล/เอกสาร ต้องรีเซ็ตผลก่อนนำออก</em>' : '')
+        + '</span></label><input type="date" aria-label="วันที่ตามแผน '
+        + cwEscapeHtml(instrument.id_code || instrument.id) + '" value="' + cwEscapeHtml(selection && selection.plannedDate || '')
+        + '" data-instrument-id="' + instrument.id + '"' + (!selection || disabled || protectedItem ? ' disabled' : '')
+        + ' onchange="cwSetCreatePlannedDate(Number(this.dataset.instrumentId),this.value)"></article>';
+    }).join('');
+    const acknowledgement = cwWizardState.mode === 'edit' && cwWizardState.currentAcknowledgement
+      ? '<div class="cw-warning" role="note">เอกสารรับทราบปัจจุบันจะเป็นประวัติหลังบันทึกการแก้ไข</div>' : '';
+    const reason = cwWizardState.mode === 'edit' && cwWizardState.hadAcknowledgement
+      ? '<label class="cw-field"><span>เหตุผลการแก้ไข</span><textarea id="cwEditReason" rows="3" oninput="cwSetEditReason(this.value)" required>'
+        + cwEscapeHtml(cwWizardState.reason) + '</textarea></label>' : '';
+    return acknowledgement + '<div class="cw-item-tools"><label class="cw-field"><span>ค้นหา</span><input id="cwCreateSearch" type="search" value="'
+      + cwEscapeHtml(cwWizardState.search) + '" oninput="cwSetCreateSearch(this.value)" placeholder="รหัสหรือชื่อเครื่องมือ"></label>'
+      + '<label class="cw-field"><span>กำหนดวันที่ที่เลือกทั้งหมด</span><input id="cwCreateBulkDate" type="date" onchange="cwSetCreateBulkDate(this.value)"></label></div>'
+      + '<div class="cw-instrument-list">' + (rows || '<p class="cw-empty">ไม่พบเครื่องมือที่ตรงกับกลุ่มนี้</p>') + '</div>' + reason;
+  }
+
+  function cwRenderCreateReview() {
+    const rows = [...cwWizardState.selected.values()].map(selection => {
+      const instrument = cwInstrumentCandidates().find(row => row.id === selection.instrumentId) || {};
+      return '<li><span><b>' + cwEscapeHtml(instrument.id_code || selection.instrumentId) + '</b><small>'
+        + cwEscapeHtml(instrument.instrument_name || '') + '</small></span><time>'
+        + cwEscapeHtml(selection.plannedDate) + '</time></li>';
+    }).join('');
+    return '<section class="cw-review"><h3>' + cwEscapeHtml(cwWizardState.title.trim()) + '</h3><p>'
+      + cwEscapeHtml(cwWizardState.unitCode) + ' · ' + cwEscapeHtml(cwWizardState.instrumentType)
+      + '</p><ul>' + rows + '</ul></section>';
+  }
+
+  function cwRenderCreateFooter() {
+    const root = document.getElementById('cwCreateFooter');
+    if (!root) return;
+    const busy = cwWizardState.submitting ? ' disabled' : '';
+    if (cwWizardState.mode === 'edit') {
+      root.innerHTML = '<button type="button" class="cw-secondary" onclick="cwCloseCreate()"' + busy + '>ยกเลิก</button>'
+        + '<button type="button" class="cw-primary" onclick="cwSubmitEdit()"' + busy + '>บันทึกรายการ</button>';
+      return;
+    }
+    root.innerHTML = (cwWizardState.step > 1 ? '<button type="button" class="cw-secondary" onclick="cwGoCreateStep('
+      + (cwWizardState.step - 1) + ')"' + busy + '>← ย้อนกลับ</button>' : '<button type="button" class="cw-secondary" onclick="cwCloseCreate()"' + busy + '>ยกเลิก</button>')
+      + (cwWizardState.step < 3 ? '<button type="button" class="cw-primary" onclick="cwGoCreateStep('
+        + (cwWizardState.step + 1) + ')"' + busy + '>ถัดไป →</button>'
+        : '<button type="button" class="cw-primary" onclick="cwSubmitCreate()"' + busy + '>สร้างชุดงาน</button>');
+  }
+
+  function cwRenderCreateDialog() {
+    const title = document.getElementById('cwCreateDialogTitle');
+    const body = document.getElementById('cwCreateBody');
+    if (title) title.textContent = cwWizardState.mode === 'edit' ? 'แก้ไขชุดงานสอบเทียบ' : 'สร้างชุดงานสอบเทียบ';
+    cwRenderCreateSteps();
+    if (body) body.innerHTML = cwWizardState.step === 1 ? cwRenderCreateGroup()
+      : cwWizardState.step === 2 ? cwRenderCreateItems() : cwRenderCreateReview();
+    cwRenderCreateFooter();
+  }
+
+  function cwRenderCreateDialogWithFocus(selector) {
+    cwRenderCreateDialog();
+    const target = selector && document.querySelector(selector);
+    if (target && !target.disabled && !target.hidden) target.focus();
+  }
+
+  function cwOpenDialog() {
+    const dialog = document.getElementById('cwCreateDialog');
+    if (!dialog) return false;
+    dialog.classList.add('open');
+    dialog.setAttribute('aria-hidden', 'false');
+    dialog.onkeydown = cwHandleCreateDialogKey;
+    dialog.onclick = event => { if (event.target === dialog && !cwWizardState.submitting) cwCloseCreate(); };
+    cwShowCreateError('');
+    cwRenderCreateDialog();
+    const focusTarget = document.getElementById(cwWizardState.mode === 'edit' ? 'cwCreateSearch' : 'cwCreateTitle')
+      || dialog.querySelector('button,input,select,textarea');
+    if (focusTarget) focusTarget.focus();
+    return true;
+  }
+
+  function cwOpenCreate() {
+    if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
+    cwWizardState.returnFocus = document.activeElement;
+    cwResetWizard('create', null);
+    return cwOpenDialog();
+  }
+
+  async function cwEditBatchItems(batchId) {
+    if (!cwCanManage() || cwUiState.model.locksReady !== true || !UUID_PATTERN.test(batchId || '')) return false;
+    const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
+    if (!batch || ['completed', 'cancelled'].includes(cwBatchStatus(batch))) return false;
+    cwWizardState.returnFocus = document.activeElement;
+    cwResetWizard('edit', batch);
+    return cwOpenDialog();
+  }
+
+  function cwCloseCreate() {
+    if (cwWizardState.submitting) return false;
+    const dialog = document.getElementById('cwCreateDialog');
+    if (dialog) {
+      dialog.classList.remove('open');
+      dialog.setAttribute('aria-hidden', 'true');
+    }
+    const returnFocus = cwWizardState.returnFocus;
+    if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.isConnected) returnFocus.focus();
+    return true;
+  }
+
+  function cwHandleCreateDialogKey(event) {
+    if (!event) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cwCloseCreate();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const dialog = document.getElementById('cwCreateDialog');
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll('button,input,select,textarea')]
+      .filter(element => !element.disabled && !element.hidden);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  }
+
+  function cwSetCreateTitle(value) {
+    cwWizardState.title = String(value == null ? '' : value);
+    return true;
+  }
+
+  function cwChooseCreateUnit(unitCode) {
+    cwWizardState.unitCode = String(unitCode || '');
+    cwWizardState.instrumentType = '';
+    cwWizardState.selected.clear();
+    cwShowCreateError('');
+    cwRenderCreateDialogWithFocus('#cwCreateType:not(:disabled), #cwCreateUnit');
+  }
+
+  function cwChooseCreateType(instrumentType) {
+    return cwSetCreateGroup(cwWizardState.unitCode, instrumentType);
+  }
+
+  function cwSetCreateGroup(unitCode, instrumentType) {
+    const group = cwRegistryGroups().find(candidate =>
+      candidate.unit === unitCode && candidate.type === instrumentType);
+    if (!group || cwWizardState.mode !== 'create') {
+      cwShowCreateError('กลุ่มหน่วยงานและประเภทเครื่องมือไม่ถูกต้อง');
+      return false;
+    }
+    cwWizardState.unitCode = group.unit;
+    cwWizardState.instrumentType = group.type;
+    cwWizardState.selected.clear();
+    cwShowCreateError('');
+    cwRenderCreateDialogWithFocus('#cwCreateType');
+    return true;
+  }
+
+  function cwToggleCreateItem(instrumentId, selected) {
+    const id = cwInstrumentId(instrumentId);
+    const candidate = cwInstrumentCandidates().find(instrument => instrument.id === id);
+    const existing = id == null ? null : cwWizardState.selected.get(String(id));
+    if (id == null || !candidate || candidate.staleRegistry || cwBlockingLock(id)) {
+      cwShowCreateError('ไม่สามารถเลือกเครื่องมือที่ไม่ตรงกลุ่มหรือถูกล็อกได้');
+      return false;
+    }
+    if (!selected && existing && cwItemHasResults(existing.item)) {
+      cwShowCreateError('รีเซ็ตผลและเอกสารของรายการนี้ก่อนนำออ');
+      return false;
+    }
+    if (selected) {
+      cwWizardState.selected.set(String(id), existing || { instrumentId: id, plannedDate: '', item: null });
+    } else {
+      cwWizardState.selected.delete(String(id));
+    }
+    cwShowCreateError('');
+    cwRenderCreateDialogWithFocus('[data-cw-instrument-id="' + id + '"] input[type="checkbox"]');
+    return true;
+  }
+
+  function cwSetCreatePlannedDate(instrumentId, date) {
+    const id = cwInstrumentId(instrumentId);
+    const selection = id == null ? null : cwWizardState.selected.get(String(id));
+    const candidate = id == null ? null : cwInstrumentCandidates().find(instrument => instrument.id === id);
+    if (!selection || !cwValidISODate(date) || !candidate || candidate.staleRegistry
+        || cwBlockingLock(id)) {
+      cwShowCreateError('กรุณาระบุวันที่ตามแผนแบบ YYYY-MM-DD');
+      return false;
+    }
+    if (selection.item && date !== selection.item.planned_date && cwItemHasResults(selection.item)) {
+      cwShowCreateError('รีเซ็ตผลและเอกสารของรายการนี้ก่อนเปลี่ยนวันที่');
+      return false;
+    }
+    selection.plannedDate = date;
+    cwShowCreateError('');
+    return true;
+  }
+
+  function cwSetCreateBulkDate(date) {
+    if (!cwValidISODate(date) || cwWizardState.selected.size === 0) {
+      cwShowCreateError('เลือกเครื่องมือและระบุวันที่แบบ YYYY-MM-DD');
+      return false;
+    }
+    let changed = false;
+    cwWizardState.selected.forEach(selection => {
+      if (!selection.item || !cwItemHasResults(selection.item) || selection.item.planned_date === date) {
+        selection.plannedDate = date;
+        changed = true;
+      }
+    });
+    if (!changed) {
+      cwShowCreateError('รายการที่มีผลต้องรีเซ็ตก่อนเปลี่ยนวันที่');
+      return false;
+    }
+    cwShowCreateError('');
+    cwRenderCreateDialogWithFocus('#cwCreateBulkDate');
+    return true;
+  }
+
+  function cwSetCreateSearch(value) {
+    cwWizardState.search = String(value == null ? '' : value);
+    cwRenderCreateDialog();
+    const input = document.getElementById('cwCreateSearch');
+    if (input) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+    return true;
+  }
+
+  function cwSetEditReason(value) {
+    cwWizardState.reason = String(value == null ? '' : value);
+    return true;
+  }
+
+  function cwValidateWizardItems() {
+    if (cwUiState.model.locksReady !== true) return 'ไม่สามารถยืนยันข้อมูล lock ได้ กรุณารีเฟรช';
+    if (!cwWizardState.selected.size) return 'กรุณาเลือกเครื่องมืออย่างน้อย 1 รายการ';
+    const candidates = new Map(cwInstrumentCandidates().map(instrument => [String(instrument.id), instrument]));
+    for (const [key, selection] of cwWizardState.selected) {
+      const candidate = candidates.get(key);
+      if (!candidate || candidate.staleRegistry) {
+        return 'ข้อมูลทะเบียนของรายการที่เลือกไม่ตรงกลุ่มชุดงาน กรุณารีเฟรช';
+      }
+      if (cwBlockingLock(selection.instrumentId)) {
+        return 'รายการที่เลือกไม่ตรงกลุ่มหรือถูกล็อก กรุณาตรวจสอบใหม่';
+      }
+      if (!cwValidISODate(selection.plannedDate)) return 'ทุกรายการต้องมีวันที่ตามแผนแบบ YYYY-MM-DD';
+      if (selection.item && selection.plannedDate !== selection.item.planned_date && cwItemHasResults(selection.item)) {
+        return 'รีเซ็ตผลก่อนเปลี่ยนวันที่ตามแผน';
+      }
+    }
+    return null;
+  }
+
+  function cwGoCreateStep(step) {
+    if (cwWizardState.mode !== 'create' || ![1, 2, 3].includes(step)) return false;
+    if (step > 1) {
+      if (!cwWizardState.title.trim()) {
+        cwShowCreateError('กรุณาระบุชื่อชุดงาน');
+        return false;
+      }
+      if (!cwRegistryGroups().some(group => group.unit === cwWizardState.unitCode
+          && group.type === cwWizardState.instrumentType)) {
+        cwShowCreateError('กรุณาเลือกหน่วยงานและประเภทเครื่องมือ');
+        return false;
+      }
+    }
+    if (step === 3) {
+      const error = cwValidateWizardItems();
+      if (error) {
+        cwShowCreateError(error);
+        return false;
+      }
+    }
+    cwWizardState.step = step;
+    cwShowCreateError('');
+    cwRenderCreateDialog();
+    const focusTarget = step === 3 ? document.querySelector('#cwCreateFooter .cw-primary')
+      : document.getElementById(step === 1 ? 'cwCreateTitle' : 'cwCreateSearch');
+    if (focusTarget) focusTarget.focus();
+    return true;
+  }
+
+  function cwItemsPayload() {
+    return [...cwWizardState.selected.values()].map(selection => ({
+      instrument_id: selection.instrumentId, planned_date: selection.plannedDate
+    }));
+  }
+
+  async function cwRpc(source, name, payload) {
+    if (!source || typeof source.rpc !== 'function') throw new Error('ยังไม่พร้อมเชื่อมต่อฐานข้อมูล');
+    const response = await source.rpc(name, payload);
+    if (response && response.error) throw new Error(response.error.message || 'การบันทึกไม่สำเร็จ');
+    return Array.isArray(response && response.data) ? response.data[0] : response && response.data;
+  }
+
+  function cwToast(message, type) {
+    if (typeof global.showToast === 'function') global.showToast(message, type);
+  }
+
+  async function cwSubmitCreate(client) {
+    if (!cwCanManage() || cwWizardState.mode !== 'create' || cwWizardState.step !== 3 || cwWizardState.submitting) return false;
+    const itemError = cwValidateWizardItems();
+    if (!cwWizardState.title.trim() || itemError) {
+      cwShowCreateError(itemError || 'กรุณาระบุชื่อชุดงาน');
+      return false;
+    }
+    const actor = cwActor();
+    const source = cwResolveClient(client);
+    cwWizardState.submitting = true;
+    cwRenderCreateFooter();
+    try {
+      const result = await cwRpc(source, 'cw_create_batch', {
+        p_token: actor && actor.token, p_title: cwWizardState.title.trim(),
+        p_unit_code: cwWizardState.unitCode, p_instrument_type: cwWizardState.instrumentType,
+        p_items: cwItemsPayload()
+      });
+      if (!result || !UUID_PATTERN.test(result.id || '')) throw new Error('ฐานข้อมูลไม่ได้ส่งรหัสชุดงานกลับมา');
+      if (!await loadCalibrationWorkPage(source)) throw new Error('สร้างชุดงานแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      cwWizardState.submitting = false;
+      cwCloseCreate();
+      await cwOpenBatch(result.id);
+      cwToast('สร้างชุดงานแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwWizardState.submitting = false;
+      cwRenderCreateFooter();
+      cwShowCreateError(error && error.message || 'สร้างชุดงานไม่สำเร็จ');
+      return false;
+    }
+  }
+
+  async function cwSubmitEdit(client) {
+    if (!cwCanManage() || cwWizardState.mode !== 'edit' || cwWizardState.submitting) return false;
+    const itemError = cwValidateWizardItems();
+    const reason = cwWizardState.reason.trim();
+    if (itemError || (cwWizardState.hadAcknowledgement && !reason)) {
+      cwShowCreateError(itemError || 'กรุณาระบุเหตุผลเมื่อชุดงานเคยมีเอกสารรับทราบ');
+      return false;
+    }
+    if (!cwWizardState.expectedUpdatedAt) {
+      cwShowCreateError('ไม่พบเวอร์ชันของชุดงาน กรุณารีเฟรช');
+      return false;
+    }
+    const actor = cwActor();
+    const source = cwResolveClient(client);
+    cwWizardState.submitting = true;
+    cwRenderCreateFooter();
+    try {
+      await cwRpc(source, 'cw_mutate_items', {
+        p_token: actor && actor.token, p_batch_id: cwWizardState.batchId,
+        p_items: cwItemsPayload(), p_expected_updated_at: cwWizardState.expectedUpdatedAt,
+        p_reason: reason || null
+      });
+      const batchId = cwWizardState.batchId;
+      if (!await loadCalibrationWorkPage(source)) throw new Error('บันทึกแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      cwWizardState.submitting = false;
+      cwCloseCreate();
+      await cwOpenBatch(batchId);
+      cwToast('บันทึกรายการแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwWizardState.submitting = false;
+      cwRenderCreateFooter();
+      cwShowCreateError(error && error.message || 'บันทึกไม่สำเร็จ');
+      return false;
+    }
+  }
+
+  async function cwConfirmBatch(batchId, client) {
+    if (!cwCanManage() || !UUID_PATTERN.test(batchId || '')) return false;
+    const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
+    if (!batch || cwBatchStatus(batch) !== 'draft') return false;
+    const source = cwResolveClient(client);
+    cwShowActionError('');
+    try {
+      await cwRpc(source, 'cw_confirm_batch', { p_token: cwActor() && cwActor().token, p_batch_id: batchId });
+      if (!await loadCalibrationWorkPage(source)) throw new Error('ยืนยันแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      await cwOpenBatch(batchId);
+      cwToast('ยืนยันรายการแผนแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwShowActionError(error && error.message || 'ยืนยันชุดงานไม่สำเร็จ');
+      return false;
+    }
+  }
+
+  async function cwCancelBatch(batchId, reason, client) {
+    const cleanReason = String(reason == null ? '' : reason).trim();
+    if (!cwCanManage() || !UUID_PATTERN.test(batchId || '') || !cleanReason) {
+      if (cwCanManage()) cwShowActionError('กรุณาระบุเหตุผลการยกเลิก');
+      return false;
+    }
+    const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
+    if (!batch || ['completed', 'cancelled'].includes(cwBatchStatus(batch))) return false;
+    const source = cwResolveClient(client);
+    cwShowActionError('');
+    try {
+      await cwRpc(source, 'cw_cancel_batch', {
+        p_token: cwActor() && cwActor().token, p_batch_id: batchId, p_reason: cleanReason
+      });
+      if (!await loadCalibrationWorkPage(source)) throw new Error('ยกเลิกแล้ว แต่ไม่สามารถตรวจสอบ lock ได้');
+      if ((cwUiState.model.locks || []).some(lock => lock && lock.batch_id === batchId)) {
+        throw new Error('ยกเลิกแล้ว แตยังพบ instrument lock ของชุดงาน กรุณารีเฟรชและตรวจสอบ');
+      }
+      cwToast('ยกเลิกชุดงานและปล่อย lock แล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwShowActionError(error && error.message || 'ยกเลิกชุดงานไม่สำเร็จ');
+      return false;
+    }
+  }
+
+  async function cwRequestCancel(batchId) {
+    const reason = typeof global.prompt === 'function' ? global.prompt('ระบุเหตุผลการยกเลิกชุดงาน') : null;
+    if (reason == null) return false;
+    return cwCancelBatch(batchId, reason);
   }
 
   global.CW_STATUS = CW_STATUS;
@@ -465,6 +1124,24 @@
   global.cwHandleTabKey = cwHandleTabKey;
   global.cwOpenBatch = cwOpenBatch;
   global.cwCloseBatch = cwCloseBatch;
+  global.cwOpenCreate = cwOpenCreate;
+  global.cwCloseCreate = cwCloseCreate;
+  global.cwSetCreateTitle = cwSetCreateTitle;
+  global.cwChooseCreateUnit = cwChooseCreateUnit;
+  global.cwChooseCreateType = cwChooseCreateType;
+  global.cwSetCreateGroup = cwSetCreateGroup;
+  global.cwGoCreateStep = cwGoCreateStep;
+  global.cwToggleCreateItem = cwToggleCreateItem;
+  global.cwSetCreatePlannedDate = cwSetCreatePlannedDate;
+  global.cwSetCreateBulkDate = cwSetCreateBulkDate;
+  global.cwSetCreateSearch = cwSetCreateSearch;
+  global.cwSetEditReason = cwSetEditReason;
+  global.cwSubmitCreate = cwSubmitCreate;
+  global.cwEditBatchItems = cwEditBatchItems;
+  global.cwSubmitEdit = cwSubmitEdit;
+  global.cwConfirmBatch = cwConfirmBatch;
+  global.cwCancelBatch = cwCancelBatch;
+  global.cwRequestCancel = cwRequestCancel;
 
   if (global.CW_TEST_MODE) return;
 })(window);

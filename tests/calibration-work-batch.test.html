@@ -151,15 +151,15 @@ function text(url) {
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw3"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw4"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260901-cw3"', 'current calibration stylesheet query version');
+    has(indexSource, 'href="theme-aqua.css?v=20260901-cw4"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v152';", 'cache v152');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v153';", 'cache v153');
     [
-      'theme-aqua.css?v=20260901-cw3',
+      'theme-aqua.css?v=20260901-cw4',
       'js/10-router.js?v=20260901-cw3',
-      'js/29-calibration-work.js?v=20260901-cw3'
+      'js/29-calibration-work.js?v=20260901-cw4'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -169,7 +169,10 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pageCalwork"><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div></div>';
+    fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+      + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
+      + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
+      + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>';
     document.body.appendChild(fixture);
     return () => fixture.remove();
   }
@@ -180,7 +183,7 @@ function text(url) {
     return {
       batches: [
         {
-          id:firstId, batch_no:'PLAN-2026-0001', title:'<img src=x onerror="window.cwXss=1">',
+          id:firstId, batch_no:'PLAN-2026-0001', title:'<img src=x onerror="window.cwXss=1">', updated_at:'2026-08-31T10:00:00Z',
           unit_code:'WRM1', instrument_type:'เครื่องชั่ง', status:'awaiting_calibration',
           items:[
             {id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', instrument_id:11, planned_date:'2001-01-01', result_status:'completed', is_active:true, cert_no:'CERT-11', calibration_date:'2001-01-01', instruments:{id_code:'WRM-11', instrument_name:'Balance <หนึ่ง>'}},
@@ -196,7 +199,7 @@ function text(url) {
           audit:[{id:'a1', action:'confirm_batch', actor:'editor', occurred_at:'2026-08-31T10:00:00Z', reason:'<checked>'}]
         },
         {
-          id:secondId, batch_no:'PLAN-2026-0002', title:'Closure batch', unit_code:'LAB',
+          id:secondId, batch_no:'PLAN-2026-0002', title:'Closure batch', unit_code:'LAB', updated_at:'2026-08-31T11:00:00Z',
           instrument_type:'Pressure', status:'awaiting_closure_pdf',
           items:[
             {id:'dddddddd-dddd-dddd-dddd-dddddddddddd', instrument_id:21, planned_date:'2026-08-01', result_status:'completed', is_active:true, instruments:{id_code:'LAB-21', instrument_name:'Gauge 1'}},
@@ -372,6 +375,7 @@ function text(url) {
           {id:cwUuid(301), batch_id:firstId, instrument_id:91, is_active:true, result_status:'in_progress', instruments:{id:91,id_code:'ACT-91',instrument_name:'Actual relation'}},
           {id:cwUuid(302), batch_id:firstId, instrument_id:92, is_active:false, result_status:'completed', removal_reason:'เก็บประวัติ', instruments:{id:92,id_code:'OLD-92',instrument_name:'Historical relation'}}
         ],
+        calibration_work_instrument_locks:[],
         calibration_work_documents:[{id:cwUuid(401), batch_id:firstId, item_id:cwUuid(302), document_kind:'certificate', version_number:1, is_current:false, original_filename:'old.pdf', uploaded_at:'2026-08-31T18:30:00Z'}],
         calibration_work_audit:[]
       };
@@ -387,7 +391,7 @@ function text(url) {
       }));
       eq(requests.filter(value => value.startsWith('calibration_work_batches:')).join(','),
         'calibration_work_batches:limit-0-199,calibration_work_batches:limit-0-199', 'keyset pages and short-page stop');
-      ['calibration_work_items','calibration_work_documents','calibration_work_audit'].forEach(table =>
+      ['calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].forEach(table =>
         eq(requests.filter(value => value.startsWith(table + ':')).join(','), table + ':limit-0-199', table + ' empty/short-page stop'));
       const batchQueries = queryLog.filter(query => query.table === 'calibration_work_batches');
       eq(batchQueries[0].orders.map(order => order.column + ':' + (order.ascending ? 'asc' : 'desc')).join(','),
@@ -416,7 +420,7 @@ function text(url) {
     const cleanup = cwMountFixture();
     try {
       const ranges = [];
-      const tables = ['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'];
+      const tables = ['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'];
       const rows = Object.fromEntries(tables.map(table => [table, []]));
       const client = cwPagedClient(rows, ranges, {calibration_work_documents:'DB <offline>'});
       await loadCalibrationWorkPage(client);
@@ -427,6 +431,19 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  await ta('fails closed when the authoritative lock read is unavailable', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const tables = ['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'];
+      const rows = Object.fromEntries(tables.map(table => [table, []]));
+      await loadCalibrationWorkPage(cwPagedClient(rows, [], {calibration_work_instrument_locks:'lock read unavailable'}));
+      eq(document.getElementById('cwCreateButton').hidden, true, 'create stays hidden without a verified lock model');
+      eq(cwOpenCreate(), false, 'logic rejects create without a verified lock model');
+      has(document.getElementById('cwBatchList').textContent, 'lock read unavailable', 'authoritative lock error remains visible');
+    } finally { cleanup(); }
+  });
+
   await ta('ignores stale overlapping load success and restores the list before refresh', async () => {
     const cleanup = cwMountFixture();
     try {
@@ -434,18 +451,19 @@ function text(url) {
       const newId = cwUuid(502);
       cwRenderDashboard({batches:[{id:oldId,batch_no:'OPEN-ME',status:'draft',items:[],documents:[],audit:[]}]});
       await cwOpenBatch(oldId);
-      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
       const staleLoad = loadCalibrationWorkPage(cwDeferredClient(deferred));
       eq(document.getElementById('cwBatchDetail').hidden, true, 'refresh hides stale detail');
       eq(document.getElementById('cwBatchList').hidden, false, 'refresh restores list surface');
       has(document.getElementById('cwBatchList').textContent, 'กำลังโหลด', 'refresh shows loading state');
       const rows = {
         calibration_work_batches:[{id:newId,batch_no:'NEWEST',status:'draft'}],
-        calibration_work_items:[], calibration_work_documents:[], calibration_work_audit:[]
+        calibration_work_items:[], calibration_work_instrument_locks:[], calibration_work_documents:[], calibration_work_audit:[]
       };
       await loadCalibrationWorkPage(cwPagedClient(rows, []));
       deferred.calibration_work_batches.resolve({data:[{id:oldId,batch_no:'STALE',status:'draft'}],error:null});
       deferred.calibration_work_items.resolve({data:[],error:null});
+      deferred.calibration_work_instrument_locks.resolve({data:[],error:null});
       deferred.calibration_work_documents.resolve({data:[],error:null});
       deferred.calibration_work_audit.resolve({data:[],error:null});
       await staleLoad;
@@ -458,15 +476,16 @@ function text(url) {
   await ta('ignores a stale overlapping load error after a newer success', async () => {
     const cleanup = cwMountFixture();
     try {
-      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
       const staleLoad = loadCalibrationWorkPage(cwDeferredClient(deferred));
       const rows = {
         calibration_work_batches:[{id:cwUuid(601),batch_no:'CURRENT',status:'draft'}],
-        calibration_work_items:[], calibration_work_documents:[], calibration_work_audit:[]
+        calibration_work_items:[], calibration_work_instrument_locks:[], calibration_work_documents:[], calibration_work_audit:[]
       };
       await loadCalibrationWorkPage(cwPagedClient(rows, []));
       deferred.calibration_work_batches.resolve({data:null,error:{message:'STALE ERROR'}});
       deferred.calibration_work_items.resolve({data:[],error:null});
+      deferred.calibration_work_instrument_locks.resolve({data:[],error:null});
       deferred.calibration_work_documents.resolve({data:[],error:null});
       deferred.calibration_work_audit.resolve({data:[],error:null});
       await staleLoad;
@@ -503,12 +522,342 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  function cwTask4Instruments() {
+    return [
+      {id:11, department:'WRM1', instrument_type:'เครื่องชั่ง (Electronic Balance)', id_code:'WRM-11', instrument_name:'Balance <img src=x onerror="window.cwXss=3">'},
+      {id:12, department:'WRM1', instrument_type:'เครื่องชั่ง (Electronic Balance)', id_code:'WRM-12', instrument_name:'Balance 2'},
+      {id:13, department:'LAB', instrument_type:'เครื่องชั่ง (Electronic Balance)', id_code:'LAB-13', instrument_name:'Wrong unit'},
+      {id:14, department:'WRM1', instrument_type:'ความดัน', id_code:'WRM-14', instrument_name:'Wrong type'},
+      {id:15, department:'WRM1', instrument_type:'เครื่องชั่ง (Electronic Balance)', id_code:'WRM-15', instrument_name:'Locked balance'}
+    ];
+  }
+
+  function cwSetTask4Actor(role) {
+    window.currentUser = {role, token:'token', username:role + '-user', name:role};
+    window.allData = cwTask4Instruments();
+    window.cwToastLog = [];
+    window.showToast = (message, type) => window.cwToastLog.push({message, type});
+  }
+
+  function cwTask4Rows(batch, items, documents, locks) {
+    return {
+      calibration_work_batches:batch ? [batch] : [],
+      calibration_work_items:items || [],
+      calibration_work_instrument_locks:locks || [],
+      calibration_work_documents:documents || [],
+      calibration_work_audit:[]
+    };
+  }
+
+  function cwRpcClient(rows, handler) {
+    const client = cwPagedClient(rows, []);
+    client.rpc = async (name, payload) => handler(name, payload, rows);
+    return client;
+  }
+
+  function cwSetInput(id, value) {
+    const input = document.getElementById(id);
+    ok(input, id + ' input missing');
+    input.value = value;
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+
+  function cwPrepareValidCreate() {
+    ok(cwOpenCreate(), 'editor opens create dialog');
+    ok(cwSetCreateGroup('WRM1', 'เครื่องชั่ง (Electronic Balance)'), 'exact group accepted');
+    cwSetInput('cwCreateTitle', 'WRM1 เครื่องชั่ง กันยายน 2026');
+    ok(cwGoCreateStep(2), 'move to item selection');
+    ok(cwToggleCreateItem(11, true), 'select 11');
+    ok(cwToggleCreateItem(12, true), 'select 12');
+    ok(cwSetCreatePlannedDate(11, '2026-09-03'), 'date 11');
+    ok(cwSetCreatePlannedDate(12, '2026-09-05'), 'date 12');
+    ok(cwGoCreateStep(3), 'move to review');
+  }
+
+  t('adds the accessible Task 4 create dialog and guarded create action shell', () => {
+    ['id="cwCreateButton"', 'onclick="cwOpenCreate()"', 'id="cwCreateDialog"', 'role="dialog"',
+      'aria-modal="true"', 'id="cwCreateSteps"', 'id="cwCreateBody"', 'id="cwCreateError"']
+      .forEach(token => has(indexSource, token, token));
+    has(cssSource, '#app #cwCreateDialog .cw-', 'scoped wizard styles');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwCreateDialog[\s\S]*?min-height:\s*44px/.test(cssSource),
+      'wizard mobile targets');
+  });
+
+  t('filters exact groups and shows hostile locked instruments disabled with owner', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const ownerId = cwUuid(701);
+      cwRenderDashboard({batches:[{id:ownerId,batch_no:'OWNER-701',status:'draft',items:[],documents:[],audit:[]}],
+        locks:[{instrument_id:15,batch_id:ownerId}]});
+      ok(cwOpenCreate(), 'open wizard');
+      ok(cwSetCreateGroup('WRM1', 'เครื่องชั่ง (Electronic Balance)'), 'set group');
+      cwSetInput('cwCreateTitle', 'Exact group');
+      ok(cwGoCreateStep(2), 'open instruments');
+      const body = document.getElementById('cwCreateBody');
+      ['WRM-11','WRM-12','WRM-15','OWNER-701'].forEach(value => has(body.textContent, value, 'group/lock row'));
+      lacks(body.textContent, 'LAB-13', 'mismatched unit hidden');
+      lacks(body.textContent, 'WRM-14', 'mismatched type hidden');
+      ok(body.querySelector('[data-cw-instrument-id="15"] input[type="checkbox"]').disabled, 'locked checkbox disabled');
+      ok(!body.querySelector('img'), 'hostile instrument text escaped');
+      eq(cwToggleCreateItem(15, true), false, 'locked selection rejected in logic');
+      eq(cwToggleCreateItem(13, true), false, 'mismatched selection rejected in logic');
+      eq(body.querySelectorAll('input[type="checkbox"]:checked').length, 0, 'wizard never auto-selects');
+      cwSetCreateSearch('WRM-12');
+      eq(document.querySelectorAll('#cwCreateBody [data-cw-instrument-id]').length, 1, 'search filters exact group rows');
+      has(document.getElementById('cwCreateBody').textContent, 'WRM-12', 'search result');
+    } finally { cleanup(); }
+  });
+
+  t('requires title selection and ISO dates then applies bulk and per-item dates in review', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      cwRenderDashboard({batches:[],locks:[]});
+      ok(cwOpenCreate(), 'open wizard');
+      eq(cwSetCreateGroup('WRM1', 'wrong type'), false, 'unknown group rejected');
+      ok(cwSetCreateGroup('WRM1', 'เครื่องชั่ง (Electronic Balance)'), 'valid group');
+      cwSetInput('cwCreateTitle', 'กันยายน 2026');
+      ok(cwGoCreateStep(2), 'step 2');
+      ok(cwToggleCreateItem(11, true), 'select 11');
+      ok(cwToggleCreateItem(12, true), 'select 12');
+      eq(cwGoCreateStep(3), false, 'dates required before review');
+      has(document.getElementById('cwCreateError').textContent, 'วันที่', 'visible required-date error');
+      eq(cwSetCreatePlannedDate(11, '09/03/2026'), false, 'non-ISO date rejected');
+      ok(cwSetCreateBulkDate('2026-09-03'), 'bulk date accepted');
+      ok(cwSetCreatePlannedDate(12, '2026-09-05'), 'per-item override accepted');
+      ok(cwGoCreateStep(3), 'review opens');
+      const review = document.getElementById('cwCreateBody').textContent;
+      ['กันยายน 2026','WRM1','เครื่องชั่ง (Electronic Balance)','WRM-11','2026-09-03','WRM-12','2026-09-05']
+        .forEach(value => has(review, value, 'review'));
+    } finally { cleanup(); }
+  });
+
+  await ta('submits the exact create RPC payload refreshes and opens the returned batch', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      cwRenderDashboard({batches:[],locks:[]});
+      cwPrepareValidCreate();
+      const batchId = cwUuid(702);
+      const calls = [];
+      const rows = cwTask4Rows();
+      const client = cwRpcClient(rows, async (name, payload, liveRows) => {
+        calls.push({name, payload});
+        const batch = {id:batchId,batch_no:'PLAN-2026-0702',title:payload.p_title,unit_code:payload.p_unit_code,
+          instrument_type:payload.p_instrument_type,status:'draft',updated_at:'2026-09-01T01:00:00Z'};
+        liveRows.calibration_work_batches.push(batch);
+        liveRows.calibration_work_items.push(...payload.p_items.map((item, index) => ({id:cwUuid(720 + index),batch_id:batchId,
+          instrument_id:item.instrument_id,planned_date:item.planned_date,result_status:'in_progress',is_active:true,
+          instruments:cwTask4Instruments().find(row => row.id === item.instrument_id)})));
+        return {data:batch,error:null};
+      });
+      eq(await cwSubmitCreate(client), true, 'create succeeds');
+      eq(calls.length, 1, 'one create RPC');
+      eq(calls[0].name, 'cw_create_batch', 'create RPC name');
+      eq(JSON.stringify(calls[0].payload), JSON.stringify({
+        p_token:'token', p_title:'WRM1 เครื่องชั่ง กันยายน 2026', p_unit_code:'WRM1',
+        p_instrument_type:'เครื่องชั่ง (Electronic Balance)',
+        p_items:[{instrument_id:11,planned_date:'2026-09-03'},{instrument_id:12,planned_date:'2026-09-05'}]
+      }), 'exact create payload');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'dialog closes');
+      has(document.getElementById('cwBatchDetail').textContent, 'PLAN-2026-0702', 'returned batch opens after refresh');
+    } finally { cleanup(); }
+  });
+
+  await ta('gates management actions by role and confirms a draft through the exact RPC', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const batchId = cwUuid(703);
+      const batch = {id:batchId,batch_no:'PLAN-703',title:'Draft',unit_code:'WRM1',instrument_type:'เครื่องชั่ง (Electronic Balance)',
+        status:'draft',updated_at:'2026-09-01T02:00:00Z',items:[{id:cwUuid(731),instrument_id:11,planned_date:'2026-09-03',result_status:'in_progress',is_active:true,instruments:cwTask4Instruments()[0]}],documents:[],audit:[]};
+      cwSetTask4Actor('viewer');
+      cwRenderDashboard({batches:[batch],locks:[]});
+      eq(document.getElementById('cwCreateButton').hidden, true, 'viewer create hidden');
+      eq(cwOpenCreate(), false, 'viewer cannot open wizard');
+      await cwOpenBatch(batchId);
+      ok(!document.querySelector('[data-cw-action="confirm"]'), 'viewer confirm hidden');
+      const deniedCalls = [];
+      eq(await cwConfirmBatch(batchId, {rpc:async (...args) => { deniedCalls.push(args); }}), false, 'viewer confirm rejected');
+      eq(deniedCalls.length, 0, 'viewer never reaches RPC');
+
+      cwSetTask4Actor('owner');
+      cwRenderDashboard({batches:[batch],locks:[]});
+      eq(document.getElementById('cwCreateButton').hidden, true, 'owner create hidden');
+      eq(cwOpenCreate(), false, 'owner cannot open wizard');
+      eq(await cwEditBatchItems(batchId), false, 'owner cannot edit items');
+      eq(await cwConfirmBatch(batchId, {rpc:async (...args) => { deniedCalls.push(args); }}), false, 'owner confirm rejected');
+      eq(await cwCancelBatch(batchId, 'owner denied', {rpc:async (...args) => { deniedCalls.push(args); }}), false, 'owner cancel rejected');
+      eq(deniedCalls.length, 0, 'owner never reaches RPC');
+
+      cwSetTask4Actor('editor');
+      cwRenderDashboard({batches:[batch],locks:[]});
+      eq(document.getElementById('cwCreateButton').hidden, false, 'editor create visible');
+      await cwOpenBatch(batchId);
+      ok(document.querySelector('[data-cw-action="confirm"]'), 'editor confirm visible');
+      const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined},
+        batch.items.map(item => ({...item,batch_id:batchId})), [], [{instrument_id:11,batch_id:batchId,item_id:cwUuid(731),locked_at:'2026-09-01'}]);
+      const calls = [];
+      const client = cwRpcClient(rows, async (name, payload) => {
+        calls.push({name,payload});
+        rows.calibration_work_batches[0].status = 'awaiting_acknowledgement_pdf';
+        rows.calibration_work_batches[0].updated_at = '2026-09-01T02:01:00Z';
+        return {data:rows.calibration_work_batches[0],error:null};
+      });
+      eq(await cwConfirmBatch(batchId, client), true, 'confirm succeeds');
+      eq(JSON.stringify(calls[0]), JSON.stringify({name:'cw_confirm_batch',payload:{p_token:'token',p_batch_id:batchId}}), 'confirm RPC payload');
+      has(document.getElementById('cwBatchDetail').textContent, 'รอ PDF รับทราบแผน', 'confirmed state refreshes');
+    } finally { cleanup(); }
+  });
+
+  await ta('edits the full active set with optimistic version and acknowledgement invalidation reason', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const model = cwDashboardModel();
+      const batch = model.batches[0];
+      batch.status = 'awaiting_calibration';
+      batch.instrument_type = 'เครื่องชั่ง (Electronic Balance)';
+      batch.documents[0].is_current = true;
+      batch.documents = batch.documents.filter(documentRow => documentRow.item_id !== 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+      cwRenderDashboard({batches:[batch],locks:batch.items.filter(item => item.is_active).map(item => ({instrument_id:item.instrument_id,batch_id:batch.id}))});
+      ok(await cwEditBatchItems(batch.id), 'edit dialog opens');
+      has(document.getElementById('cwCreateBody').textContent, 'เอกสารรับทราบปัจจุบันจะเป็นประวัติ', 'explicit invalidation warning');
+      ok(document.querySelector('[data-cw-instrument-id="11"] input[type="checkbox"]').disabled,
+        'result-bearing checkbox is disabled before DOM state can diverge');
+      eq(cwToggleCreateItem(11, false), false, 'result-bearing item cannot be removed');
+      has(document.getElementById('cwCreateError').textContent, 'รีเซ็ตผล', 'soft-removal guard explains reset');
+      eq(cwSetCreatePlannedDate(11, '2026-09-09'), false, 'result-bearing date cannot change');
+      ok(cwSetCreatePlannedDate(12, '2026-09-06'), 'active draft item date changes');
+      const calls = [];
+      const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined},
+        batch.items.map(item => ({...item,batch_id:batch.id})), batch.documents,
+        batch.items.filter(item => item.is_active).map(item => ({instrument_id:item.instrument_id,batch_id:batch.id,item_id:item.id,locked_at:'2026-09-01'})));
+      const client = cwRpcClient(rows, async (name, payload) => { calls.push({name,payload}); return {data:rows.calibration_work_batches[0],error:null}; });
+      eq(await cwSubmitEdit(client), false, 'reason required after acknowledgement');
+      eq(calls.length, 0, 'missing reason never reaches RPC');
+      cwSetInput('cwEditReason', 'ปรับวันที่ตามผู้ให้บริการ');
+      eq(await cwSubmitEdit(client), true, 'reasoned edit succeeds');
+      eq(calls[0].name, 'cw_mutate_items', 'mutation RPC');
+      eq(calls[0].payload.p_expected_updated_at, '2026-08-31T10:00:00Z', 'optimistic version');
+      eq(calls[0].payload.p_reason, 'ปรับวันที่ตามผู้ให้บริการ', 'invalidation reason');
+      eq(JSON.stringify(calls[0].payload.p_items), JSON.stringify([
+        {instrument_id:11,planned_date:'2001-01-01'}, {instrument_id:12,planned_date:'2026-09-06'}
+      ]), 'full active item set');
+      ok(document.activeElement.classList.contains('cw-detail-head'), 'successful edit moves focus into refreshed detail');
+    } finally { cleanup(); }
+  });
+
+  await ta('allows pre-acknowledgement edits without reason and surfaces authoritative RPC errors', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const model = cwDashboardModel();
+      const batch = model.batches[0];
+      batch.status = 'draft';
+      batch.instrument_type = 'เครื่องชั่ง (Electronic Balance)';
+      batch.documents = [];
+      batch.items = batch.items.filter(item => item.is_active && item.result_status === 'in_progress');
+      cwRenderDashboard({batches:[batch],locks:[{instrument_id:12,batch_id:batch.id}]});
+      ok(await cwEditBatchItems(batch.id), 'pre-ack edit opens');
+      ok(cwSetCreatePlannedDate(12, '2026-09-07'), 'date changes');
+      const calls = [];
+      const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, batch.items, [], [{instrument_id:12,batch_id:batch.id}]);
+      const client = cwRpcClient(rows, async (name, payload) => { calls.push({name,payload}); return {data:null,error:{message:'stale batch edit'}}; });
+      eq(await cwSubmitEdit(client), false, 'server error fails edit');
+      eq(calls[0].payload.p_reason, null, 'pre-ack reason omitted');
+      has(document.getElementById('cwCreateError').textContent, 'stale batch edit', 'authoritative RPC error visible');
+    } finally { cleanup(); }
+  });
+
+  await ta('keeps stale or regrouped active instruments visible but rejects edit submission', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const batchId = cwUuid(705);
+      const batch = {id:batchId,batch_no:'PLAN-705',title:'Registry drift',unit_code:'WRM1',
+        instrument_type:'เครื่องชั่ง (Electronic Balance)',status:'draft',updated_at:'2026-09-01T04:00:00Z',
+        items:[{id:cwUuid(751),instrument_id:12,planned_date:'2026-09-05',result_status:'in_progress',is_active:true,
+          instruments:{id_code:'WRM-12',instrument_name:'Balance 2'}}],documents:[],audit:[]};
+      cwRenderDashboard({batches:[batch],locks:[{instrument_id:12,batch_id:batchId}]});
+      ok(await cwEditBatchItems(batchId), 'edit opens from a valid registry snapshot');
+      window.allData.find(instrument => instrument.id === 12).department = 'LAB';
+      const calls = [];
+      eq(await cwSubmitEdit({rpc:async (...args) => { calls.push(args); }}), false, 'regrouped active item fails client validation');
+      eq(calls.length, 0, 'stale item never reaches mutation RPC');
+      has(document.getElementById('cwCreateBody').textContent, 'WRM-12', 'stale active item remains visible for context');
+      has(document.getElementById('cwCreateError').textContent, 'ทะเบียน', 'stale registry error is actionable');
+    } finally { cleanup(); }
+  });
+
+  await ta('requires cancellation reason and verifies lock release before success', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const batchId = cwUuid(704);
+      const batch = {id:batchId,batch_no:'PLAN-704',title:'Cancel me',unit_code:'WRM1',instrument_type:'เครื่องชั่ง (Electronic Balance)',
+        status:'draft',updated_at:'2026-09-01T03:00:00Z',items:[],documents:[],audit:[]};
+      cwRenderDashboard({batches:[batch],locks:[{instrument_id:11,batch_id:batchId}]});
+      const blankCalls = [];
+      eq(await cwCancelBatch(batchId, '  ', {rpc:async (...args) => { blankCalls.push(args); }}), false, 'blank reason rejected');
+      eq(blankCalls.length, 0, 'blank reason never reaches RPC');
+
+      const failedRows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, [], [], [{instrument_id:11,batch_id:batchId}]);
+      const failedClient = cwRpcClient(failedRows, async () => ({data:{...batch,status:'cancelled'},error:null}));
+      eq(await cwCancelBatch(batchId, 'ยกเลิกแผน', failedClient), false, 'remaining lock blocks success claim');
+      has(document.getElementById('cwActionError').textContent, 'lock', 'lock verification error visible');
+
+      cwRenderDashboard({batches:[batch],locks:[{instrument_id:11,batch_id:batchId}]});
+      const calls = [];
+      const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, [], [], [{instrument_id:11,batch_id:batchId}]);
+      const client = cwRpcClient(rows, async (name, payload) => {
+        calls.push({name,payload});
+        rows.calibration_work_batches[0].status = 'cancelled';
+        rows.calibration_work_instrument_locks = [];
+        return {data:rows.calibration_work_batches[0],error:null};
+      });
+      eq(await cwCancelBatch(batchId, 'ยกเลิกแผน', client), true, 'cancel succeeds only after lock release');
+      eq(JSON.stringify(calls[0]), JSON.stringify({name:'cw_cancel_batch',payload:{p_token:'token',p_batch_id:batchId,p_reason:'ยกเลิกแผน'}}), 'cancel RPC payload');
+      ok(window.cwToastLog.some(entry => entry.type === 'success'), 'success shown only after verification');
+    } finally { cleanup(); }
+  });
+
+  t('traps wizard focus closes on Escape and restores the trigger', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      cwRenderDashboard({batches:[],locks:[]});
+      const trigger = document.getElementById('cwCreateButton');
+      trigger.focus();
+      ok(cwOpenCreate(), 'open dialog');
+      ok(cwSetCreateGroup('WRM1', 'เครื่องชั่ง (Electronic Balance)'), 'set group');
+      cwSetInput('cwCreateTitle', 'Focus continuity');
+      ok(cwGoCreateStep(2), 'open selection step');
+      const itemCheckbox = document.querySelector('[data-cw-instrument-id="11"] input[type="checkbox"]');
+      itemCheckbox.focus();
+      itemCheckbox.checked = true;
+      itemCheckbox.dispatchEvent(new Event('change', {bubbles:true}));
+      eq(document.activeElement, document.querySelector('[data-cw-instrument-id="11"] input[type="checkbox"]'),
+        'selection rerender restores the equivalent checkbox focus');
+      const dialog = document.getElementById('cwCreateDialog');
+      const focusable = [...dialog.querySelectorAll('button,input,select,textarea')].filter(element => !element.disabled && !element.hidden);
+      focusable[focusable.length - 1].focus();
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Tab',bubbles:true}));
+      eq(document.activeElement, focusable[0], 'Tab wraps focus inside dialog');
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}));
+      eq(dialog.getAttribute('aria-hidden'), 'true', 'Escape closes dialog');
+      eq(document.activeElement, trigger, 'focus returns to trigger');
+    } finally { cleanup(); }
+  });
+
   t('scopes responsive dashboard styles without page overflow', () => {
     has(cssSource, '#app #pageCalwork .cw-', 'scoped calibration styles');
     ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pageCalwork \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pageCalwork \.cw-/.test(cssSource), 'mobile scoped rules');
     ok(/#app #pageCalwork[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?min-height:\s*44px/.test(cssSource), 'mobile touch target');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwCreateDialog \.modal-header button[\s\S]*?min-(?:height|block-size):\s*44px/.test(cssSource),
+      'mobile dialog close target');
   });
 
   t('defines all UUID-backed workflow tables and lock uniqueness', () => {

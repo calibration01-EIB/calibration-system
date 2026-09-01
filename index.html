@@ -2696,7 +2696,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260901-cw3">
+<link rel="stylesheet" href="theme-aqua.css?v=20260901-cw4">
 </head>
 <body>
 
@@ -2872,12 +2872,29 @@ body.app-mode textarea:focus {
             <h1 id="cwPageTitle">ชุดงานสอบเทียบ</h1>
             <p>ติดตามแผน เอกสาร และผลสอบเทียบรายเครื่อง</p>
           </div>
-          <button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button>
+          <div class="cw-page-actions">
+            <button type="button" class="cw-primary" id="cwCreateButton" onclick="cwOpenCreate()" hidden>+ สร้างชุดงาน</button>
+            <button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button>
+          </div>
         </section>
         <nav id="cwTabs" class="cw-tabs" role="tablist" aria-label="มุมมองชุดงาน"></nav>
         <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div>
         <div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div>
         <div id="cwBatchDetail" class="cw-batch-detail" hidden></div>
+        <div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
+      </div>
+
+      <div class="modal-overlay" id="cwCreateDialog" aria-hidden="true">
+        <div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">
+          <div class="modal-header">
+            <h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2>
+            <button type="button" id="cwCreateClose" onclick="cwCloseCreate()" aria-label="ปิดหน้าต่าง">×</button>
+          </div>
+          <div id="cwCreateSteps" class="cw-create-steps" aria-label="ขั้นตอนการสร้าง"></div>
+          <div id="cwCreateError" class="cw-create-error" role="alert" hidden></div>
+          <div id="cwCreateBody" class="cw-create-body"></div>
+          <div id="cwCreateFooter" class="cw-create-footer"></div>
+        </div>
       </div>
 
 
@@ -4793,7 +4810,7 @@ body.app-mode textarea:focus {
 <script src="js/26-list-ui.js?v=20260831-spec-cards"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260819-kpi"></script>
-<script src="js/29-calibration-work.js?v=20260901-cw3"></script>
+<script src="js/29-calibration-work.js?v=20260901-cw4"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
