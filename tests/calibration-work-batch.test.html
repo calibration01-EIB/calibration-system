@@ -6,6 +6,7 @@
 <script>
 const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+async function ta(name, fn) { try { await fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
 function eq(actual, expected, message) { ok(actual === expected, (message || 'values differ') + ': expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual)); }
 function throws(fn, message) { let failed = false; try { fn(); } catch (_) { failed = true; } ok(failed, message || 'expected function to throw'); }
@@ -25,12 +26,14 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource;
+  let sql, indexSource, swSource, routerSource, cssSource;
   try {
-    [sql, indexSource, swSource] = await Promise.all([
+    [sql, indexSource, swSource, routerSource, cssSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../index.html'),
-      text('../sw.js')
+      text('../sw.js'),
+      text('../js/10-router.js'),
+      text('../theme-aqua.css')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -152,6 +155,148 @@ function text(url) {
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
     has(swSource, "const CACHE_NAME = 'calibration-app-v150';", 'cache v150');
     has(swSource, "'./js/29-calibration-work.js'", 'status engine APP_SHELL entry');
+  });
+
+  function cwMountFixture() {
+    const fixture = document.createElement('div');
+    fixture.id = 'cwTestFixture';
+    fixture.innerHTML = '<div id="pageCalwork"><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div></div>';
+    document.body.appendChild(fixture);
+    return () => fixture.remove();
+  }
+
+  function cwDashboardModel() {
+    const firstId = '11111111-1111-1111-1111-111111111111';
+    const secondId = '22222222-2222-2222-2222-222222222222';
+    return {
+      batches: [
+        {
+          id:firstId, batch_no:'PLAN-2026-0001', title:'<img src=x onerror="window.cwXss=1">',
+          unit_code:'WRM1', instrument_type:'เครื่องชั่ง', status:'awaiting_calibration',
+          items:[
+            {id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', instrument_id:11, planned_date:'2001-01-01', result_status:'completed', is_active:true, cert_no:'CERT-11', calibration_date:'2001-01-01', instruments:{id_code:'WRM-11', instrument_name:'Balance <หนึ่ง>'}},
+            {id:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', instrument_id:12, planned_date:'2001-01-02', result_status:'in_progress', is_active:true, instruments:{id_code:'WRM-12', instrument_name:'Balance 2'}},
+            {id:'cccccccc-cccc-cccc-cccc-cccccccccccc', instrument_id:13, planned_date:'2001-01-03', result_status:'completed', is_active:false, removal_reason:'duplicate', instruments:{id_code:'WRM-13', instrument_name:'Old balance'}}
+          ],
+          documents:[
+            {id:'d1', item_id:null, document_kind:'acknowledgement', version_number:2, is_current:true, original_filename:'ack-v2.pdf', storage_path:firstId + '/batch/acknowledgement/v0002.pdf', uploaded_by:'editor'},
+            {id:'d0', item_id:null, document_kind:'acknowledgement', version_number:1, is_current:false, original_filename:'ack-<old>.pdf', storage_path:firstId + '/batch/acknowledgement/v0001.pdf', uploaded_by:'owner', replacement_reason:'แก้ชื่อ'}
+          ],
+          audit:[{id:'a1', action:'confirm_batch', actor:'editor', occurred_at:'2026-08-31T10:00:00Z', reason:'<checked>'}]
+        },
+        {
+          id:secondId, batch_no:'PLAN-2026-0002', title:'Closure batch', unit_code:'LAB',
+          instrument_type:'Pressure', status:'awaiting_closure_pdf',
+          items:[
+            {id:'dddddddd-dddd-dddd-dddd-dddddddddddd', instrument_id:21, planned_date:'2026-08-01', result_status:'completed', is_active:true, instruments:{id_code:'LAB-21', instrument_name:'Gauge 1'}},
+            {id:'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', instrument_id:22, planned_date:'2026-08-02', result_status:'skipped', is_active:true, skip_reason:'ส่งซ่อม', instruments:{id_code:'LAB-22', instrument_name:'Gauge 2'}}
+          ],
+          documents:[], audit:[]
+        }
+      ]
+    };
+  }
+
+  t('adds accessible desktop/mobile navigation page shell and router loading', () => {
+    ['id="nav-calwork"', 'data-page="calwork"', 'id="pageCalwork"', 'id="cwTabs"',
+      'id="cwMetrics"', 'id="cwBatchList"', 'id="cwBatchDetail"'].forEach(token => has(indexSource, token, token));
+    has(routerSource, "'calwork'", 'router page registration');
+    has(routerSource, "calwork: ['ชุดงานสอบเทียบ'", 'router title');
+    has(routerSource, "page === 'calwork'", 'router load branch');
+    has(routerSource, 'loadCalibrationWorkPage()', 'router loader call');
+    has(routerSource, 'setTimeout(() => waitAndLoad', 'router waits for app data/client');
+  });
+
+  t('renders dashboard tabs metrics progress document gates and hostile text safely', () => {
+    const cleanup = cwMountFixture();
+    try {
+      window.cwXss = 0;
+      cwRenderDashboard(cwDashboardModel());
+      const tabs = [...document.querySelectorAll('#cwTabs [role="tab"]')];
+      eq(tabs.length, 4, 'four dashboard tabs');
+      eq(tabs.map(tab => tab.dataset.count).join(','), '2,1,0,2', 'tab counts');
+      const metrics = document.getElementById('cwMetrics').textContent.replace(/\s+/g, ' ');
+      ['2 ชุดงานกำลังดำเนินการ', '3 / 4 เครื่องเสร็จ', '1 เครื่องเกินแผน', '1 ชุดรอ PDF ปิดแผน'].forEach(value => has(metrics, value, 'metric'));
+      const list = document.getElementById('cwBatchList');
+      eq(list.querySelectorAll('.cw-batch-card').length, 2, 'active cards');
+      ok(!list.querySelector('img'), 'hostile title must not create markup');
+      has(list.textContent, '<img src=x onerror="window.cwXss=1">', 'escaped title remains visible as text');
+      eq(window.cwXss, 0, 'hostile title handler');
+      has(list.textContent, '1 / 2', 'partial progress');
+      has(list.textContent, 'รับทราบแล้ว', 'acknowledgement state');
+      has(list.textContent, 'รอ PDF ปิดแผน', 'closure state');
+      const firstCard = list.querySelector('.cw-batch-card');
+      eq(firstCard.dataset.batchId, '11111111-1111-1111-1111-111111111111', 'validated batch action id');
+    } finally { cleanup(); }
+  });
+
+  t('filters dashboard cards through keyboard-operable tabs', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      cwSetDashboardTab('waiting');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 1, 'waiting card count');
+      has(document.getElementById('cwBatchList').textContent, 'PLAN-2026-0002', 'waiting batch');
+      const selected = document.querySelector('#cwTabs [aria-selected="true"]');
+      eq(selected.dataset.cwTab, 'waiting', 'selected tab');
+      eq(selected.tagName, 'BUTTON', 'tab is keyboard operable');
+    } finally { cleanup(); }
+  });
+
+  t('renders visible empty and escaped error states', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard({batches:[]});
+      has(document.getElementById('cwBatchList').textContent, 'ยังไม่มีชุดงานสอบเทียบ', 'empty state');
+      cwRenderDashboard({batches:[], error:'โหลดไม่ได้ <svg onload="window.cwXss=2">'});
+      const list = document.getElementById('cwBatchList');
+      has(list.textContent, '<svg onload="window.cwXss=2">', 'error text');
+      ok(!list.querySelector('svg'), 'error must not create markup');
+    } finally { cleanup(); }
+  });
+
+  await ta('loads the complete read model with the existing client and shows query errors', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const tables = [];
+      const client = { from(table) {
+        tables.push(table);
+        return { select() { return { order: async () => ({data:null, error:{message:'DB <offline>'}}) }; } };
+      } };
+      await loadCalibrationWorkPage(client);
+      ['calibration_work_batches','calibration_work_items','calibration_work_documents','calibration_work_audit']
+        .forEach(table => ok(tables.includes(table), table + ' query missing'));
+      const list = document.getElementById('cwBatchList');
+      has(list.textContent, 'DB <offline>', 'query error state');
+      ok(!list.querySelector('offline'), 'query error must be text only');
+    } finally { cleanup(); }
+  });
+
+  await ta('opens a read-only detail with item history document versions and audit', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const model = cwDashboardModel();
+      cwRenderDashboard(model);
+      await cwOpenBatch(model.batches[0].id);
+      const detail = document.getElementById('cwBatchDetail');
+      ok(!detail.hidden, 'detail must be visible');
+      const body = detail.textContent.replace(/\s+/g, ' ');
+      ['PLAN-2026-0001', '1 / 2', 'WRM-11', 'WRM-12', 'WRM-13', 'นำออกแล้ว',
+       'ack-v2.pdf', 'ack-<old>.pdf', 'เวอร์ชัน 2', 'เวอร์ชัน 1',
+       'confirm_batch', 'editor', '<checked>'].forEach(value => has(body, value, 'detail'));
+      ok(!detail.querySelector('img'), 'detail hostile text must not create markup');
+      ok(!detail.querySelector('input,select,textarea'), 'Task 3 detail must be read-only');
+      has(detail.querySelector('.cw-current-docs').textContent, 'PDF รับทราบแผน', 'current batch PDF');
+      has(detail.querySelector('.cw-current-docs').textContent, 'ยังไม่มี PDF ปิดแผน', 'missing closure PDF');
+    } finally { cleanup(); }
+  });
+
+  t('scopes responsive dashboard styles without page overflow', () => {
+    has(cssSource, '#app #pageCalwork .cw-', 'scoped calibration styles');
+    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pageCalwork \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pageCalwork \.cw-/.test(cssSource), 'mobile scoped rules');
+    ok(/#app #pageCalwork[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?min-height:\s*44px/.test(cssSource), 'mobile touch target');
   });
 
   t('defines all UUID-backed workflow tables and lock uniqueness', () => {

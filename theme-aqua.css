@@ -1797,3 +1797,144 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   .ax-tile-art svg { width: 40px; height: 40px; }
   .ax-tile h3 { font-size: 11px; }
 }
+
+/* Calibration work batches — Task 3 read-only dashboard */
+#app #pageCalwork { overflow-x: hidden; }
+#app #pageCalwork .cw-page-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  margin-bottom: 18px; padding: 22px 24px; border: 1px solid var(--border);
+  border-radius: 18px; background: linear-gradient(135deg, #f6fbfd, #ffffff);
+}
+#app #pageCalwork .cw-page-head h1 { margin: 0; color: var(--text); font-size: 25px; }
+#app #pageCalwork .cw-page-head p { margin: 5px 0 0; color: var(--text2); font-size: 13px; }
+#app #pageCalwork .cw-refresh,
+#app #pageCalwork .cw-detail-head > button {
+  min-height: 40px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--accent); font: 700 12px var(--ff); cursor: pointer;
+}
+#app #pageCalwork .cw-tabs {
+  display: flex; gap: 7px; margin-bottom: 14px; padding: 5px;
+  overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+}
+#app #pageCalwork .cw-tab {
+  min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  flex: 1 0 auto; padding: 8px 14px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--text2); font: 700 12px var(--ff); cursor: pointer;
+}
+#app #pageCalwork .cw-tab strong {
+  min-width: 22px; padding: 2px 6px; border-radius: 20px; background: var(--surface2); font-size: 10px;
+}
+#app #pageCalwork .cw-tab.is-active { background: var(--accent-light); color: var(--accent); }
+#app #pageCalwork .cw-tab.is-active strong { background: var(--accent); color: #fff; }
+#app #pageCalwork .cw-tab:focus-visible,
+#app #pageCalwork .cw-batch-card:focus-visible,
+#app #pageCalwork .cw-refresh:focus-visible,
+#app #pageCalwork .cw-detail-head > button:focus-visible { outline: 3px solid rgba(8,145,178,.28); outline-offset: 2px; }
+#app #pageCalwork .cw-metrics {
+  display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 16px;
+}
+#app #pageCalwork .cw-metric {
+  min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 16px 18px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+}
+#app #pageCalwork .cw-metric strong { color: var(--accent); font: 800 23px/1.15 var(--ff-num); }
+#app #pageCalwork .cw-metric span { color: var(--text2); font-size: 11px; }
+#app #pageCalwork .cw-batch-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+#app #pageCalwork .cw-batch-card {
+  width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 18px;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text);
+  font-family: var(--ff); text-align: left; cursor: pointer; box-shadow: 0 5px 16px rgba(15,39,58,.05);
+}
+#app #pageCalwork .cw-batch-card:hover { border-color: rgba(8,145,178,.45); transform: translateY(-1px); }
+#app #pageCalwork .cw-batch-card--invalid { cursor: default; }
+#app #pageCalwork .cw-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+#app #pageCalwork .cw-card-top > span:first-child { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+#app #pageCalwork .cw-card-top b { color: var(--accent); font: 800 13px var(--ff-num); }
+#app #pageCalwork .cw-card-top small { overflow-wrap: anywhere; color: var(--text); font-size: 14px; font-weight: 700; }
+#app #pageCalwork .cw-status {
+  flex: 0 0 auto; padding: 5px 9px; border-radius: 20px; color: var(--cw-status);
+  background: color-mix(in srgb, var(--cw-status) 10%, white); font-size: 10px; font-weight: 800;
+}
+#app #pageCalwork .cw-card-meta,
+#app #pageCalwork .cw-doc-gates { display: flex; flex-wrap: wrap; gap: 7px; }
+#app #pageCalwork .cw-card-meta span,
+#app #pageCalwork .cw-doc-gates span { padding: 4px 8px; border-radius: 8px; background: var(--surface2); color: var(--text2); font-size: 10px; }
+#app #pageCalwork .cw-progress-label { display: flex; justify-content: space-between; color: var(--text2); font-size: 11px; }
+#app #pageCalwork .cw-progress-label b { color: var(--text); font-family: var(--ff-num); }
+#app #pageCalwork .cw-progress { height: 8px; display: block; overflow: hidden; border-radius: 20px; background: #e6eef2; }
+#app #pageCalwork .cw-progress > span { height: 100%; display: block; border-radius: inherit; background: linear-gradient(90deg,var(--accent),#35b9c9); }
+#app #pageCalwork .cw-state {
+  grid-column: 1 / -1; min-height: 180px; display: grid; place-content: center; gap: 5px;
+  padding: 24px; border: 1px dashed var(--border); border-radius: 16px; color: var(--text2); text-align: center;
+}
+#app #pageCalwork .cw-state strong { color: var(--text); }
+#app #pageCalwork .cw-state--error { border-color: rgba(185,28,28,.3); background: #fff7f7; }
+#app #pageCalwork .cw-state--error strong { color: #b91c1c; }
+#app #pageCalwork .cw-detail-head {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: start; gap: 16px;
+  margin-bottom: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
+}
+#app #pageCalwork .cw-detail-head > div { min-width: 0; }
+#app #pageCalwork .cw-detail-head > div > span { color: var(--accent); font: 800 12px var(--ff-num); }
+#app #pageCalwork .cw-detail-head h1 { margin: 4px 0; overflow-wrap: anywhere; color: var(--text); font-size: 21px; }
+#app #pageCalwork .cw-detail-head p { margin: 0; color: var(--text2); font-size: 12px; }
+#app #pageCalwork .cw-detail-progress { margin-bottom: 14px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+#app #pageCalwork .cw-detail-progress > div { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text2); font-size: 12px; }
+#app #pageCalwork .cw-detail-progress b { color: var(--accent); font-family: var(--ff-num); }
+#app #pageCalwork .cw-detail-grid { display: grid; grid-template-columns: minmax(0,1.75fr) minmax(280px,.75fr); gap: 14px; align-items: start; }
+#app #pageCalwork .cw-detail-grid > div,
+#app #pageCalwork .cw-detail-grid > aside { min-width: 0; display: grid; gap: 14px; }
+#app #pageCalwork .cw-panel { min-width: 0; padding: 17px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
+#app #pageCalwork .cw-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+#app #pageCalwork .cw-panel-head h2 { margin: 0; color: var(--text); font-size: 15px; }
+#app #pageCalwork .cw-panel-head span { color: var(--text3); font-size: 10px; }
+#app #pageCalwork .cw-table-wrap { max-width: 100%; overflow-x: auto; }
+#app #pageCalwork .cw-item-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+#app #pageCalwork .cw-item-table th,
+#app #pageCalwork .cw-item-table td { padding: 10px 9px; border-bottom: 1px solid var(--border); color: var(--text2); font-size: 11px; text-align: left; vertical-align: top; }
+#app #pageCalwork .cw-item-table th { color: var(--text3); font-size: 10px; text-transform: uppercase; }
+#app #pageCalwork .cw-item-table td:first-child { display: grid; gap: 2px; }
+#app #pageCalwork .cw-item-table td:first-child b { color: var(--text); font-family: var(--ff-num); }
+#app #pageCalwork .cw-item-table td:first-child span { overflow-wrap: anywhere; }
+#app #pageCalwork .cw-item-table tr.is-removed { opacity: .62; }
+#app #pageCalwork .cw-item-status { white-space: nowrap; color: var(--accent); font-weight: 700; }
+#app #pageCalwork .cw-current-docs article { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid var(--border); }
+#app #pageCalwork .cw-current-docs article b { color: var(--text); font-size: 11px; }
+#app #pageCalwork .cw-current-docs article span { overflow-wrap: anywhere; color: var(--text2); font-size: 10px; }
+#app #pageCalwork .cw-doc-history ul,
+#app #pageCalwork .cw-audit ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+#app #pageCalwork .cw-doc-history li { display: grid; gap: 4px; padding: 10px; border-radius: 10px; background: var(--surface2); }
+#app #pageCalwork .cw-doc-history li div { min-width: 0; display: grid; gap: 2px; }
+#app #pageCalwork .cw-doc-history li b,
+#app #pageCalwork .cw-doc-history li span { overflow-wrap: anywhere; color: var(--text); font-size: 10px; }
+#app #pageCalwork .cw-doc-history li span,
+#app #pageCalwork .cw-doc-history li small { color: var(--text2); }
+#app #pageCalwork .cw-audit li { display: grid; grid-template-columns: 10px minmax(0,1fr); gap: 8px; }
+#app #pageCalwork .cw-audit-dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--accent); }
+#app #pageCalwork .cw-audit li div { min-width: 0; display: grid; gap: 2px; }
+#app #pageCalwork .cw-audit li b { overflow-wrap: anywhere; color: var(--text); font-size: 11px; }
+#app #pageCalwork .cw-audit li span,
+#app #pageCalwork .cw-audit li small { overflow-wrap: anywhere; color: var(--text2); font-size: 10px; }
+
+@media (max-width: 1100px) {
+  #app #pageCalwork .cw-detail-grid { grid-template-columns: 1fr; }
+  #app #pageCalwork .cw-detail-grid > aside { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 767px) {
+  #app #pageCalwork .cw-page-head { align-items: stretch; padding: 16px; }
+  #app #pageCalwork .cw-page-head h1 { font-size: 21px; }
+  #app #pageCalwork .cw-refresh,
+  #app #pageCalwork .cw-tab,
+  #app #pageCalwork .cw-batch-card,
+  #app #pageCalwork .cw-detail-head > button { min-height: 44px; }
+  #app #pageCalwork .cw-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  #app #pageCalwork .cw-metric { padding: 13px; }
+  #app #pageCalwork .cw-metric strong { font-size: 19px; }
+  #app #pageCalwork .cw-batch-list { grid-template-columns: 1fr; }
+  #app #pageCalwork .cw-detail-head { grid-template-columns: 1fr; padding: 15px; }
+  #app #pageCalwork .cw-detail-head > .cw-status { justify-self: start; }
+  #app #pageCalwork .cw-detail-grid,
+  #app #pageCalwork .cw-detail-grid > aside { grid-template-columns: 1fr; }
+  #app #pageCalwork .cw-panel { padding: 13px; }
+}

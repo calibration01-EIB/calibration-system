@@ -2750,6 +2750,7 @@ body.app-mode textarea:focus {
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
         <div class="nav-item" onclick="showPage('list')" id="nav-list"><span class="nav-icon">📑</span> รายการเครื่องมือ</div>
         <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
+        <div class="nav-item" onclick="showPage('calwork')" id="nav-calwork"><span class="nav-icon">🧰</span> ชุดงานสอบเทียบ</div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
@@ -2863,6 +2864,20 @@ body.app-mode textarea:focus {
 
           <section class="ax-tiles" id="axTiles"></section>
         </div>
+      </div>
+
+      <div id="pageCalwork" class="page-content" style="display:none">
+        <section class="cw-page-head" aria-labelledby="cwPageTitle">
+          <div>
+            <h1 id="cwPageTitle">ชุดงานสอบเทียบ</h1>
+            <p>ติดตามแผน เอกสาร และผลสอบเทียบรายเครื่อง</p>
+          </div>
+          <button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button>
+        </section>
+        <nav id="cwTabs" class="cw-tabs" role="tablist" aria-label="มุมมองชุดงาน"></nav>
+        <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div>
+        <div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div>
+        <div id="cwBatchDetail" class="cw-batch-detail" hidden></div>
       </div>
 
 
@@ -4125,6 +4140,7 @@ body.app-mode textarea:focus {
     <div class="ax-mobile-more-head"><strong>เมนูเพิ่มเติม</strong><button type="button" onclick="closeAxMobileMore()" aria-label="ปิดเมนู">×</button></div>
     <div class="ax-mobile-more-grid">
       <button type="button" onclick="axMobileGo('dashboard')"><span>📊</span><b>Dashboard</b></button>
+      <button type="button" data-page="calwork" onclick="axMobileGo('calwork')"><span>🧰</span><b>ชุดงานสอบเทียบ</b></button>
       <button type="button" onclick="axMobileGo('cert')"><span>🏷️</span><b>ลำดับเลข Cert</b></button>
       <button type="button" onclick="axMobileGo('repairs')" class="ax-mobile-more-repair"><span>🔧</span><b>งานซ่อม</b><i id="bnavRepairBadge">0</i></button>
       <button type="button" onclick="axMobileGo('weights')"><span>📜</span><b>Cert Reference</b></button>
