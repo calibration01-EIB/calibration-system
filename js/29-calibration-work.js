@@ -61,18 +61,19 @@
       && documentRow.is_current === true);
     const calibrationDate = String(source.calibration_date || '');
     const plannedDate = String(source.planned_date || '');
-    const overdueRequired = /^\d{4}-\d{2}-\d{2}$/.test(calibrationDate)
-      && /^\d{4}-\d{2}-\d{2}$/.test(plannedDate) && calibrationDate > plannedDate;
+    const calibrationValid = cwValidISODate(calibrationDate);
+    const plannedValid = cwValidISODate(plannedDate);
+    const overdueRequired = calibrationValid && plannedValid && calibrationDate > plannedDate;
     const missing = [];
     if (!String(source.cert_no || '').trim()) missing.push('cert_no');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(calibrationDate)) missing.push('calibration_date');
+    if (!calibrationValid) missing.push('calibration_date');
     if (!current('certificate')) missing.push('certificate');
     if (overdueRequired && !String(source.overdue_reason || '').trim()) missing.push('overdue_reason');
     if (overdueRequired && !current('overdue')) missing.push('overdue');
     const today = todayISO || cwTodayISO();
     const displayOverdue = source.result_status === 'in_progress' && source.is_active !== false
-      && /^\d{4}-\d{2}-\d{2}$/.test(plannedDate) && plannedDate < today
-      && (!/^\d{4}-\d{2}-\d{2}$/.test(calibrationDate) || calibrationDate > plannedDate);
+      && plannedValid && plannedDate < today
+      && (!calibrationValid || calibrationDate > plannedDate);
     return { certificateRequired: true, overdueRequired, missing, displayOverdue };
   }
 
@@ -141,7 +142,7 @@
   const cwDocumentUploads = new Set();
   const cwItemResultState = {
     batchId: null, itemId: null, certNo: '', calibrationDate: '', overdueReason: '',
-    busy: false, returnFocus: null
+    busy: false, returnFocus: null, focusId: null
   };
   const cwItemMutations = new Set();
 
@@ -558,7 +559,7 @@
     if (!ITEM_DOCUMENT_KINDS.has(kind) || !UUID_PATTERN.test(itemId || '')
         || ['draft', 'awaiting_acknowledgement_pdf', 'completed', 'cancelled'].includes(status)
         || !cwCurrentDocument(batch, 'acknowledgement')) return false;
-    return cwActiveItems(batch).some(item => item.id === itemId);
+    return cwActiveItems(batch).some(item => item.id === itemId && item.result_status === 'in_progress');
   }
 
   function cwDocumentButton(documentRow, batch) {
@@ -1310,6 +1311,10 @@
     root.hidden = !message;
   }
 
+  function cwResultDisabledAttr(id) {
+    return cwItemResultState.busy && cwItemResultState.focusId !== id ? ' disabled' : '';
+  }
+
   function cwItemEvidenceMarkup(batch, item, kind, label) {
     const current = cwCurrentItemDocument(batch, item.id, kind);
     const open = current ? cwDocumentButton(current, batch) : '';
@@ -1339,7 +1344,7 @@
     const requirements = cwItemRequirements(candidate, cwTodayISO(), batch.documents || []);
     const lateSection = requirements.overdueRequired
       ? '<label class="cw-field"><span>เหตุผลเกินแผน</span><textarea id="cwItemOverdueReason" rows="3"'
-        + ' oninput="cwSetItemResultField(\'overdueReason\',this.value)"' + (cwItemResultState.busy ? ' disabled' : '') + '>'
+        + ' oninput="cwSetItemResultField(\'overdueReason\',this.value)"' + cwResultDisabledAttr('cwItemOverdueReason') + '>'
         + cwEscapeHtml(cwItemResultState.overdueReason) + '</textarea></label>'
         + cwItemEvidenceMarkup(batch, item, 'overdue', 'หลักฐานเกินแผน PDF')
       : requirements.displayOverdue
@@ -1350,27 +1355,37 @@
       + cwEscapeHtml(item.planned_date || '–') + '</span></div>'
       + '<div class="cw-result-fields"><label class="cw-field"><span>Cert No.</span><input id="cwItemCertNo" type="text" maxlength="200" value="'
       + cwEscapeHtml(cwItemResultState.certNo) + '" oninput="cwSetItemResultField(\'certNo\',this.value)"'
-      + (cwItemResultState.busy ? ' disabled' : '') + '></label>'
+      + cwResultDisabledAttr('cwItemCertNo') + '></label>'
       + '<label class="cw-field"><span>วันที่สอบเทียบ</span><input id="cwItemCalibrationDate" type="date" value="'
       + cwEscapeHtml(cwItemResultState.calibrationDate) + '" onchange="cwSetItemResultField(\'calibrationDate\',this.value)"'
-      + (cwItemResultState.busy ? ' disabled' : '') + '></label></div>'
+      + cwResultDisabledAttr('cwItemCalibrationDate') + '></label></div>'
       + cwItemEvidenceMarkup(batch, item, 'certificate', 'Certificate PDF') + lateSection;
     footer.innerHTML = '<button type="button" id="cwItemResultCancel" class="cw-secondary" onclick="cwCloseItemResult()"'
-      + (cwItemResultState.busy ? ' disabled' : '') + '>ปิด</button>'
+      + cwResultDisabledAttr('cwItemResultCancel') + '>ปิด</button>'
       + '<button type="button" class="cw-secondary" id="cwItemResultSave" onclick="cwSaveItemDraft()" aria-disabled="'
       + cwItemResultState.busy + '">บันทึกร่าง</button>'
       + '<button type="button" class="cw-primary" id="cwItemResultComplete" onclick="cwCompleteItem()" aria-disabled="'
       + cwItemResultState.busy + '">ยืนยันผล</button>';
+    const focusTarget = cwItemResultState.focusId && document.getElementById(cwItemResultState.focusId);
+    if (focusTarget && !focusTarget.disabled && typeof focusTarget.focus === 'function') focusTarget.focus();
   }
 
   function cwSetItemResultBusy(busy) {
+    if (busy) {
+      const dialog = document.getElementById('cwItemResultDialog');
+      cwItemResultState.focusId = dialog && dialog.contains(document.activeElement)
+        ? document.activeElement.id || null : null;
+    }
     cwItemResultState.busy = Boolean(busy);
     const dialog = document.getElementById('cwItemResultDialog');
     if (dialog) dialog.setAttribute('aria-busy', String(Boolean(busy)));
-    ['cwItemResultClose','cwItemResultCancel','cwItemResultSave','cwItemResultComplete',
-      'cwItemCertNo','cwItemCalibrationDate','cwItemOverdueReason'].forEach(id => {
+    ['cwItemResultClose','cwItemResultCancel','cwItemCertNo','cwItemCalibrationDate','cwItemOverdueReason'].forEach(id => {
       const control = document.getElementById(id);
-      if (control) control.disabled = Boolean(busy);
+      if (control) control.disabled = Boolean(busy) && control.id !== cwItemResultState.focusId;
+    });
+    ['cwItemResultSave','cwItemResultComplete'].forEach(id => {
+      const control = document.getElementById(id);
+      if (control) control.setAttribute('aria-disabled', String(Boolean(busy)));
     });
   }
 
@@ -1385,6 +1400,7 @@
     cwItemResultState.overdueReason = known.item.overdue_reason || '';
     cwItemResultState.busy = false;
     cwItemResultState.returnFocus = document.activeElement;
+    cwItemResultState.focusId = null;
     cwShowItemResultError('');
     cwRenderItemResultDialog();
     dialog.classList.add('open');
@@ -1411,6 +1427,22 @@
       if (fallback && typeof fallback.focus === 'function') fallback.focus();
     }
     return true;
+  }
+
+  function cwDismissChangedItemResult(message) {
+    cwItemResultState.busy = false;
+    cwItemResultState.focusId = null;
+    const dialog = document.getElementById('cwItemResultDialog');
+    if (dialog) {
+      dialog.setAttribute('aria-busy', 'false');
+      dialog.classList.remove('open');
+      dialog.setAttribute('aria-hidden', 'true');
+    }
+    cwShowActionError(message || 'สถานะรายการเปลี่ยนไป กรุณาตรวจสอบข้อมูลล่าสุด');
+    const fallback = document.querySelector('[data-cw-result-item="' + cwItemResultState.itemId + '"]')
+      || document.querySelector('#cwBatchDetail .cw-detail-head');
+    if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    return false;
   }
 
   function cwHandleItemResultKey(event) {
@@ -1463,13 +1495,14 @@
     if (!cwFindBatch(batchId)) throw new Error('ไม่พบชุดงานหลังรีเฟรช');
     await cwOpenBatch(batchId);
     if (reopen) {
-      const known = cwFindItemRecord(itemId);
-      if (!known || known.item.result_status !== 'in_progress') throw new Error('สถานะรายการเปลี่ยนไป กรุณาตรวจสอบใหม่');
+      const known = cwItemMutationTarget(itemId, 'edit');
+      if (!known) return cwDismissChangedItemResult();
       cwItemResultState.certNo = known.item.cert_no || '';
       cwItemResultState.calibrationDate = known.item.calibration_date || '';
       cwItemResultState.overdueReason = known.item.overdue_reason || '';
       cwRenderItemResultDialog();
     }
+    return true;
   }
 
   async function cwSaveItemDraft(client) {
@@ -1482,7 +1515,7 @@
     cwShowItemResultError('');
     try {
       await cwRpc(source, 'cw_save_item_draft', cwItemDraftPayload(known.item.id));
-      await cwRefreshItemResult(source, known.batch.id, known.item.id, true);
+      if (!await cwRefreshItemResult(source, known.batch.id, known.item.id, true)) return false;
       cwSetItemResultBusy(false);
       cwRenderItemResultDialog();
       cwToast('บันทึกร่างผลสอบเทียบแล้ว', 'success');
@@ -1502,6 +1535,24 @@
       overdue_reason: 'เหตุผลเกินแผน', overdue: 'หลักฐานเกินแผน PDF ปัจจุบัน'
     };
     return 'ข้อมูลยังไม่ครบ: ' + missing.map(key => labels[key] || key).join(', ');
+  }
+
+  function cwRegistryProvesItemResult(item, certNo, calibrationDate) {
+    const instrumentId = item && item.instrument_id;
+    const instrument = cwRegistry().find(row => row && String(row.id) === String(instrumentId));
+    return Boolean(instrument
+      && String(instrument.cert_no || '') === String(certNo || '')
+      && String(instrument.cal_date || '') === String(calibrationDate || ''));
+  }
+
+  async function cwReconcileRegistry(item, certNo, calibrationDate) {
+    let explicitSuccess = false;
+    try {
+      if (typeof global.loadData === 'function') explicitSuccess = await global.loadData(true) === true;
+    } catch (_error) {
+      explicitSuccess = false;
+    }
+    return explicitSuccess || cwRegistryProvesItemResult(item, certNo, calibrationDate);
   }
 
   async function cwCompleteItem(client) {
@@ -1524,19 +1575,50 @@
     cwItemMutations.add(key);
     cwSetItemResultBusy(true);
     cwShowItemResultError('');
+    let mutationError = null;
+    let registryVerified = false;
+    let batchRefreshed = false;
     try {
-      await cwRpc(source, 'cw_save_item_draft', draftPayload);
-      await cwRpc(source, 'cw_complete_item', { p_token: cwActor() && cwActor().token, p_item_id: known.item.id });
-      if (typeof global.loadData === 'function') await global.loadData(true);
-      if (!await loadCalibrationWorkPage(source)) throw new Error('ยืนยันผลแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
-      await cwOpenBatch(known.batch.id);
+      try {
+        await cwRpc(source, 'cw_save_item_draft', draftPayload);
+        await cwRpc(source, 'cw_complete_item', { p_token: cwActor() && cwActor().token, p_item_id: known.item.id });
+      } catch (error) {
+        mutationError = error;
+      }
+      registryVerified = await cwReconcileRegistry(
+        known.item, draftPayload.p_cert_no, draftPayload.p_calibration_date
+      );
+      try {
+        batchRefreshed = await loadCalibrationWorkPage(source) === true;
+        if (batchRefreshed && cwFindBatch(known.batch.id)) await cwOpenBatch(known.batch.id);
+      } catch (_error) {
+        batchRefreshed = false;
+      }
+
+      const authoritative = batchRefreshed ? cwFindItemRecord(known.item.id) : null;
+      if (authoritative && authoritative.item.result_status === 'completed') {
+        cwSetItemResultBusy(false);
+        cwCloseItemResult();
+        if (!registryVerified) {
+          cwShowActionError('ยืนยันผลแล้ว แต่ยังตรวจสอบการรีเฟรชทะเบียนไม่ได้ กรุณารีเฟรชทะเบียน');
+          return false;
+        }
+        cwToast('ยืนยันผลสอบเทียบแล้ว', 'success');
+        return true;
+      }
+
       cwSetItemResultBusy(false);
-      cwCloseItemResult();
-      cwToast('ยืนยันผลสอบเทียบแล้ว', 'success');
-      return true;
-    } catch (error) {
-      cwSetItemResultBusy(false);
-      cwShowItemResultError(error && error.message || 'ยืนยันผลไม่สำเร็จ');
+      if (batchRefreshed && !cwItemMutationTarget(known.item.id, 'edit')) {
+        return cwDismissChangedItemResult();
+      }
+      if (authoritative) {
+        cwItemResultState.certNo = authoritative.item.cert_no || '';
+        cwItemResultState.calibrationDate = authoritative.item.calibration_date || '';
+        cwItemResultState.overdueReason = authoritative.item.overdue_reason || '';
+        cwRenderItemResultDialog();
+      }
+      cwShowItemResultError(mutationError && mutationError.message
+        || (!batchRefreshed ? 'ยังตรวจสอบสถานะการยืนยันผลไม่ได้ กรุณาลองรีเฟรชอีกครั้ง' : 'ยืนยันผลไม่สำเร็จ'));
       return false;
     } finally {
       cwItemMutations.delete(key);
@@ -1669,8 +1751,9 @@
     if (refreshed && cwFindBatch(batchId)) await cwOpenBatch(batchId);
     const resultDialog = document.getElementById('cwItemResultDialog');
     if (refreshed && resultDialog && resultDialog.classList.contains('open')
-        && cwItemResultState.batchId === batchId && cwFindItemRecord(cwItemResultState.itemId)) {
-      cwRenderItemResultDialog();
+        && cwItemResultState.batchId === batchId) {
+      if (cwItemMutationTarget(cwItemResultState.itemId, 'edit')) cwRenderItemResultDialog();
+      else cwDismissChangedItemResult();
     }
     if (dialogFocus && dialogFocus.isConnected && typeof dialogFocus.focus === 'function') dialogFocus.focus();
     return refreshed;

@@ -34,13 +34,14 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource, routerSource, cssSource;
+  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource;
   try {
-    [sql, indexSource, swSource, routerSource, cssSource] = await Promise.all([
+    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../index.html'),
       text('../sw.js'),
       text('../js/10-router.js'),
+      text('../js/02-dashboard.js'),
       text('../theme-aqua.css')
     ]);
   } catch (error) {
@@ -181,6 +182,16 @@ function text(url) {
     eq(result.displayOverdue, false, 'completed on-time result never displays as overdue');
     result = cwItemRequirements({...base,result_status:'skipped'}, '2026-09-20', []);
     eq(result.missing.length, 0, 'skipped item has no certificate requirements');
+    result = cwItemRequirements({...base,cert_no:'CERT-1',calibration_date:'2026-02-31'}, '2026-03-01', [certificate]);
+    ok(result.missing.includes('calibration_date'), 'impossible calendar date is rejected');
+  });
+
+  t('makes registry refresh return an explicit success contract', () => {
+    const start = dashboardSource.indexOf('async function loadData(forceRefresh = false)');
+    const end = dashboardSource.indexOf('async function fetchFromSupabase()', start);
+    const loadBody = dashboardSource.slice(start, end);
+    has(loadBody, 'return true;', 'successful registry refresh result');
+    has(loadBody, 'return false;', 'failed registry refresh result');
   });
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
@@ -189,7 +200,7 @@ function text(url) {
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
     has(indexSource, 'href="theme-aqua.css?v=20260901-cw6"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v155';", 'cache v155');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v156';", 'cache v156');
     [
       'theme-aqua.css?v=20260901-cw6',
       'js/10-router.js?v=20260901-cw3',
@@ -1408,6 +1419,44 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  await ta('closes the result editor when draft or evidence refresh loses eligibility', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const cancelled = cwTask6Context();
+      const cancelledEvidence = cwEvidenceClient(cancelled, {rpc:async (name,_payload,rows) => {
+        if (name !== 'cw_save_item_draft') return {data:null,error:{message:'unexpected RPC'}};
+        rows.calibration_work_batches[0].status = 'cancelled';
+        return {data:rows.calibration_work_items[0],error:null};
+      }});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(cancelled.model);
+      cwOpenItemResult(cancelled.itemId);
+      eq(await cwSaveItemDraft(cancelledEvidence.client), false, 'cancelled-during-save does not report draft success');
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'true', 'cancelled batch closes stale editor');
+      has(document.getElementById('cwActionError').textContent, 'สถานะ', 'draft state-change alert');
+
+      const roleChanged = cwTask6Context();
+      const roleEvidence = cwEvidenceClient(roleChanged, {rpc:async (name,payload,rows) => {
+        if (name !== 'cw_register_document') return {data:null,error:{message:'unexpected RPC'}};
+        const documentRow = {
+          id:cwUuid(905),batch_id:payload.p_batch_id,item_id:payload.p_item_id,document_kind:payload.p_document_kind,
+          storage_path:payload.p_storage_path,version_number:1,is_current:true,original_filename:payload.p_original_filename,
+          file_size:payload.p_file_size,uploaded_by:'editor',uploaded_at:'2026-09-01T06:00:00Z'
+        };
+        rows.calibration_work_documents.push(documentRow);
+        window.currentUser.role = 'viewer';
+        return {data:documentRow,error:null};
+      }});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(roleChanged.model);
+      cwOpenItemResult(roleChanged.itemId);
+      await cwUploadDocument({batchId:roleChanged.batchId,itemId:roleChanged.itemId,kind:'certificate',
+        file:cwPdf('certificate.pdf'),replacementReason:null}, roleEvidence.client);
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'true', 'role loss after evidence refresh closes editor');
+      has(document.getElementById('cwActionError').textContent, 'สถานะ', 'evidence state-change alert');
+    } finally { cleanup(); }
+  });
+
   await ta('integrates certificate and overdue uploads with the open result editor', async () => {
     const cleanup = cwMountFixture();
     try {
@@ -1428,6 +1477,33 @@ function text(url) {
       eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'result editor survives evidence refresh');
       has(document.getElementById('cwItemResultBody').textContent, 'certificate.pdf', 'current evidence refreshes in result editor');
     } finally { cleanup(); }
+  });
+
+  await ta('rejects certificate and overdue uploads for resolved items before network', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      for (const resultStatus of ['completed','skipped']) {
+        const context = cwTask6Context({status:'partially_completed',resultStatus});
+        const evidence = cwEvidenceClient(context);
+        cwRenderDashboard(context.model);
+        for (const kind of ['certificate','overdue']) {
+          const message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:context.itemId,kind,
+            file:cwPdf(kind + '.pdf'),replacementReason:null}, evidence.client));
+          has(message, 'สถานะ', resultStatus + ' ' + kind + ' state error');
+        }
+        eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0,
+          resultStatus + ' evidence rejection has zero network calls');
+      }
+    } finally { cleanup(); }
+  });
+
+  t('guards item evidence registration with a locked in-progress item row', () => {
+    const fn = body('cw_register_document');
+    has(fn, 'v_item public.calibration_work_items%rowtype', 'register item row variable');
+    has(fn, 'select * into strict v_item from public.calibration_work_items', 'register locks owned item row');
+    has(fn, 'for update', 'register item lock');
+    has(fn, "v_item.result_status <> 'in_progress'", 'register resolved evidence guard');
   });
 
   await ta('completes only valid items then refreshes registry without changing due date', async () => {
@@ -1469,6 +1545,66 @@ function text(url) {
       eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'true', 'completion closes editor');
       has(document.getElementById('cwBatchDetail').textContent, 'สรุปพร้อมปิดแผน', 'closure summary after completion');
       ok(document.querySelector('[data-cw-upload-kind="closure"]'), 'server awaiting-closure state enables closure PDF');
+    } finally { window.loadData = originalLoadData; window.allData = originalAllData; cleanup(); }
+  });
+
+  await ta('reconciles uncertain completion and never claims unverified registry success', async () => {
+    const cleanup = cwMountFixture();
+    const originalLoadData = window.loadData;
+    const originalAllData = window.allData;
+    try {
+      const itemId = cwUuid(811);
+      const certificate = {
+        id:cwUuid(904),item_id:itemId,document_kind:'certificate',storage_path:cwUuid(801) + '/items/' + itemId + '/certificate/v0001.pdf',
+        version_number:1,is_current:true,original_filename:'certificate.pdf',file_size:1024,uploaded_by:'editor',uploaded_at:'2026-09-01T04:00:00Z'
+      };
+      const uncertain = cwTask6Context({item:{planned_date:'2026-09-03'},documents:[certificate]});
+      const uncertainEvidence = cwEvidenceClient(uncertain, {rpc:async (name,payload,rows) => {
+        const row = rows.calibration_work_items[0];
+        if (name === 'cw_save_item_draft') {
+          Object.assign(row,{cert_no:payload.p_cert_no,calibration_date:payload.p_calibration_date});
+          return {data:row,error:null};
+        }
+        if (name === 'cw_complete_item') {
+          row.result_status = 'completed';
+          rows.calibration_work_batches[0].status = 'awaiting_closure_pdf';
+          return {data:null,error:{message:'completion response lost'}};
+        }
+        return {data:null,error:{message:'unexpected RPC'}};
+      }});
+      cwSetTask4Actor('editor');
+      window.allData = [{id:11,cert_no:'OLD',cal_date:'2025-01-01',due_date:'2027-12-31'}];
+      const registryCalls = [];
+      window.loadData = async force => { registryCalls.push(force); return null; };
+      cwRenderDashboard(uncertain.model);
+      cwOpenItemResult(uncertain.itemId);
+      cwSetItemResultField('certNo','CERT-NEW');
+      cwSetItemResultField('calibrationDate','2026-09-03');
+      eq(await cwCompleteItem(uncertainEvidence.client), false, 'completed but registry-unverified returns no success');
+      eq(JSON.stringify(registryCalls), JSON.stringify([true]), 'registry reconciliation attempted after uncertain RPC');
+      ok(uncertainEvidence.requests.some(request => request.startsWith('calibration_work_batches:')), 'batch reconciliation attempted after uncertain RPC');
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'true', 'authoritatively completed item closes stale editor');
+      has(document.getElementById('cwActionError').textContent, 'ทะเบียน', 'truthful completed-but-unverified registry message');
+      ok(!window.cwToastLog.some(entry => entry.type === 'success'), 'unverified registry never shows success toast');
+
+      const failed = cwTask6Context({item:{planned_date:'2026-09-03'},documents:[certificate]});
+      const failedEvidence = cwEvidenceClient(failed, {rpc:async (name,payload,rows) => {
+        if (name === 'cw_save_item_draft') {
+          Object.assign(rows.calibration_work_items[0],{cert_no:payload.p_cert_no,calibration_date:payload.p_calibration_date});
+          return {data:rows.calibration_work_items[0],error:null};
+        }
+        return {data:null,error:{message:'completion rejected'}};
+      }});
+      cwSetTask4Actor('editor');
+      window.loadData = async () => false;
+      cwRenderDashboard(failed.model);
+      cwOpenItemResult(failed.itemId);
+      cwSetItemResultField('certNo','CERT-NEW');
+      cwSetItemResultField('calibrationDate','2026-09-03');
+      eq(await cwCompleteItem(failedEvidence.client), false, 'definitive incomplete result returns false');
+      ok(failedEvidence.requests.some(request => request.startsWith('calibration_work_batches:')), 'failed completion still reconciles batch');
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'eligible failed item remains recoverable');
+      has(document.getElementById('cwItemResultError').textContent, 'completion rejected', 'scoped completion error remains visible');
     } finally { window.loadData = originalLoadData; window.allData = originalAllData; cleanup(); }
   });
 
@@ -1535,12 +1671,18 @@ function text(url) {
       eq(await cwSkipItem(cwUuid(997),'reason',evidence.client), false, 'unknown skip rejected');
       eq(evidence.calls.length, 0, 'unknown item reaches no RPC');
       cwOpenItemResult(context.itemId);
+      const saveButton = document.getElementById('cwItemResultSave');
+      saveButton.focus();
       const first = cwSaveItemDraft(evidence.client);
       await started.promise;
+      eq(document.activeElement, saveButton, 'focused save action remains focused while busy');
+      eq(saveButton.disabled, false, 'focused save action is guarded without native disabling');
+      eq(saveButton.getAttribute('aria-disabled'), 'true', 'busy state remains accessible');
       eq(await cwSaveItemDraft(evidence.client), false, 'second draft rejected while busy');
       eq(evidence.calls.length, 1, 'only one draft RPC starts');
       released.resolve();
       eq(await first, true, 'first draft completes');
+      eq(document.activeElement, document.getElementById('cwItemResultSave'), 'logical save focus restored after authoritative rerender');
     } finally { cleanup(); }
   });
 

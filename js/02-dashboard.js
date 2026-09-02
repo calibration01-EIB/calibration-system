@@ -328,7 +328,7 @@ async function loadData(forceRefresh = false) {
           setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
         }
       });
-      return;
+      return true;
     }
   } catch(e) { /* cache miss */ }
 
@@ -336,16 +336,18 @@ async function loadData(forceRefresh = false) {
   showLoading('กำลังโหลดข้อมูล...');
   try {
     const rows = await fetchFromSupabase();
-    if (!rows) return;
+    if (!rows) return false;
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
     } catch(e) { /* storage full */ }
     procesData(rows);
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
+    return true;
   } catch(e) {
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+    return false;
   } finally { hideLoading(); }
 }
 

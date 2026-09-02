@@ -585,6 +585,7 @@ declare
   v_actor record;
   v_batch public.calibration_work_batches%rowtype;
   v_batch_after public.calibration_work_batches%rowtype;
+  v_item public.calibration_work_items%rowtype;
   v_document public.calibration_work_documents%rowtype;
   v_before public.calibration_work_documents%rowtype;
   v_version integer;
@@ -609,10 +610,14 @@ begin
     raise exception 'invalid document scope';
   end if;
   if p_item_id is not null then
-    perform 1 from public.calibration_work_items
-    where id = p_item_id and batch_id = p_batch_id and is_active
-    for update;
-    if not found then raise exception 'active item does not belong to batch'; end if;
+    select * into strict v_item from public.calibration_work_items
+    where id = p_item_id for update;
+    if v_item.batch_id <> p_batch_id or not v_item.is_active then
+      raise exception 'active item does not belong to batch';
+    end if;
+    if v_item.result_status <> 'in_progress' then
+      raise exception 'resolved item evidence is immutable until reset';
+    end if;
   end if;
   if v_batch.status = 'cancelled' then raise exception 'batch is cancelled'; end if;
   if p_document_kind = 'acknowledgement' and v_batch.status in ('draft','completed') then
