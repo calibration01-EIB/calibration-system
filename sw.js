@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v156';
+const CACHE_NAME = 'calibration-app-v157';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -24,7 +24,7 @@ const APP_SHELL = [
   './assets/tiles/09_offsite_equipment.png',
   './js/00-config.js',
   './js/01-core.js',
-  './js/02-dashboard.js',
+  './js/02-dashboard.js?v=20260902-cw6-results',
   './js/03-instruments.js',
   './js/04-reports.js',
   './js/05-audit.js',
@@ -39,7 +39,7 @@ const APP_SHELL = [
   './js/26-list-ui.js',
   './js/27-asset-out-page.js',
   './js/28-kpi.js',
-  './js/29-calibration-work.js?v=20260901-cw6',
+  './js/29-calibration-work.js?v=20260902-cw6-results',
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',
