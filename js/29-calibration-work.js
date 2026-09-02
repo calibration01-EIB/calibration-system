@@ -2064,6 +2064,7 @@
       } catch (registrationError) {
         let cleanupClaim = null;
         let cleanupError = null;
+        let cleanupConfirmed = false;
         try {
           cleanupClaim = await cwRpc(source, 'cw_request_orphan_cleanup', {
             p_token: actor && actor.token,
@@ -2074,14 +2075,36 @@
         } catch (error) {
           cleanupError = error;
         }
+        if (cleanupClaim) {
+          try {
+            cwEvidenceProgress(options, 'ลงทะเบียนไม่สำเร็จ กำลังล้างไฟล์ที่อัปโหลด...');
+            const removed = await storage.remove([storagePath]);
+            if (removed && removed.error) throw new Error(removed.error.message || 'ล้างไฟล์ไม่สำเร็จ');
+            await cwRpc(source, 'cw_confirm_orphan_cleanup', {
+              p_token: actor && actor.token,
+              p_claim_id: cleanupClaim.id
+            });
+            cleanupConfirmed = true;
+          } catch (error) {
+            cleanupError = error;
+          }
+        }
         const refreshed = await cwRefreshEvidenceBatch(source, options.batchId);
         const refreshMessage = refreshed
           ? ' รีเฟรชสถานะล่าสุดแล้ว กรุณาตรวจสอบก่อนลองใหม่'
           : ' แต่รีเฟรชสถานะล่าสุดไม่สำเร็จ';
+        if (cleanupConfirmed) {
+          const cleaned = new Error('ลงทะเบียนไม่สำเร็จ แต่ล้างไฟล์แล้ว' + refreshMessage);
+          cleaned.cleanupCompleted = true;
+          cleaned.cleanupClaim = cleanupClaim;
+          cleaned.storagePath = storagePath;
+          throw cleaned;
+        }
         if (cleanupClaim) {
           const pending = new Error('ลงทะเบียนไม่สำเร็จ ส่งคำขอรอล้างไฟล์แล้ว' + refreshMessage);
           pending.cleanupPending = true;
           pending.cleanupClaim = cleanupClaim;
+          pending.cleanupError = cleanupError;
           pending.storagePath = storagePath;
           throw pending;
         }

@@ -32,6 +32,9 @@ create table if not exists public.calibration_work_items (
     check (result_status in ('in_progress','completed','skipped')),
   cert_no text,
   calibration_date date,
+  registry_snapshot_taken boolean not null default false,
+  registry_before_cert_no text,
+  registry_before_cal_date date,
   overdue_reason text,
   skip_reason text,
   completed_by text,
@@ -50,6 +53,9 @@ alter table public.calibration_work_items add column if not exists is_active boo
 alter table public.calibration_work_items add column if not exists removed_by text;
 alter table public.calibration_work_items add column if not exists removed_at timestamptz;
 alter table public.calibration_work_items add column if not exists removal_reason text;
+alter table public.calibration_work_items add column if not exists registry_snapshot_taken boolean not null default false;
+alter table public.calibration_work_items add column if not exists registry_before_cert_no text;
+alter table public.calibration_work_items add column if not exists registry_before_cal_date date;
 create unique index if not exists calibration_work_items_lock_tuple_uidx
   on public.calibration_work_items(batch_id, id, instrument_id);
 
@@ -134,6 +140,28 @@ create table if not exists public.calibration_work_audit (
   after_data jsonb,
   reason text
 );
+
+-- Existing installations already audited the registry state before each completion.
+-- Recover the latest active completion snapshot so those items remain safely resettable.
+with legacy_snapshots as (
+  select distinct on (a.item_id)
+    a.item_id,
+    a.before_data ->> 'cert_no' as cert_no,
+    case when nullif(a.before_data ->> 'cal_date', '') is null then null
+         else (a.before_data ->> 'cal_date')::date end as cal_date
+  from public.calibration_work_audit a
+  where a.action = 'update_instrument_result'
+    and a.item_id is not null
+    and jsonb_typeof(a.before_data) = 'object'
+  order by a.item_id, a.occurred_at desc, a.id desc
+)
+update public.calibration_work_items i
+set registry_snapshot_taken = true,
+    registry_before_cert_no = s.cert_no,
+    registry_before_cal_date = s.cal_date
+from legacy_snapshots s
+where i.result_status = 'completed' and not i.registry_snapshot_taken
+  and i.id = s.item_id;
 
 create index if not exists calibration_work_items_batch_idx
   on public.calibration_work_items(batch_id);
@@ -776,6 +804,8 @@ declare
   v_batch_id uuid;
   v_instrument_before jsonb;
   v_instrument_after jsonb;
+  v_registry_before_cert_no text;
+  v_registry_before_cal_date date;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   select batch_id into strict v_batch_id from public.calibration_work_items where id = p_item_id;
@@ -801,10 +831,15 @@ begin
     )
   ) then raise exception 'overdue reason and current overdue document are required'; end if;
 
-  select jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
-    into v_instrument_before
+  select cert_no, cal_date, jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
+    into v_registry_before_cert_no, v_registry_before_cal_date, v_instrument_before
   from public.instruments where id = v_item.instrument_id for update;
   if not found then raise exception 'instrument not found'; end if;
+  update public.calibration_work_items
+  set registry_snapshot_taken = true,
+      registry_before_cert_no = v_registry_before_cert_no,
+      registry_before_cal_date = v_registry_before_cal_date
+  where id = p_item_id;
   -- Preserve instruments.due_date: this workflow owns only the certificate and calibration date.
   update public.instruments
   set cert_no = v_item.cert_no,
@@ -877,6 +912,8 @@ declare
   v_closure_before public.calibration_work_documents%rowtype;
   v_closure_after public.calibration_work_documents%rowtype;
   v_has_resettable boolean;
+  v_instrument_before jsonb;
+  v_instrument_after jsonb;
 begin
   select * into v_actor from public.cw_actor(p_token, true);
   if nullif(btrim(p_reason), '') is null then raise exception 'reset reason is required'; end if;
@@ -885,6 +922,33 @@ begin
   select * into strict v_before from public.calibration_work_items where id = p_item_id for update;
   if not v_before.is_active or v_batch.status in ('completed','cancelled') then
     raise exception 'item cannot be reset';
+  end if;
+  if v_before.result_status = 'completed' then
+    if not v_before.registry_snapshot_taken then
+      raise exception 'completed item is missing its registry snapshot';
+    end if;
+    select jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
+      into v_instrument_before
+    from public.instruments
+    where id = v_before.instrument_id
+      and cert_no is not distinct from v_before.cert_no
+      and cal_date is not distinct from v_before.calibration_date
+    for update;
+    if not found then
+      raise exception 'instrument result changed after completion; reset aborted';
+    end if;
+    update public.instruments
+    set cert_no = v_before.registry_before_cert_no,
+        cal_date = v_before.registry_before_cal_date
+    where id = v_before.instrument_id;
+    select jsonb_build_object('cert_no', cert_no, 'cal_date', cal_date)
+      into v_instrument_after
+    from public.instruments where id = v_before.instrument_id;
+    insert into public.calibration_work_audit
+      (batch_id, item_id, action, actor, before_data, after_data, reason)
+    values
+      (v_before.batch_id, p_item_id, 'restore_instrument_result', v_actor.username,
+       v_instrument_before, v_instrument_after, btrim(p_reason));
   end if;
   v_has_resettable := v_before.result_status in ('completed','skipped')
     or (
@@ -935,6 +999,8 @@ begin
   end if;
   update public.calibration_work_items
   set result_status = 'in_progress', cert_no = null, calibration_date = null,
+      registry_snapshot_taken = false, registry_before_cert_no = null,
+      registry_before_cal_date = null,
       overdue_reason = null, skip_reason = null, completed_by = null,
       completed_at = null, updated_at = now()
   where id = p_item_id returning * into v_after;
@@ -1054,8 +1120,71 @@ begin
 end;
 $$;
 
--- Trusted service contract: fetch a pending claim, call the Supabase Storage API,
--- then finalize it. Leave the claim pending whenever the API outcome is uncertain.
+create or replace function public.cw_confirm_orphan_cleanup(p_token text, p_claim_id uuid)
+returns public.calibration_work_cleanup_claims
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_actor record;
+  v_batch public.calibration_work_batches%rowtype;
+  v_claim public.calibration_work_cleanup_claims%rowtype;
+  v_after public.calibration_work_cleanup_claims%rowtype;
+begin
+  select * into v_actor from public.cw_actor(p_token, true);
+  select b.* into strict v_batch
+  from public.calibration_work_cleanup_claims c
+  join public.calibration_work_batches b on b.id = c.batch_id
+  where c.id = p_claim_id
+  for update of b;
+  select * into strict v_claim
+  from public.calibration_work_cleanup_claims
+  where id = p_claim_id for update;
+  if v_claim.status = 'succeeded' then return v_claim; end if;
+  if v_claim.status <> 'pending' then raise exception 'cleanup claim is already finalized'; end if;
+  if exists (
+    select 1 from public.calibration_work_documents d
+    where d.storage_path = v_claim.storage_path
+  ) then raise exception 'cleanup path is now referenced by document history'; end if;
+  if exists (
+    select 1 from storage.objects o
+    where o.bucket_id = v_claim.bucket_id and o.name = v_claim.storage_path
+  ) then raise exception 'Storage API deletion is not confirmed'; end if;
+  update public.calibration_work_cleanup_claims
+  set status = 'succeeded', finalized_at = now(), failure_detail = null, updated_at = now()
+  where id = p_claim_id returning * into v_after;
+  insert into public.calibration_work_audit
+    (batch_id, action, actor, before_data, after_data, reason)
+  values
+    (v_claim.batch_id, 'cleanup_orphan_document_succeeded', v_actor.username,
+     to_jsonb(v_claim), to_jsonb(v_after), v_claim.request_reason);
+  return v_after;
+end;
+$$;
+
+create or replace function public.cw_claimed_orphan_delete_allowed(
+  p_token text,
+  p_bucket_id text,
+  p_storage_path text
+)
+returns boolean
+language plpgsql security definer stable set search_path = public
+as $$
+begin
+  perform public.cw_actor(p_token, true);
+  return exists (
+    select 1 from public.calibration_work_cleanup_claims c
+    where c.bucket_id = p_bucket_id
+      and c.storage_path = p_storage_path
+      and c.status = 'pending'
+  ) and not exists (
+    select 1 from public.calibration_work_documents d
+    where d.storage_path = p_storage_path
+  );
+end;
+$$;
+
+-- Trusted service fallback: retry pending claims whose browser cleanup was interrupted,
+-- then finalize them. Leave the claim pending whenever the API outcome is uncertain.
 create or replace function public.cw_finalize_orphan_cleanup(
   p_claim_id uuid,
   p_succeeded boolean,
@@ -1196,6 +1325,12 @@ create policy calibration_work_storage_insert on storage.objects
 drop policy if exists calibration_work_storage_update on storage.objects;
 drop policy if exists calibration_work_storage_delete on storage.objects;
 drop policy if exists calibration_work_storage_delete_orphan on storage.objects;
+create policy calibration_work_storage_delete_orphan on storage.objects
+  for delete to anon, authenticated
+  using (
+    bucket_id = 'calibration-work-batches'
+    and public.cw_claimed_orphan_delete_allowed(public.cw_request_token(), bucket_id, name)
+  );
 
 revoke all on public.calibration_work_batches from anon, authenticated;
 revoke all on public.calibration_work_items from anon, authenticated;
@@ -1227,6 +1362,8 @@ revoke all on function public.cw_reset_item_result(text, uuid, text) from public
 revoke all on function public.cw_complete_batch(text, uuid) from public;
 revoke all on function public.cw_cancel_batch(text, uuid, text) from public;
 revoke all on function public.cw_request_orphan_cleanup(text, text, text, text) from public;
+revoke all on function public.cw_confirm_orphan_cleanup(text, uuid) from public;
+revoke all on function public.cw_claimed_orphan_delete_allowed(text, text, text) from public;
 revoke all on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) from public;
 revoke all on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) from anon, authenticated;
 grant execute on function public.cw_actor(text, boolean) to anon, authenticated;
@@ -1243,4 +1380,6 @@ grant execute on function public.cw_reset_item_result(text, uuid, text) to anon,
 grant execute on function public.cw_complete_batch(text, uuid) to anon, authenticated;
 grant execute on function public.cw_cancel_batch(text, uuid, text) to anon, authenticated;
 grant execute on function public.cw_request_orphan_cleanup(text, text, text, text) to anon, authenticated;
+grant execute on function public.cw_confirm_orphan_cleanup(text, uuid) to anon, authenticated;
+grant execute on function public.cw_claimed_orphan_delete_allowed(text, text, text) to anon, authenticated;
 grant execute on function public.cw_finalize_orphan_cleanup(uuid, boolean, text) to service_role;

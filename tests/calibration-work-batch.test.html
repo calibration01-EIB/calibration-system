@@ -1218,6 +1218,7 @@ function text(url) {
     const uploads = [];
     const signed = [];
     let removes = 0;
+    const removedPaths = [];
     const client = cwPagedClient(context.rows, requests);
     client.supabaseUrl = config.supabaseUrl || 'https://example.test';
     if (config.storageOrigins) client.cwStorageAllowedOrigins = config.storageOrigins;
@@ -1234,13 +1235,19 @@ function text(url) {
           if (config.sign) return config.sign(path, expiresIn, signed.length);
           return {data:{signedUrl:'https://example.test/signed-' + signed.length},error:null};
         },
-        async remove() { removes += 1; return {data:[],error:null}; }
+        async remove(paths) {
+          removes += 1;
+          removedPaths.push({bucket,paths});
+          if (config.remove) return config.remove(paths);
+          return {data:(paths || []).map(path => ({name:path})),error:null};
+        }
       };
     }};
     client.rpc = async (name, payload) => {
       calls.push({name,payload});
       if (config.rpc) return config.rpc(name, payload, context.rows, calls);
       if (name === 'cw_request_orphan_cleanup') return {data:{id:cwUuid(899),status:'pending',storage_path:payload.p_storage_path},error:null};
+      if (name === 'cw_confirm_orphan_cleanup') return {data:{id:payload.p_claim_id,status:'succeeded'},error:null};
       if (name !== 'cw_register_document') return {data:null,error:{message:'unexpected RPC ' + name}};
       context.rows.calibration_work_documents.forEach(documentRow => {
         if (documentRow.item_id === payload.p_item_id && documentRow.document_kind === payload.p_document_kind) {
@@ -1267,7 +1274,7 @@ function text(url) {
       batchRow.updated_at = '2026-09-01T06:00:00Z';
       return {data:documentRow,error:null};
     };
-    return {client,requests,calls,uploads,signed,get removes(){return removes;}};
+    return {client,requests,calls,uploads,signed,removedPaths,get removes(){return removes;}};
   }
 
   t('adds the accessible Task 5 PDF dialog and scoped mobile controls', () => {
@@ -1384,25 +1391,30 @@ function text(url) {
     } finally { cleanup(); }
   });
 
-  await ta('requests durable orphan cleanup after registration failure without direct Storage removal', async () => {
+  await ta('claims removes and confirms an orphan after registration failure', async () => {
     const cleanup = cwMountFixture();
     try {
       const context = cwTask5Context('awaiting_acknowledgement_pdf');
-      const evidence = cwEvidenceClient(context, {rpc:async (name, payload) => name === 'cw_register_document'
-        ? {data:null,error:{message:'stale storage version'}}
-        : {data:{id:cwUuid(824),status:'pending',storage_path:payload.p_storage_path},error:null}});
+      const evidence = cwEvidenceClient(context, {rpc:async (name, payload) => {
+        if (name === 'cw_register_document') return {data:null,error:{message:'stale storage version'}};
+        if (name === 'cw_request_orphan_cleanup') return {data:{id:cwUuid(824),status:'pending',storage_path:payload.p_storage_path},error:null};
+        if (name === 'cw_confirm_orphan_cleanup') return {data:{id:payload.p_claim_id,status:'succeeded'},error:null};
+        return {data:null,error:{message:'unexpected RPC ' + name}};
+      }});
       cwSetTask4Actor('editor');
       cwRenderDashboard(context.model);
       const message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
         file:cwPdf(),replacementReason:null}, evidence.client));
-      has(message, 'รอล้าง', 'truthful pending-cleanup message');
-      eq(evidence.removes, 0, 'browser never directly removes Storage objects');
-      eq(evidence.calls.map(call => call.name).join(','), 'cw_register_document,cw_request_orphan_cleanup', 'registration then cleanup claim');
+      has(message, 'ล้างไฟล์แล้ว', 'truthful completed-cleanup message');
+      eq(evidence.removes, 1, 'browser removes only the claimed orphan');
+      eq(JSON.stringify(evidence.removedPaths[0]), JSON.stringify({bucket:'calibration-work-batches',paths:[context.batchId + '/batch/acknowledgement/v0001.pdf']}), 'exact orphan path removed');
+      eq(evidence.calls.map(call => call.name).join(','), 'cw_register_document,cw_request_orphan_cleanup,cw_confirm_orphan_cleanup', 'registration then cleanup claim removal confirmation');
       const cleanupCall = evidence.calls[1];
       eq(cleanupCall.payload.p_token, 'token', 'cleanup token');
       eq(cleanupCall.payload.p_bucket_id, 'calibration-work-batches', 'cleanup bucket');
       eq(cleanupCall.payload.p_storage_path, context.batchId + '/batch/acknowledgement/v0001.pdf', 'cleanup exact path');
       ok(cleanupCall.payload.p_reason.trim().length > 0, 'cleanup reason');
+      eq(evidence.calls[2].payload.p_claim_id, cwUuid(824), 'exact cleanup claim confirmed');
 
       const failedContext = cwTask5Context('awaiting_acknowledgement_pdf');
       const failedEvidence = cwEvidenceClient(failedContext, {rpc:async name => ({data:null,error:{message:name === 'cw_register_document' ? 'register failed' : 'cleanup request failed'}})});
@@ -1410,7 +1422,7 @@ function text(url) {
       const failedMessage = await cwRejected(cwUploadDocument({batchId:failedContext.batchId,itemId:null,kind:'acknowledgement',
         file:cwPdf(),replacementReason:null}, failedEvidence.client));
       has(failedMessage, 'cleanup request failed', 'cleanup-request failure is truthful');
-      eq(failedEvidence.removes, 0, 'cleanup failure still never directly removes');
+      eq(failedEvidence.removes, 0, 'cleanup claim failure prevents unclaimed removal');
 
       const staleContext = cwTask5Context('awaiting_acknowledgement_pdf');
       const staleEvidence = cwEvidenceClient(staleContext, {rpc:async (name, payload, rows) => {
@@ -2060,7 +2072,8 @@ function text(url) {
       'cw_actor', 'cw_create_batch', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item',
       'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch',
-      'cw_request_orphan_cleanup', 'cw_finalize_orphan_cleanup'
+      'cw_request_orphan_cleanup', 'cw_confirm_orphan_cleanup',
+      'cw_claimed_orphan_delete_allowed', 'cw_finalize_orphan_cleanup'
     ].forEach(name => {
       const fn = body(name);
       has(fn, 'security definer', name);
@@ -2117,12 +2130,17 @@ function text(url) {
     has(fn, 'already referenced', 'duplicate evidence rejection');
   });
 
-  t('allows immutable Storage INSERT without any direct client mutation policy', () => {
+  t('allows immutable Storage INSERT and deletion only for an exact pending orphan claim', () => {
     has(normalized, 'create policy calibration_work_storage_insert', 'immutable storage insert');
     has(normalized, "name ~ '^", 'versioned storage path check');
     lacks(normalized, 'create policy calibration_work_storage_update', 'storage policies');
-    lacks(normalized, 'for delete to anon, authenticated', 'direct client storage delete');
-    lacks(normalized, 'create policy calibration_work_storage_delete_orphan', 'orphan delete policy');
+    has(normalized, 'create policy calibration_work_storage_delete_orphan', 'orphan delete policy');
+    has(normalized, 'for delete to anon, authenticated', 'claim-scoped client storage delete');
+    const guard = body('cw_claimed_orphan_delete_allowed');
+    has(guard, "c.status = 'pending'", 'delete requires pending claim');
+    has(guard, 'c.storage_path = p_storage_path', 'delete is restricted to exact claimed path');
+    has(guard, 'not exists', 'referenced evidence cannot be deleted');
+    has(normalized, 'public.cw_claimed_orphan_delete_allowed(public.cw_request_token(), bucket_id, name)', 'delete policy uses guarded exact path');
   });
 
   t('stages durable orphan cleanup claims without deleting Storage metadata in SQL', () => {
@@ -2304,6 +2322,30 @@ function text(url) {
     has(fn, "'reset_item_result'", 'reasoned reset audit');
   });
 
+  t('restores the exact pre-completion registry values when a completed item is reset', () => {
+    const complete = body('cw_complete_item');
+    const reset = body('cw_reset_item_result');
+    has(normalized, 'registry_snapshot_taken boolean not null default false', 'registry snapshot marker');
+    has(normalized, 'registry_before_cert_no text', 'registry certificate snapshot');
+    has(normalized, 'registry_before_cal_date date', 'registry calibration date snapshot');
+    has(complete, 'registry_snapshot_taken = true', 'completion records snapshot atomically');
+    has(complete, 'registry_before_cert_no =', 'completion records previous certificate');
+    has(complete, 'registry_before_cal_date =', 'completion records previous calibration date');
+    has(reset, 'update public.instruments', 'reset reconciles registry');
+    has(reset, 'is not distinct from v_before.cert_no', 'reset rejects concurrent certificate changes');
+    has(reset, 'is not distinct from v_before.calibration_date', 'reset rejects concurrent date changes');
+    has(reset, 'cert_no = v_before.registry_before_cert_no', 'reset restores previous certificate');
+    has(reset, 'cal_date = v_before.registry_before_cal_date', 'reset restores previous calibration date');
+    has(reset, "'restore_instrument_result'", 'registry restoration audit');
+  });
+
+  t('backfills registry snapshots for items completed before the snapshot migration', () => {
+    has(normalized, "where a.action = 'update_instrument_result'", 'legacy snapshot source audit');
+    has(normalized, 'a.before_data ->> \'cert_no\'', 'legacy certificate source');
+    has(normalized, "(a.before_data ->> 'cal_date')::date", 'legacy calibration date source');
+    has(normalized, "where i.result_status = 'completed' and not i.registry_snapshot_taken", 'backfill only legacy completed items');
+  });
+
   t('audits evidence invalidation and instrument and closure transitions distinctly', () => {
     has(body('cw_mutate_items'), "'invalidate_acknowledgement_document'", 'acknowledgement invalidation audit');
     has(body('cw_reset_item_result'), "'reset_invalidate_documents'", 'reset document invalidation audit');
@@ -2317,7 +2359,8 @@ function text(url) {
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
       'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch',
-      'cw_request_orphan_cleanup', 'cw_finalize_orphan_cleanup'
+      'cw_request_orphan_cleanup', 'cw_confirm_orphan_cleanup',
+      'cw_claimed_orphan_delete_allowed', 'cw_finalize_orphan_cleanup'
     ].forEach(name => has(normalized, 'revoke all on function public.' + name, name + ' PUBLIC revoke'));
   });
 
