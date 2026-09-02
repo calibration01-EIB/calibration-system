@@ -34,15 +34,16 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource;
+  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource;
   try {
-    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource] = await Promise.all([
+    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../index.html'),
       text('../sw.js'),
       text('../js/10-router.js'),
       text('../js/02-dashboard.js'),
-      text('../theme-aqua.css')
+      text('../theme-aqua.css'),
+      text('../js/29-calibration-work.js')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -196,21 +197,22 @@ function text(url) {
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260902-cw6-results"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260902-cw7"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260901-cw6"', 'current calibration stylesheet query version');
+    has(indexSource, 'href="theme-aqua.css?v=20260902-cw7"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v157';", 'cache v157');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v158';", 'cache v158');
     [
-      'theme-aqua.css?v=20260901-cw6',
+      'theme-aqua.css?v=20260902-cw7',
       'js/10-router.js?v=20260901-cw3',
-      'js/02-dashboard.js?v=20260902-cw6-results',
-      'js/29-calibration-work.js?v=20260902-cw6-results'
+      'js/02-dashboard.js?v=20260902-cw7',
+      'js/26-list-ui.js?v=20260902-cw7',
+      'js/29-calibration-work.js?v=20260902-cw7'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
     });
-    ['js/02-dashboard.js','js/29-calibration-work.js'].forEach(scriptPath => {
+    ['js/02-dashboard.js','js/26-list-ui.js','js/29-calibration-work.js'].forEach(scriptPath => {
       const indexMatch = indexSource.match(new RegExp('<script src="(' + scriptPath.replace(/\./g, '\\.') + '\\?[^\"]+)"'));
       ok(indexMatch, scriptPath + ' query-qualified index request');
       has(swSource, "'./" + indexMatch[1] + "'", scriptPath + ' index URL exactly matches APP_SHELL');
@@ -220,7 +222,7 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -605,6 +607,286 @@ function text(url) {
       calibration_work_audit:[]
     };
   }
+
+  function cwTask7IntegrationModel() {
+    const batch = (number, status, title) => ({
+      id:cwUuid(700 + number), batch_no:'CW7-' + number, title:title || 'Batch ' + number,
+      status, items:[], documents:[], audit:[]
+    });
+    const active = batch(1, 'partially_completed', 'Active <script>');
+    const awaiting = batch(2, 'awaiting_acknowledgement_pdf', 'Awaiting acknowledgement');
+    const terminal = batch(3, 'completed', 'Terminal');
+    const cancelled = batch(4, 'cancelled', 'Cancelled');
+    const unlocked = batch(5, 'awaiting_calibration', 'Unlocked');
+    const add = (owner, number, result, planned, extra) => {
+      const item = {id:cwUuid(800 + number),batch_id:owner.id,instrument_id:number,is_active:true,
+        result_status:result,planned_date:planned,...(extra || {})};
+      owner.items.push(item);
+      return item;
+    };
+    add(active, 101, 'completed', '2026-09-01');
+    add(active, 102, 'in_progress', '2026-09-01');
+    add(active, 103, 'in_progress', '2026-09-03');
+    add(active, 109, 'skipped', '2026-09-01');
+    add(awaiting, 104, 'in_progress', '2026-09-03');
+    const awaitingOverdue = add(awaiting, 110, 'in_progress', '2026-09-01', {overdue_reason:'มีหลักฐานครบ'});
+    awaiting.documents.push({id:cwUuid(910),batch_id:awaiting.id,item_id:awaitingOverdue.id,
+      document_kind:'overdue',is_current:true});
+    add(terminal, 105, 'completed', '2026-09-01');
+    add(cancelled, 106, 'in_progress', '2026-09-01');
+    add(unlocked, 107, 'in_progress', '2026-09-01');
+    add(active, 108, 'in_progress', '2026-09-01', {is_active:false});
+    const locks = [101,102,103,109].map(instrument_id => ({instrument_id,batch_id:active.id}))
+      .concat([{instrument_id:104,batch_id:awaiting.id},{instrument_id:110,batch_id:awaiting.id},{instrument_id:105,batch_id:terminal.id},
+        {instrument_id:106,batch_id:cancelled.id},{instrument_id:108,batch_id:active.id}]);
+    return {batches:[active,awaiting,terminal,cancelled,unlocked],locks,locksReady:true};
+  }
+
+  t('builds active instrument work status with exact precedence and terminal lock guards', () => {
+    const map = cwBuildCalibrationWorkStatusMap(cwTask7IntegrationModel(), '2026-09-02');
+    eq(map[101].status, 'completed', 'completed precedence');
+    eq(map[102].status, 'overdue', 'overdue precedence');
+    eq(map[103].status, 'in_progress', 'in-progress precedence');
+    eq(map[104].status, 'awaiting_acknowledgement_pdf', 'awaiting acknowledgement fallback');
+    eq(map[110].status, 'overdue', 'overdue outranks awaiting acknowledgement');
+    eq(map[102].batchNo, 'CW7-1', 'batch metadata');
+    eq(map[102].plannedDate, '2026-09-01', 'planned date metadata');
+    eq(map[102].title, 'Active <script>', 'unescaped data remains data in the map');
+    [105,106,107,108,109].forEach(id => ok(!map[id], 'inactive/terminal/unlocked/skipped id excluded: ' + id));
+  });
+
+  await ta('loads the complete integration map with immutable keysets', async () => {
+    const batchId = cwUuid(700);
+    const rows = {
+      calibration_work_batches:[{id:batchId,batch_no:'CW7-PAGED',title:'Paged',status:'awaiting_calibration'}],
+      calibration_work_items:[], calibration_work_instrument_locks:[], calibration_work_documents:[]
+    };
+    for (let number = 1001; number <= 1201; number += 1) {
+      rows.calibration_work_items.push({id:cwUuid(2000 + number),batch_id:batchId,instrument_id:number,
+        is_active:true,result_status:'in_progress',planned_date:'2026-09-03'});
+      rows.calibration_work_instrument_locks.push({instrument_id:number,batch_id:batchId});
+    }
+    const requests = [];
+    const queryLog = [];
+    eq(await loadCalibrationWorkStatusMap(cwPagedClient(rows, requests, null, queryLog)), true, 'complete load succeeds');
+    eq(Object.keys(calibrationWorkStatusMap).length, 201, 'all active instrument statuses loaded');
+    eq(calibrationWorkStatusMap[1201].batchId, batchId, 'last keyset row included');
+    ['calibration_work_items','calibration_work_instrument_locks'].forEach(table => {
+      eq(requests.filter(value => value.startsWith(table + ':')).length, 2, table + ' reads two bounded pages');
+      const pages = queryLog.filter(query => query.table === table);
+      ok(pages.every(page => page.method === 'limit' && page.limit === 200), table + ' bounded keyset limit');
+      ok(pages.every(page => page.upperBounds.length === 0), table + ' has no browser-clock snapshot');
+    });
+  });
+
+  await ta('retains a known-good status map across failures and stale overlapping loads', async () => {
+    const currentBatch = cwUuid(720);
+    const currentRows = {
+      calibration_work_batches:[{id:currentBatch,batch_no:'CURRENT',title:'Current',status:'awaiting_calibration'}],
+      calibration_work_items:[{id:cwUuid(820),batch_id:currentBatch,instrument_id:220,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+      calibration_work_instrument_locks:[{instrument_id:220,batch_id:currentBatch}], calibration_work_documents:[]
+    };
+    ok(await loadCalibrationWorkStatusMap(cwPagedClient(currentRows, [])), 'seed known-good map');
+    const failedRows = {...currentRows};
+    eq(await loadCalibrationWorkStatusMap(cwPagedClient(failedRows, [], {calibration_work_items:'offline'})), false, 'failed load reports false');
+    eq(calibrationWorkStatusMap[220].batchNo, 'CURRENT', 'failed load preserves known-good map');
+
+    const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items',
+      'calibration_work_instrument_locks','calibration_work_documents'].map(table => [table,cwDeferred()]));
+    const stale = loadCalibrationWorkStatusMap(cwDeferredClient(deferred));
+    const newestBatch = cwUuid(721);
+    const newestRows = {
+      calibration_work_batches:[{id:newestBatch,batch_no:'NEWEST',title:'Newest',status:'awaiting_calibration'}],
+      calibration_work_items:[{id:cwUuid(821),batch_id:newestBatch,instrument_id:221,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+      calibration_work_instrument_locks:[{instrument_id:221,batch_id:newestBatch}], calibration_work_documents:[]
+    };
+    ok(await loadCalibrationWorkStatusMap(cwPagedClient(newestRows, [])), 'newer load succeeds');
+    deferred.calibration_work_batches.resolve({data:currentRows.calibration_work_batches,error:null});
+    deferred.calibration_work_items.resolve({data:currentRows.calibration_work_items,error:null});
+    deferred.calibration_work_instrument_locks.resolve({data:currentRows.calibration_work_instrument_locks,error:null});
+    deferred.calibration_work_documents.resolve({data:[],error:null});
+    eq(await stale, false, 'superseded load reports false');
+    ok(calibrationWorkStatusMap[221] && !calibrationWorkStatusMap[220], 'stale success cannot overwrite newest map');
+  });
+
+  await ta('serializes status and notification publications across every loader', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const oldBatch = cwUuid(722);
+      const newBatch = cwUuid(723);
+      const oldRows = {
+        calibration_work_batches:[{id:oldBatch,batch_no:'OLD',title:'Old',status:'awaiting_acknowledgement_pdf'}],
+        calibration_work_items:[{id:cwUuid(822),batch_id:oldBatch,instrument_id:222,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:222,batch_id:oldBatch}], calibration_work_documents:[], calibration_work_audit:[]
+      };
+      const newRows = {
+        calibration_work_batches:[{id:newBatch,batch_no:'NEW',title:'New',status:'awaiting_calibration'}],
+        calibration_work_items:[{id:cwUuid(823),batch_id:newBatch,instrument_id:223,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:223,batch_id:newBatch}], calibration_work_documents:[], calibration_work_audit:[]
+      };
+      const statusDeferred = Object.fromEntries(['calibration_work_batches','calibration_work_items',
+        'calibration_work_instrument_locks','calibration_work_documents'].map(table => [table,cwDeferred()]));
+      const staleStatus = loadCalibrationWorkStatusMap(cwDeferredClient(statusDeferred));
+      ok(await loadCalibrationWorkPage(cwPagedClient(newRows, [])), 'newer authoritative dashboard publication succeeds');
+      statusDeferred.calibration_work_batches.resolve({data:oldRows.calibration_work_batches,error:null});
+      statusDeferred.calibration_work_items.resolve({data:oldRows.calibration_work_items,error:null});
+      statusDeferred.calibration_work_instrument_locks.resolve({data:oldRows.calibration_work_instrument_locks,error:null});
+      statusDeferred.calibration_work_documents.resolve({data:[],error:null});
+      eq(await staleStatus, false, 'older registry loader is superseded by dashboard publication');
+      ok(calibrationWorkStatusMap[223] && !calibrationWorkStatusMap[222], 'stale registry snapshot cannot replace mutation snapshot');
+
+      const notificationDeferred = Object.fromEntries(['calibration_work_batches','calibration_work_items',
+        'calibration_work_instrument_locks','calibration_work_documents'].map(table => [table,cwDeferred()]));
+      const staleNotifications = cwLoadNotifications(cwDeferredClient(notificationDeferred), '2026-09-02');
+      ok(await loadCalibrationWorkPage(cwPagedClient(newRows, [])), 'newer dashboard also supersedes notification loader');
+      notificationDeferred.calibration_work_batches.resolve({data:oldRows.calibration_work_batches,error:null});
+      notificationDeferred.calibration_work_items.resolve({data:oldRows.calibration_work_items,error:null});
+      notificationDeferred.calibration_work_instrument_locks.resolve({data:oldRows.calibration_work_instrument_locks,error:null});
+      notificationDeferred.calibration_work_documents.resolve({data:[],error:null});
+      eq((await staleNotifications).available, false, 'older notification loader reports superseded');
+      has(document.getElementById('cwNotifications').textContent, 'รอ PDF รับทราบ0', 'stale notification snapshot cannot overwrite newest counts');
+    } finally { cleanup(); }
+  });
+
+  await ta('keeps dashboard rendering independent when a newer background publication wins', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const dashboardBatch = cwUuid(724);
+      const backgroundBatch = cwUuid(725);
+      const dashboardRows = {
+        calibration_work_batches:[{id:dashboardBatch,batch_no:'DASHBOARD',title:'Dashboard result',status:'awaiting_calibration'}],
+        calibration_work_items:[{id:cwUuid(824),batch_id:dashboardBatch,instrument_id:224,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:224,batch_id:dashboardBatch}], calibration_work_documents:[], calibration_work_audit:[]
+      };
+      const backgroundRows = {
+        calibration_work_batches:[{id:backgroundBatch,batch_no:'BACKGROUND',title:'New background',status:'awaiting_calibration'}],
+        calibration_work_items:[{id:cwUuid(825),batch_id:backgroundBatch,instrument_id:225,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:225,batch_id:backgroundBatch}], calibration_work_documents:[]
+      };
+      const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items',
+        'calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].map(table => [table,cwDeferred()]));
+      const dashboardLoad = loadCalibrationWorkPage(cwDeferredClient(deferred));
+      ok(await loadCalibrationWorkStatusMap(cwPagedClient(backgroundRows, [])), 'newer background publication succeeds');
+      Object.keys(deferred).forEach(table => deferred[table].resolve({data:dashboardRows[table] || [],error:null}));
+      eq(await dashboardLoad, true, 'dashboard response still renders under its own UI generation');
+      has(document.getElementById('cwBatchList').textContent, 'DASHBOARD', 'dashboard does not remain stuck loading');
+      ok(calibrationWorkStatusMap[225] && !calibrationWorkStatusMap[224], 'older dashboard cannot replace newer shared integration state');
+    } finally { cleanup(); }
+  });
+
+  await ta('counts internal work notifications and opens their filtered tabs/details', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const model = cwTask7IntegrationModel();
+      const active = model.batches[0];
+      const awaiting = model.batches[1];
+      active.status = 'partially_completed';
+      active.items.find(item => item.instrument_id === 102).overdue_reason = null;
+      active.items.find(item => item.instrument_id === 103).planned_date = '2026-09-02';
+      active.documents = [];
+      const closure = {id:cwUuid(730),batch_no:'CW7-CLOSE',title:'Close',status:'awaiting_closure_pdf',items:[{
+        id:cwUuid(830),batch_id:cwUuid(730),instrument_id:130,is_active:true,result_status:'completed',planned_date:'2026-09-01'
+      }],documents:[],audit:[]};
+      model.batches.push(closure);
+      model.locks.push({instrument_id:130,batch_id:closure.id});
+      const result = await cwLoadNotifications(model, '2026-09-02');
+      eq(result.awaitingAcknowledgement, 1, 'awaiting acknowledgement batches');
+      eq(result.dueToday, 1, 'instruments due on deterministic today');
+      eq(result.overdueMissingEvidence, 1, 'overdue missing reason/evidence instruments');
+      eq(result.awaitingClosure, 1, 'awaiting closure batches');
+      ['รอ PDF รับทราบ','ครบกำหนดวันนี้','เกินแผนขาดหลักฐาน','รอ PDF ปิดแผน'].forEach(label =>
+        has(document.getElementById('cwNotifications').textContent, label, 'notification label'));
+
+      cwRenderDashboard(model);
+      ok(await cwOpenNotification('awaiting_acknowledgement'), 'notification filter opens');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting tab selected');
+      has(document.getElementById('cwBatchList').textContent, awaiting.batch_no, 'awaiting acknowledgement filter');
+      ok(await cwOpenNotification('awaiting_closure', closure.id), 'batch notification opens exact detail');
+      has(document.getElementById('cwBatchDetail').textContent, closure.batch_no, 'correct notification detail');
+    } finally { cleanup(); }
+  });
+
+  await ta('allows read-only registry navigation and restores shortcut focus on return', async () => {
+    const cleanup = cwMountFixture();
+    const originalShowPage = window.showPage;
+    try {
+      const model = cwTask7IntegrationModel();
+      cwRenderDashboard(model);
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      Object.assign(calibrationWorkStatusMap, cwBuildCalibrationWorkStatusMap(model, '2026-09-02'));
+      cwSetTask4Actor('viewer');
+      const trigger = document.createElement('button');
+      trigger.dataset.cwOpenBatchInstrument = '102';
+      document.body.appendChild(trigger);
+      const pages = [];
+      window.showPage = page => pages.push(page);
+      trigger.focus();
+      ok(await cwOpenBatchFromInstrument(102), 'Viewer can open registry batch read-only');
+      has(document.getElementById('cwBatchDetail').textContent, 'CW7-1', 'validated mapped batch opened');
+      ok(!document.querySelector('#cwBatchDetail [data-cw-action]'), 'Viewer receives no mutations');
+      cwCloseBatch();
+      eq(pages.join(','), 'calwork,list', 'returns to registry page');
+      eq(document.activeElement, trigger, 'registry shortcut focus restored');
+      eq(await cwOpenBatchFromInstrument(-1), false, 'invalid numeric instrument rejected');
+      trigger.remove();
+    } finally { window.showPage = originalShowPage; cleanup(); }
+  });
+
+  await ta('restores registry focus after authoritative refresh replaces the shortcut DOM', async () => {
+    const cleanup = cwMountFixture();
+    const originalShowPage = window.showPage;
+    const originalRenderTable = window.renderTable;
+    const pageList = document.createElement('div');
+    pageList.id = 'pageList';
+    document.body.appendChild(pageList);
+    try {
+      const model = cwTask7IntegrationModel();
+      const rows = {
+        calibration_work_batches:model.batches.map(({items,documents,audit,...batch}) => batch),
+        calibration_work_items:model.batches.flatMap(batch => batch.items),
+        calibration_work_instrument_locks:model.locks,
+        calibration_work_documents:model.batches.flatMap(batch => batch.documents || []), calibration_work_audit:[]
+      };
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      Object.assign(calibrationWorkStatusMap, cwBuildCalibrationWorkStatusMap(model, '2026-09-02'));
+      const renderShortcut = () => {
+        pageList.innerHTML = '<div hidden><button type="button" data-cw-open-batch-instrument="102">hidden 102</button></div>'
+          + '<button type="button" data-cw-open-batch-instrument="102">ชุดงาน 102</button>';
+        return pageList.lastElementChild;
+      };
+      let trigger = renderShortcut();
+      window.renderTable = renderShortcut;
+      const pages = [];
+      window.showPage = page => pages.push(page);
+      trigger.focus();
+      ok(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [])), 'network-backed navigation opens current batch');
+      ok(!trigger.isConnected, 'authoritative integration publish replaced original shortcut');
+      cwCloseBatch();
+      eq(pages.join(','), 'calwork,list', 'close returns to registry after network navigation');
+      trigger = pageList.querySelectorAll('[data-cw-open-batch-instrument="102"]')[1];
+      eq(document.activeElement, trigger, 'newly rendered shortcut receives returned focus');
+
+      trigger.focus();
+      eq(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [], {calibration_work_items:'offline'})), false,
+        'failed authoritative navigation reports failure');
+      eq(pages.slice(-2).join(','), 'calwork,list', 'failed navigation restores registry surface');
+      eq(document.activeElement, trigger, 'failed navigation restores shortcut focus');
+    } finally {
+      window.showPage = originalShowPage;
+      window.renderTable = originalRenderTable;
+      pageList.remove();
+      cleanup();
+    }
+  });
+
+  t('reloads integration status after registry data and authoritative work mutations', () => {
+    const start = dashboardSource.indexOf('async function loadData(forceRefresh = false)');
+    const end = dashboardSource.indexOf('async function fetchFromSupabase()', start);
+    has(dashboardSource.slice(start, end), 'loadCalibrationWorkStatusMap', 'initial registry load hook');
+    has(workSource, 'cwPublishCalibrationWorkIntegration(model, null, integrationGeneration)',
+      'authoritative work refresh uses the shared publication generation');
+    has(indexSource, 'id="cwNotifications"', 'notification host');
+  });
 
   function cwRpcClient(rows, handler) {
     const client = cwPagedClient(rows, []);

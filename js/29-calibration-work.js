@@ -129,7 +129,10 @@
     Object.freeze({ key: 'history', label: 'ประวัติทั้งหมด' })
   ]);
   const CW_READ_PAGE_SIZE = 200;
-  const cwUiState = { model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null, loadGeneration: 0 };
+  const cwUiState = {
+    model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
+    loadGeneration: 0, notificationFilter: null, registryReturnInstrumentId: null
+  };
   const cwWizardState = {
     mode: 'create', step: 1, title: '', unitCode: '', instrumentType: '', search: '',
     selected: new Map(), batchId: null, expectedUpdatedAt: null, hadAcknowledgement: false,
@@ -145,6 +148,13 @@
     busy: false, returnFocus: null, focusId: null
   };
   const cwItemMutations = new Set();
+  const calibrationWorkStatusMap = global.calibrationWorkStatusMap || {};
+  global.calibrationWorkStatusMap = calibrationWorkStatusMap;
+  let cwIntegrationLoadGeneration = 0;
+  let cwNotificationState = {
+    awaitingAcknowledgement: 0, dueToday: 0, overdueMissingEvidence: 0, awaitingClosure: 0,
+    batchIds: { awaiting_acknowledgement: [], due_today: [], overdue_missing_evidence: [], awaiting_closure: [] }
+  };
 
   function cwEscapeHtml(value) {
     return String(value == null ? '' : value)
@@ -282,7 +292,8 @@
   function cwRenderBatchList() {
     const root = document.getElementById('cwBatchList');
     if (!root) return;
-    const batches = cwTabBatches(cwUiState.tab);
+    const batches = cwTabBatches(cwUiState.tab)
+      .filter(batch => cwNotificationBatchMatch(batch, cwUiState.notificationFilter));
     if (!batches.length) {
       root.innerHTML = '<div class="cw-state" role="status"><strong>ยังไม่มีชุดงานสอบเทียบ</strong><span>ไม่พบรายการในมุมมองนี้</span></div>';
       return;
@@ -291,10 +302,12 @@
   }
 
   function cwShowDashboardSurface() {
+    const notifications = document.getElementById('cwNotifications');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
     const list = document.getElementById('cwBatchList');
     const detail = document.getElementById('cwBatchDetail');
+    if (notifications) notifications.hidden = false;
     if (tabs) tabs.hidden = false;
     if (metrics) metrics.hidden = false;
     if (list) list.hidden = false;
@@ -307,6 +320,7 @@
       ? { ...model, locks: hasLocks ? model.locks : [], locksReady: hasLocks && model.locksReady !== false }
       : { batches: [], locks: [], locksReady: false };
     cwUiState.tab = 'active';
+    cwUiState.notificationFilter = null;
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
     cwSetCreateAccess();
@@ -328,6 +342,7 @@
   function cwSetDashboardTab(tab) {
     if (!CW_TABS.some(item => item.key === tab)) return;
     cwUiState.tab = tab;
+    cwUiState.notificationFilter = null;
     cwRenderTabs();
     cwRenderBatchList();
   }
@@ -388,8 +403,216 @@
     return cwSortReadRows(rows, orderColumn, ascending);
   }
 
+  function cwIntegrationModel(batches, items, locks, documents) {
+    return cwNormalizeReadModel(batches, items, locks, documents, []);
+  }
+
+  async function cwReadIntegrationSnapshot(source) {
+    if (!source || typeof source.from !== 'function') throw new Error('ยังไม่พร้อมเชื่อมต่อฐานข้อมูล');
+    const [batches, items, locks, documents] = await Promise.all([
+      cwReadTable(source, 'calibration_work_batches', '*', 'updated_at', false),
+      cwReadTable(source, 'calibration_work_items', '*', 'created_at', true),
+      cwReadTable(source, 'calibration_work_instrument_locks', '*', 'instrument_id', true, 'instrument_id'),
+      cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false)
+    ]);
+    return cwIntegrationModel(batches, items, locks, documents);
+  }
+
+  function cwBuildCalibrationWorkStatusMap(model, todayISO) {
+    const next = {};
+    const today = todayISO || cwTodayISO();
+    const batches = new Map((model && model.batches || []).map(batch => [batch.id, batch]));
+    const locks = new Map((model && model.locks || []).map(lock => [String(lock.instrument_id), lock]));
+    const rank = { awaiting_acknowledgement_pdf: 1, in_progress: 2, overdue: 3, completed: 4 };
+    batches.forEach(batch => {
+      if (!batch || ['draft', 'completed', 'cancelled'].includes(batch.status)) return;
+      (batch.items || []).forEach(item => {
+        const instrumentId = cwInstrumentId(item && item.instrument_id);
+        if (instrumentId == null || item.is_active === false || item.result_status === 'skipped') return;
+        const lock = locks.get(String(instrumentId));
+        if (!lock || lock.batch_id !== batch.id) return;
+        let status = null;
+        if (item.result_status === 'completed') status = 'completed';
+        else if (item.result_status === 'in_progress') {
+          const displayStatus = cwItemDisplayStatus(item, today);
+          status = displayStatus === 'overdue' ? 'overdue'
+            : (batch.status === 'awaiting_acknowledgement_pdf' ? 'awaiting_acknowledgement_pdf' : displayStatus);
+        }
+        if (!rank[status]) return;
+        const candidate = {
+          batchId: batch.id,
+          batchNo: String(batch.batch_no || ''),
+          title: String(batch.title || ''),
+          plannedDate: String(item.planned_date || ''),
+          status
+        };
+        const current = next[instrumentId];
+        if (!current || rank[candidate.status] > rank[current.status]) next[instrumentId] = candidate;
+      });
+    });
+    return next;
+  }
+
+  function cwReplaceStatusMap(next) {
+    Object.keys(calibrationWorkStatusMap).forEach(key => { delete calibrationWorkStatusMap[key]; });
+    Object.assign(calibrationWorkStatusMap, next || {});
+    global.calibrationWorkStatusMap = calibrationWorkStatusMap;
+  }
+
+  function cwNotificationSummary(model, todayISO) {
+    const today = todayISO || cwTodayISO();
+    const summary = {
+      awaitingAcknowledgement: 0, dueToday: 0, overdueMissingEvidence: 0, awaitingClosure: 0,
+      batchIds: { awaiting_acknowledgement: [], due_today: [], overdue_missing_evidence: [], awaiting_closure: [] }
+    };
+    const lockByInstrument = new Map((model && model.locks || []).map(lock => [String(lock.instrument_id), lock]));
+    (model && model.batches || []).forEach(batch => {
+      if (!batch || ['draft', 'completed', 'cancelled'].includes(batch.status)) return;
+      const activeItems = (batch.items || []).filter(item => {
+        if (!item || item.is_active === false) return false;
+        const lock = lockByInstrument.get(String(item.instrument_id));
+        return Boolean(lock && lock.batch_id === batch.id);
+      });
+      if (!activeItems.length) return;
+      if (batch.status === 'awaiting_acknowledgement_pdf') {
+        summary.awaitingAcknowledgement += 1;
+        summary.batchIds.awaiting_acknowledgement.push(batch.id);
+      }
+      if (batch.status === 'awaiting_closure_pdf') {
+        summary.awaitingClosure += 1;
+        summary.batchIds.awaiting_closure.push(batch.id);
+      }
+      let dueInBatch = false;
+      let missingInBatch = false;
+      activeItems.forEach(item => {
+        if (item.result_status !== 'in_progress') return;
+        if (item.planned_date === today) {
+          summary.dueToday += 1;
+          dueInBatch = true;
+        }
+        if (cwItemDisplayStatus(item, today) !== 'overdue') return;
+        const currentOverdue = (batch.documents || []).some(documentRow => documentRow
+          && documentRow.item_id === item.id && documentRow.document_kind === 'overdue'
+          && documentRow.is_current === true);
+        if (!String(item.overdue_reason || '').trim() || !currentOverdue) {
+          summary.overdueMissingEvidence += 1;
+          missingInBatch = true;
+        }
+      });
+      if (dueInBatch) summary.batchIds.due_today.push(batch.id);
+      if (missingInBatch) summary.batchIds.overdue_missing_evidence.push(batch.id);
+    });
+    return summary;
+  }
+
+  function cwRenderNotifications(summary) {
+    const root = document.getElementById('cwNotifications');
+    if (!root) return;
+    const rows = [
+      ['awaiting_acknowledgement', 'รอ PDF รับทราบ', summary.awaitingAcknowledgement],
+      ['due_today', 'ครบกำหนดวันนี้', summary.dueToday],
+      ['overdue_missing_evidence', 'เกินแผนขาดหลักฐาน', summary.overdueMissingEvidence],
+      ['awaiting_closure', 'รอ PDF ปิดแผน', summary.awaitingClosure]
+    ];
+    root.innerHTML = rows.map(row => '<button type="button" class="cw-notification" data-cw-notification="'
+      + row[0] + '" onclick="cwOpenNotification(this.dataset.cwNotification)"><span>'
+      + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
+  }
+
+  async function cwLoadNotifications(sourceOrModel, todayISO) {
+    const generation = ++cwIntegrationLoadGeneration;
+    if (sourceOrModel && Array.isArray(sourceOrModel.batches) && Array.isArray(sourceOrModel.locks)) {
+      if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
+      cwNotificationState = cwNotificationSummary(sourceOrModel, todayISO);
+      cwRenderNotifications(cwNotificationState);
+      return cwNotificationState;
+    }
+    try {
+      const source = cwResolveClient(sourceOrModel);
+      const model = await cwReadIntegrationSnapshot(source);
+      if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
+      cwNotificationState = cwNotificationSummary(model, todayISO);
+      cwRenderNotifications(cwNotificationState);
+      return cwNotificationState;
+    } catch (_error) {
+      return { ...cwNotificationState, available: false };
+    }
+  }
+
+  function cwPublishCalibrationWorkIntegration(model, todayISO, generation) {
+    const publicationGeneration = generation == null ? ++cwIntegrationLoadGeneration : generation;
+    if (publicationGeneration !== cwIntegrationLoadGeneration) return false;
+    cwReplaceStatusMap(cwBuildCalibrationWorkStatusMap(model, todayISO));
+    cwNotificationState = cwNotificationSummary(model, todayISO);
+    cwRenderNotifications(cwNotificationState);
+    if (typeof global.renderTable === 'function') global.renderTable();
+    return true;
+  }
+
+  async function loadCalibrationWorkStatusMap(client) {
+    const generation = ++cwIntegrationLoadGeneration;
+    try {
+      const model = await cwReadIntegrationSnapshot(cwResolveClient(client));
+      if (generation !== cwIntegrationLoadGeneration) return false;
+      return cwPublishCalibrationWorkIntegration(model, null, generation);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function cwNotificationBatchMatch(batch, filter) {
+    if (!filter) return true;
+    const ids = cwNotificationState.batchIds && cwNotificationState.batchIds[filter] || [];
+    return ids.includes(batch.id);
+  }
+
+  async function cwOpenNotification(kind, batchId) {
+    const tabs = {
+      awaiting_acknowledgement: 'waiting', due_today: 'active',
+      overdue_missing_evidence: 'active', awaiting_closure: 'waiting'
+    };
+    if (!Object.prototype.hasOwnProperty.call(tabs, kind)) return false;
+    if (typeof global.showPage === 'function') global.showPage('calwork');
+    const source = cwResolveClient(null);
+    if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) return false;
+    cwUiState.notificationFilter = kind;
+    cwUiState.tab = tabs[kind];
+    cwRenderTabs();
+    cwRenderBatchList();
+    if (batchId != null) {
+      if (!UUID_PATTERN.test(batchId || '') || !cwNotificationBatchMatch({ id: batchId }, kind)
+          || !cwFindBatch(batchId)) return false;
+      await cwOpenBatch(batchId);
+    }
+    const target = batchId == null && document.querySelector('#cwBatchList .cw-batch-card');
+    if (target && typeof target.focus === 'function') target.focus();
+    return true;
+  }
+
+  async function cwOpenBatchFromInstrument(instrumentId, client) {
+    const id = cwInstrumentId(instrumentId);
+    const mapped = id == null ? null : calibrationWorkStatusMap[id];
+    if (!mapped || !UUID_PATTERN.test(mapped.batchId || '')) return false;
+    const returnFocus = document.activeElement;
+    if (typeof global.showPage === 'function') global.showPage('calwork');
+    const source = cwResolveClient(client);
+    if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) {
+      cwReturnToRegistry(id, returnFocus);
+      return false;
+    }
+    const current = calibrationWorkStatusMap[id];
+    if (!current || current.batchId !== mapped.batchId || !cwFindBatch(mapped.batchId)) {
+      cwReturnToRegistry(id, returnFocus);
+      return false;
+    }
+    cwUiState.registryReturnInstrumentId = id;
+    await cwOpenBatch(mapped.batchId);
+    return true;
+  }
+
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
+    const integrationGeneration = ++cwIntegrationLoadGeneration;
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -411,7 +634,9 @@
         cwReadTable(source, 'calibration_work_audit', '*', 'occurred_at', false)
       ]);
       if (generation !== cwUiState.loadGeneration) return false;
-      cwRenderDashboard(cwNormalizeReadModel(batches, items, locks, documents, audit));
+      const model = cwNormalizeReadModel(batches, items, locks, documents, audit);
+      cwRenderDashboard(model);
+      cwPublishCalibrationWorkIntegration(model, null, integrationGeneration);
       return true;
     } catch (error) {
       if (generation !== cwUiState.loadGeneration) return false;
@@ -655,6 +880,7 @@
     const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
     if (!batch) throw new Error('Calibration work batch not found');
     const tabs = document.getElementById('cwTabs');
+    const notifications = document.getElementById('cwNotifications');
     const metrics = document.getElementById('cwMetrics');
     const list = document.getElementById('cwBatchList');
     const detail = document.getElementById('cwBatchDetail');
@@ -673,6 +899,7 @@
       + '<span class="cw-progress" aria-label="ความคืบหน้า ' + progress.percent + '%"><span style="width:' + progress.percent + '%"></span></span></section>'
       + '<div class="cw-detail-grid"><div>' + cwRenderItems(batch) + cwRenderClosureSummary(batch) + cwRenderAudit(batch) + '</div><aside>'
       + cwRenderCurrentDocuments(batch) + cwRenderDocumentHistory(batch) + '</aside></div>';
+    if (notifications) notifications.hidden = true;
     if (tabs) tabs.hidden = true;
     if (metrics) metrics.hidden = true;
     if (list) list.hidden = true;
@@ -683,7 +910,26 @@
 
   function cwCloseBatch() {
     cwUiState.openBatchId = null;
+    const registryReturnInstrumentId = cwUiState.registryReturnInstrumentId;
+    if (registryReturnInstrumentId) {
+      cwUiState.registryReturnInstrumentId = null;
+      cwReturnToRegistry(registryReturnInstrumentId);
+      return;
+    }
     cwShowDashboardSurface();
+  }
+
+  function cwReturnToRegistry(instrumentId, fallback) {
+    if (typeof global.showPage === 'function') global.showPage('list');
+    const selector = '[data-cw-open-batch-instrument="' + String(instrumentId) + '"]';
+    const targets = [...document.querySelectorAll(selector)];
+    const target = targets.find(candidate => candidate.offsetParent !== null) || targets.find(candidate => {
+      if (candidate.closest('[hidden]')) return false;
+      const style = typeof global.getComputedStyle === 'function' ? global.getComputedStyle(candidate) : null;
+      return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+    }) || targets[0];
+    if (target && typeof target.focus === 'function') target.focus();
+    else if (fallback && fallback.isConnected && typeof fallback.focus === 'function') fallback.focus();
   }
 
   function cwShowCreateError(message) {
@@ -2090,6 +2336,11 @@
   global.cwBatchDerivedStatus = cwBatchDerivedStatus;
   global.cwValidatePdf = cwValidatePdf;
   global.cwDocumentPath = cwDocumentPath;
+  global.cwBuildCalibrationWorkStatusMap = cwBuildCalibrationWorkStatusMap;
+  global.loadCalibrationWorkStatusMap = loadCalibrationWorkStatusMap;
+  global.cwLoadNotifications = cwLoadNotifications;
+  global.cwOpenNotification = cwOpenNotification;
+  global.cwOpenBatchFromInstrument = cwOpenBatchFromInstrument;
   global.loadCalibrationWorkPage = loadCalibrationWorkPage;
   global.cwRenderDashboard = cwRenderDashboard;
   global.cwSetDashboardTab = cwSetDashboardTab;

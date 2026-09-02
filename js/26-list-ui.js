@@ -115,6 +115,25 @@ function listStatusPill(d) {
   return { bg: '#e1f5ee', fg: '#0f6e56', emoji: '🟢', text: 'ปกติ', days: 'อีก ' + days + ' วัน', cancelled: false };
 }
 
+function cwRegistryShortcutHtml(instrumentId) {
+  const id = Number(instrumentId);
+  const map = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
+    ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
+  const work = Number.isSafeInteger(id) && id > 0 ? map[id] : null;
+  if (!work) return '';
+  const labels = {
+    completed: 'เสร็จแล้ว', overdue: 'เกินแผน', in_progress: 'กำลังสอบเทียบ',
+    awaiting_acknowledgement_pdf: 'รอรับทราบ'
+  };
+  const label = labels[work.status] || work.status || '–';
+  const title = [work.title, work.batchNo, work.plannedDate, label].filter(Boolean).join(' · ');
+  return '<button type="button" class="cw-registry-shortcut" data-cw-work-status="' + escapeHtmlAttr(work.status || 'unknown')
+    + '" data-cw-open-batch-instrument="' + id + '" title="' + escapeHtmlAttr(title) + '"><span>ชุดงาน</span><b>'
+    + escapeHtmlText(work.batchNo || '–') + '</b><small>' + escapeHtmlText(work.plannedDate || '–')
+    + ' · ' + escapeHtmlText(label) + '</small></button>';
+}
+window.cwRegistryShortcutHtml = cwRegistryShortcutHtml;
+
 /* ปุ่มงานท้ายแถว (ไฟล์ / วางแผน / ลบ) — ดีไซน์ไม่มีคอลัมน์นี้
    แต่ระบบใช้งานจริงอยู่ จึงคงไว้เป็นคอลัมน์เดียวรวบท้ายตาราง */
 function listActionCell(d) {
@@ -148,7 +167,7 @@ function listActionCell(d) {
     ? `<button type="button" class="btn-del" onclick="deleteInstrument(${id},'${escapeJsSingle(d.instrument_name || '')}')">🗑️</button>`
     : '';
 
-  return `<span class="ax-actcell">${fileBtn}${planBtn}${delBtn}</span>`;
+  return `<span class="ax-actcell">${fileBtn}${planBtn}${cwRegistryShortcutHtml(id)}${delBtn}</span>`;
 }
 
 /* ---------- ชิปสถานะ ---------- */
@@ -251,6 +270,7 @@ function listSpecCardHtml(d) {
       <strong class="ax-spec-id" title="${escapeHtmlAttr(d.id_code || '–')}">${idCode}</strong>
       <span class="ax-spec-cert" title="${escapeHtmlAttr(d.cert_no || '–')}">Cert: ${cert}</span>
       <span class="ax-spec-due" style="color:${p.fg}">Due: ${escapeHtmlText(due)}</span>
+      ${cwRegistryShortcutHtml(id)}
       <button type="button" class="ax-spec-detail" aria-label="ดูรายละเอียดเครื่องมือ ${idCode}" onclick="event.stopPropagation();openInstrumentDetail(${id})">ดูรายละเอียด</button>
     </div>
   </article>`;
@@ -388,7 +408,7 @@ function renderListFull(rows, start) {
     const p = listStatusPill(d);
     const internal = d.cal_type === 'ภายใน' ? '✓' : '';
     const external = d.cal_type === 'ภายนอก' ? '✓' : '';
-    return `<tr class="${p.cancelled ? 'reg-cancelled' : ''}" onclick="openInstrumentDetail(${id})" title="คลิกเพื่อดูรายละเอียด">
+    return `<tr class="${p.cancelled ? 'reg-cancelled' : ''}" onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" title="คลิกเพื่อดูรายละเอียด">
       <td class="c-no">${start + i + 1}</td>
       <td class="c-name">
         <div class="ax-namecell">
@@ -412,7 +432,7 @@ function renderListFull(rows, start) {
       <td class="ax-mark">${internal}</td>
       <td class="ax-mark">${external}</td>
       <td class="ax-usp">${escapeHtmlText(d.usp_type || '–')}</td>
-      <td class="c-status"><span class="ax-pill" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span></td>
+      <td class="c-status"><span class="ax-pill" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span>${cwRegistryShortcutHtml(id)}</td>
     </tr>`;
   }).join('');
 }
@@ -467,6 +487,18 @@ function renderListPage() {
 
 /* แทนที่ renderTable เดิม (10-router ห่อไว้เพื่อ normalize — เราทำเองแล้ว) */
 renderTable = window.renderTable = renderListPage;
+
+document.addEventListener('click', event => {
+  const shortcut = event.target && event.target.closest && event.target.closest('[data-cw-open-batch-instrument]');
+  if (!shortcut) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const instrumentId = Number(shortcut.dataset.cwOpenBatchInstrument);
+  if (Number.isSafeInteger(instrumentId) && instrumentId > 0
+      && typeof window.cwOpenBatchFromInstrument === 'function') {
+    void window.cwOpenBatchFromInstrument(instrumentId);
+  }
+}, true);
 
 /* หมายเหตุ: toggleManageColumns ถูกทำให้ null-safe ที่ต้นทาง (03-instruments.js) แล้ว
    ห้าม override ที่นี่ เพราะ enterApp() เรียกมันตั้งแต่ตอนโหลด 10-router.js

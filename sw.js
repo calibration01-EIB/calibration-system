@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v157';
+const CACHE_NAME = 'calibration-app-v158';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -6,7 +6,7 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './theme-aqua.css?v=20260901-cw6',
+  './theme-aqua.css?v=20260902-cw7',
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
@@ -24,7 +24,7 @@ const APP_SHELL = [
   './assets/tiles/09_offsite_equipment.png',
   './js/00-config.js',
   './js/01-core.js',
-  './js/02-dashboard.js?v=20260902-cw6-results',
+  './js/02-dashboard.js?v=20260902-cw7',
   './js/03-instruments.js',
   './js/04-reports.js',
   './js/05-audit.js',
@@ -36,10 +36,10 @@ const APP_SHELL = [
   './js/10-router.js?v=20260901-cw3',
   './js/24-home.js',
   './js/25-dashboard-ui.js',
-  './js/26-list-ui.js',
+  './js/26-list-ui.js?v=20260902-cw7',
   './js/27-asset-out-page.js',
   './js/28-kpi.js',
-  './js/29-calibration-work.js?v=20260902-cw6-results',
+  './js/29-calibration-work.js?v=20260902-cw7',
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',

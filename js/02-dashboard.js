@@ -108,6 +108,7 @@ function renderMobileCards() {
       ? ['ไม่ต้องวางแผน', '#8A1F1F', '#FCEBEB']
       : (ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
     const planBadge = '<div class="mobile-plan-row"><span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span></div>';
+    const workBadge = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
     const planBtn = cancelled
       ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
       : (ps
@@ -132,7 +133,7 @@ function renderMobileCards() {
         '<div class="mobile-field"><span>S/N</span><strong>' + serialNo + '</strong></div>' +
         '<div class="mobile-field"><span>จุดใช้งาน</span><strong>' + machineLoc + '</strong></div>' +
       '</div>' +
-      planBadge +
+      planBadge + workBadge +
       '<div class="mobile-card-actions">' +
         '<button class="mobile-card-action" onclick="event.stopPropagation();openInstrumentDetail(' + id + ')"><i class="ti ti-eye"></i><span>ดู</span></button>' +
         '<button class="mobile-card-action" onclick="event.stopPropagation();mobileCert(' + i + ')"><i class="ti ti-paperclip"></i><span>ไฟล์</span></button>' +
@@ -305,6 +306,7 @@ async function loadData(forceRefresh = false) {
     renderDashboardAuditLog();
     renderPendingCertWidget();
     loadPlanStatusMap();
+    if (typeof loadCalibrationWorkStatusMap === 'function') void loadCalibrationWorkStatusMap();
     if (typeof loadRepairData === 'function') loadRepairData();
     updateNotificationBell();
     const certEl = document.getElementById("pageCert"); if (certEl && certEl.style.display !== "none" && certEl.offsetParent !== null) loadCertPage();

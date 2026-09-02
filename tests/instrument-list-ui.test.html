@@ -30,11 +30,11 @@ function text(url) {
 }
 
 (async () => {
-  let INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, CSS;
+  let INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, CSS;
   try {
-    [INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, CSS] = await Promise.all([
+    [INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, CSS] = await Promise.all([
       text('../index.html'), text('../js/04-reports.js'),
-      text('../js/03-instruments.js'), text('../js/26-list-ui.js'), text('../theme-aqua.css')
+      text('../js/03-instruments.js'), text('../js/26-list-ui.js'), text('../js/02-dashboard.js'), text('../theme-aqua.css')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -137,6 +137,7 @@ function text(url) {
   document.body.appendChild(fixture);
   window.escapeHtmlText = value => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   window.escapeHtmlAttr = window.escapeHtmlText;
+  window.escapeJsSingle = value => String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   window.formatDate = value => value || '–';
   window.openInstrumentDetail = () => {};
   window.instPhotoFolder = d => `photos_${d.id}_${d.id_code}`;
@@ -150,6 +151,48 @@ function text(url) {
     ok(!/<article[^>]*(role="button"|tabindex=)/.test(html), 'article must be non-interactive');
     has(html, '<button type="button" class="ax-spec-detail" aria-label="ดูรายละเอียดเครื่องมือ PFP3BB03-WI01"');
     ok(html.indexOf('Electronic Balance') === -1, 'must omit instrument name');
+  });
+
+  t('renders a separate escaped work-batch shortcut without replacing FRM plan state', () => {
+    window.planStatusMap = {7:{status:'planned',title:'Legacy FRM'}};
+    window.calibrationWorkStatusMap = {7:{batchId:'00000000-0000-0000-0000-000000000701',batchNo:'CW7-<1>',
+      title:'Unsafe <img src=x onerror=1>',plannedDate:'2026-09-03',status:'in_progress'}};
+    const card = listSpecCardHtml({id:7,id_code:'SAFE-7',cert_no:'CERT-7',due_date:'2027-01-01',days_left:40});
+    has(card, 'class="cw-registry-shortcut"', 'separate work shortcut');
+    has(card, 'data-cw-open-batch-instrument="7"', 'numeric delegated navigation id');
+    has(card, 'ชุดงาน', 'work label');
+    has(card, 'CW7-&lt;1&gt;', 'escaped batch number');
+    has(card, '2026-09-03', 'planned date');
+    ok(card.indexOf('<img src=x') === -1, 'hostile title cannot create markup');
+    ok(card.indexOf('onclick="cwOpenBatchFromInstrument') === -1, 'shortcut avoids per-row inline navigation');
+    const actions = listActionCell({id:7,id_code:'SAFE-7',instrument_name:'Balance',cert_no:'CERT-7'});
+    has(actions, 'วางแผนแล้ว', 'legacy FRM action remains');
+    has(actions, 'cw-registry-shortcut', 'work action coexists');
+    eq(window.planStatusMap[7].title, 'Legacy FRM', 'legacy plan map remains intact');
+    has(DASHBOARD_JS, 'cwRegistryShortcutHtml(id)', 'mobile registry integration');
+  });
+
+  t('delegated native work shortcut opens the numeric instrument and keeps keyboard focusable markup', () => {
+    let opened = null;
+    window.cwOpenBatchFromInstrument = instrumentId => { opened = instrumentId; };
+    const host = document.createElement('div');
+    host.innerHTML = cwRegistryShortcutHtml(7);
+    document.body.appendChild(host);
+    const button = host.querySelector('button');
+    eq(button.type, 'button', 'native button type');
+    button.focus();
+    eq(document.activeElement, button, 'shortcut accepts keyboard focus');
+    button.click();
+    eq(opened, 7, 'delegated shortcut uses validated numeric id');
+    host.remove();
+  });
+
+  t('work shortcut wraps safely at desktop tablet and mobile widths', () => {
+    has(CSS, '#app #pageList .cw-registry-shortcut', 'registry shortcut scoped CSS');
+    ok(/#app #pageList \.cw-registry-shortcut\s*\{[^}]*max-width:\s*100%[^}]*white-space:\s*normal/.test(CSS),
+      'shortcut wraps without page overflow');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pageList \.cw-registry-shortcut/.test(CSS),
+      'mobile shortcut contract');
   });
 
   await ta('photo loader เลือก overview และ discard request ก่อน invalidation', async () => {

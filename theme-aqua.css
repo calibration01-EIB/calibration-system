@@ -783,6 +783,15 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 .ax-usp { font-family: var(--ff-num); font-size: 16px !important; font-weight: 800; color: var(--deep) !important; }
 
 .ax-actcell { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
+#app #pageList .cw-registry-shortcut {
+  max-width: 100%; min-width: 0; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 3px 6px;
+  padding: 6px 9px; border: 1px solid #0891b2; border-radius: 9px; background: #ecfeff; color: #0e7490;
+  font: 700 11px/1.25 var(--ff); white-space: normal; overflow-wrap: anywhere; cursor: pointer;
+}
+#app #pageList .cw-registry-shortcut b { font-family: var(--ff-num); }
+#app #pageList .cw-registry-shortcut small { flex-basis: 100%; color: #476777; font-size: 9px; }
+#app #pageList .cw-registry-shortcut[data-cw-work-status="overdue"] { border-color: #dc2626; background: #fff1f2; color: #b91c1c; }
+#app #pageList .cw-registry-shortcut:focus-visible { outline: 3px solid rgba(8,145,178,.28); outline-offset: 2px; }
 .ax-act-plan {
   font-size: 12.5px; border-radius: 8px; padding: 5px 9px; cursor: pointer; white-space: nowrap;
   font-family: inherit; font-weight: 600; background: var(--accent-light);
@@ -1819,6 +1828,20 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   background: var(--surface); color: var(--accent); font: 700 12px var(--ff); cursor: pointer;
 }
 #app #pageCalwork .cw-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+#app #pageCalwork .cw-notifications {
+  min-width: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; margin-bottom: 14px;
+}
+#app #pageCalwork .cw-notification {
+  min-width: 0; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface);
+  color: var(--text2); font: 700 10px var(--ff); text-align: left; cursor: pointer;
+}
+#app #pageCalwork .cw-notification span { min-width: 0; overflow-wrap: anywhere; }
+#app #pageCalwork .cw-notification strong {
+  min-width: 25px; padding: 3px 7px; border-radius: 20px; background: var(--accent-light);
+  color: var(--accent); font: 800 11px var(--ff-num); text-align: center;
+}
+#app #pageCalwork .cw-notification:focus-visible { outline: 3px solid rgba(8,145,178,.28); outline-offset: 2px; }
 #app #pageCalwork .cw-tabs {
   display: flex; gap: 7px; margin-bottom: 14px; padding: 5px;
   overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
@@ -2139,11 +2162,15 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #app #cwItemResultDialog button:disabled { cursor: wait; opacity: .58; }
 
 @media (max-width: 1100px) {
+  #app #pageCalwork .cw-notifications { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #app #pageCalwork .cw-detail-grid { grid-template-columns: 1fr; }
   #app #pageCalwork .cw-detail-grid > aside { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width: 767px) {
+  #app #pageList .cw-registry-shortcut { width: 100%; min-height: 44px; justify-content: flex-start; }
+  #app #pageCalwork .cw-notifications { grid-template-columns: 1fr; }
+  #app #pageCalwork .cw-notification { min-height: 44px; }
   #app #pageCalwork .cw-page-head { align-items: stretch; flex-direction: column; padding: 16px; }
   #app #pageCalwork .cw-page-actions { justify-content: stretch; }
   #app #pageCalwork .cw-page-actions > button { flex: 1 1 auto; }
