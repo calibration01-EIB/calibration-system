@@ -157,17 +157,43 @@ function text(url) {
     throws(() => cwDocumentPath(batchId, itemId, 'certificate', 10000), 'five-digit version must fail');
   });
 
+  t('derives exact SQL-aligned item completion requirements', () => {
+    const itemId = '22222222-2222-2222-2222-222222222222';
+    const base = {id:itemId,result_status:'in_progress',planned_date:'2026-09-10',cert_no:null,calibration_date:null,overdue_reason:null};
+    let result = cwItemRequirements(base, '2026-09-01', []);
+    eq(JSON.stringify(result.missing), JSON.stringify(['cert_no','calibration_date','certificate']), 'empty draft requirements');
+    eq(result.certificateRequired, true, 'certificate evidence required');
+    eq(result.overdueRequired, false, 'undated draft has no completion overdue-evidence requirement');
+
+    const certificate = {item_id:itemId,document_kind:'certificate',is_current:true};
+    result = cwItemRequirements({...base,cert_no:'CERT-1',calibration_date:'2026-09-10'}, '2026-09-20', [certificate]);
+    eq(result.missing.length, 0, 'on-plan calibration is complete even when today is later');
+    eq(result.overdueRequired, false, 'today alone does not require overdue evidence');
+
+    result = cwItemRequirements({...base,cert_no:'CERT-1',calibration_date:'2026-09-11'}, '2026-09-01', [certificate]);
+    eq(result.overdueRequired, true, 'actual late calibration requires overdue evidence');
+    eq(JSON.stringify(result.missing), JSON.stringify(['overdue_reason','overdue']), 'late evidence requirements');
+    const overdue = {item_id:itemId,document_kind:'overdue',is_current:true};
+    result = cwItemRequirements({...base,cert_no:'CERT-1',calibration_date:'2026-09-11',overdue_reason:'เครื่องกลับช้า'}, '2026-09-01', [certificate,overdue]);
+    eq(result.missing.length, 0, 'late result complete with reason and current evidence');
+
+    result = cwItemRequirements({...base,result_status:'completed',cert_no:'CERT-1',calibration_date:'2026-09-10'}, '2026-09-20', [certificate]);
+    eq(result.displayOverdue, false, 'completed on-time result never displays as overdue');
+    result = cwItemRequirements({...base,result_status:'skipped'}, '2026-09-20', []);
+    eq(result.missing.length, 0, 'skipped item has no certificate requirements');
+  });
+
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw5"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw6"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260901-cw5"', 'current calibration stylesheet query version');
+    has(indexSource, 'href="theme-aqua.css?v=20260901-cw6"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v154';", 'cache v154');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v155';", 'cache v155');
     [
-      'theme-aqua.css?v=20260901-cw5',
+      'theme-aqua.css?v=20260901-cw6',
       'js/10-router.js?v=20260901-cw3',
-      'js/29-calibration-work.js?v=20260901-cw5'
+      'js/29-calibration-work.js?v=20260901-cw6'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -183,7 +209,10 @@ function text(url) {
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
       + '<div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true"><div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2><button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()">×</button></div>'
-      + '<div id="cwDocumentError" role="alert" hidden></div><div id="cwDocumentBody"></div><div id="cwDocumentFooter"></div></div></div>';
+      + '<div id="cwDocumentError" role="alert" hidden></div><div id="cwDocumentBody"></div><div id="cwDocumentFooter"></div></div></div>'
+      + '<div class="modal-overlay" id="cwItemResultDialog" aria-hidden="true"><div class="modal-box cw-item-result-dialog" role="dialog" aria-modal="true" aria-labelledby="cwItemResultDialogTitle" tabindex="-1">'
+      + '<div class="modal-header"><h2 id="cwItemResultDialogTitle">บันทึกผลสอบเทียบ</h2><button type="button" id="cwItemResultClose" onclick="cwCloseItemResult()">×</button></div>'
+      + '<div id="cwItemResultError" role="alert" hidden></div><div id="cwItemResultBody"></div><div id="cwItemResultFooter"></div></div></div>';
     document.body.appendChild(fixture);
     return () => fixture.remove();
   }
@@ -1277,6 +1306,284 @@ function text(url) {
       has(completedMessage, 'สถานะ', 'direct completed closure upload is rejected');
       eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, networkBefore,
         'completed closure rejection occurs before network');
+    } finally { cleanup(); }
+  });
+
+  function cwTask6Context(options) {
+    const config = options || {};
+    const probe = cwTask5Context(config.status || 'awaiting_calibration', [], config.resultStatus || 'in_progress');
+    const acknowledgement = {
+      id:cwUuid(901),batch_id:probe.batchId,item_id:null,document_kind:'acknowledgement',
+      storage_path:probe.batchId + '/batch/acknowledgement/v0001.pdf',version_number:1,is_current:true,
+      original_filename:'acknowledgement.pdf',file_size:2048,uploaded_by:'editor',uploaded_at:'2026-09-01T03:00:00Z'
+    };
+    const documents = [acknowledgement].concat((config.documents || []).map(documentRow => ({batch_id:probe.batchId,...documentRow})));
+    Object.assign(probe.item, {
+      batch_id:probe.batchId,cert_no:null,calibration_date:null,overdue_reason:null,skip_reason:null,
+      updated_at:'2026-09-01T05:00:00Z'
+    }, config.item || {});
+    probe.item.instruments = config.instrument || {id:11,id_code:'WRM-11',instrument_name:'Balance <unsafe>'};
+    probe.batch.items = [probe.item];
+    probe.batch.documents = documents;
+    probe.batch.status = config.status || 'awaiting_calibration';
+    probe.rows.calibration_work_batches[0].status = probe.batch.status;
+    probe.rows.calibration_work_items = [probe.item];
+    probe.rows.calibration_work_documents = documents;
+    probe.model = {batches:[probe.batch],locks:probe.locks};
+    return probe;
+  }
+
+  t('adds an accessible scoped Task 6 result dialog and cache generation', () => {
+    ['id="cwItemResultDialog"','aria-labelledby="cwItemResultDialogTitle"','id="cwItemResultError"',
+      'id="cwItemResultBody"','id="cwItemResultFooter"'].forEach(token => has(indexSource, token, token));
+    has(cssSource, '#app #cwItemResultDialog .cw-', 'scoped result dialog styles');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwItemResultDialog[\s\S]*?min-height:\s*44px/.test(cssSource),
+      'result dialog mobile controls');
+  });
+
+  t('gates result editing by role state acknowledgement activity and ownership while escaping text', () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask6Context({instrument:{id:11,id_code:'<img src=x>',instrument_name:'Balance <scr' + 'ipt>bad</scr' + 'ipt>'}});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      cwOpenBatch(context.batchId);
+      const trigger = document.querySelector('[data-cw-result-item]');
+      ok(trigger, 'eligible item has result action');
+      trigger.focus();
+      ok(cwOpenItemResult(context.itemId), 'eligible editor opens result dialog');
+      const dialog = document.getElementById('cwItemResultDialog');
+      has(dialog.textContent, '<img src=x>', 'hostile instrument code remains text');
+      ok(!dialog.querySelector('img') && !dialog.querySelector('script'), 'hostile instrument markup is escaped');
+      const focusable = [...dialog.querySelectorAll('button,input,textarea')].filter(element => !element.disabled && !element.hidden);
+      focusable[focusable.length - 1].focus();
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Tab',bubbles:true}));
+      eq(document.activeElement, focusable[0], 'result dialog traps focus');
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}));
+      eq(dialog.getAttribute('aria-hidden'), 'true', 'Escape closes result dialog');
+      eq(document.activeElement, trigger, 'result dialog restores trigger focus');
+
+      cwSetTask4Actor('viewer');
+      cwRenderDashboard(context.model);
+      cwOpenBatch(context.batchId);
+      ok(!document.querySelector('[data-cw-result-item]'), 'Viewer receives no item mutation action');
+      eq(cwOpenItemResult(context.itemId), false, 'Viewer cannot open result editor');
+      cwSetTask4Actor('editor');
+      context.item.is_active = false;
+      cwRenderDashboard(context.model);
+      eq(cwOpenItemResult(context.itemId), false, 'inactive item rejected');
+      eq(cwOpenItemResult(cwUuid(999)), false, 'unknown item rejected');
+      context.item.is_active = true;
+      context.item.batch_id = cwUuid(998);
+      cwRenderDashboard(context.model);
+      eq(cwOpenItemResult(context.itemId), false, 'mismatched item ownership rejected');
+    } finally { cleanup(); }
+  });
+
+  await ta('saves an item draft with the exact RPC payload and authoritative refresh', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask6Context();
+      const evidence = cwEvidenceClient(context, {rpc:async (name,payload,rows) => {
+        if (name !== 'cw_save_item_draft') return {data:null,error:{message:'unexpected RPC'}};
+        Object.assign(rows.calibration_work_items[0], {
+          cert_no:payload.p_cert_no,calibration_date:payload.p_calibration_date,overdue_reason:payload.p_overdue_reason,
+          updated_at:'2026-09-01T06:00:00Z'
+        });
+        return {data:rows.calibration_work_items[0],error:null};
+      }});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      ok(cwOpenItemResult(context.itemId), 'open draft');
+      cwSetItemResultField('certNo',' CERT-<DRAFT> ');
+      cwSetItemResultField('calibrationDate','2026-09-03');
+      cwSetItemResultField('overdueReason','  ');
+      eq(await cwSaveItemDraft(evidence.client), true, 'draft save succeeds');
+      eq(JSON.stringify(evidence.calls[0]), JSON.stringify({name:'cw_save_item_draft',payload:{
+        p_token:'token',p_item_id:context.itemId,p_cert_no:'CERT-<DRAFT>',p_calibration_date:'2026-09-03',p_overdue_reason:null
+      }}), 'exact draft payload');
+      eq(evidence.calls.length, 1, 'draft does not complete item');
+      eq(cwDashboardModel && document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'authoritative draft stays editable');
+      eq(document.getElementById('cwItemCertNo').value, 'CERT-<DRAFT>', 'refreshed draft value remains escaped in the input');
+    } finally { cleanup(); }
+  });
+
+  await ta('integrates certificate and overdue uploads with the open result editor', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask6Context({item:{planned_date:'2026-09-03'}});
+      const evidence = cwEvidenceClient(context);
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      ok(cwOpenItemResult(context.itemId), 'open item result');
+      ok(document.querySelector('#cwItemResultDialog [data-cw-upload-kind="certificate"]'), 'certificate upload action');
+      cwSetItemResultField('calibrationDate','2026-09-04');
+      ok(document.querySelector('#cwItemResultDialog [data-cw-upload-kind="overdue"]'), 'late date reveals overdue upload action');
+      const registered = await cwUploadDocument({batchId:context.batchId,itemId:context.itemId,kind:'certificate',
+        file:cwPdf('certificate.pdf'),replacementReason:null}, evidence.client);
+      eq(registered.document_kind, 'certificate', 'certificate registration');
+      eq(evidence.uploads[0].path, context.batchId + '/items/' + context.itemId + '/certificate/v0001.pdf', 'exact item certificate path');
+      const call = evidence.calls.find(entry => entry.name === 'cw_register_document');
+      eq(call.payload.p_item_id, context.itemId, 'certificate RPC item scope');
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'result editor survives evidence refresh');
+      has(document.getElementById('cwItemResultBody').textContent, 'certificate.pdf', 'current evidence refreshes in result editor');
+    } finally { cleanup(); }
+  });
+
+  await ta('completes only valid items then refreshes registry without changing due date', async () => {
+    const cleanup = cwMountFixture();
+    const originalLoadData = window.loadData;
+    const originalAllData = window.allData;
+    try {
+      const itemId = cwUuid(811);
+      const context = cwTask6Context({item:{planned_date:'2026-09-03'},documents:[{
+        id:cwUuid(902),item_id:itemId,document_kind:'certificate',storage_path:cwUuid(801) + '/items/' + itemId + '/certificate/v0001.pdf',
+        version_number:1,is_current:true,original_filename:'certificate.pdf',file_size:1024,uploaded_by:'editor',uploaded_at:'2026-09-01T04:00:00Z'
+      }]});
+      const evidence = cwEvidenceClient(context, {rpc:async (name,payload,rows) => {
+        const row = rows.calibration_work_items[0];
+        if (name === 'cw_save_item_draft') {
+          Object.assign(row,{cert_no:payload.p_cert_no,calibration_date:payload.p_calibration_date,overdue_reason:payload.p_overdue_reason});
+          return {data:row,error:null};
+        }
+        if (name === 'cw_complete_item') {
+          row.result_status = 'completed';
+          rows.calibration_work_batches[0].status = 'awaiting_closure_pdf';
+          return {data:row,error:null};
+        }
+        return {data:null,error:{message:'unexpected RPC'}};
+      }});
+      const registryRefreshes = [];
+      cwSetTask4Actor('editor');
+      window.allData = [{id:11,cert_no:'OLD',cal_date:'2025-01-01',due_date:'2027-12-31'}];
+      window.loadData = async force => { registryRefreshes.push(force); window.allData[0] = {...window.allData[0],cert_no:'CERT-NEW',cal_date:'2026-09-03'}; };
+      cwRenderDashboard(context.model);
+      cwOpenItemResult(context.itemId);
+      cwSetItemResultField('certNo','CERT-NEW');
+      cwSetItemResultField('calibrationDate','2026-09-03');
+      eq(await cwCompleteItem(evidence.client), true, 'valid item completes');
+      eq(evidence.calls.map(entry => entry.name).join(','), 'cw_save_item_draft,cw_complete_item', 'draft then authority completion');
+      eq(JSON.stringify(evidence.calls[1]), JSON.stringify({name:'cw_complete_item',payload:{p_token:'token',p_item_id:context.itemId}}), 'exact completion payload');
+      eq(JSON.stringify(registryRefreshes), JSON.stringify([true]), 'registry force refresh');
+      eq(window.allData[0].due_date, '2027-12-31', 'due date remains untouched');
+      eq(document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'true', 'completion closes editor');
+      has(document.getElementById('cwBatchDetail').textContent, 'สรุปพร้อมปิดแผน', 'closure summary after completion');
+      ok(document.querySelector('[data-cw-upload-kind="closure"]'), 'server awaiting-closure state enables closure PDF');
+    } finally { window.loadData = originalLoadData; window.allData = originalAllData; cleanup(); }
+  });
+
+  await ta('requires reasons for skip and reset and preserves reset evidence as history', async () => {
+    const cleanup = cwMountFixture();
+    const originalPrompt = window.prompt;
+    try {
+      const itemId = cwUuid(811);
+      const context = cwTask6Context({documents:[{
+        id:cwUuid(903),item_id:itemId,document_kind:'certificate',storage_path:cwUuid(801) + '/items/' + itemId + '/certificate/v0001.pdf',
+        version_number:1,is_current:true,original_filename:'certificate.pdf',file_size:1024,uploaded_by:'editor',uploaded_at:'2026-09-01T04:00:00Z'
+      }]});
+      const evidence = cwEvidenceClient(context, {rpc:async (name,payload,rows) => {
+        const row = rows.calibration_work_items[0];
+        if (name === 'cw_skip_item') {
+          Object.assign(row,{result_status:'skipped',skip_reason:payload.p_reason});
+          rows.calibration_work_batches[0].status = 'awaiting_closure_pdf';
+          return {data:row,error:null};
+        }
+        if (name === 'cw_reset_item_result') {
+          Object.assign(row,{result_status:'in_progress',cert_no:null,calibration_date:null,overdue_reason:null,skip_reason:null});
+          rows.calibration_work_documents.forEach(doc => { if (doc.item_id === row.id) doc.is_current = false; });
+          rows.calibration_work_batches[0].status = 'awaiting_calibration';
+          return {data:row,error:null};
+        }
+        return {data:null,error:{message:'unexpected RPC'}};
+      }});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      eq(await cwSkipItem(context.itemId,'  ',evidence.client), false, 'blank skip rejected');
+      eq(evidence.calls.length, 0, 'blank skip has no RPC');
+      eq(await cwSkipItem(context.itemId,' ส่งซ่อม <urgent> ',evidence.client), true, 'reasoned skip succeeds');
+      eq(JSON.stringify(evidence.calls[0]), JSON.stringify({name:'cw_skip_item',payload:{p_token:'token',p_item_id:context.itemId,p_reason:'ส่งซ่อม <urgent>'}}), 'exact skip payload');
+      has(document.getElementById('cwBatchDetail').textContent, 'ส่งซ่อม <urgent>', 'escaped skip reason appears in closure summary');
+      ok(!document.getElementById('cwBatchDetail').querySelector('urgent'), 'skip reason is not markup');
+      eq(await cwResetItemResult(context.itemId,' ',evidence.client), false, 'blank reset rejected');
+      eq(evidence.calls.length, 1, 'blank reset has no RPC');
+      let promptText = '';
+      window.prompt = message => { promptText = message; return null; };
+      eq(await cwRequestResetItem(context.itemId,evidence.client), false, 'cancel reset prompt');
+      has(promptText, 'ประวัติ', 'reset prompt warns evidence becomes history');
+      eq(await cwResetItemResult(context.itemId,'แก้ผลผิด',evidence.client), true, 'reasoned reset succeeds');
+      eq(JSON.stringify(evidence.calls[1]), JSON.stringify({name:'cw_reset_item_result',payload:{p_token:'token',p_item_id:context.itemId,p_reason:'แก้ผลผิด'}}), 'exact reset payload');
+      const resetBatch = cwDashboardModel && document.getElementById('cwBatchDetail');
+      has(resetBatch.textContent, 'กำลังสอบเทียบ', 'reset item returns in progress');
+      ok(!document.querySelector('#cwItemResultDialog .cw-document-current'), 'reset current evidence no longer shown');
+    } finally { window.prompt = originalPrompt; cleanup(); }
+  });
+
+  await ta('rejects stale item mutations and serializes double draft submits', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask6Context();
+      const started = cwDeferred();
+      const released = cwDeferred();
+      const evidence = cwEvidenceClient(context, {rpc:async (name,_payload,rows) => {
+        if (name !== 'cw_save_item_draft') return {data:null,error:{message:'unexpected RPC'}};
+        started.resolve();
+        await released.promise;
+        return {data:rows.calibration_work_items[0],error:null};
+      }});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      eq(await cwSkipItem(cwUuid(997),'reason',evidence.client), false, 'unknown skip rejected');
+      eq(evidence.calls.length, 0, 'unknown item reaches no RPC');
+      cwOpenItemResult(context.itemId);
+      const first = cwSaveItemDraft(evidence.client);
+      await started.promise;
+      eq(await cwSaveItemDraft(evidence.client), false, 'second draft rejected while busy');
+      eq(evidence.calls.length, 1, 'only one draft RPC starts');
+      released.resolve();
+      eq(await first, true, 'first draft completes');
+    } finally { cleanup(); }
+  });
+
+  t('renders closure summary but gates closure upload on exact server status', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const stale = cwTask6Context({status:'partially_completed',resultStatus:'completed',item:{cert_no:'CERT',calibration_date:'2026-09-03'}});
+      cwRenderDashboard(stale.model);
+      cwOpenBatch(stale.batchId);
+      has(document.getElementById('cwBatchDetail').textContent, 'รอสถานะปิดแผนจากเซิร์ฟเวอร์', 'stale resolved summary');
+      ok(!document.querySelector('[data-cw-upload-kind="closure"]'), 'derived readiness cannot enable closure upload');
+
+      const ready = cwTask6Context({status:'awaiting_closure_pdf',resultStatus:'skipped',item:{skip_reason:'ไม่พร้อมใช้งาน'}});
+      cwRenderDashboard(ready.model);
+      cwOpenBatch(ready.batchId);
+      has(document.getElementById('cwBatchDetail').textContent, 'สรุปพร้อมปิดแผน', 'server-ready closure summary');
+      has(document.getElementById('cwBatchDetail').textContent, 'ไม่พร้อมใช้งาน', 'skipped reason in closure summary');
+      ok(document.querySelector('[data-cw-upload-kind="closure"]'), 'exact server state enables closure upload');
+      ok(document.querySelector('[data-cw-reset-item]'), 'resolved item exposes explicit reset only');
+      ok(!document.querySelector('[data-cw-result-item]'), 'resolved item is read-only');
+
+      const inconsistent = cwTask6Context({status:'awaiting_closure_pdf',resultStatus:'in_progress'});
+      cwRenderDashboard(inconsistent.model);
+      cwOpenBatch(inconsistent.batchId);
+      ok(!document.querySelector('[data-cw-upload-kind="closure"]'), 'server status alone cannot bypass unresolved active items');
+    } finally { cleanup(); }
+  });
+
+  t('exposes reasoned reset for a result-bearing in-progress item', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const bearing = cwTask6Context({item:{cert_no:'DRAFT-CERT'}});
+      cwRenderDashboard(bearing.model);
+      cwOpenBatch(bearing.batchId);
+      ok(document.querySelector('[data-cw-result-item]'), 'result-bearing draft remains editable');
+      ok(document.querySelector('[data-cw-reset-item]'), 'result-bearing draft exposes reset allowed by SQL');
+
+      const empty = cwTask6Context();
+      cwRenderDashboard(empty.model);
+      cwOpenBatch(empty.batchId);
+      ok(!document.querySelector('[data-cw-reset-item]'), 'empty in-progress item rejects no-op reset');
     } finally { cleanup(); }
   });
 

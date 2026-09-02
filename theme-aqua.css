@@ -1917,6 +1917,21 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #app #pageCalwork .cw-item-table td:first-child span { overflow-wrap: anywhere; }
 #app #pageCalwork .cw-item-table tr.is-removed { opacity: .62; }
 #app #pageCalwork .cw-item-status { white-space: nowrap; color: var(--accent); font-weight: 700; }
+#app #pageCalwork .cw-item-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#app #pageCalwork .cw-item-actions button,
+#app #pageCalwork [data-cw-reset-item] {
+  min-height: 36px; padding: 7px 9px; border: 1px solid var(--accent); border-radius: 9px;
+  background: var(--accent); color: #fff; font: 700 10px var(--ff); cursor: pointer; white-space: nowrap;
+}
+#app #pageCalwork .cw-item-actions .cw-secondary,
+#app #pageCalwork [data-cw-reset-item] { border-color: var(--border); background: var(--surface); color: var(--accent); }
+#app #pageCalwork .cw-closure-summary ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+#app #pageCalwork .cw-closure-summary li {
+  min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 10px; border-radius: 9px; background: var(--surface2); font-size: 11px;
+}
+#app #pageCalwork .cw-closure-summary li b,
+#app #pageCalwork .cw-closure-summary li span { overflow-wrap: anywhere; }
 #app #pageCalwork .cw-current-docs article { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid var(--border); }
 #app #pageCalwork .cw-current-docs article b { color: var(--text); font-size: 11px; }
 #app #pageCalwork .cw-current-docs article span { overflow-wrap: anywhere; color: var(--text2); font-size: 10px; }
@@ -2071,6 +2086,58 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
 #app #cwDocumentDialog .cw-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 #app #cwDocumentDialog button:disabled { cursor: wait; opacity: .58; }
 
+#app #cwItemResultDialog .cw-item-result-dialog {
+  width: min(700px, calc(100vw - 32px)); max-width: 700px; max-height: min(90vh, 800px);
+  display: flex; flex-direction: column; overflow: hidden; padding: 0; border-radius: 18px;
+}
+#app #cwItemResultDialog .modal-header {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+}
+#app #cwItemResultDialog .modal-header h2 { margin: 0; color: var(--text); font-size: 19px; }
+#app #cwItemResultDialog .modal-header button {
+  width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 10px;
+  background: var(--surface2); color: var(--text2); font-size: 24px; cursor: pointer;
+}
+#app #cwItemResultDialog .cw-item-result-error {
+  flex: 0 0 auto; margin: 14px 20px 0; padding: 10px 12px; border: 1px solid rgba(185,28,28,.28);
+  border-radius: 10px; background: #fff7f7; color: #991b1b; font-size: 12px; overflow-wrap: anywhere;
+}
+#app #cwItemResultDialog .cw-item-result-body { min-width: 0; flex: 1 1 auto; display: grid; gap: 14px; overflow: auto; padding: 18px 20px; }
+#app #cwItemResultDialog .cw-item-result-footer {
+  flex: 0 0 auto; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px;
+  padding: 14px 20px 18px; border-top: 1px solid var(--border); background: var(--surface);
+}
+#app #cwItemResultDialog .cw-result-immutable {
+  min-width: 0; display: grid; gap: 3px; padding: 12px; border-radius: 11px; background: var(--surface2);
+}
+#app #cwItemResultDialog .cw-result-immutable b,
+#app #cwItemResultDialog .cw-result-immutable span { overflow-wrap: anywhere; }
+#app #cwItemResultDialog .cw-result-immutable b { color: var(--text); font-family: var(--ff-num); }
+#app #cwItemResultDialog .cw-result-immutable span { color: var(--text2); font-size: 11px; }
+#app #cwItemResultDialog .cw-result-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+#app #cwItemResultDialog .cw-field { min-width: 0; display: grid; gap: 6px; color: var(--text2); font-size: 11px; font-weight: 700; }
+#app #cwItemResultDialog .cw-field input,
+#app #cwItemResultDialog .cw-field textarea {
+  width: 100%; min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface); color: var(--text); font: 400 13px var(--ff); box-sizing: border-box;
+}
+#app #cwItemResultDialog .cw-field textarea { min-height: 76px; resize: vertical; }
+#app #cwItemResultDialog .cw-item-evidence { display: grid; gap: 5px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; }
+#app #cwItemResultDialog .cw-item-evidence > b { color: var(--text); font-size: 11px; }
+#app #cwItemResultDialog .cw-item-evidence > span { overflow-wrap: anywhere; color: var(--text2); font-size: 10px; }
+#app #cwItemResultDialog .cw-result-warning { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fffaf0; color: #92400e; font-size: 11px; }
+#app #cwItemResultDialog .cw-primary,
+#app #cwItemResultDialog .cw-secondary,
+#app #cwItemResultDialog .cw-doc-open,
+#app #cwItemResultDialog .cw-doc-upload {
+  min-height: 42px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--accent); font: 800 12px var(--ff); cursor: pointer;
+}
+#app #cwItemResultDialog .cw-primary,
+#app #cwItemResultDialog .cw-doc-upload { border-color: var(--accent); background: var(--accent); color: #fff; }
+#app #cwItemResultDialog button:disabled { cursor: wait; opacity: .58; }
+
 @media (max-width: 1100px) {
   #app #pageCalwork .cw-detail-grid { grid-template-columns: 1fr; }
   #app #pageCalwork .cw-detail-grid > aside { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -2104,6 +2171,16 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   #app #cwDocumentDialog .cw-field input,
   #app #cwDocumentDialog .cw-field textarea { min-height: 44px; }
   #app #cwDocumentDialog .modal-header button { min-width: 44px; }
+  #app #pageCalwork .cw-item-actions button,
+  #app #pageCalwork [data-cw-reset-item],
+  #app #cwItemResultDialog .cw-primary,
+  #app #cwItemResultDialog .cw-secondary,
+  #app #cwItemResultDialog .cw-doc-open,
+  #app #cwItemResultDialog .cw-doc-upload,
+  #app #cwItemResultDialog .modal-header button,
+  #app #cwItemResultDialog .cw-field input,
+  #app #cwItemResultDialog .cw-field textarea { min-height: 44px; }
+  #app #cwItemResultDialog .modal-header button { min-width: 44px; }
   #app #pageCalwork .cw-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
   #app #pageCalwork .cw-metric { padding: 13px; }
   #app #pageCalwork .cw-metric strong { font-size: 19px; }
@@ -2130,4 +2207,10 @@ button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
   #app #cwDocumentDialog .cw-document-body,
   #app #cwDocumentDialog .cw-document-footer { padding-inline: 13px; }
   #app #cwDocumentDialog .cw-document-error { margin-inline: 13px; }
+  #app #cwItemResultDialog .cw-item-result-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  #app #cwItemResultDialog .modal-header,
+  #app #cwItemResultDialog .cw-item-result-body,
+  #app #cwItemResultDialog .cw-item-result-footer { padding-inline: 13px; }
+  #app #cwItemResultDialog .cw-item-result-error { margin-inline: 13px; }
+  #app #cwItemResultDialog .cw-result-fields { grid-template-columns: 1fr; }
 }

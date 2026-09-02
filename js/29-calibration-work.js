@@ -49,6 +49,33 @@
     return stored;
   }
 
+  function cwItemRequirements(item, todayISO, documents) {
+    const source = item || {};
+    if (source.result_status === 'skipped') {
+      return { certificateRequired: false, overdueRequired: false, missing: [], displayOverdue: false };
+    }
+    const rows = Array.isArray(documents) ? documents
+      : Array.isArray(source.documents) ? source.documents : [];
+    const current = kind => rows.some(documentRow => documentRow
+      && documentRow.item_id === source.id && documentRow.document_kind === kind
+      && documentRow.is_current === true);
+    const calibrationDate = String(source.calibration_date || '');
+    const plannedDate = String(source.planned_date || '');
+    const overdueRequired = /^\d{4}-\d{2}-\d{2}$/.test(calibrationDate)
+      && /^\d{4}-\d{2}-\d{2}$/.test(plannedDate) && calibrationDate > plannedDate;
+    const missing = [];
+    if (!String(source.cert_no || '').trim()) missing.push('cert_no');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(calibrationDate)) missing.push('calibration_date');
+    if (!current('certificate')) missing.push('certificate');
+    if (overdueRequired && !String(source.overdue_reason || '').trim()) missing.push('overdue_reason');
+    if (overdueRequired && !current('overdue')) missing.push('overdue');
+    const today = todayISO || cwTodayISO();
+    const displayOverdue = source.result_status === 'in_progress' && source.is_active !== false
+      && /^\d{4}-\d{2}-\d{2}$/.test(plannedDate) && plannedDate < today
+      && (!/^\d{4}-\d{2}-\d{2}$/.test(calibrationDate) || calibrationDate > plannedDate);
+    return { certificateRequired: true, overdueRequired, missing, displayOverdue };
+  }
+
   function cwBatchDerivedStatus(batch, items, docs) {
     const stored = batch && batch.status;
     const preserved = new Set([
@@ -112,6 +139,11 @@
     busy: false, progress: '', returnFocus: null
   };
   const cwDocumentUploads = new Set();
+  const cwItemResultState = {
+    batchId: null, itemId: null, certNo: '', calibrationDate: '', overdueReason: '',
+    busy: false, returnFocus: null
+  };
+  const cwItemMutations = new Set();
 
   function cwEscapeHtml(value) {
     return String(value == null ? '' : value)
@@ -408,6 +440,41 @@
       || status || '–';
   }
 
+  function cwHasCurrentAcknowledgement(batch) {
+    return Boolean(batch && (batch.documents || []).some(documentRow => documentRow
+      && documentRow.item_id == null && documentRow.document_kind === 'acknowledgement'
+      && documentRow.is_current === true));
+  }
+
+  function cwItemResettable(batch, item) {
+    if (!batch || !item || item.is_active === false || ['completed', 'cancelled'].includes(batch.status)) return false;
+    if (item.result_status === 'completed' || item.result_status === 'skipped') return true;
+    return item.result_status === 'in_progress' && (item.cert_no != null || item.calibration_date != null
+      || item.overdue_reason != null || item.skip_reason != null
+      || (batch.documents || []).some(documentRow => documentRow && documentRow.item_id === item.id
+        && documentRow.is_current === true && ITEM_DOCUMENT_KINDS.has(documentRow.document_kind)));
+  }
+
+  function cwItemActionMarkup(batch, item) {
+    if (!cwCanManage() || !batch || !item || !UUID_PATTERN.test(batch.id || '')
+        || !UUID_PATTERN.test(item.id || '') || item.batch_id !== batch.id || item.is_active === false) return '';
+    const eligibleBatch = ['awaiting_calibration', 'partially_completed', 'awaiting_closure_pdf'].includes(batch.status)
+      && cwHasCurrentAcknowledgement(batch);
+    if (eligibleBatch && item.result_status === 'in_progress') {
+      return '<div class="cw-item-actions"><button type="button" data-cw-result-item="' + item.id
+        + '" onclick="cwOpenItemResult(this.dataset.cwResultItem)">บันทึกผล</button>'
+        + '<button type="button" class="cw-secondary" data-cw-skip-item="' + item.id
+        + '" onclick="cwRequestSkipItem(this.dataset.cwSkipItem)">ข้ามรายการ</button>'
+        + (cwItemResettable(batch, item) ? '<button type="button" class="cw-secondary" data-cw-reset-item="' + item.id
+          + '" onclick="cwRequestResetItem(this.dataset.cwResetItem)">ล้างผล</button>' : '') + '</div>';
+    }
+    if (cwItemResettable(batch, item)) {
+      return '<button type="button" class="cw-secondary" data-cw-reset-item="' + item.id
+        + '" onclick="cwRequestResetItem(this.dataset.cwResetItem)">ล้างผล</button>';
+    }
+    return '';
+  }
+
   function cwRenderItems(batch) {
     const rows = (batch.items || []).map(item => {
       const instrument = cwItemInstrument(item);
@@ -420,12 +487,32 @@
         + cwEscapeHtml(cwItemStatusLabel(item)) + '</span></td><td>'
         + cwEscapeHtml(item.cert_no || '–') + '</td><td>'
         + cwEscapeHtml(item.calibration_date || '–') + '</td><td>'
-        + cwEscapeHtml(notes || '–') + '</td></tr>';
+        + cwEscapeHtml(notes || '–') + '</td><td>' + cwItemActionMarkup(batch, item) + '</td></tr>';
     }).join('');
     return '<section class="cw-panel cw-detail-items"><div class="cw-panel-head"><h2>รายการเครื่องมือ</h2><span>'
       + (batch.items || []).length + ' รายการรวมประวัติ</span></div><div class="cw-table-wrap"><table class="cw-item-table">'
-      + '<thead><tr><th>เครื่องมือ</th><th>วันที่ตามแผน</th><th>สถานะ</th><th>Cert No.</th><th>วันที่สอบเทียบ</th><th>หมายเหตุ</th></tr></thead>'
-      + '<tbody>' + (rows || '<tr><td colspan="6">ไม่มีรายการเครื่องมือ</td></tr>') + '</tbody></table></div></section>';
+      + '<thead><tr><th>เครื่องมือ</th><th>วันที่ตามแผน</th><th>สถานะ</th><th>Cert No.</th><th>วันที่สอบเทียบ</th><th>หมายเหตุ</th><th>การทำงาน</th></tr></thead>'
+      + '<tbody>' + (rows || '<tr><td colspan="7">ไม่มีรายการเครื่องมือ</td></tr>') + '</tbody></table></div></section>';
+  }
+
+  function cwRenderClosureSummary(batch) {
+    const active = cwActiveItems(batch);
+    const resolved = active.filter(item => item.result_status === 'completed' || item.result_status === 'skipped');
+    if (!resolved.length) return '';
+    const allResolved = active.length > 0 && resolved.length === active.length;
+    const serverReady = allResolved && batch.status === 'awaiting_closure_pdf';
+    const rows = resolved.map(item => {
+      const instrument = cwItemInstrument(item);
+      const label = instrument.id_code || item.instrument_id || item.id;
+      const result = item.result_status === 'skipped'
+        ? 'ไม่ได้ดำเนินการ' + (item.skip_reason ? ' · ' + item.skip_reason : '')
+        : 'สอบเทียบแล้ว' + (item.cert_no ? ' · ' + item.cert_no : '');
+      return '<li><b>' + cwEscapeHtml(label) + '</b><span>' + cwEscapeHtml(result) + '</span></li>';
+    }).join('');
+    const heading = serverReady ? 'สรุปพร้อมปิดแผน'
+      : allResolved ? 'รอสถานะปิดแผนจากเซิร์ฟเวอร์' : 'สรุปผลที่ดำเนินการแล้ว';
+    return '<section class="cw-panel cw-closure-summary"><div class="cw-panel-head"><h2>'
+      + heading + '</h2><span>' + resolved.length + ' / ' + active.length + '</span></div><ul>' + rows + '</ul></section>';
   }
 
   function cwDocumentKindLabel(kind) {
@@ -464,7 +551,9 @@
       return itemId == null && !['draft', 'completed', 'cancelled'].includes(status);
     }
     if (kind === 'closure') {
-      return itemId == null && status === 'awaiting_closure_pdf';
+      const active = cwActiveItems(batch);
+      return itemId == null && batch.status === 'awaiting_closure_pdf' && active.length > 0
+        && active.every(item => item.result_status === 'completed' || item.result_status === 'skipped');
     }
     if (!ITEM_DOCUMENT_KINDS.has(kind) || !UUID_PATTERN.test(itemId || '')
         || ['draft', 'awaiting_acknowledgement_pdf', 'completed', 'cancelled'].includes(status)
@@ -581,7 +670,7 @@
       + '</span>' + cwBatchActionMarkup(batch) + '</aside></header>'
       + '<section class="cw-detail-progress"><div><span>ความคืบหน้า</span><b>' + progress.completed + ' / ' + progress.total + '</b></div>'
       + '<span class="cw-progress" aria-label="ความคืบหน้า ' + progress.percent + '%"><span style="width:' + progress.percent + '%"></span></span></section>'
-      + '<div class="cw-detail-grid"><div>' + cwRenderItems(batch) + cwRenderAudit(batch) + '</div><aside>'
+      + '<div class="cw-detail-grid"><div>' + cwRenderItems(batch) + cwRenderClosureSummary(batch) + cwRenderAudit(batch) + '</div><aside>'
       + cwRenderCurrentDocuments(batch) + cwRenderDocumentHistory(batch) + '</aside></div>';
     if (tabs) tabs.hidden = true;
     if (metrics) metrics.hidden = true;
@@ -1187,6 +1276,334 @@
     return (cwUiState.model.batches || []).find(batch => batch && batch.id === batchId) || null;
   }
 
+  function cwFindItemRecord(itemId) {
+    if (!UUID_PATTERN.test(itemId || '')) return null;
+    for (const batch of cwUiState.model.batches || []) {
+      const item = (batch.items || []).find(candidate => candidate && candidate.id === itemId);
+      if (item && item.batch_id === batch.id) return { batch, item };
+    }
+    return null;
+  }
+
+  function cwItemMutationTarget(itemId, mode) {
+    if (!cwCanManage()) return null;
+    const actor = cwActor();
+    if (!actor || !String(actor.token || '').trim()) return null;
+    const known = cwFindItemRecord(itemId);
+    if (!known || known.item.is_active === false) return null;
+    if (mode === 'reset') return cwItemResettable(known.batch, known.item) ? known : null;
+    if (!['awaiting_calibration', 'partially_completed', 'awaiting_closure_pdf'].includes(known.batch.status)
+        || !cwHasCurrentAcknowledgement(known.batch) || known.item.result_status !== 'in_progress') return null;
+    return known;
+  }
+
+  function cwCurrentItemDocument(batch, itemId, kind) {
+    return (batch && batch.documents || []).find(documentRow => documentRow
+      && documentRow.item_id === itemId && documentRow.document_kind === kind
+      && documentRow.is_current === true) || null;
+  }
+
+  function cwShowItemResultError(message) {
+    const root = document.getElementById('cwItemResultError');
+    if (!root) return;
+    root.textContent = message || '';
+    root.hidden = !message;
+  }
+
+  function cwItemEvidenceMarkup(batch, item, kind, label) {
+    const current = cwCurrentItemDocument(batch, item.id, kind);
+    const open = current ? cwDocumentButton(current, batch) : '';
+    const upload = cwDocumentUploadAllowed(batch, item.id, kind, current)
+      ? '<button type="button" class="cw-doc-upload" data-batch-id="' + batch.id
+        + '" data-item-id="' + item.id + '" data-cw-upload-kind="' + kind
+        + '" onclick="cwOpenDocumentUpload(this.dataset.batchId,this.dataset.itemId,this.dataset.cwUploadKind)">'
+        + (current ? 'แทนที่ PDF' : 'แนบ PDF') + '</button>' : '';
+    return '<section class="cw-item-evidence"><b>' + label + '</b><span>'
+      + (current ? cwEscapeHtml(current.original_filename || current.storage_path || 'มีเอกสาร') : 'ยังไม่มีเอกสาร')
+      + '</span><div class="cw-doc-actions">' + open + upload + '</div></section>';
+  }
+
+  function cwRenderItemResultDialog() {
+    const body = document.getElementById('cwItemResultBody');
+    const footer = document.getElementById('cwItemResultFooter');
+    const known = cwFindItemRecord(cwItemResultState.itemId);
+    if (!body || !footer || !known) return;
+    const { batch, item } = known;
+    const instrument = cwItemInstrument(item);
+    const candidate = {
+      ...item,
+      cert_no: cwItemResultState.certNo,
+      calibration_date: cwItemResultState.calibrationDate || null,
+      overdue_reason: cwItemResultState.overdueReason
+    };
+    const requirements = cwItemRequirements(candidate, cwTodayISO(), batch.documents || []);
+    const lateSection = requirements.overdueRequired
+      ? '<label class="cw-field"><span>เหตุผลเกินแผน</span><textarea id="cwItemOverdueReason" rows="3"'
+        + ' oninput="cwSetItemResultField(\'overdueReason\',this.value)"' + (cwItemResultState.busy ? ' disabled' : '') + '>'
+        + cwEscapeHtml(cwItemResultState.overdueReason) + '</textarea></label>'
+        + cwItemEvidenceMarkup(batch, item, 'overdue', 'หลักฐานเกินแผน PDF')
+      : requirements.displayOverdue
+        ? '<p class="cw-result-warning">เลยวันที่ตามแผนแล้ว กรุณาระบุวันที่สอบเทียบจริง</p>' : '';
+    body.innerHTML = '<div class="cw-result-immutable"><b>'
+      + cwEscapeHtml(instrument.id_code || item.instrument_id || item.id) + '</b><span>'
+      + cwEscapeHtml(instrument.instrument_name || 'ไม่ระบุชื่อเครื่องมือ') + '</span><span>วันที่ตามแผน '
+      + cwEscapeHtml(item.planned_date || '–') + '</span></div>'
+      + '<div class="cw-result-fields"><label class="cw-field"><span>Cert No.</span><input id="cwItemCertNo" type="text" maxlength="200" value="'
+      + cwEscapeHtml(cwItemResultState.certNo) + '" oninput="cwSetItemResultField(\'certNo\',this.value)"'
+      + (cwItemResultState.busy ? ' disabled' : '') + '></label>'
+      + '<label class="cw-field"><span>วันที่สอบเทียบ</span><input id="cwItemCalibrationDate" type="date" value="'
+      + cwEscapeHtml(cwItemResultState.calibrationDate) + '" onchange="cwSetItemResultField(\'calibrationDate\',this.value)"'
+      + (cwItemResultState.busy ? ' disabled' : '') + '></label></div>'
+      + cwItemEvidenceMarkup(batch, item, 'certificate', 'Certificate PDF') + lateSection;
+    footer.innerHTML = '<button type="button" id="cwItemResultCancel" class="cw-secondary" onclick="cwCloseItemResult()"'
+      + (cwItemResultState.busy ? ' disabled' : '') + '>ปิด</button>'
+      + '<button type="button" class="cw-secondary" id="cwItemResultSave" onclick="cwSaveItemDraft()" aria-disabled="'
+      + cwItemResultState.busy + '">บันทึกร่าง</button>'
+      + '<button type="button" class="cw-primary" id="cwItemResultComplete" onclick="cwCompleteItem()" aria-disabled="'
+      + cwItemResultState.busy + '">ยืนยันผล</button>';
+  }
+
+  function cwSetItemResultBusy(busy) {
+    cwItemResultState.busy = Boolean(busy);
+    const dialog = document.getElementById('cwItemResultDialog');
+    if (dialog) dialog.setAttribute('aria-busy', String(Boolean(busy)));
+    ['cwItemResultClose','cwItemResultCancel','cwItemResultSave','cwItemResultComplete',
+      'cwItemCertNo','cwItemCalibrationDate','cwItemOverdueReason'].forEach(id => {
+      const control = document.getElementById(id);
+      if (control) control.disabled = Boolean(busy);
+    });
+  }
+
+  function cwOpenItemResult(itemId) {
+    const known = cwItemMutationTarget(itemId, 'edit');
+    const dialog = document.getElementById('cwItemResultDialog');
+    if (!known || !dialog) return false;
+    cwItemResultState.batchId = known.batch.id;
+    cwItemResultState.itemId = known.item.id;
+    cwItemResultState.certNo = known.item.cert_no || '';
+    cwItemResultState.calibrationDate = known.item.calibration_date || '';
+    cwItemResultState.overdueReason = known.item.overdue_reason || '';
+    cwItemResultState.busy = false;
+    cwItemResultState.returnFocus = document.activeElement;
+    cwShowItemResultError('');
+    cwRenderItemResultDialog();
+    dialog.classList.add('open');
+    dialog.setAttribute('aria-hidden', 'false');
+    dialog.onkeydown = cwHandleItemResultKey;
+    dialog.onclick = event => { if (event.target === dialog && !cwItemResultState.busy) cwCloseItemResult(); };
+    const first = document.getElementById('cwItemCertNo');
+    if (first) first.focus();
+    return true;
+  }
+
+  function cwCloseItemResult() {
+    if (cwItemResultState.busy) return false;
+    const dialog = document.getElementById('cwItemResultDialog');
+    if (dialog) {
+      dialog.classList.remove('open');
+      dialog.setAttribute('aria-hidden', 'true');
+    }
+    const returnFocus = cwItemResultState.returnFocus;
+    if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
+    else {
+      const fallback = document.querySelector('[data-cw-result-item="' + cwItemResultState.itemId + '"]')
+        || document.querySelector('#cwBatchDetail .cw-detail-head');
+      if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    }
+    return true;
+  }
+
+  function cwHandleItemResultKey(event) {
+    if (!event) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cwCloseItemResult();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const dialog = document.getElementById('cwItemResultDialog');
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll('button,input,textarea')]
+      .filter(element => !element.disabled && !element.hidden);
+    if (!focusable.length) return;
+    if (!event.shiftKey && document.activeElement === focusable[focusable.length - 1]) {
+      event.preventDefault();
+      focusable[0].focus();
+    } else if (event.shiftKey && document.activeElement === focusable[0]) {
+      event.preventDefault();
+      focusable[focusable.length - 1].focus();
+    }
+  }
+
+  function cwSetItemResultField(field, value) {
+    if (cwItemResultState.busy || !['certNo','calibrationDate','overdueReason'].includes(field)) return false;
+    cwItemResultState[field] = String(value == null ? '' : value);
+    if (field === 'calibrationDate') {
+      cwRenderItemResultDialog();
+      const input = document.getElementById('cwItemCalibrationDate');
+      if (input) input.focus();
+    }
+    return true;
+  }
+
+  function cwItemDraftPayload(itemId) {
+    const date = cwItemResultState.calibrationDate;
+    if (date && !cwValidISODate(date)) throw new Error('วันที่สอบเทียบไม่ถูกต้อง');
+    return {
+      p_token: cwActor() && cwActor().token,
+      p_item_id: itemId,
+      p_cert_no: cwItemResultState.certNo.trim() || null,
+      p_calibration_date: date || null,
+      p_overdue_reason: cwItemResultState.overdueReason.trim() || null
+    };
+  }
+
+  async function cwRefreshItemResult(source, batchId, itemId, reopen) {
+    if (!await loadCalibrationWorkPage(source)) throw new Error('บันทึกแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+    if (!cwFindBatch(batchId)) throw new Error('ไม่พบชุดงานหลังรีเฟรช');
+    await cwOpenBatch(batchId);
+    if (reopen) {
+      const known = cwFindItemRecord(itemId);
+      if (!known || known.item.result_status !== 'in_progress') throw new Error('สถานะรายการเปลี่ยนไป กรุณาตรวจสอบใหม่');
+      cwItemResultState.certNo = known.item.cert_no || '';
+      cwItemResultState.calibrationDate = known.item.calibration_date || '';
+      cwItemResultState.overdueReason = known.item.overdue_reason || '';
+      cwRenderItemResultDialog();
+    }
+  }
+
+  async function cwSaveItemDraft(client) {
+    const known = cwItemMutationTarget(cwItemResultState.itemId, 'edit');
+    const key = cwItemResultState.itemId;
+    if (!known || cwItemResultState.busy || cwItemMutations.has(key)) return false;
+    const source = cwResolveClient(client);
+    cwItemMutations.add(key);
+    cwSetItemResultBusy(true);
+    cwShowItemResultError('');
+    try {
+      await cwRpc(source, 'cw_save_item_draft', cwItemDraftPayload(known.item.id));
+      await cwRefreshItemResult(source, known.batch.id, known.item.id, true);
+      cwSetItemResultBusy(false);
+      cwRenderItemResultDialog();
+      cwToast('บันทึกร่างผลสอบเทียบแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwSetItemResultBusy(false);
+      cwShowItemResultError(error && error.message || 'บันทึกร่างไม่สำเร็จ');
+      return false;
+    } finally {
+      cwItemMutations.delete(key);
+    }
+  }
+
+  function cwRequirementMessage(missing) {
+    const labels = {
+      cert_no: 'Cert No.', calibration_date: 'วันที่สอบเทียบ', certificate: 'Certificate PDF ปัจจุบัน',
+      overdue_reason: 'เหตุผลเกินแผน', overdue: 'หลักฐานเกินแผน PDF ปัจจุบัน'
+    };
+    return 'ข้อมูลยังไม่ครบ: ' + missing.map(key => labels[key] || key).join(', ');
+  }
+
+  async function cwCompleteItem(client) {
+    const known = cwItemMutationTarget(cwItemResultState.itemId, 'edit');
+    const key = cwItemResultState.itemId;
+    if (!known || cwItemResultState.busy || cwItemMutations.has(key)) return false;
+    let draftPayload;
+    try { draftPayload = cwItemDraftPayload(known.item.id); }
+    catch (error) { cwShowItemResultError(error.message); return false; }
+    const candidate = {
+      ...known.item, cert_no: draftPayload.p_cert_no,
+      calibration_date: draftPayload.p_calibration_date, overdue_reason: draftPayload.p_overdue_reason
+    };
+    const requirements = cwItemRequirements(candidate, cwTodayISO(), known.batch.documents || []);
+    if (requirements.missing.length) {
+      cwShowItemResultError(cwRequirementMessage(requirements.missing));
+      return false;
+    }
+    const source = cwResolveClient(client);
+    cwItemMutations.add(key);
+    cwSetItemResultBusy(true);
+    cwShowItemResultError('');
+    try {
+      await cwRpc(source, 'cw_save_item_draft', draftPayload);
+      await cwRpc(source, 'cw_complete_item', { p_token: cwActor() && cwActor().token, p_item_id: known.item.id });
+      if (typeof global.loadData === 'function') await global.loadData(true);
+      if (!await loadCalibrationWorkPage(source)) throw new Error('ยืนยันผลแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      await cwOpenBatch(known.batch.id);
+      cwSetItemResultBusy(false);
+      cwCloseItemResult();
+      cwToast('ยืนยันผลสอบเทียบแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwSetItemResultBusy(false);
+      cwShowItemResultError(error && error.message || 'ยืนยันผลไม่สำเร็จ');
+      return false;
+    } finally {
+      cwItemMutations.delete(key);
+    }
+  }
+
+  async function cwSkipItem(itemId, reason, client) {
+    const cleanReason = String(reason == null ? '' : reason).trim();
+    const known = cwItemMutationTarget(itemId, 'edit');
+    if (!known || !cleanReason || cwItemMutations.has(itemId)) return false;
+    const source = cwResolveClient(client);
+    cwItemMutations.add(itemId);
+    try {
+      await cwRpc(source, 'cw_skip_item', {
+        p_token: cwActor() && cwActor().token, p_item_id: itemId, p_reason: cleanReason
+      });
+      if (!await loadCalibrationWorkPage(source)) throw new Error('ข้ามรายการแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      await cwOpenBatch(known.batch.id);
+      if (cwItemResultState.itemId === itemId) {
+        cwItemResultState.busy = false;
+        cwCloseItemResult();
+      }
+      cwToast('บันทึกรายการที่ไม่ได้ดำเนินการแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwShowActionError(error && error.message || 'ข้ามรายการไม่สำเร็จ');
+      return false;
+    } finally {
+      cwItemMutations.delete(itemId);
+    }
+  }
+
+  async function cwRequestSkipItem(itemId, client) {
+    const reason = typeof global.prompt === 'function' ? global.prompt('ระบุเหตุผลที่ไม่ได้ดำเนินการ') : null;
+    if (reason == null) return false;
+    return cwSkipItem(itemId, reason, client);
+  }
+
+  async function cwResetItemResult(itemId, reason, client) {
+    const cleanReason = String(reason == null ? '' : reason).trim();
+    const known = cwItemMutationTarget(itemId, 'reset');
+    if (!known || !cleanReason || cwItemMutations.has(itemId)) return false;
+    const source = cwResolveClient(client);
+    cwItemMutations.add(itemId);
+    try {
+      await cwRpc(source, 'cw_reset_item_result', {
+        p_token: cwActor() && cwActor().token, p_item_id: itemId, p_reason: cleanReason
+      });
+      if (!await loadCalibrationWorkPage(source)) throw new Error('ล้างผลแล้ว แต่รีเฟรชข้อมูลไม่สำเร็จ');
+      await cwOpenBatch(known.batch.id);
+      cwToast('ล้างผลและเก็บเอกสารเดิมเป็นประวัติแล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwShowActionError(error && error.message || 'ล้างผลไม่สำเร็จ');
+      return false;
+    } finally {
+      cwItemMutations.delete(itemId);
+    }
+  }
+
+  async function cwRequestResetItem(itemId, client) {
+    const message = 'ระบุเหตุผลการล้างผล เอกสาร Certificate/เกินแผนปัจจุบันจะเปลี่ยนเป็นประวัติ';
+    const reason = typeof global.prompt === 'function' ? global.prompt(message) : null;
+    if (reason == null) return false;
+    return cwResetItemResult(itemId, reason, client);
+  }
+
   function cwDocumentTarget(options, requireFile) {
     const input = options || {};
     if (!cwCanManage()) throw new Error('คุณไม่มีสิทธิ์แนบเอกสาร');
@@ -1250,6 +1667,11 @@
       ? document.activeElement : null;
     const refreshed = await loadCalibrationWorkPage(source);
     if (refreshed && cwFindBatch(batchId)) await cwOpenBatch(batchId);
+    const resultDialog = document.getElementById('cwItemResultDialog');
+    if (refreshed && resultDialog && resultDialog.classList.contains('open')
+        && cwItemResultState.batchId === batchId && cwFindItemRecord(cwItemResultState.itemId)) {
+      cwRenderItemResultDialog();
+    }
     if (dialogFocus && dialogFocus.isConnected && typeof dialogFocus.focus === 'function') dialogFocus.focus();
     return refreshed;
   }
@@ -1581,6 +2003,7 @@
   global.CW_STATUS = CW_STATUS;
   global.cwTodayISO = cwTodayISO;
   global.cwItemDisplayStatus = cwItemDisplayStatus;
+  global.cwItemRequirements = cwItemRequirements;
   global.cwBatchDerivedStatus = cwBatchDerivedStatus;
   global.cwValidatePdf = cwValidatePdf;
   global.cwDocumentPath = cwDocumentPath;
@@ -1608,6 +2031,15 @@
   global.cwConfirmBatch = cwConfirmBatch;
   global.cwCancelBatch = cwCancelBatch;
   global.cwRequestCancel = cwRequestCancel;
+  global.cwOpenItemResult = cwOpenItemResult;
+  global.cwCloseItemResult = cwCloseItemResult;
+  global.cwSetItemResultField = cwSetItemResultField;
+  global.cwSaveItemDraft = cwSaveItemDraft;
+  global.cwCompleteItem = cwCompleteItem;
+  global.cwSkipItem = cwSkipItem;
+  global.cwRequestSkipItem = cwRequestSkipItem;
+  global.cwResetItemResult = cwResetItemResult;
+  global.cwRequestResetItem = cwRequestResetItem;
   global.cwRenderDocumentVersions = cwRenderDocumentVersions;
   global.cwUploadDocument = cwUploadDocument;
   global.cwOpenDocument = cwOpenDocument;

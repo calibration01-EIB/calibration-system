@@ -2696,7 +2696,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260901-cw5">
+<link rel="stylesheet" href="theme-aqua.css?v=20260901-cw6">
 </head>
 <body>
 
@@ -2906,6 +2906,18 @@ body.app-mode textarea:focus {
           <div id="cwDocumentError" class="cw-document-error" role="alert" hidden></div>
           <div id="cwDocumentBody" class="cw-document-body"></div>
           <div id="cwDocumentFooter" class="cw-document-footer"></div>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="cwItemResultDialog" aria-hidden="true">
+        <div class="modal-box cw-item-result-dialog" role="dialog" aria-modal="true" aria-labelledby="cwItemResultDialogTitle" tabindex="-1">
+          <div class="modal-header">
+            <h2 id="cwItemResultDialogTitle">บันทึกผลสอบเทียบ</h2>
+            <button type="button" id="cwItemResultClose" onclick="cwCloseItemResult()" aria-label="ปิดหน้าต่าง">×</button>
+          </div>
+          <div id="cwItemResultError" class="cw-item-result-error" role="alert" hidden></div>
+          <div id="cwItemResultBody" class="cw-item-result-body"></div>
+          <div id="cwItemResultFooter" class="cw-item-result-footer"></div>
         </div>
       </div>
 
@@ -4822,7 +4834,7 @@ body.app-mode textarea:focus {
 <script src="js/26-list-ui.js?v=20260831-spec-cards"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260819-kpi"></script>
-<script src="js/29-calibration-work.js?v=20260901-cw5"></script>
+<script src="js/29-calibration-work.js?v=20260901-cw6"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
