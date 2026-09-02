@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v153';
+const CACHE_NAME = 'calibration-app-v154';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js';
 const APP_SHELL = [
   './',
@@ -6,7 +6,7 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './theme-aqua.css?v=20260901-cw4',
+  './theme-aqua.css?v=20260901-cw5',
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
@@ -39,7 +39,7 @@ const APP_SHELL = [
   './js/26-list-ui.js',
   './js/27-asset-out-page.js',
   './js/28-kpi.js',
-  './js/29-calibration-work.js?v=20260901-cw4',
+  './js/29-calibration-work.js?v=20260901-cw5',
   './js/12-standard-certs.js',
   './js/15-plan-export.js',
   './js/16-repairs.js',

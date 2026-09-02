@@ -5,8 +5,16 @@
 <script src="../js/29-calibration-work.js"></script>
 <script>
 const results = [];
-function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
-async function ta(name, fn) { try { await fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
+function t(name, fn) {
+  try { fn(); results.push('PASS ' + name); }
+  catch (e) { results.push('FAIL ' + name + ' — ' + e.message); }
+}
+async function ta(name, fn) {
+  document.getElementById('out').textContent = 'FAIL INCOMPLETE — ' + name + '\n' + results.join('\n');
+  try { await fn(); results.push('PASS ' + name); }
+  catch (e) { results.push('FAIL ' + name + ' — ' + e.message); }
+  document.getElementById('out').textContent = 'FAIL INCOMPLETE — remaining assertions\n' + results.join('\n');
+}
 function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
 function eq(actual, expected, message) { ok(actual === expected, (message || 'values differ') + ': expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual)); }
 function throws(fn, message) { let failed = false; try { fn(); } catch (_) { failed = true; } ok(failed, message || 'expected function to throw'); }
@@ -151,15 +159,15 @@ function text(url) {
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw4"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260901-cw5"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260901-cw4"', 'current calibration stylesheet query version');
+    has(indexSource, 'href="theme-aqua.css?v=20260901-cw5"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v153';", 'cache v153');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v154';", 'cache v154');
     [
-      'theme-aqua.css?v=20260901-cw4',
+      'theme-aqua.css?v=20260901-cw5',
       'js/10-router.js?v=20260901-cw3',
-      'js/29-calibration-work.js?v=20260901-cw4'
+      'js/29-calibration-work.js?v=20260901-cw5'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -172,7 +180,10 @@ function text(url) {
     fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
-      + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>';
+      + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
+      + '<div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true"><div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1">'
+      + '<div class="modal-header"><h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2><button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()">×</button></div>'
+      + '<div id="cwDocumentError" role="alert" hidden></div><div id="cwDocumentBody"></div><div id="cwDocumentFooter"></div></div></div>';
     document.body.appendChild(fixture);
     return () => fixture.remove();
   }
@@ -847,6 +858,389 @@ function text(url) {
       dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}));
       eq(dialog.getAttribute('aria-hidden'), 'true', 'Escape closes dialog');
       eq(document.activeElement, trigger, 'focus returns to trigger');
+    } finally { cleanup(); }
+  });
+
+  async function cwRejected(promise) {
+    try { await promise; return ''; } catch (error) { return error && error.message || String(error); }
+  }
+
+  function cwPdf(name, contents, type) {
+    return new File([contents == null ? 'abc' : contents], name || 'evidence.pdf', {type:type || 'application/pdf'});
+  }
+
+  function cwTask5Context(status, documents, resultStatus) {
+    const batchId = cwUuid(801);
+    const itemId = cwUuid(811);
+    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:'2026-09-03',
+      result_status:resultStatus || 'in_progress',is_active:true,instruments:cwTask4Instruments()[0]};
+    const docs = (documents || []).map(documentRow => ({batch_id:batchId,...documentRow}));
+    const batch = {id:batchId,batch_no:'PLAN-801',title:'Evidence <batch>',unit_code:'WRM1',
+      instrument_type:'เครื่องชั่ง (Electronic Balance)',status,updated_at:'2026-09-01T05:00:00Z',
+      items:[item],documents:docs,audit:[]};
+    const locks = [{instrument_id:11,batch_id:batchId,item_id:itemId,locked_at:'2026-09-01T05:00:00Z'}];
+    const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, [item], docs, locks);
+    return {batchId,itemId,item,batch,locks,rows,model:{batches:[batch],locks}};
+  }
+
+  function cwEvidenceClient(context, options) {
+    const config = options || {};
+    const requests = [];
+    const calls = [];
+    const uploads = [];
+    const signed = [];
+    let removes = 0;
+    const client = cwPagedClient(context.rows, requests);
+    if (!config.realHash) client.cwTestSha256 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+    client.storage = { from(bucket) {
+      return {
+        async upload(path, file, uploadOptions) {
+          uploads.push({bucket,path,file,options:uploadOptions});
+          if (config.upload) return config.upload(path, file, uploadOptions);
+          return {data:{path},error:null};
+        },
+        async createSignedUrl(path, expiresIn) {
+          signed.push({bucket,path,expiresIn});
+          if (config.sign) return config.sign(path, expiresIn, signed.length);
+          return {data:{signedUrl:'https://example.test/signed-' + signed.length},error:null};
+        },
+        async remove() { removes += 1; return {data:[],error:null}; }
+      };
+    }};
+    client.rpc = async (name, payload) => {
+      calls.push({name,payload});
+      if (config.rpc) return config.rpc(name, payload, context.rows, calls);
+      if (name === 'cw_request_orphan_cleanup') return {data:{id:cwUuid(899),status:'pending',storage_path:payload.p_storage_path},error:null};
+      if (name !== 'cw_register_document') return {data:null,error:{message:'unexpected RPC ' + name}};
+      context.rows.calibration_work_documents.forEach(documentRow => {
+        if (documentRow.item_id === payload.p_item_id && documentRow.document_kind === payload.p_document_kind) {
+          documentRow.is_current = false;
+        }
+      });
+      const match = /\/v(\d{4})\.pdf$/.exec(payload.p_storage_path);
+      const documentRow = {
+        id:cwUuid(860 + calls.length),batch_id:payload.p_batch_id,item_id:payload.p_item_id,
+        document_kind:payload.p_document_kind,storage_path:payload.p_storage_path,
+        version_number:Number(match && match[1]),is_current:true,original_filename:payload.p_original_filename,
+        mime_type:payload.p_mime_type,file_size:payload.p_file_size,sha256:payload.p_sha256,
+        uploaded_by:'editor-user',uploaded_at:'2026-09-01T06:00:00Z',replacement_reason:payload.p_replacement_reason
+      };
+      context.rows.calibration_work_documents.push(documentRow);
+      const batchRow = context.rows.calibration_work_batches[0];
+      if (payload.p_document_kind === 'acknowledgement' && batchRow.status === 'awaiting_acknowledgement_pdf') {
+        batchRow.status = 'awaiting_calibration';
+      }
+      if (payload.p_document_kind === 'closure' && batchRow.status === 'awaiting_closure_pdf') {
+        batchRow.status = 'completed';
+        context.rows.calibration_work_instrument_locks = [];
+      }
+      batchRow.updated_at = '2026-09-01T06:00:00Z';
+      return {data:documentRow,error:null};
+    };
+    return {client,requests,calls,uploads,signed,get removes(){return removes;}};
+  }
+
+  t('adds the accessible Task 5 PDF dialog and scoped mobile controls', () => {
+    ['id="cwDocumentDialog"','role="dialog"','aria-modal="true"','id="cwDocumentBody"',
+      'id="cwDocumentError"','id="cwDocumentFooter"'].forEach(token => has(indexSource, token, token));
+    has(cssSource, '#app #cwDocumentDialog .cw-', 'scoped evidence dialog styles');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwDocumentDialog[\s\S]*?min-height:\s*44px/.test(cssSource),
+      'evidence dialog mobile targets');
+  });
+
+  await ta('rejects invalid role file scope and state before any network call', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask5Context('awaiting_acknowledgement_pdf');
+      const evidence = cwEvidenceClient(context);
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      let message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf('bad.txt','x','text/plain'),replacementReason:null}, evidence.client));
+      has(message, 'PDF', 'invalid file error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'invalid file has zero network calls');
+
+      message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:context.itemId,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, evidence.client));
+      has(message, 'ขอบเขต', 'scope error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'invalid scope has zero network calls');
+
+      context.batch.status = 'draft';
+      context.rows.calibration_work_batches[0].status = 'draft';
+      message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, evidence.client));
+      has(message, 'สถานะ', 'state error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'invalid state has zero network calls');
+
+      context.batch.status = 'awaiting_acknowledgement_pdf';
+      context.rows.calibration_work_batches[0].status = 'awaiting_acknowledgement_pdf';
+      cwSetTask4Actor('editor');
+      window.currentUser.token = '  ';
+      message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, evidence.client));
+      has(message, 'เซสชัน', 'missing session token error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'missing token has zero network calls');
+
+      cwSetTask4Actor('viewer');
+      message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, evidence.client));
+      has(message, 'สิทธิ์', 'role error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'viewer has zero network calls');
+    } finally { cleanup(); }
+  });
+
+  await ta('hashes uploads and registers the exact next version while preserving history', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const batchId = cwUuid(801);
+      const documents = [
+        {id:cwUuid(821),item_id:null,document_kind:'acknowledgement',storage_path:batchId + '/batch/acknowledgement/v0001.pdf',version_number:1,is_current:false,original_filename:'old-<one>.pdf',file_size:1024,uploaded_by:'owner',uploaded_at:'2026-09-01T03:00:00Z'},
+        {id:cwUuid(822),item_id:null,document_kind:'acknowledgement',storage_path:batchId + '/batch/acknowledgement/v0002.pdf',version_number:2,is_current:true,original_filename:'current.pdf',file_size:2048,uploaded_by:'editor',uploaded_at:'2026-09-01T04:00:00Z'}
+      ];
+      const context = cwTask5Context('awaiting_calibration', documents);
+      const evidence = cwEvidenceClient(context, {realHash:true});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      const result = await cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf('replacement.pdf','abc'),replacementReason:'แก้ไฟล์ <ล่าสุด>'}, evidence.client);
+      eq(evidence.uploads.length, 1, 'one immutable upload');
+      eq(evidence.uploads[0].bucket, 'calibration-work-batches', 'exact bucket');
+      eq(evidence.uploads[0].path, context.batchId + '/batch/acknowledgement/v0003.pdf', 'next history version path');
+      eq(evidence.uploads[0].options.upsert, false, 'overwrite forbidden');
+      const registration = evidence.calls.find(call => call.name === 'cw_register_document');
+      ok(registration, 'registration RPC');
+      eq(JSON.stringify(registration.payload), JSON.stringify({
+        p_token:'token',p_batch_id:context.batchId,p_item_id:null,p_document_kind:'acknowledgement',
+        p_storage_path:context.batchId + '/batch/acknowledgement/v0003.pdf',p_original_filename:'replacement.pdf',
+        p_mime_type:'application/pdf',p_file_size:3,
+        p_sha256:'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+        p_replacement_reason:'แก้ไฟล์ <ล่าสุด>'
+      }), 'exact hardened registration payload');
+      eq(result.version_number, 3, 'registered result');
+      eq(context.rows.calibration_work_documents.length, 3, 'history is preserved');
+      eq(context.rows.calibration_work_documents.filter(documentRow => documentRow.is_current).length, 1, 'one current version');
+      const markup = cwRenderDocumentVersions(context.rows.calibration_work_documents, context.batch);
+      ['old-<one>.pdf','current.pdf','replacement.pdf','1 KB','2 KB','แก้ไฟล์ <ล่าสุด>'].forEach(value => has(document.createRange().createContextualFragment(markup).textContent, value, 'version history'));
+      ok(!document.createRange().createContextualFragment(markup).querySelector('one'), 'hostile filename is escaped');
+    } finally { cleanup(); }
+  });
+
+  await ta('requires a replacement reason before document reads or uploads', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask5Context('awaiting_calibration', [{id:cwUuid(823),item_id:null,document_kind:'acknowledgement',
+        storage_path:cwUuid(801) + '/batch/acknowledgement/v0001.pdf',version_number:1,is_current:true,original_filename:'current.pdf'}]);
+      const evidence = cwEvidenceClient(context);
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      const message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:'  '}, evidence.client));
+      has(message, 'เหตุผล', 'replacement reason error');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, 0, 'missing reason stops before network');
+    } finally { cleanup(); }
+  });
+
+  await ta('requests durable orphan cleanup after registration failure without direct Storage removal', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const context = cwTask5Context('awaiting_acknowledgement_pdf');
+      const evidence = cwEvidenceClient(context, {rpc:async (name, payload) => name === 'cw_register_document'
+        ? {data:null,error:{message:'stale storage version'}}
+        : {data:{id:cwUuid(824),status:'pending',storage_path:payload.p_storage_path},error:null}});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(context.model);
+      const message = await cwRejected(cwUploadDocument({batchId:context.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, evidence.client));
+      has(message, 'รอล้าง', 'truthful pending-cleanup message');
+      eq(evidence.removes, 0, 'browser never directly removes Storage objects');
+      eq(evidence.calls.map(call => call.name).join(','), 'cw_register_document,cw_request_orphan_cleanup', 'registration then cleanup claim');
+      const cleanupCall = evidence.calls[1];
+      eq(cleanupCall.payload.p_token, 'token', 'cleanup token');
+      eq(cleanupCall.payload.p_bucket_id, 'calibration-work-batches', 'cleanup bucket');
+      eq(cleanupCall.payload.p_storage_path, context.batchId + '/batch/acknowledgement/v0001.pdf', 'cleanup exact path');
+      ok(cleanupCall.payload.p_reason.trim().length > 0, 'cleanup reason');
+
+      const failedContext = cwTask5Context('awaiting_acknowledgement_pdf');
+      const failedEvidence = cwEvidenceClient(failedContext, {rpc:async name => ({data:null,error:{message:name === 'cw_register_document' ? 'register failed' : 'cleanup request failed'}})});
+      cwRenderDashboard(failedContext.model);
+      const failedMessage = await cwRejected(cwUploadDocument({batchId:failedContext.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, failedEvidence.client));
+      has(failedMessage, 'cleanup request failed', 'cleanup-request failure is truthful');
+      eq(failedEvidence.removes, 0, 'cleanup failure still never directly removes');
+
+      const staleContext = cwTask5Context('awaiting_acknowledgement_pdf');
+      const staleEvidence = cwEvidenceClient(staleContext, {rpc:async (name, payload, rows) => {
+        if (name === 'cw_register_document') {
+          rows.calibration_work_batches[0].status = 'cancelled';
+          rows.calibration_work_batches[0].updated_at = '2026-09-01T07:00:00Z';
+          return {data:null,error:{message:'uploaded evidence predates the current batch version'}};
+        }
+        return {data:{id:cwUuid(827),status:'pending',storage_path:payload.p_storage_path},error:null};
+      }});
+      cwRenderDashboard(staleContext.model);
+      await cwOpenBatch(staleContext.batchId);
+      const staleMessage = await cwRejected(cwUploadDocument({batchId:staleContext.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, staleEvidence.client));
+      has(staleMessage, 'รีเฟรช', 'registration race reports full refresh before retry');
+      ['calibration_work_batches:','calibration_work_items:','calibration_work_instrument_locks:',
+        'calibration_work_documents:','calibration_work_audit:'].forEach(table =>
+        ok(staleEvidence.requests.some(request => request.startsWith(table)), 'registration failure reloads ' + table));
+      has(document.getElementById('cwBatchDetail').textContent, 'ยกเลิกชุดงาน', 'registration race reopens authoritative cancelled batch');
+    } finally { cleanup(); }
+  });
+
+  await ta('refreshes history on collision and prevents double-submit for one evidence scope', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      const collisionContext = cwTask5Context('awaiting_acknowledgement_pdf');
+      const collision = cwEvidenceClient(collisionContext, {upload:async () => ({data:null,error:{message:'The resource already exists',statusCode:'409'}})});
+      cwSetTask4Actor('editor');
+      cwRenderDashboard(collisionContext.model);
+      let message = await cwRejected(cwUploadDocument({batchId:collisionContext.batchId,itemId:null,kind:'acknowledgement',
+        file:cwPdf(),replacementReason:null}, collision.client));
+      has(message, 'รีเฟรช', 'collision requires retry after refresh');
+      ok(collision.requests.filter(value => value.startsWith('calibration_work_documents:')).length >= 2,
+        'authoritative documents read before upload and refreshed after collision');
+      eq(collision.calls.length, 0, 'collision never registers or cleans a failed upload');
+
+      const pendingContext = cwTask5Context('awaiting_acknowledgement_pdf');
+      const started = cwDeferred();
+      const release = cwDeferred();
+      const pending = cwEvidenceClient(pendingContext, {upload:async path => {
+        started.resolve();
+        await release.promise;
+        return {data:{path},error:null};
+      }});
+      cwRenderDashboard(pendingContext.model);
+      const first = cwUploadDocument({batchId:pendingContext.batchId,itemId:null,kind:'acknowledgement',file:cwPdf(),replacementReason:null}, pending.client);
+      await started.promise;
+      message = await cwRejected(cwUploadDocument({batchId:pendingContext.batchId,itemId:null,kind:'acknowledgement',file:cwPdf(),replacementReason:null}, pending.client));
+      has(message, 'กำลัง', 'double-submit rejected');
+      eq(pending.uploads.length, 1, 'only one upload begins');
+      release.resolve();
+      await first;
+    } finally { cleanup(); }
+  });
+
+  await ta('opens each known owned document through a fresh short-lived signed URL', async () => {
+    const cleanup = cwMountFixture();
+    const originalOpen = window.open;
+    try {
+      const documentId = cwUuid(825);
+      const context = cwTask5Context('awaiting_calibration', [{id:documentId,item_id:null,document_kind:'acknowledgement',
+        storage_path:cwUuid(801) + '/batch/acknowledgement/v0001.pdf',version_number:1,is_current:true,original_filename:'current.pdf'}]);
+      const opened = [];
+      const evidence = cwEvidenceClient(context, {sign:async (_path, _expiresIn, count) => {
+        eq(opened.length, count, 'safe placeholder opens synchronously before signing');
+        return {data:{signedUrl:'https://example.test/signed-' + count},error:null};
+      }});
+      window.open = (...args) => {
+        const record = {args,navigated:[],closed:false};
+        opened.push(record);
+        return {
+          opener:'unsafe',
+          location:{replace(url) { record.navigated.push(url); }},
+          close() { record.closed = true; }
+        };
+      };
+      cwSetTask4Actor('viewer');
+      cwRenderDashboard(context.model);
+      await cwOpenDocument(documentId, evidence.client);
+      await cwOpenDocument(documentId, evidence.client);
+      eq(evidence.signed.length, 2, 'signed URL requested every time');
+      ok(evidence.signed.every(call => call.bucket === 'calibration-work-batches' && call.expiresIn > 0 && call.expiresIn <= 300),
+        'short-lived exact-bucket signing');
+      eq(opened.length, 2, 'each fresh URL opens');
+      ok(opened.every(call => call.args[0] === '' && call.args[1] === '_blank' && /noopener/.test(call.args[2])),
+        'safe synchronous placeholder features');
+      eq(opened[0].navigated[0], 'https://example.test/signed-1', 'first placeholder receives fresh URL');
+      eq(opened[1].navigated[0], 'https://example.test/signed-2', 'second placeholder receives fresh URL');
+      let message = await cwRejected(cwOpenDocument(cwUuid(826), evidence.client));
+      has(message, 'ไม่พบ', 'unknown document rejection');
+      context.batch.documents[0].storage_path = context.batchId + '/batch/closure/v0001.pdf';
+      message = await cwRejected(cwOpenDocument(documentId, evidence.client));
+      has(message, 'path', 'mismatched path rejection');
+      eq(evidence.signed.length, 2, 'unknown/stale rows never request signed URLs');
+      eq(opened.length, 2, 'unknown/stale rows never open placeholders');
+
+      context.batch.documents[0].storage_path = context.batchId + '/batch/acknowledgement/v0001.pdf';
+      const failed = cwEvidenceClient(context, {sign:async () => ({data:null,error:{message:'sign failed'}})});
+      message = await cwRejected(cwOpenDocument(documentId, failed.client));
+      has(message, 'sign failed', 'signing failure remains visible');
+      eq(opened.length, 3, 'signing attempt opens one placeholder');
+      eq(opened[2].closed, true, 'signing failure closes unused placeholder');
+    } finally { window.open = originalOpen; cleanup(); }
+  });
+
+  await ta('gates acknowledgement and closure upload actions and keeps the PDF dialog keyboard safe', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const acknowledgement = cwTask5Context('awaiting_acknowledgement_pdf');
+      cwRenderDashboard(acknowledgement.model);
+      await cwOpenBatch(acknowledgement.batchId);
+      const trigger = document.querySelector('[data-cw-upload-kind="acknowledgement"]');
+      ok(trigger, 'acknowledgement action appears after confirmation');
+      trigger.focus();
+      ok(cwOpenDocumentUpload(acknowledgement.batchId, null, 'acknowledgement'), 'dialog opens for allowed state');
+      has(document.getElementById('cwDocumentBody').textContent, 'PDF', 'PDF guidance');
+      has(document.getElementById('cwDocumentBody').textContent, '50 MB', 'size guidance');
+      const dialog = document.getElementById('cwDocumentDialog');
+      const focusable = [...dialog.querySelectorAll('button,input,textarea')].filter(element => !element.disabled && !element.hidden);
+      focusable[focusable.length - 1].focus();
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Tab',bubbles:true}));
+      eq(document.activeElement, focusable[0], 'document dialog traps focus');
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}));
+      eq(dialog.getAttribute('aria-hidden'), 'true', 'Escape closes evidence dialog');
+      eq(document.activeElement, trigger, 'evidence dialog restores trigger focus');
+
+      cwSetTask4Actor('owner');
+      cwRenderDashboard(acknowledgement.model);
+      await cwOpenBatch(acknowledgement.batchId);
+      ok(!document.querySelector('[data-cw-upload-kind]'), 'Owner has no upload actions');
+      eq(cwOpenDocumentUpload(acknowledgement.batchId, null, 'acknowledgement'), false, 'Owner cannot open upload dialog');
+
+      cwSetTask4Actor('editor');
+      const uploadStarted = cwDeferred();
+      const uploadRelease = cwDeferred();
+      const acknowledgementEvidence = cwEvidenceClient(acknowledgement, {upload:async path => {
+        uploadStarted.resolve();
+        await uploadRelease.promise;
+        return {data:{path},error:null};
+      }});
+      cwRenderDashboard(acknowledgement.model);
+      await cwOpenBatch(acknowledgement.batchId);
+      const refreshedTrigger = document.querySelector('[data-cw-upload-kind="acknowledgement"]');
+      refreshedTrigger.focus();
+      ok(cwOpenDocumentUpload(acknowledgement.batchId, null, 'acknowledgement'), 'acknowledgement upload dialog reopens');
+      cwSetDocumentFile(cwPdf('acknowledgement.pdf'));
+      const submit = document.querySelector('#cwDocumentFooter .cw-primary');
+      submit.focus();
+      const submitted = cwSubmitDocumentUpload(acknowledgementEvidence.client);
+      await uploadStarted.promise;
+      eq(document.activeElement, submit, 'busy upload retains focus on stable submit control');
+      eq(submit.getAttribute('aria-disabled'), 'true', 'busy submit is exposed as unavailable without replacement');
+      uploadRelease.resolve();
+      eq(await submitted, true, 'acknowledgement dialog submit succeeds');
+      eq(document.getElementById('cwDocumentDialog').getAttribute('aria-hidden'), 'true', 'successful upload closes dialog');
+      const replacementTrigger = document.querySelector('[data-cw-upload-kind="acknowledgement"]');
+      ok(replacementTrigger && replacementTrigger.isConnected, 'refreshed acknowledgement action exists');
+      eq(document.activeElement, replacementTrigger, 'successful refresh restores focus to corresponding action');
+
+      const closure = cwTask5Context('awaiting_closure_pdf', [], 'completed');
+      const evidence = cwEvidenceClient(closure);
+      cwRenderDashboard(closure.model);
+      const registered = await cwUploadDocument({batchId:closure.batchId,itemId:null,kind:'closure',file:cwPdf('closure.pdf'),replacementReason:null}, evidence.client);
+      eq(registered.document_kind, 'closure', 'closure registered');
+      eq(cwDashboardModel && document.getElementById('cwBatchDetail').textContent.includes('สอบเทียบสำเร็จ'), true, 'initial closure atomically refreshes completed state');
+      eq(closure.rows.calibration_work_instrument_locks.length, 0, 'closure completion releases locks');
+      ok(!document.querySelector('[data-cw-upload-kind="closure"]'), 'completed batch has no closure upload action');
+      const networkBefore = evidence.requests.length + evidence.uploads.length + evidence.calls.length;
+      const completedMessage = await cwRejected(cwUploadDocument({batchId:closure.batchId,itemId:null,kind:'closure',
+        file:cwPdf('replacement.pdf'),replacementReason:'replace'}, evidence.client));
+      has(completedMessage, 'สถานะ', 'direct completed closure upload is rejected');
+      eq(evidence.requests.length + evidence.uploads.length + evidence.calls.length, networkBefore,
+        'completed closure rejection occurs before network');
     } finally { cleanup(); }
   });
 

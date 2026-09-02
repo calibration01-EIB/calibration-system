@@ -5,6 +5,8 @@
   'use strict';
 
   const PDF_MAX_BYTES = 52428800;
+  const CW_DOCUMENT_BUCKET = 'calibration-work-batches';
+  const CW_SIGNED_URL_SECONDS = 60;
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   const BATCH_DOCUMENT_KINDS = new Set(['acknowledgement', 'closure']);
   const ITEM_DOCUMENT_KINDS = new Set(['certificate', 'overdue']);
@@ -105,6 +107,11 @@
     selected: new Map(), batchId: null, expectedUpdatedAt: null, hadAcknowledgement: false,
     currentAcknowledgement: false, submitting: false, returnFocus: null
   };
+  const cwDocumentState = {
+    batchId: null, itemId: null, kind: null, file: null, replacementReason: '',
+    busy: false, progress: '', returnFocus: null
+  };
+  const cwDocumentUploads = new Set();
 
   function cwEscapeHtml(value) {
     return String(value == null ? '' : value)
@@ -426,22 +433,79 @@
       || kind || 'เอกสาร';
   }
 
+  function cwFormatFileSize(value) {
+    const bytes = Number(value);
+    if (!Number.isFinite(bytes) || bytes <= 0) return '–';
+    if (bytes < 1024) return Math.round(bytes) + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(bytes % 1024 ? 1 : 0) + ' KB';
+    return (bytes / 1048576).toFixed(bytes % 1048576 ? 1 : 0) + ' MB';
+  }
+
+  function cwDocumentOwnedPath(documentRow, batch) {
+    if (!documentRow || !batch || !UUID_PATTERN.test(documentRow.id || '')
+        || documentRow.batch_id !== batch.id) return null;
+    try {
+      const expected = cwDocumentPath(
+        documentRow.batch_id,
+        documentRow.item_id == null ? null : documentRow.item_id,
+        documentRow.document_kind,
+        Number(documentRow.version_number)
+      );
+      return documentRow.storage_path === expected ? expected : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function cwDocumentUploadAllowed(batch, itemId, kind, currentDocument) {
+    if (!batch || !UUID_PATTERN.test(batch.id || '')) return false;
+    const status = cwBatchStatus(batch);
+    if (kind === 'acknowledgement') {
+      return itemId == null && !['draft', 'completed', 'cancelled'].includes(status);
+    }
+    if (kind === 'closure') {
+      return itemId == null && status === 'awaiting_closure_pdf';
+    }
+    if (!ITEM_DOCUMENT_KINDS.has(kind) || !UUID_PATTERN.test(itemId || '')
+        || ['draft', 'awaiting_acknowledgement_pdf', 'completed', 'cancelled'].includes(status)
+        || !cwCurrentDocument(batch, 'acknowledgement')) return false;
+    return cwActiveItems(batch).some(item => item.id === itemId);
+  }
+
+  function cwDocumentButton(documentRow, batch) {
+    if (!cwDocumentOwnedPath(documentRow, batch)) return '';
+    return '<button type="button" class="cw-doc-open" data-document-id="' + documentRow.id
+      + '" onclick="cwOpenDocument(this.dataset.documentId)">เปิดเอกสาร</button>';
+  }
+
+  function cwUploadButton(batch, kind, currentDocument) {
+    if (!cwCanManage() || !cwDocumentUploadAllowed(batch, null, kind, currentDocument)) return '';
+    return '<button type="button" class="cw-doc-upload" data-batch-id="' + batch.id
+      + '" data-cw-upload-kind="' + kind
+      + '" onclick="cwOpenDocumentUpload(this.dataset.batchId,null,this.dataset.cwUploadKind)">'
+      + (currentDocument ? 'แทนที่ PDF' : 'แนบ PDF') + '</button>';
+  }
+
   function cwRenderCurrentDocuments(batch) {
     const ack = cwCurrentDocument(batch, 'acknowledgement');
     const closure = cwCurrentDocument(batch, 'closure');
-    const row = (label, documentRow, missing) => '<article><b>' + label + '</b><span>'
+    const row = (label, kind, documentRow, missing) => '<article><b>' + label + '</b><span>'
       + (documentRow ? cwEscapeHtml(documentRow.original_filename || documentRow.storage_path || 'มีเอกสาร') : missing)
-      + '</span></article>';
+      + '</span><div class="cw-doc-actions">' + (documentRow ? cwDocumentButton(documentRow, batch) : '')
+      + cwUploadButton(batch, kind, documentRow) + '</div></article>';
     return '<section class="cw-panel cw-current-docs"><div class="cw-panel-head"><h2>เอกสารระดับชุดงาน</h2></div>'
-      + row('PDF รับทราบแผน', ack, 'ยังไม่มี PDF รับทราบแผน')
-      + row('PDF ปิดแผน', closure, 'ยังไม่มี PDF ปิดแผน') + '</section>';
+      + row('PDF รับทราบแผน', 'acknowledgement', ack, 'ยังไม่มี PDF รับทราบแผน')
+      + row('PDF ปิดแผน', 'closure', closure, 'ยังไม่มี PDF ปิดแผน') + '</section>';
   }
 
-  function cwRenderDocumentHistory(batch) {
-    const documents = [...(batch.documents || [])].sort((a, b) => Number(b.version_number || 0) - Number(a.version_number || 0));
-    const rows = documents.map(documentRow => {
+  function cwRenderDocumentVersions(documents, batch) {
+    const rowsByVersion = [...(documents || [])].sort((a, b) =>
+      String(b.uploaded_at || '').localeCompare(String(a.uploaded_at || ''))
+      || Number(b.version_number || 0) - Number(a.version_number || 0)
+      || String(a.id || '').localeCompare(String(b.id || '')));
+    return rowsByVersion.map(documentRow => {
       const item = documentRow.item_id == null ? null
-        : (batch.items || []).find(candidate => candidate.id === documentRow.item_id);
+        : (batch && batch.items || []).find(candidate => candidate.id === documentRow.item_id);
       const instrument = cwItemInstrument(item);
       const scope = item
         ? (instrument.id_code || item.instrument_id || documentRow.item_id) + ' · ' + (instrument.instrument_name || 'ไม่ระบุชื่อเครื่องมือ')
@@ -452,8 +516,14 @@
         + cwEscapeHtml(scope) + '</span></div><small>'
         + (documentRow.is_current ? 'ฉบับใช้งาน' : 'ประวัติ') + ' · โดย ' + cwEscapeHtml(documentRow.uploaded_by || '–')
         + ' · อัปโหลด ' + cwEscapeHtml(cwFormatBangkokDateTime(documentRow.uploaded_at))
-        + (documentRow.replacement_reason ? ' · ' + cwEscapeHtml(documentRow.replacement_reason) : '') + '</small></li>';
+        + ' · ' + cwEscapeHtml(cwFormatFileSize(documentRow.file_size))
+        + (documentRow.replacement_reason ? ' · ' + cwEscapeHtml(documentRow.replacement_reason) : '')
+        + '</small>' + (batch ? cwDocumentButton(documentRow, batch) : '') + '</li>';
     }).join('');
+  }
+
+  function cwRenderDocumentHistory(batch) {
+    const rows = cwRenderDocumentVersions(batch.documents || [], batch);
     return '<section class="cw-panel cw-doc-history"><div class="cw-panel-head"><h2>เวอร์ชันเอกสารทั้งหมด</h2></div><ul>'
       + (rows || '<li>ยังไม่มีเอกสาร</li>') + '</ul></section>';
   }
@@ -1112,6 +1182,382 @@
     return cwCancelBatch(batchId, reason);
   }
 
+  function cwFindBatch(batchId) {
+    return (cwUiState.model.batches || []).find(batch => batch && batch.id === batchId) || null;
+  }
+
+  function cwDocumentTarget(options, requireFile) {
+    const input = options || {};
+    if (!cwCanManage()) throw new Error('คุณไม่มีสิทธิ์แนบเอกสาร');
+    const actor = cwActor();
+    if (!actor || !String(actor.token || '').trim()) throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+    if (!UUID_PATTERN.test(input.batchId || '')) throw new Error('ไม่พบชุดงาน');
+    const batch = cwFindBatch(input.batchId);
+    if (!batch) throw new Error('ไม่พบชุดงาน');
+    const itemId = input.itemId == null ? null : input.itemId;
+    if (!BATCH_DOCUMENT_KINDS.has(input.kind) && !ITEM_DOCUMENT_KINDS.has(input.kind)) {
+      throw new Error('ชนิดเอกสารไม่ถูกต้อง');
+    }
+    if ((BATCH_DOCUMENT_KINDS.has(input.kind) && itemId != null)
+        || (ITEM_DOCUMENT_KINDS.has(input.kind) && !UUID_PATTERN.test(itemId || ''))) {
+      throw new Error('ขอบเขตเอกสารไม่ถูกต้อง');
+    }
+    const currentDocument = (batch.documents || []).find(documentRow =>
+      documentRow && documentRow.item_id === itemId && documentRow.document_kind === input.kind
+      && documentRow.is_current === true) || null;
+    if (!cwDocumentUploadAllowed(batch, itemId, input.kind, currentDocument)) {
+      throw new Error('สถานะชุดงานไม่อนุญาตให้แนบเอกสารชนิดนี้');
+    }
+    const reason = String(input.replacementReason == null ? '' : input.replacementReason).trim();
+    if (currentDocument && !reason) throw new Error('กรุณาระบุเหตุผลการแทนที่เอกสารปัจจุบัน');
+    if (requireFile) {
+      const fileError = cwValidatePdf(input.file);
+      if (fileError) throw new Error(fileError);
+      if (typeof input.file.arrayBuffer !== 'function') throw new Error('ไม่สามารถอ่านไฟล์ PDF ได้');
+    }
+    return { batch, itemId, currentDocument, reason };
+  }
+
+  async function cwRefreshAuthoritativeDocuments(source, batchId) {
+    if (!source || typeof source.from !== 'function') throw new Error('ยังไม่พร้อมอ่านประวัติเอกสาร');
+    const allDocuments = await cwReadTable(source, 'calibration_work_documents', '*', 'uploaded_at', false);
+    const documents = allDocuments.filter(documentRow => documentRow && documentRow.batch_id === batchId);
+    const batch = cwFindBatch(batchId);
+    if (batch) batch.documents = documents;
+    return documents;
+  }
+
+  async function cwSha256(file) {
+    if (!global.crypto || !global.crypto.subtle) throw new Error('เบราว์เซอร์ไม่รองรับ SHA-256');
+    const digest = await global.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  function cwEvidenceProgress(options, message) {
+    if (options && typeof options.onProgress === 'function') options.onProgress(message);
+  }
+
+  function cwCollisionError(error) {
+    const message = String(error && error.message || '').toLowerCase();
+    const code = String(error && (error.statusCode || error.status) || '');
+    return code === '409' || /already exists|duplicate|conflict|collision/.test(message);
+  }
+
+  async function cwRefreshEvidenceBatch(source, batchId) {
+    const dialog = document.getElementById('cwDocumentDialog');
+    const dialogFocus = dialog && dialog.classList.contains('open') && dialog.contains(document.activeElement)
+      ? document.activeElement : null;
+    const refreshed = await loadCalibrationWorkPage(source);
+    if (refreshed && cwFindBatch(batchId)) await cwOpenBatch(batchId);
+    if (dialogFocus && dialogFocus.isConnected && typeof dialogFocus.focus === 'function') dialogFocus.focus();
+    return refreshed;
+  }
+
+  async function cwUploadDocument(options, client) {
+    const target = cwDocumentTarget(options, true);
+    const actor = cwActor();
+    const source = cwResolveClient(client);
+    const scopeKey = options.batchId + '|' + (target.itemId || 'batch') + '|' + options.kind;
+    if (cwDocumentUploads.has(scopeKey)) throw new Error('เอกสารขอบเขตนี้กำลังอัปโหลด');
+    if (!source || !source.storage || typeof source.storage.from !== 'function') {
+      throw new Error('ยังไม่พร้อมเชื่อมต่อ Storage');
+    }
+    cwDocumentUploads.add(scopeKey);
+    try {
+      cwEvidenceProgress(options, 'กำลังอ่านประวัติเอกสาร...');
+      const documents = await cwRefreshAuthoritativeDocuments(source, options.batchId);
+      const scoped = documents.filter(documentRow => documentRow
+        && documentRow.item_id === target.itemId && documentRow.document_kind === options.kind);
+      const current = scoped.find(documentRow => documentRow.is_current === true) || null;
+      if (current && !target.reason) throw new Error('กรุณาระบุเหตุผลการแทนที่เอกสารปัจจุบัน');
+      const nextVersion = scoped.reduce((max, documentRow) =>
+        Math.max(max, Number(documentRow.version_number) || 0), 0) + 1;
+      const storagePath = cwDocumentPath(options.batchId, target.itemId, options.kind, nextVersion);
+      cwEvidenceProgress(options, 'กำลังคำนวณ SHA-256...');
+      const testDigest = global.CW_TEST_MODE && /^[0-9a-f]{64}$/.test(source.cwTestSha256 || '')
+        ? source.cwTestSha256 : null;
+      const sha256 = testDigest || await cwSha256(options.file);
+      const storage = source.storage.from(CW_DOCUMENT_BUCKET);
+      cwEvidenceProgress(options, 'กำลังอัปโหลด PDF...');
+      const upload = await storage.upload(storagePath, options.file, {
+        upsert: false, contentType: 'application/pdf'
+      });
+      if (upload && upload.error) {
+        if (cwCollisionError(upload.error)) {
+          const refreshed = await cwRefreshEvidenceBatch(source, options.batchId);
+          throw new Error('พบไฟล์เวอร์ชันชนกัน '
+            + (refreshed ? 'รีเฟรชสถานะล่าสุดแล้ว กรุณาตรวจสอบก่อนลองใหม่'
+              : 'และรีเฟรชสถานะไม่สำเร็จ'));
+        }
+        throw new Error(upload.error.message || 'อัปโหลด PDF ไม่สำเร็จ');
+      }
+
+      const registrationPayload = {
+        p_token: actor && actor.token,
+        p_batch_id: options.batchId,
+        p_item_id: target.itemId,
+        p_document_kind: options.kind,
+        p_storage_path: storagePath,
+        p_original_filename: String(options.file.name || ''),
+        p_mime_type: 'application/pdf',
+        p_file_size: options.file.size,
+        p_sha256: sha256,
+        p_replacement_reason: target.reason || null
+      };
+      let registered;
+      try {
+        cwEvidenceProgress(options, 'กำลังลงทะเบียนหลักฐาน...');
+        registered = await cwRpc(source, 'cw_register_document', registrationPayload);
+        if (!registered) throw new Error('ฐานข้อมูลไม่ได้ส่งรายการเอกสารกลับมา');
+      } catch (registrationError) {
+        let cleanupClaim = null;
+        let cleanupError = null;
+        try {
+          cleanupClaim = await cwRpc(source, 'cw_request_orphan_cleanup', {
+            p_token: actor && actor.token,
+            p_bucket_id: CW_DOCUMENT_BUCKET,
+            p_storage_path: storagePath,
+            p_reason: 'document registration failed: ' + String(registrationError.message || 'unknown').slice(0, 300)
+          });
+        } catch (error) {
+          cleanupError = error;
+        }
+        const refreshed = await cwRefreshEvidenceBatch(source, options.batchId);
+        const refreshMessage = refreshed
+          ? ' รีเฟรชสถานะล่าสุดแล้ว กรุณาตรวจสอบก่อนลองใหม่'
+          : ' แต่รีเฟรชสถานะล่าสุดไม่สำเร็จ';
+        if (cleanupClaim) {
+          const pending = new Error('ลงทะเบียนไม่สำเร็จ ส่งคำขอรอล้างไฟล์แล้ว' + refreshMessage);
+          pending.cleanupPending = true;
+          pending.cleanupClaim = cleanupClaim;
+          pending.storagePath = storagePath;
+          throw pending;
+        }
+        throw new Error('ไม่สามารถยืนยันการลงทะเบียน และส่งคำขอล้างไฟล์ไม่สำเร็จ: '
+          + (cleanupError && cleanupError.message || registrationError.message || 'ไม่ทราบสาเหตุ') + refreshMessage);
+      }
+
+      cwEvidenceProgress(options, 'ลงทะเบียนแล้ว กำลังรีเฟรช...');
+      if (!await cwRefreshEvidenceBatch(source, options.batchId)) {
+        throw new Error('ลงทะเบียนเอกสารแล้ว แต่รีเฟรชสถานะไม่สำเร็จ');
+      }
+      return registered;
+    } finally {
+      cwDocumentUploads.delete(scopeKey);
+    }
+  }
+
+  function cwKnownDocument(documentId) {
+    if (!UUID_PATTERN.test(documentId || '')) return null;
+    for (const batch of cwUiState.model.batches || []) {
+      const documentRow = (batch.documents || []).find(candidate => candidate && candidate.id === documentId);
+      if (documentRow) return { batch, documentRow };
+    }
+    return null;
+  }
+
+  async function cwOpenDocument(documentId, client) {
+    const known = cwKnownDocument(documentId);
+    if (!known) throw new Error('ไม่พบเอกสาร');
+    const path = cwDocumentOwnedPath(known.documentRow, known.batch);
+    if (!path) throw new Error('document path ไม่ตรงกับชุดงาน');
+    const source = cwResolveClient(client);
+    if (!source || !source.storage || typeof source.storage.from !== 'function') {
+      throw new Error('ยังไม่พร้อมเชื่อมต่อ Storage');
+    }
+    const opened = typeof global.open === 'function' ? global.open('', '_blank', 'noopener,noreferrer') : null;
+    if (!opened) throw new Error('เบราว์เซอร์บล็อกหน้าต่างเอกสาร');
+    opened.opener = null;
+    try {
+      const response = await source.storage.from(CW_DOCUMENT_BUCKET).createSignedUrl(path, CW_SIGNED_URL_SECONDS);
+      if (response && response.error) throw new Error(response.error.message || 'สร้างลิงก์เอกสารไม่สำเร็จ');
+      const signedUrl = response && response.data && response.data.signedUrl;
+      let parsed;
+      try { parsed = new URL(signedUrl); } catch (_) { throw new Error('ลิงก์เอกสารไม่ถูกต้อง'); }
+      if (parsed.protocol !== 'https:') throw new Error('ลิงก์เอกสารไม่ปลอดภัย');
+      if (opened.location && typeof opened.location.replace === 'function') opened.location.replace(parsed.href);
+      else opened.location = parsed.href;
+    } catch (error) {
+      if (typeof opened.close === 'function') opened.close();
+      throw error;
+    }
+  }
+
+  function cwShowDocumentError(message) {
+    const root = document.getElementById('cwDocumentError');
+    if (!root) return;
+    root.textContent = message || '';
+    root.hidden = !message;
+  }
+
+  function cwRenderDocumentDialog() {
+    const body = document.getElementById('cwDocumentBody');
+    const footer = document.getElementById('cwDocumentFooter');
+    const title = document.getElementById('cwDocumentDialogTitle');
+    const batch = cwFindBatch(cwDocumentState.batchId);
+    const current = batch && (batch.documents || []).find(documentRow => documentRow
+      && documentRow.item_id === cwDocumentState.itemId
+      && documentRow.document_kind === cwDocumentState.kind && documentRow.is_current === true);
+    if (title) title.textContent = (current ? 'แทนที่' : 'แนบ') + ' ' + cwDocumentKindLabel(cwDocumentState.kind);
+    if (body) {
+      body.innerHTML = '<p class="cw-document-guidance">รองรับเฉพาะ PDF ขนาดไม่เกิน 50 MB · ไฟล์ใหม่จะเป็นเวอร์ชันถัดไปและไม่เขียนทับ</p>'
+        + (current ? '<div class="cw-document-current">ฉบับปัจจุบัน: <b>'
+          + cwEscapeHtml(current.original_filename || current.storage_path || '–') + '</b></div>' : '')
+        + '<label class="cw-field"><span>ไฟล์ PDF</span><input id="cwDocumentFile" type="file" accept="application/pdf,.pdf"'
+        + ' onchange="cwSetDocumentFile(this.files&&this.files[0])"' + (cwDocumentState.busy ? ' disabled' : '') + '></label>'
+        + (current ? '<label class="cw-field"><span>เหตุผลการแทนที่</span><textarea id="cwDocumentReason" rows="3"'
+          + ' oninput="cwSetDocumentReason(this.value)"' + (cwDocumentState.busy ? ' disabled' : '') + '>'
+          + cwEscapeHtml(cwDocumentState.replacementReason) + '</textarea></label>' : '')
+        + '<div class="cw-document-progress" role="status">' + cwEscapeHtml(cwDocumentState.progress || '') + '</div>';
+    }
+    if (footer) footer.innerHTML = '<button type="button" id="cwDocumentCancel" class="cw-secondary" onclick="cwCloseDocumentUpload()"'
+      + (cwDocumentState.busy ? ' disabled' : '') + '>ยกเลิก</button><button type="button" class="cw-primary" onclick="cwSubmitDocumentUpload()"'
+      + ' id="cwDocumentSubmit" aria-disabled="' + cwDocumentState.busy + '">'
+      + (cwDocumentState.busy ? 'กำลังอัปโหลด...' : 'อัปโหลด PDF') + '</button>';
+  }
+
+  function cwSetDocumentBusy(busy) {
+    const dialog = document.getElementById('cwDocumentDialog');
+    if (dialog) dialog.setAttribute('aria-busy', String(Boolean(busy)));
+    ['cwDocumentClose', 'cwDocumentCancel', 'cwDocumentFile', 'cwDocumentReason'].forEach(id => {
+      const control = document.getElementById(id);
+      if (control) control.disabled = Boolean(busy);
+    });
+    const submit = document.getElementById('cwDocumentSubmit');
+    if (submit) {
+      submit.setAttribute('aria-disabled', String(Boolean(busy)));
+      submit.textContent = busy ? 'กำลังอัปโหลด...' : 'อัปโหลด PDF';
+    }
+  }
+
+  function cwOpenDocumentUpload(batchId, itemId, kind) {
+    if (!cwCanManage()) return false;
+    const normalizedItemId = itemId == null ? null : itemId;
+    try {
+      cwDocumentTarget({ batchId, itemId: normalizedItemId, kind, file: null, replacementReason:
+        ((cwFindBatch(batchId) || {}).documents || []).some(documentRow => documentRow
+          && documentRow.item_id === normalizedItemId && documentRow.document_kind === kind && documentRow.is_current)
+          ? 'pending-reason' : null }, false);
+    } catch (error) {
+      cwShowActionError(error.message);
+      return false;
+    }
+    const dialog = document.getElementById('cwDocumentDialog');
+    if (!dialog) return false;
+    cwDocumentState.batchId = batchId;
+    cwDocumentState.itemId = normalizedItemId;
+    cwDocumentState.kind = kind;
+    cwDocumentState.file = null;
+    cwDocumentState.replacementReason = '';
+    cwDocumentState.busy = false;
+    cwDocumentState.progress = '';
+    cwDocumentState.returnFocus = document.activeElement;
+    cwShowDocumentError('');
+    cwRenderDocumentDialog();
+    dialog.classList.add('open');
+    dialog.setAttribute('aria-hidden', 'false');
+    dialog.onkeydown = cwHandleDocumentDialogKey;
+    dialog.onclick = event => { if (event.target === dialog && !cwDocumentState.busy) cwCloseDocumentUpload(); };
+    const fileInput = document.getElementById('cwDocumentFile');
+    if (fileInput) fileInput.focus();
+    return true;
+  }
+
+  function cwCloseDocumentUpload() {
+    if (cwDocumentState.busy) return false;
+    const dialog = document.getElementById('cwDocumentDialog');
+    if (dialog) {
+      dialog.classList.remove('open');
+      dialog.setAttribute('aria-hidden', 'true');
+    }
+    const returnFocus = cwDocumentState.returnFocus;
+    if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') {
+      returnFocus.focus();
+      return true;
+    }
+    const escapedKind = cwDocumentState.kind && cwEscapeHtml(cwDocumentState.kind);
+    const refreshedAction = escapedKind && document.querySelector('[data-cw-upload-kind="' + escapedKind + '"]');
+    const fallback = refreshedAction
+      || document.querySelector('#cwBatchDetail .cw-detail-head')
+      || document.querySelector('#cwBatchList [data-batch-id="' + cwDocumentState.batchId + '"]')
+      || document.querySelector('#cwTabs [tabindex="0"]');
+    if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    return true;
+  }
+
+  function cwHandleDocumentDialogKey(event) {
+    if (!event) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cwCloseDocumentUpload();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const dialog = document.getElementById('cwDocumentDialog');
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll('button,input,textarea')]
+      .filter(element => !element.disabled && !element.hidden);
+    if (!focusable.length) return;
+    if (!event.shiftKey && document.activeElement === focusable[focusable.length - 1]) {
+      event.preventDefault();
+      focusable[0].focus();
+    } else if (event.shiftKey && document.activeElement === focusable[0]) {
+      event.preventDefault();
+      focusable[focusable.length - 1].focus();
+    }
+  }
+
+  function cwSetDocumentFile(file) {
+    if (cwDocumentState.busy) return false;
+    const error = cwValidatePdf(file);
+    cwDocumentState.file = error ? null : file;
+    cwShowDocumentError(error || '');
+    return !error;
+  }
+
+  function cwSetDocumentReason(value) {
+    if (cwDocumentState.busy) return false;
+    cwDocumentState.replacementReason = String(value == null ? '' : value);
+    return true;
+  }
+
+  async function cwSubmitDocumentUpload(client) {
+    if (cwDocumentState.busy) return false;
+    cwDocumentState.busy = true;
+    cwDocumentState.progress = 'กำลังตรวจสอบ...';
+    cwShowDocumentError('');
+    cwSetDocumentBusy(true);
+    const initialProgress = document.querySelector('#cwDocumentDialog .cw-document-progress');
+    if (initialProgress) initialProgress.textContent = cwDocumentState.progress;
+    try {
+      await cwUploadDocument({
+        batchId: cwDocumentState.batchId,
+        itemId: cwDocumentState.itemId,
+        kind: cwDocumentState.kind,
+        file: cwDocumentState.file,
+        replacementReason: cwDocumentState.replacementReason,
+        onProgress(message) {
+          cwDocumentState.progress = message;
+          const progress = document.querySelector('#cwDocumentDialog .cw-document-progress');
+          if (progress) progress.textContent = message;
+        }
+      }, client);
+      cwDocumentState.busy = false;
+      cwSetDocumentBusy(false);
+      cwCloseDocumentUpload();
+      cwToast('ลงทะเบียน PDF แล้ว', 'success');
+      return true;
+    } catch (error) {
+      cwDocumentState.busy = false;
+      cwDocumentState.progress = '';
+      cwSetDocumentBusy(false);
+      const progress = document.querySelector('#cwDocumentDialog .cw-document-progress');
+      if (progress) progress.textContent = '';
+      cwShowDocumentError(error && error.message || 'อัปโหลด PDF ไม่สำเร็จ');
+      return false;
+    }
+  }
+
   global.CW_STATUS = CW_STATUS;
   global.cwTodayISO = cwTodayISO;
   global.cwItemDisplayStatus = cwItemDisplayStatus;
@@ -1142,6 +1588,14 @@
   global.cwConfirmBatch = cwConfirmBatch;
   global.cwCancelBatch = cwCancelBatch;
   global.cwRequestCancel = cwRequestCancel;
+  global.cwRenderDocumentVersions = cwRenderDocumentVersions;
+  global.cwUploadDocument = cwUploadDocument;
+  global.cwOpenDocument = cwOpenDocument;
+  global.cwOpenDocumentUpload = cwOpenDocumentUpload;
+  global.cwCloseDocumentUpload = cwCloseDocumentUpload;
+  global.cwSetDocumentFile = cwSetDocumentFile;
+  global.cwSetDocumentReason = cwSetDocumentReason;
+  global.cwSubmitDocumentUpload = cwSubmitDocumentUpload;
 
   if (global.CW_TEST_MODE) return;
 })(window);
