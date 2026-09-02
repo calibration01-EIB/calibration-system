@@ -507,9 +507,10 @@
       const item = documentRow.item_id == null ? null
         : (batch && batch.items || []).find(candidate => candidate.id === documentRow.item_id);
       const instrument = cwItemInstrument(item);
-      const scope = item
-        ? (instrument.id_code || item.instrument_id || documentRow.item_id) + ' · ' + (instrument.instrument_name || 'ไม่ระบุชื่อเครื่องมือ')
-        : 'ระดับชุดงาน';
+      const scope = documentRow.item_id == null ? 'ระดับชุดงาน'
+        : item
+          ? (instrument.id_code || item.instrument_id || documentRow.item_id) + ' · ' + (instrument.instrument_name || 'ไม่ระบุชื่อเครื่องมือ')
+          : documentRow.item_id;
       return '<li><div><b>' + cwEscapeHtml(cwDocumentKindLabel(documentRow.document_kind))
         + ' · เวอร์ชัน ' + cwEscapeHtml(documentRow.version_number || '–') + '</b><span>'
         + cwEscapeHtml(documentRow.original_filename || documentRow.storage_path || '–') + '</span><span>'
@@ -1356,6 +1357,23 @@
     return null;
   }
 
+  function cwStorageAllowedOrigins(source) {
+    const origins = new Set();
+    const add = value => {
+      if (typeof value !== 'string' || !value.trim()) return;
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol === 'https:') origins.add(parsed.origin);
+      } catch (_) {}
+    };
+    add(source && source.supabaseUrl);
+    add(source && source.storageUrl);
+    add(source && source.storage && source.storage.url);
+    (source && Array.isArray(source.cwStorageAllowedOrigins) ? source.cwStorageAllowedOrigins : []).forEach(add);
+    if (typeof SUPABASE_URL !== 'undefined') add(SUPABASE_URL);
+    return origins;
+  }
+
   async function cwOpenDocument(documentId, client) {
     const known = cwKnownDocument(documentId);
     if (!known) throw new Error('ไม่พบเอกสาร');
@@ -1365,7 +1383,9 @@
     if (!source || !source.storage || typeof source.storage.from !== 'function') {
       throw new Error('ยังไม่พร้อมเชื่อมต่อ Storage');
     }
-    const opened = typeof global.open === 'function' ? global.open('', '_blank', 'noopener,noreferrer') : null;
+    const allowedOrigins = cwStorageAllowedOrigins(source);
+    if (!allowedOrigins.size) throw new Error('ไม่พบ Storage origin ที่ได้รับอนุญาต');
+    const opened = typeof global.open === 'function' ? global.open('', '_blank') : null;
     if (!opened) throw new Error('เบราว์เซอร์บล็อกหน้าต่างเอกสาร');
     opened.opener = null;
     try {
@@ -1374,7 +1394,7 @@
       const signedUrl = response && response.data && response.data.signedUrl;
       let parsed;
       try { parsed = new URL(signedUrl); } catch (_) { throw new Error('ลิงก์เอกสารไม่ถูกต้อง'); }
-      if (parsed.protocol !== 'https:') throw new Error('ลิงก์เอกสารไม่ปลอดภัย');
+      if (!allowedOrigins.has(parsed.origin)) throw new Error('signed URL origin ไม่ได้รับอนุญาต');
       if (opened.location && typeof opened.location.replace === 'function') opened.location.replace(parsed.href);
       else opened.location = parsed.href;
     } catch (error) {

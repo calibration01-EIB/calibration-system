@@ -891,6 +891,8 @@ function text(url) {
     const signed = [];
     let removes = 0;
     const client = cwPagedClient(context.rows, requests);
+    client.supabaseUrl = config.supabaseUrl || 'https://example.test';
+    if (config.storageOrigins) client.cwStorageAllowedOrigins = config.storageOrigins;
     if (!config.realHash) client.cwTestSha256 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
     client.storage = { from(bucket) {
       return {
@@ -1025,6 +1027,20 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  t('keeps item identity when an item-scoped document relation is unavailable', () => {
+    const batchId = cwUuid(801);
+    const itemId = cwUuid(812);
+    const markup = cwRenderDocumentVersions([{
+      id:cwUuid(828),batch_id:batchId,item_id:itemId,document_kind:'certificate',
+      storage_path:batchId + '/items/' + itemId + '/certificate/v0001.pdf',version_number:1,
+      is_current:true,original_filename:'certificate.pdf',file_size:1234,uploaded_by:'editor',
+      uploaded_at:'2026-09-01T04:00:00Z'
+    }], {id:batchId,items:[]});
+    const text = document.createRange().createContextualFragment(markup).textContent;
+    has(text, itemId, 'missing relation falls back to exact item UUID');
+    ok(!text.includes('ระดับชุดงาน'), 'item document is never mislabeled as batch-level');
+  });
+
   await ta('requires a replacement reason before document reads or uploads', async () => {
     const cleanup = cwMountFixture();
     try {
@@ -1132,16 +1148,19 @@ function text(url) {
       const opened = [];
       const evidence = cwEvidenceClient(context, {sign:async (_path, _expiresIn, count) => {
         eq(opened.length, count, 'safe placeholder opens synchronously before signing');
+        eq(opened[count - 1].handle.opener, null, 'placeholder opener is nulled before signing');
         return {data:{signedUrl:'https://example.test/signed-' + count},error:null};
       }});
       window.open = (...args) => {
+        if (args[2] && /noopener|noreferrer/.test(args[2])) return null;
         const record = {args,navigated:[],closed:false};
         opened.push(record);
-        return {
+        record.handle = {
           opener:'unsafe',
           location:{replace(url) { record.navigated.push(url); }},
           close() { record.closed = true; }
         };
+        return record.handle;
       };
       cwSetTask4Actor('viewer');
       cwRenderDashboard(context.model);
@@ -1151,24 +1170,41 @@ function text(url) {
       ok(evidence.signed.every(call => call.bucket === 'calibration-work-batches' && call.expiresIn > 0 && call.expiresIn <= 300),
         'short-lived exact-bucket signing');
       eq(opened.length, 2, 'each fresh URL opens');
-      ok(opened.every(call => call.args[0] === '' && call.args[1] === '_blank' && /noopener/.test(call.args[2])),
-        'safe synchronous placeholder features');
+      ok(opened.every(call => call.args.length === 2 && call.args[0] === '' && call.args[1] === '_blank'),
+        'blank popup requests a standards-usable handle without suppressing features');
+      ok(opened.every(call => call.handle.opener === null), 'all usable handles have opener severed synchronously');
       eq(opened[0].navigated[0], 'https://example.test/signed-1', 'first placeholder receives fresh URL');
       eq(opened[1].navigated[0], 'https://example.test/signed-2', 'second placeholder receives fresh URL');
-      let message = await cwRejected(cwOpenDocument(cwUuid(826), evidence.client));
+
+      const custom = cwEvidenceClient(context, {
+        supabaseUrl:'https://api.example.test',storageOrigins:['https://storage.example.test'],
+        sign:async () => ({data:{signedUrl:'https://storage.example.test/custom-signed'},error:null})
+      });
+      await cwOpenDocument(documentId, custom.client);
+      eq(opened.length, 3, 'configured custom Storage origin opens');
+      eq(opened[2].navigated[0], 'https://storage.example.test/custom-signed', 'custom allowlisted origin navigates');
+
+      const foreign = cwEvidenceClient(context, {sign:async () => ({data:{signedUrl:'https://foreign.example/signed'},error:null})});
+      let message = await cwRejected(cwOpenDocument(documentId, foreign.client));
+      has(message, 'origin', 'foreign HTTPS origin is rejected');
+      eq(opened.length, 4, 'foreign signed URL opens one placeholder before async signing');
+      eq(opened[3].closed, true, 'foreign signed URL closes its placeholder');
+      eq(opened[3].navigated.length, 0, 'foreign signed URL is never navigated');
+
+      message = await cwRejected(cwOpenDocument(cwUuid(826), evidence.client));
       has(message, 'ไม่พบ', 'unknown document rejection');
       context.batch.documents[0].storage_path = context.batchId + '/batch/closure/v0001.pdf';
       message = await cwRejected(cwOpenDocument(documentId, evidence.client));
       has(message, 'path', 'mismatched path rejection');
       eq(evidence.signed.length, 2, 'unknown/stale rows never request signed URLs');
-      eq(opened.length, 2, 'unknown/stale rows never open placeholders');
+      eq(opened.length, 4, 'unknown/stale rows never open placeholders');
 
       context.batch.documents[0].storage_path = context.batchId + '/batch/acknowledgement/v0001.pdf';
       const failed = cwEvidenceClient(context, {sign:async () => ({data:null,error:{message:'sign failed'}})});
       message = await cwRejected(cwOpenDocument(documentId, failed.client));
       has(message, 'sign failed', 'signing failure remains visible');
-      eq(opened.length, 3, 'signing attempt opens one placeholder');
-      eq(opened[2].closed, true, 'signing failure closes unused placeholder');
+      eq(opened.length, 5, 'signing attempt opens one placeholder');
+      eq(opened[4].closed, true, 'signing failure closes unused placeholder');
     } finally { window.open = originalOpen; cleanup(); }
   });
 
