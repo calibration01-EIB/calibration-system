@@ -153,22 +153,22 @@ function text(url) {
     ok(html.indexOf('Electronic Balance') === -1, 'must omit instrument name');
   });
 
-  t('renders a separate escaped work-batch shortcut without replacing FRM plan state', () => {
-    window.planStatusMap = {7:{status:'planned',title:'Legacy FRM'}};
+  t('renders an escaped work-batch shortcut from the unified status map', () => {
     window.calibrationWorkStatusMap = {7:{batchId:'00000000-0000-0000-0000-000000000701',batchNo:'CW7-<1>',
       title:'Unsafe <img src=x onerror=1>',plannedDate:'2026-09-03',status:'in_progress'}};
     const card = listSpecCardHtml({id:7,id_code:'SAFE-7',cert_no:'CERT-7',due_date:'2027-01-01',days_left:40});
     has(card, 'class="cw-registry-shortcut"', 'separate work shortcut');
     has(card, 'data-cw-open-batch-instrument="7"', 'numeric delegated navigation id');
+    has(card, 'data-cw-work-status="in_progress"', 'current work-batch status');
     has(card, 'ชุดงาน', 'work label');
+    has(card, 'กำลังสอบเทียบ', 'current work-batch action');
     has(card, 'CW7-&lt;1&gt;', 'escaped batch number');
     has(card, '2026-09-03', 'planned date');
     ok(card.indexOf('<img src=x') === -1, 'hostile title cannot create markup');
     ok(card.indexOf('onclick="cwOpenBatchFromInstrument') === -1, 'shortcut avoids per-row inline navigation');
     const actions = listActionCell({id:7,id_code:'SAFE-7',instrument_name:'Balance',cert_no:'CERT-7'});
-    has(actions, 'วางแผนแล้ว', 'legacy FRM action remains');
-    has(actions, 'cw-registry-shortcut', 'work action coexists');
-    eq(window.planStatusMap[7].title, 'Legacy FRM', 'legacy plan map remains intact');
+    has(actions, 'data-cw-work-status="in_progress"', 'work-batch action status');
+    has(actions, 'กำลังสอบเทียบ', 'work-batch action label');
     has(DASHBOARD_JS, 'cwRegistryShortcutHtml(id)', 'mobile registry integration');
   });
 

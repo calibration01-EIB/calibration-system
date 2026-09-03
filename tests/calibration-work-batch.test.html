@@ -66,9 +66,13 @@ function text(url) {
   });
 
   t('defines exactly four primary plan sections', () => {
-    const keys = [...indexSource.matchAll(/data-cw-primary="([^"]+)"/g)].map(match => match[1]);
-    eq(keys.join(','), 'select,batches,waiting,history', 'primary section keys');
-    ['เลือกเครื่อง', 'ชุดงาน', 'รอดำเนินการ', 'ประวัติ'].forEach(label => has(indexSource, label, 'primary section label'));
+    const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+    const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs [role="tab"]')];
+    eq(tabs.length, 4, 'primary plan tab count');
+    ok(tabs.every(tab => tab.tagName === 'BUTTON'), 'primary plan tabs must be buttons');
+    eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
+      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
+    ]), 'primary plan tab keys and labels');
   });
 
   t('removes every legacy calibration-plan surface', () => {
