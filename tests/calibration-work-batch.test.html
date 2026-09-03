@@ -2071,15 +2071,19 @@ function text(url) {
     [
       'cw_actor', 'cw_create_batch', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item',
-      'cw_skip_item', 'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch',
+      'cw_skip_item', 'cw_reset_item_result', 'cw_cancel_batch',
       'cw_request_orphan_cleanup', 'cw_confirm_orphan_cleanup',
       'cw_claimed_orphan_delete_allowed', 'cw_finalize_orphan_cleanup'
     ].forEach(name => {
       const fn = body(name);
       has(fn, 'security definer', name);
     });
-    has(normalized, 'from public.app_validate_token(p_token)', 'token validation');
-    has(normalized, "u.role in ('admin','editor')", 'write role validation');
+    const actor = body('cw_actor');
+    has(actor, "to_regprocedure('public.app_validate_token(text)')", 'legacy token helper detection');
+    has(actor, "to_regprocedure('public.current_app_user(uuid)')", 'UUID token helper detection');
+    has(actor, 'public.current_app_user($1::uuid)', 'production UUID user lookup');
+    has(actor, "p_token !~* '^[0-9a-f]", 'UUID token format validation');
+    has(actor, "v_role not in ('admin','editor')", 'write role validation');
   });
 
   t('uses atomic Bangkok-year numbering, transactional locks, and audits', () => {
@@ -2298,9 +2302,8 @@ function text(url) {
     has(register, "'complete_batch'", 'atomic closure transition audit');
     has(register, "v_batch.status = 'completed'", 'replacement state branch');
     has(register, 'set updated_at = now()', 'replacement-only batch update');
-    const complete = body('cw_complete_batch');
-    lacks(complete, 'update public.calibration_work_batches', 'compatibility RPC');
-    has(complete, 'completion occurs atomically when closure is registered', 'duplicate transition rejection');
+    has(normalized, 'drop function if exists public.cw_complete_batch(text, uuid)', 'dead completion RPC removed');
+    lacks(normalized, 'grant execute on function public.cw_complete_batch', 'dead completion RPC is not exposed');
   });
 
   t('invalidates stale pending closure evidence on mutable result paths', () => {
@@ -2358,7 +2361,7 @@ function text(url) {
       'cw_actor', 'cw_request_token', 'cw_next_batch_no', 'cw_refresh_batch_status',
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
       'cw_register_document', 'cw_save_item_draft', 'cw_complete_item', 'cw_skip_item',
-      'cw_reset_item_result', 'cw_complete_batch', 'cw_cancel_batch',
+      'cw_reset_item_result', 'cw_cancel_batch',
       'cw_request_orphan_cleanup', 'cw_confirm_orphan_cleanup',
       'cw_claimed_orphan_delete_allowed', 'cw_finalize_orphan_cleanup'
     ].forEach(name => has(normalized, 'revoke all on function public.' + name, name + ' PUBLIC revoke'));
@@ -2379,6 +2382,27 @@ function text(url) {
     has(normalized, 'references public.calibration_work_items(batch_id, id, instrument_id)', 'lock tuple target');
   });
 
+  t('avoids duplicate indexes and covers workflow foreign keys', () => {
+    has(normalized, 'drop index if exists public.calibration_work_items_lock_tuple_uidx', 'duplicate tuple index cleanup');
+    lacks(normalized, 'create unique index if not exists calibration_work_items_lock_tuple_uidx', 'duplicate tuple index creation');
+    const dropFk = normalized.indexOf('drop constraint if exists calibration_work_instrument_locks_tuple_fkey');
+    const dropDuplicate = normalized.indexOf('drop index if exists public.calibration_work_items_lock_tuple_uidx');
+    const restoreFk = normalized.lastIndexOf('add constraint calibration_work_instrument_locks_tuple_fkey');
+    ok(dropFk !== -1 && dropFk < dropDuplicate, 'tuple FK is removed before its possible backing index');
+    ok(restoreFk > dropDuplicate, 'tuple FK is restored after duplicate index cleanup');
+    [
+      'create index if not exists calibration_work_items_instrument_idx',
+      'create index if not exists calibration_work_locks_batch_idx',
+      'create index if not exists calibration_work_documents_item_idx',
+      'create index if not exists calibration_work_audit_item_idx'
+    ].forEach(token => has(normalized, token, token));
+  });
+
+  t('explicitly revokes internal helpers from Data API roles', () => {
+    ['cw_next_batch_no()', 'cw_refresh_batch_status(uuid)'].forEach(signature =>
+      has(normalized, 'revoke all on function public.' + signature + ' from anon, authenticated', signature));
+  });
+
   t('each write RPC owns its authorization and audit', () => {
     [
       'cw_create_batch', 'cw_update_batch_draft', 'cw_confirm_batch', 'cw_mutate_items',
@@ -2389,7 +2413,6 @@ function text(url) {
       has(fn, 'from public.cw_actor(p_token, true)', name + ' authorization');
       has(fn, 'insert into public.calibration_work_audit', name + ' audit');
     });
-    has(body('cw_complete_batch'), 'from public.cw_actor(p_token, true)', 'completion compatibility authorization');
   });
 
   document.getElementById('out').textContent = results.join('\n');
