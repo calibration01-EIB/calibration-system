@@ -426,6 +426,27 @@ function text(url) {
     } finally { cleanup(); delete window.currentUser; }
   });
 
+  t('restores the selected primary tab after pointer create close', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true }, { primaryTab:'batches' });
+      window.currentUser = { role:'editor' };
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      select.onclick = () => cwSetPrimaryTab('select');
+      batches.focus();
+      select.focus();
+      select.dispatchEvent(new MouseEvent('click', { bubbles:true }));
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'select', 'pointer select opens and selects tab');
+      ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'pointer select opens create dialog');
+      cwCloseCreate();
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'pointer close restores prior selection');
+      eq(document.activeElement, batches, 'pointer close focuses restored selected tab');
+      eq(batches.tabIndex, 0, 'restored pointer tab is in tab order');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
   t('keeps primary tablist focus and selection deterministic with arrow keys', () => {
     const cleanup = cwMountFixture();
     try {

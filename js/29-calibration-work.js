@@ -1292,7 +1292,9 @@
       cwRenderTabs();
       cwRenderBatchList();
     }
-    const returnFocus = cwWizardState.returnFocus;
+    const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
+      ? document.querySelector('#cwPrimaryTabs [aria-selected="true"]') : null;
+    const returnFocus = restoredPrimary || cwWizardState.returnFocus;
     if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.isConnected) returnFocus.focus();
     else {
       const fallback = document.querySelector('#cwPrimaryTabs [aria-selected="true"]');
