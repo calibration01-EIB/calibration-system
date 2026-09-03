@@ -269,6 +269,43 @@ function text(url) {
     has(swSource, 'evictRetiredAssets', 'activation runs retired asset eviction');
   });
 
+  await ta('service-worker activation evicts query variants before claiming clients', async () => {
+    const evictStart = swSource.indexOf('async function evictRetiredAssets(cache)');
+    const evictEnd = swSource.indexOf('\n\n/*', evictStart);
+    const evict = new Function('RETIRED_ASSET_PATHS', 'return ' + swSource.slice(evictStart, evictEnd))([
+      'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
+    ]);
+    const activationStart = swSource.indexOf("self.addEventListener('activate'");
+    const activationEnd = swSource.indexOf('\n});', activationStart) + 3;
+    const sequence = [];
+    let activation;
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'activate') activation = listener; },
+      clients: { claim: () => { sequence.push('claim'); return Promise.resolve(); } }
+    };
+    const cache = {
+      keys: async () => [
+        {url:'https://app.test/js/06-plan.js?v=old'},
+        {url:'https://app.test/assets/frm-eib04-template.xlsx'},
+        {url:'https://app.test/js/06-plan.js.map'}
+      ],
+      delete: async request => { sequence.push('retired:' + request.url); return true; }
+    };
+    const cachesStub = {
+      keys: async () => ['old-cache', 'calibration-app-v160'],
+      delete: async key => { sequence.push('cache:' + key); return true; },
+      open: async () => cache
+    };
+    new Function('self', 'caches', 'CACHE_NAME', 'evictRetiredAssets',
+      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v160', evict);
+    let waited;
+    activation({waitUntil: promise => { waited = promise; }});
+    await waited;
+    eq(sequence.filter(item => item.startsWith('retired:')).length, 2, 'only retired path requests are evicted');
+    ok(sequence[sequence.length - 1] === 'claim', 'clients.claim waits until cache cleanup completes');
+    ok(sequence.every(item => !item.includes('06-plan.js.map')), 'pathname matching does not evict similarly named assets');
+  });
+
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
@@ -814,6 +851,8 @@ function text(url) {
     eq(map[102].plannedDate, '2026-09-01', 'planned date metadata');
     eq(map[102].title, 'Active <script>', 'unescaped data remains data in the map');
     eq(map[105].status, 'completed', 'completed batch remains visible without relying on its stale lock');
+    eq(map[105].isActive, false, 'completed batch is historical rather than active');
+    eq(map[102].isActive, true, 'matching lock marks active work explicitly');
     [106,107,108,109].forEach(id => ok(!map[id], 'inactive/cancelled/unlocked/skipped id excluded: ' + id));
   });
 

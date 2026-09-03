@@ -1,5 +1,21 @@
 /* ===== 02-dashboard.js ===== (generated from index.html inline app script) */
 
+function dashboardWorkIsActive(work) {
+  return Boolean(work && work.isActive !== false);
+}
+
+function dashboardIsDueAlertCandidate(instrument, workMap) {
+  if (!instrument || instrument.days_left === null || instrument.days_left === undefined) return false;
+  const work = (workMap || {})[instrument.id] || null;
+  if (dashboardWorkIsActive(work)) return false;
+  return instrument.days_left >= -30 && instrument.days_left <= 60;
+}
+
+if (typeof window !== 'undefined') {
+  window.dashboardWorkIsActive = dashboardWorkIsActive;
+  window.dashboardIsDueAlertCandidate = dashboardIsDueAlertCandidate;
+}
+
 let _monthlyBarChart = null;
 function renderMonthlyBarChart() {
   const canvas = document.getElementById('monthlyBarChart');
@@ -98,6 +114,7 @@ function renderMobileCards() {
     const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || escapeHtmlText(d.department || '-');
     const work = (window.calibrationWorkStatusMap || {})[d.id] || null;
+    const activeWork = dashboardWorkIsActive(work);
     const sMap = {
       awaiting_acknowledgement_pdf: ['รอรับทราบ', '#854F0B', '#FAEEDA'],
       in_progress: ['กำลังสอบเทียบ', '#185FA5', '#E6F1FB'],
@@ -111,7 +128,7 @@ function renderMobileCards() {
     const workBadge = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
     const planBtn = cancelled
       ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
-      : (work
+      : (activeWork
         ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>แผน</span></button>'
         : '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>');
     return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
@@ -165,16 +182,11 @@ async function renderAlerts() {
 
   el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px 0">กำลังโหลด...</div>';
 
-  // สถานะชุดงานปัจจุบันเผยแพร่โดย calibration-work engine
-  const plannedIds = new Set(Object.keys(window.calibrationWorkStatusMap || {}).map(Number));
-
   const today = new Date(); today.setHours(0,0,0,0);
 
   // กรองเครื่องมือที่ยังไม่มีแผนและ due ภายใน 60 วัน
   const alerts = allData.filter(d => {
-    if (d.days_left === null) return false;
-    if (plannedIds.has(d.id)) return false;
-    return d.days_left >= -30 && d.days_left <= 60;
+    return dashboardIsDueAlertCandidate(d, window.calibrationWorkStatusMap || {});
   }).sort((a,b) => a.days_left - b.days_left).slice(0, 12);
 
   if (!alerts.length) {
@@ -793,8 +805,10 @@ function renderTable() {
       <td>${statusBadge}${typeof repairBadgeHtml === 'function' && repairBadgeHtml(d.id) ? '<br>' + repairBadgeHtml(d.id) : ''}</td>
       <td>${(()=>{
         if (cancelled) return '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
+        const work = (window.calibrationWorkStatusMap || {})[id] || null;
         const shortcut = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
-        return shortcut || `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        const plan = `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        return !dashboardWorkIsActive(work) ? plan + shortcut : (shortcut || plan);
       })()}</td>
       <td><button id="certbtn-${id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td style="white-space:nowrap" class="td-manage"></td>

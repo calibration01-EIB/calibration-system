@@ -362,15 +362,12 @@ tbody tr:nth-child(even) td { background: var(--surface2) !important; }
 tbody tr:hover td { background: #f6fafd !important; }
 
 /* ปุ่มหลัก */
-.btn-add, .btn-primary,
-button[onclick^="goToPlanStep2"], button[onclick^="submitPlan"],
-.plan-btn.primary, .plan-tab.active {
+.btn-add, .btn-primary {
   background: var(--accent) !important; border-color: var(--accent) !important;
   color: #fff !important; border-radius: var(--r-ctl) !important;
   box-shadow: none !important;
 }
-.btn-add:hover, .btn-primary:hover, .plan-btn.primary:hover { background: var(--accent-h) !important; }
-.plan-panel-title i { color: var(--accent) !important; }
+.btn-add:hover, .btn-primary:hover { background: var(--accent-h) !important; }
 .status-dot.ok { background: var(--accent) !important; }
 
 /* ---------- 7b) DASHBOARD ตามดีไซน์ ---------- */

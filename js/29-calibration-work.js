@@ -530,7 +530,8 @@
           batchNo: String(batch.batch_no || ''),
           title: String(batch.title || ''),
           plannedDate: String(item.planned_date || ''),
-          status
+          status,
+          isActive: !closed
         };
         const priority = closed ? 1 : 2;
         const updatedAt = String(batch.updated_at || '');

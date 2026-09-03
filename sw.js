@@ -92,8 +92,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(Promise.all([
     caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))),
     caches.open(CACHE_NAME).then(evictRetiredAssets)
-  ]));
-  self.clients.claim();
+  ]).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', event => {

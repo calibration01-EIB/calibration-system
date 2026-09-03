@@ -144,6 +144,7 @@ function text(url) {
   window.INST_PHOTO_MAX = 5;
   window.instPhotoArrange = items => ({ bySlot: { overview: items.find(item => /^overview_/.test(item.name)) } });
   eval(LIST_JS);
+  eval(DASHBOARD_JS);
 
   t('renderer สร้าง native Detail button โดยไม่มี nested interactive card', () => {
     const html = listSpecCardHtml({ id: 7, id_code: 'PFP3BB03-WI01', cert_no: 'CAL-7', due_date: '2027-08-24', days_left: 40, instrument_name: 'Electronic Balance' });
@@ -170,6 +171,28 @@ function text(url) {
     has(actions, 'data-cw-work-status="in_progress"', 'work-batch action status');
     has(actions, 'กำลังสอบเทียบ', 'work-batch action label');
     has(DASHBOARD_JS, 'cwRegistryShortcutHtml(id)', 'mobile registry integration');
+  });
+
+  t('completed-only history keeps the list planning CTA while active work keeps the batch shortcut', () => {
+    window.calibrationWorkStatusMap = {7:{batchId:'00000000-0000-0000-0000-000000000701',batchNo:'DONE-7',
+      title:'Historical completion',plannedDate:'2026-09-03',status:'completed',isActive:false}};
+    const historical = listActionCell({id:7,id_code:'SAFE-7',instrument_name:'Balance',cert_no:'CERT-7'});
+    has(historical, 'goToPlanWithItem(7)', 'historical instrument planning CTA');
+    has(historical, 'data-cw-work-status="completed"', 'historical completion remains visible');
+
+    window.calibrationWorkStatusMap[7].isActive = true;
+    const active = listActionCell({id:7,id_code:'SAFE-7',instrument_name:'Balance',cert_no:'CERT-7'});
+    ok(active.indexOf('goToPlanWithItem(7)') === -1, 'active instrument must not offer duplicate planning');
+    has(active, 'data-cw-work-status="completed"', 'active completed item remains visible');
+  });
+
+  t('dashboard due-alert predicate ignores historical completion but suppresses active work', () => {
+    ok(typeof window.dashboardIsDueAlertCandidate === 'function', 'dashboard due predicate is exposed');
+    const instrument = {id:7,days_left:10};
+    ok(window.dashboardIsDueAlertCandidate(instrument, {7:{status:'completed',isActive:false}}),
+      'historical completion remains due-alert eligible');
+    ok(!window.dashboardIsDueAlertCandidate(instrument, {7:{status:'in_progress',isActive:true}}),
+      'active locked work is removed from due alerts');
   });
 
   t('delegated native work shortcut opens the numeric instrument and keeps keyboard focusable markup', () => {

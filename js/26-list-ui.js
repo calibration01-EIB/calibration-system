@@ -148,9 +148,10 @@ function listActionCell(d) {
   const workMap = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
     ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
   const work = workMap[d.id] || null;
+  const activeWork = work && work.isActive !== false;
   if (cancelled) {
     planBtn = '<span class="ax-act-mute">ไม่ต้องวางแผน</span>';
-  } else if (!work) {
+  } else if (!activeWork) {
     planBtn = `<button type="button" class="ax-act-plan" onclick="goToPlanWithItem(${id})">📋 วางแผน</button>`;
   } else {
     planBtn = '';

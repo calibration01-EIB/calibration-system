@@ -21,11 +21,20 @@ function text(url) {
     request.send();
   });
 }
+function optionalText(url) {
+  return new Promise(resolve => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => resolve(request.status === 200 || request.status === 0 ? request.responseText : '');
+    request.onerror = () => resolve('');
+    request.send();
+  });
+}
 
 (async () => {
-  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource;
+  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource;
   try {
-    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource] = await Promise.all([
+    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource] = await Promise.all([
       text('../index.html'),
       text('../sw.js'),
       text('../js/06-plan.js'),
@@ -33,7 +42,9 @@ function text(url) {
       text('../js/18-asset-out.js'),
       text('../js/02-dashboard.js'),
       text('../js/23-cal-records.js'),
-      text('../js/28-kpi.js')
+      text('../js/28-kpi.js'),
+      text('../theme-aqua.css'),
+      optionalText('../tools/build-frm-eib04-template.ps1')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -80,6 +91,15 @@ function text(url) {
     ['.plan-workspace', '.plan-tabs', '.plan-filter-grid', '.plan-upload', '#planTabNew', '#planStep1',
       '#planStep2', '#planDropZone', '#planFilterType', 'filterPlanInstruments', 'goToPlanStep2', 'submitPlan']
       .forEach(token => lacks(indexSource, token, token + ' retired CSS'));
+    ['.plan-workspace', '.plan-tabs', '.plan-filter-grid', '.plan-upload', '#planDropZone',
+      'filterPlanInstruments', 'goToPlanStep2', 'submitPlan']
+      .forEach(token => lacks(themeSource, token, token + ' retired theme selector'));
+  });
+
+  t('retirement deletes the legacy FRM generation helper', () => {
+    ok(helperSource === '', 'legacy FRM generation helper must be absent');
+    lacks(swSource, 'build-frm-eib04-template.ps1', 'service worker does not expose generator');
+    lacks(themeSource, 'build-frm-eib04-template.ps1', 'theme does not expose generator');
   });
 
   document.getElementById('out').textContent = results.join('\n');
