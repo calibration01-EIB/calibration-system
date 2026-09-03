@@ -2,7 +2,7 @@
 
 ## Status
 
-Task 2 is complete and committed as `b1d59bf feat: make work batches the calibration plan page`.
+Task 2 is complete. The original implementation is committed as `eda2f3b feat: make work batches the calibration plan page`; reviewer follow-up fixes are committed as `3ef46df fix: synchronize unified calibration plan tabs`.
 
 ## Partial-edit audit
 
@@ -46,10 +46,27 @@ Final commands:
 
 Changed files: `index.html`, `js/10-router.js`, `js/29-calibration-work.js`, `theme-aqua.css`, `sw.js`, `tests/calibration-work-batch.test.html`, `tests/login-b3-ui.test.html`, and `tests/reference-home.test.html`.
 
-Commit: `b1d59bf feat: make work batches the calibration plan page`
+Commits: `eda2f3b feat: make work batches the calibration plan page`; follow-up `3ef46df fix: synchronize unified calibration plan tabs`.
 
 Report: `C:\Users\8014\Desktop\calibration-system-main\.worktrees\replace-legacy-calibration-plan\.superpowers\sdd\task-2-report.md`
 
 ## Concerns
 
 The full suite is not entirely green only because Task 3 is intentionally pending; no Task 2-specific failures remain. The service worker retains the legacy FRM entries and `js/06-plan.js` retains legacy tables until Task 3, as required by task ownership.
+
+## Reviewer follow-up (3ef46df)
+
+Root-cause audit found two state-boundary defects. `cwRenderDashboard()` reset `cwUiState.tab` to `active` while retaining `cwPrimaryTab`, and notification navigation assigned only the inner tab. Separately, `cwSetPrimaryTab('select')` selected the tab before `cwOpenCreate()` could fail, leaving a read-only user on an unselected, unfocusable control.
+
+TDD evidence:
+
+- RED focused run after adding reviewer contracts: refresh showed `waiting inner state survives refresh: expected "waiting", got "active"`; denied select showed `denied select restores primary selection: expected "batches", got "select"`; keyboard select/close and notification selection also failed.
+- GREEN focused run after implementation: only the intentional `frm_plans` Task 3 contract remains; all reviewer refresh, notification, denied-select, and keyboard close assertions pass.
+
+The follow-up introduces `cwSyncPrimaryState()` as the single primary/inner state synchronizer, preserves the requested primary section through authoritative refresh, synchronizes notification routing, commits `select` only after dialog open succeeds, and restores the prior primary/inner state and focus on close.
+
+Follow-up verification:
+
+- `pwsh -File tools/run-tests.ps1`: 9 pages; only the four expected Task 3 retirement contracts fail (`calibration-work-batch`, `frm-cross-month`, `plan-export`, `reference-home`). No reviewer or Task 2 failures.
+- `pwsh -File tools/verify-app-load.ps1`: 28/28 scripts fetched and parsed, 109 inline handlers resolved, 11 wrappers installed, 0 load-time errors (`SUMMARY CLEAN`).
+- `git diff --check`: clean; implementation commit `3ef46df` has the requested production/test changes.
