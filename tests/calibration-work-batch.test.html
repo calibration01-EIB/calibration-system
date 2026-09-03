@@ -34,16 +34,17 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource;
+  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource;
   try {
-    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource] = await Promise.all([
+    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../index.html'),
       text('../sw.js'),
       text('../js/10-router.js'),
       text('../js/02-dashboard.js'),
       text('../theme-aqua.css'),
-      text('../js/29-calibration-work.js')
+      text('../js/29-calibration-work.js'),
+      text('../js/06-plan.js')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -53,6 +54,25 @@ function text(url) {
 
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
   const lower = sql.toLowerCase();
+
+  t('uses calibration work as the only plan page', () => {
+    has(indexSource, '> แผนสอบเทียบ</span>', 'desktop menu title');
+    has(routerSource, "plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง']", 'route title');
+    has(indexSource, 'id="pagePlan"', 'single plan page');
+    has(indexSource, 'id="cwTabs"', 'work dashboard lives in plan page');
+    lacks(indexSource, "showPage('calwork')", 'separate work route removed');
+    lacks(routerSource, 'calwork:', 'separate route metadata removed');
+  });
+
+  t('removes every legacy calibration-plan surface', () => {
+    ['แผน FRM', 'ระบบเก่า', 'ลงแผน FRM', 'FRM-EIB04'].forEach(token => lacks(indexSource, token, token));
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token => {
+      lacks(indexSource, token, token + ' HTML');
+      lacks(planSource, token, token + ' JavaScript');
+    });
+    lacks(swSource, 'frm-eib04-template.xlsx', 'legacy template cache entry');
+  });
+
   function body(name) {
     const marker = 'create or replace function public.' + name;
     const start = lower.indexOf(marker);
