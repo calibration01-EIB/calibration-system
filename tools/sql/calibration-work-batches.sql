@@ -1,5 +1,6 @@
 -- Calibration work batches: schema, locking, document metadata, audit, and RPCs.
--- Prerequisite: public.app_validate_token(text) returns username and role.
+-- Authentication compatibility: prefer public.app_validate_token(text), or fall back
+-- to the existing public.current_app_user(uuid) session helper.
 
 create extension if not exists pgcrypto;
 
@@ -56,8 +57,9 @@ alter table public.calibration_work_items add column if not exists removal_reaso
 alter table public.calibration_work_items add column if not exists registry_snapshot_taken boolean not null default false;
 alter table public.calibration_work_items add column if not exists registry_before_cert_no text;
 alter table public.calibration_work_items add column if not exists registry_before_cal_date date;
-create unique index if not exists calibration_work_items_lock_tuple_uidx
-  on public.calibration_work_items(batch_id, id, instrument_id);
+alter table if exists public.calibration_work_instrument_locks
+  drop constraint if exists calibration_work_instrument_locks_tuple_fkey;
+drop index if exists public.calibration_work_items_lock_tuple_uidx;
 
 create table if not exists public.calibration_work_instrument_locks (
   instrument_id bigint primary key references public.instruments(id) on delete restrict,
@@ -165,23 +167,46 @@ where i.result_status = 'completed' and not i.registry_snapshot_taken
 
 create index if not exists calibration_work_items_batch_idx
   on public.calibration_work_items(batch_id);
+create index if not exists calibration_work_items_instrument_idx
+  on public.calibration_work_items(instrument_id);
+create index if not exists calibration_work_locks_batch_idx
+  on public.calibration_work_instrument_locks(batch_id);
 create index if not exists calibration_work_documents_batch_idx
   on public.calibration_work_documents(batch_id, item_id, document_kind, version_number desc);
+create index if not exists calibration_work_documents_item_idx
+  on public.calibration_work_documents(item_id);
 create index if not exists calibration_work_cleanup_claims_batch_idx
   on public.calibration_work_cleanup_claims(batch_id, status, requested_at desc);
 create index if not exists calibration_work_audit_batch_idx
   on public.calibration_work_audit(batch_id, occurred_at desc);
+create index if not exists calibration_work_audit_item_idx
+  on public.calibration_work_audit(item_id);
 
 create or replace function public.cw_actor(p_token text, p_write boolean default false)
 returns table(username text, role text)
 language plpgsql security definer set search_path = public
 as $$
+declare
+  v_username text;
+  v_role text;
 begin
-  return query
-  select u.username, u.role
-  from public.app_validate_token(p_token) u
-  where not p_write or u.role in ('admin','editor');
-  if not found then raise exception 'permission denied'; end if;
+  if to_regprocedure('public.app_validate_token(text)') is not null then
+    execute 'select u.username::text, u.role::text from public.app_validate_token($1) u limit 1'
+      into v_username, v_role using p_token;
+  elsif to_regprocedure('public.current_app_user(uuid)') is not null then
+    if p_token is null or p_token !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+      raise exception 'permission denied';
+    end if;
+    execute 'select u.username::text, u.role::text from public.current_app_user($1::uuid) u limit 1'
+      into v_username, v_role using p_token;
+  else
+    raise exception 'application token validator is not configured';
+  end if;
+  if nullif(v_username, '') is null or nullif(v_role, '') is null
+     or (p_write and v_role not in ('admin','editor')) then
+    raise exception 'permission denied';
+  end if;
+  return query select v_username, v_role;
 end;
 $$;
 
@@ -1012,17 +1037,7 @@ begin
 end;
 $$;
 
-create or replace function public.cw_complete_batch(p_token text, p_batch_id uuid)
-returns public.calibration_work_batches
-language plpgsql security definer set search_path = public
-as $$
-declare
-  v_actor record;
-begin
-  select * into v_actor from public.cw_actor(p_token, true);
-  raise exception 'batch completion occurs atomically when closure is registered';
-end;
-$$;
+drop function if exists public.cw_complete_batch(text, uuid);
 
 create or replace function public.cw_cancel_batch(p_token text, p_batch_id uuid, p_reason text)
 returns public.calibration_work_batches
@@ -1350,6 +1365,8 @@ revoke all on function public.cw_actor(text, boolean) from public;
 revoke all on function public.cw_request_token() from public;
 revoke all on function public.cw_next_batch_no() from public;
 revoke all on function public.cw_refresh_batch_status(uuid) from public;
+revoke all on function public.cw_next_batch_no() from anon, authenticated;
+revoke all on function public.cw_refresh_batch_status(uuid) from anon, authenticated;
 revoke all on function public.cw_create_batch(text, text, text, text, jsonb) from public;
 revoke all on function public.cw_update_batch_draft(text, uuid, text, text, text, timestamptz) from public;
 revoke all on function public.cw_confirm_batch(text, uuid) from public;
@@ -1359,7 +1376,6 @@ revoke all on function public.cw_save_item_draft(text, uuid, text, date, text) f
 revoke all on function public.cw_complete_item(text, uuid) from public;
 revoke all on function public.cw_skip_item(text, uuid, text) from public;
 revoke all on function public.cw_reset_item_result(text, uuid, text) from public;
-revoke all on function public.cw_complete_batch(text, uuid) from public;
 revoke all on function public.cw_cancel_batch(text, uuid, text) from public;
 revoke all on function public.cw_request_orphan_cleanup(text, text, text, text) from public;
 revoke all on function public.cw_confirm_orphan_cleanup(text, uuid) from public;
@@ -1377,7 +1393,6 @@ grant execute on function public.cw_save_item_draft(text, uuid, text, date, text
 grant execute on function public.cw_complete_item(text, uuid) to anon, authenticated;
 grant execute on function public.cw_skip_item(text, uuid, text) to anon, authenticated;
 grant execute on function public.cw_reset_item_result(text, uuid, text) to anon, authenticated;
-grant execute on function public.cw_complete_batch(text, uuid) to anon, authenticated;
 grant execute on function public.cw_cancel_batch(text, uuid, text) to anon, authenticated;
 grant execute on function public.cw_request_orphan_cleanup(text, text, text, text) to anon, authenticated;
 grant execute on function public.cw_confirm_orphan_cleanup(text, uuid) to anon, authenticated;
