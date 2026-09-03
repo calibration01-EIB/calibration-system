@@ -97,21 +97,21 @@ function renderMobileCards() {
     const idCertLine = [d.id_code, d.cert_no].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
     const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || escapeHtmlText(d.department || '-');
-    const ps = planStatusMap[d.id];
+    const work = (window.calibrationWorkStatusMap || {})[d.id] || null;
     const sMap = {
-      pending_plan: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E41;&#x0E1C;&#x0E19;', '#854F0B', '#FAEEDA'],
-      planned:      ['&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#3B6D11', '#EAF3DE'],
-      pending_cert: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E2A;&#x0E2D;&#x0E1A;', '#185FA5', '#E6F1FB'],
-      completed:    ['&#x0E2A;&#x0E2D;&#x0E1A;&#x0E40;&#x0E17;&#x0E35;&#x0E22;&#x0E1A;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#0F6E56', '#E1F5EE'],
+      awaiting_acknowledgement_pdf: ['รอรับทราบ', '#854F0B', '#FAEEDA'],
+      in_progress: ['กำลังสอบเทียบ', '#185FA5', '#E6F1FB'],
+      overdue: ['เกินแผน', '#A32D2D', '#FCEBEB'],
+      completed: ['เสร็จแล้ว', '#0F6E56', '#E1F5EE'],
     };
     const planMeta = cancelled
       ? ['ไม่ต้องวางแผน', '#8A1F1F', '#FCEBEB']
-      : (ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
+      : (work ? (sMap[work.status] || [escapeHtmlText(work.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
     const planBadge = '<div class="mobile-plan-row"><span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span></div>';
     const workBadge = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
     const planBtn = cancelled
       ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
-      : (ps
+      : (work
         ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>แผน</span></button>'
         : '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>');
     return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
@@ -165,15 +165,8 @@ async function renderAlerts() {
 
   el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px 0">กำลังโหลด...</div>';
 
-  // ดึง instrument_id ที่มีแผน active อยู่แล้ว
-  let plannedIds = new Set();
-  try {
-    const { data: planItems } = await sb
-      .from('calibration_plan_items')
-      .select('instrument_id, calibration_plans!inner(status)')
-      .in('calibration_plans.status', ['pending_plan','planned','pending_cert']);
-    if (planItems) planItems.forEach(p => plannedIds.add(p.instrument_id));
-  } catch(e) { /* ถ้าดึงไม่ได้ก็แสดงทั้งหมด */ }
+  // สถานะชุดงานปัจจุบันเผยแพร่โดย calibration-work engine
+  const plannedIds = new Set(Object.keys(window.calibrationWorkStatusMap || {}).map(Number));
 
   const today = new Date(); today.setHours(0,0,0,0);
 
@@ -305,7 +298,6 @@ async function loadData(forceRefresh = false) {
     renderMonthlyBarChart();
     renderDashboardAuditLog();
     renderPendingCertWidget();
-    loadPlanStatusMap();
     if (typeof loadCalibrationWorkStatusMap === 'function') void loadCalibrationWorkStatusMap();
     if (typeof loadRepairData === 'function') loadRepairData();
     updateNotificationBell();
@@ -778,7 +770,6 @@ function renderTable() {
     const idCode = escapeHtmlText(d.id_code || '–');
     const certNo = escapeHtmlText(d.cert_no || '–');
     const instrumentName = escapeHtmlText(d.instrument_name || '–');
-    const planTitle = escapeHtmlAttr(planStatusMap[d.id]?.title || '');
     const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
     const displayType = getDisplayInstrumentType(d);
     const [letter, icon, color] = regTypeMeta(displayType, d);
@@ -802,16 +793,8 @@ function renderTable() {
       <td>${statusBadge}${typeof repairBadgeHtml === 'function' && repairBadgeHtml(d.id) ? '<br>' + repairBadgeHtml(d.id) : ''}</td>
       <td>${(()=>{
         if (cancelled) return '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
-        const ps = planStatusMap[d.id];
-        if (!ps) return `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
-        const sMap = {
-          pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#FAEEDA'],
-          planned:      ['✅ วางแผนแล้ว','#3B6D11','#EAF3DE'],
-          pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#E6F1FB'],
-          completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
-        };
-        const [lbl,color2,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
-        return `<button onclick="goToPlanDetail(${id})" title="ดูแผน: ${planTitle}" style="font-size:11px;background:${bg};color:${color2};border:1px solid ${color2}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
+        const shortcut = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
+        return shortcut || `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
       })()}</td>
       <td><button id="certbtn-${id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td style="white-space:nowrap" class="td-manage"></td>

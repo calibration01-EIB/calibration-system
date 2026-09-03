@@ -23,11 +23,17 @@ function text(url) {
 }
 
 (async () => {
-  let indexSource, swSource;
+  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource;
   try {
-    [indexSource, swSource] = await Promise.all([
+    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource] = await Promise.all([
       text('../index.html'),
-      text('../sw.js')
+      text('../sw.js'),
+      text('../js/06-plan.js'),
+      text('../js/04-reports.js'),
+      text('../js/18-asset-out.js'),
+      text('../js/02-dashboard.js'),
+      text('../js/23-cal-records.js'),
+      text('../js/28-kpi.js')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -47,6 +53,24 @@ function text(url) {
     lacks(swSource, 'assets/frm-eib04-template.xlsx', 'FRM template cache');
     has(indexSource, 'id="importFileInput"', 'general register import remains');
     has(indexSource, 'handleImportFile(this.files[0])', 'general import handler remains');
+  });
+
+  t('preserves unrelated Excel exports without the retired runtime', () => {
+    has(reportsSource, 'function exportExcel()', 'general register export remains');
+    has(assetOutSource, 'function assetOutEscapeXml', 'asset-out XML helper remains');
+    has(assetOutSource, 'function assetOutDateSerial', 'asset-out date helper remains');
+    lacks(assetOutSource, 'js/15-plan-export.js', 'asset-out legacy runtime dependency');
+  });
+
+  t('retires legacy plan data callers in favor of calibration work', () => {
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token => {
+      [planSource, dashboardSource, calRecordsSource, kpiSource].forEach(source =>
+        lacks(source, token, token + ' source reference'));
+    });
+    ['planSelectedItems', 'switchPlanTab(', 'planStatusMap'].forEach(token =>
+      lacks(calRecordsSource, token, token + ' calibration-record dependency'));
+    has(calRecordsSource, 'calibrationWorkStatusMap', 'unified work status source');
+    has(calRecordsSource, 'cwOpenBatchFromInstrument', 'unified work detail navigation');
   });
 
   document.getElementById('out').textContent = results.join('\n');

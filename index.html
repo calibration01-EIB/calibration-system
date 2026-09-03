@@ -304,20 +304,6 @@ tbody tr:hover { background: var(--surface2); }
 /* PLAN PAGE */
 .plan-workspace { display:flex; flex-direction:column; gap:14px; }
 .plan-tabs { display:flex; gap:4px; width:fit-content; max-width:100%; padding:4px; border:1px solid var(--border); border-radius:8px; background:#f7fbfa; overflow-x:auto; scrollbar-width:none; }
-.frm-grid { border-collapse:collapse; font-size:12px; min-width:1150px; }
-.frm-grid th, .frm-grid td { border:1px solid #9aa5b1; padding:2px 4px; text-align:center; }
-.frm-grid th { background:#f1f5f4; font-weight:700; }
-.frm-grid td.frm-day { width:20px; min-width:20px; padding:0; height:22px; cursor:pointer; user-select:none; }
-.frm-grid td.frm-day.on { background:#00B0F0; color:#fff; font-weight:700; }
-.frm-grid td.frm-day.band { background:#00B0F0; }
-.frm-grid td.frm-day.pending { outline:2px dashed #d33f35; outline-offset:-2px; }
-.frm-grid td.frm-day.ro { cursor:default; }
-.frm-grid input, .frm-grid select { border:1px solid var(--border); border-radius:6px; padding:3px 6px; font-family:var(--font); font-size:12px; }
-.frm-grid input.frm-name { width:150px; } .frm-grid input.frm-loc { width:70px; }
-.frm-grid th.frm-next-divider, .frm-grid td.frm-next-divider { border-left:3px solid #d33f35; }
-.frm-grid td.frm-day-next { background:#f6f6f6; }
-.frm-grid td.frm-day input[type=checkbox], .frm-grid td.frm-day-next input[type=checkbox] { margin:0; cursor:pointer; }
-.frm-grid tr.frm-sibling-row { opacity:.65; background:#fafafa; }
 .plan-tabs::-webkit-scrollbar { display:none; }
 .plan-tab { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:7px 14px; border:0; border-radius:6px; background:transparent; color:var(--text2); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,box-shadow .15s; }
 .plan-tab:hover { background:#edf7f5; color:var(--text); }
@@ -4100,84 +4086,6 @@ body.app-mode textarea:focus {
   </div>
 </div>
 
-<!-- CERT RESULT MODAL (กรอกผลสอบเทียบรายเครื่อง) -->
-<div class="modal-overlay" id="certResultModal">
-  <div class="modal-box" style="max-width:680px">
-    <div class="modal-header">
-      <h3 id="certResultTitle">กรอกผลสอบเทียบ</h3>
-      <button class="btn-close" onclick="closeCertResultModal()">×</button>
-    </div>
-    <div class="modal-body" id="certResultBody"></div>
-    <div class="modal-footer" id="certResultFooter"></div>
-  </div>
-</div>
-
-
-<!-- Modal ปฏิเสธแผน -->
-<div class="modal-overlay" id="rejectPlanModal" style="display:none">
-  <div class="modal-box" style="max-width:440px">
-    <div class="modal-header">
-      <h3>❌ ปฏิเสธแผนสอบเทียบ</h3>
-      <button class="btn-close" onclick="closeRejectModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">กรุณาระบุสาเหตุที่ปฏิเสธ เพื่อให้เจ้าหน้าที่แก้ไขได้ถูกต้อง</p>
-      <input type="hidden" id="rejectPlanId">
-      <div class="form-group">
-        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">สาเหตุที่ปฏิเสธ <span style="color:var(--red)">*</span></label>
-        <textarea id="rejectReason" rows="4" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="เช่น เอกสารไม่ครบ, วันที่ไม่เหมาะสม, รายการเครื่องมือไม่ถูกต้อง..."></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button onclick="closeRejectModal()" class="btn-secondary">ยกเลิก</button>
-      <button onclick="submitRejectPlan()" style="padding:9px 20px;background:#C62828;color:white;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">❌ ยืนยันการปฏิเสธ</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal แก้ไขแผน -->
-<div class="modal-overlay" id="editPlanModal">
-  <div class="modal-box" style="max-width:480px">
-    <div class="modal-header">
-      <h3>✏️ แก้ไขแผนสอบเทียบ</h3>
-      <button class="btn-close" onclick="closeEditPlanModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editPlanId">
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">ชื่อแผน <span style="color:var(--red)">*</span></label>
-        <input type="text" id="editPlanTitle" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
-      </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">วันที่นัดสอบ <span style="color:var(--red)">*</span></label>
-        <input type="date" id="editPlanDate" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none">
-      </div>
-      <div class="form-group">
-        <label style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block">หมายเหตุการแก้ไข</label>
-        <textarea id="editPlanNote" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical" placeholder="ระบุเหตุผลที่แก้ไข (ถ้ามี)"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button onclick="closeEditPlanModal()" class="btn-secondary">ยกเลิก</button>
-      <button onclick="submitEditPlan()" class="btn-primary">💾 บันทึก</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Audit Trail -->
-<div class="modal-overlay" id="auditPlanModal">
-  <div class="modal-box" style="max-width:560px">
-    <div class="modal-header">
-      <h3>📋 ประวัติการดำเนินการ</h3>
-      <button class="btn-close" onclick="closeAuditPlanModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div id="auditPlanTitle" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
-      <div id="auditPlanList" style="display:flex;flex-direction:column;gap:0"></div>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="instrumentModal">
   <div class="modal-box instrument-modal-box">
     <div class="modal-header instrument-modal-header">
@@ -4615,7 +4523,6 @@ body.app-mode textarea:focus {
 <script src="js/03-instruments.js?v=20260803-split"></script>
 <script src="js/04-reports.js?v=20260803-deadcode"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
-<script src="js/06-plan.js?v=20260803-deadcode"></script>
 <script src="js/06b-import-register.js?v=20260803-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260803-deadcode"></script>
@@ -4625,9 +4532,7 @@ body.app-mode textarea:focus {
 <script src="js/12-standard-certs.js?v=20260803-deadcode"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
 <script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
-<script src="js/15-plan-export.js?v=20260803-deadcode"></script>
 <script src="js/16-repairs.js?v=20260721-repairs"></script>
-<script src="js/17-frm-cross-month.js?v=20260722-cross-month"></script>
 <script src="js/18-asset-out.js?v=20260723-asset-out"></script>
 <script src="js/22-users.js?v=20260803-split"></script>
 <script src="js/23-cal-records.js?v=20260803-split"></script>

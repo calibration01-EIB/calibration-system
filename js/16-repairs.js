@@ -566,7 +566,8 @@ function renderRepairDashboard() {
 
   // แถบเตือน ซ่อมเสร็จ รอสอบเทียบใหม่
   const strip = document.getElementById('repairRecalStrip');
-  const waiting = computeRecalWaiting(repairOrders, allData || [], typeof planStatusMap !== 'undefined' ? planStatusMap : {});
+  const waiting = computeRecalWaiting(repairOrders, allData || [],
+    typeof calibrationWorkStatusMap !== 'undefined' ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {});
   if (strip) strip.innerHTML = waiting.length ? `
     <div style="background:#fdf3dd;border:1px solid #f0d9a8;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px">
       ⚠️ <strong>ซ่อมเสร็จ รอสอบเทียบใหม่ ${waiting.length} เครื่อง:</strong>

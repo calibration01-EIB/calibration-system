@@ -145,20 +145,15 @@ function listActionCell(d) {
   const fileBtn = `<button type="button" id="certbtn-${id}" class="btn-cert ${cnt > 0 ? 'btn-cert-has' : 'btn-cert-empty'}" onclick="${openCertCall}">📎 ${cnt > 0 ? cnt + ' ไฟล์' : 'ไฟล์'}</button>`;
 
   let planBtn;
-  const ps = typeof planStatusMap !== 'undefined' ? planStatusMap[d.id] : null;
+  const workMap = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
+    ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
+  const work = workMap[d.id] || null;
   if (cancelled) {
     planBtn = '<span class="ax-act-mute">ไม่ต้องวางแผน</span>';
-  } else if (!ps) {
+  } else if (!work) {
     planBtn = `<button type="button" class="ax-act-plan" onclick="goToPlanWithItem(${id})">📋 วางแผน</button>`;
   } else {
-    const sMap = {
-      pending_plan: ['🟡 รอยืนยันแผน', '#854F0B', '#FAEEDA'],
-      planned:      ['✅ วางแผนแล้ว',  '#3B6D11', '#EAF3DE'],
-      pending_cert: ['🔵 รอยืนยันสอบ', '#185FA5', '#E6F1FB'],
-      completed:    ['🏆 สอบเทียบแล้ว', '#0F6E56', '#E1F5EE']
-    };
-    const [lbl, color, bg] = sMap[ps.status] || ['–', '#888', '#f5f5f5'];
-    planBtn = `<button type="button" class="ax-act-plan" style="background:${bg};color:${color};border-color:${color}40" title="ดูแผน: ${escapeHtmlAttr(ps.title || '')}" onclick="goToPlanDetail(${id})">${lbl}</button>`;
+    planBtn = '';
   }
 
   const canEdit = typeof currentUser !== 'undefined'

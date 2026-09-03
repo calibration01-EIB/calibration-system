@@ -28,7 +28,6 @@ const APP_SHELL = [
   './js/03-instruments.js',
   './js/04-reports.js',
   './js/05-audit.js',
-  './js/06-plan.js',
   './js/06b-import-register.js',
   './js/07-notifications.js',
   './js/08-weights.js',
@@ -41,9 +40,7 @@ const APP_SHELL = [
   './js/28-kpi.js',
   './js/29-calibration-work.js?v=20260903-plan1',
   './js/12-standard-certs.js',
-  './js/15-plan-export.js',
   './js/16-repairs.js',
-  './js/17-frm-cross-month.js',
   './js/18-asset-out.js',
   './js/13-cmc.js',
   './js/14-cal-presets.js',
@@ -53,7 +50,6 @@ const APP_SHELL = [
   // จึงต้อง precache เพื่อให้ช่างหน้างานใช้งานได้แม้เครือข่ายไม่พร้อม
   './balance-cal.html',
   './js/balance-cal.js',
-  './assets/frm-eib04-template.xlsx',
   './assets/frm-asset-out-template.xlsx',
   IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
