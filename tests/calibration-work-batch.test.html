@@ -369,6 +369,63 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  t('keeps primary and inner state aligned after waiting/history refreshes', () => {
+    const cleanup = cwMountFixture();
+    try {
+      const waitingModel = cwDashboardModel();
+      cwRenderDashboard(waitingModel);
+      ok(cwSetPrimaryTab('waiting'), 'waiting selected before refresh');
+      cwRenderDashboard(waitingModel, { primaryTab: 'waiting' });
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'waiting remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting inner state survives refresh');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting content survives refresh');
+
+      const historyModel = { batches: [
+        { id:'66666666-6666-6666-6666-666666666666', status:'completed', items:[], documents:[] },
+        { id:'77777777-7777-7777-7777-777777777777', status:'cancelled', items:[], documents:[] },
+        { id:'88888888-8888-8888-8888-888888888888', status:'awaiting_calibration', items:[], documents:[] }
+      ], locks:[], locksReady:true };
+      cwSetPrimaryTab('history');
+      cwRenderDashboard(historyModel, { primaryTab: 'history' });
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'history', 'history remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'history', 'history inner state survives refresh');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history content survives refresh');
+    } finally { cleanup(); }
+  });
+
+  t('rolls back denied primary select without stealing focus or selection', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      batches.focus();
+      window.currentUser = { role:'viewer' };
+      eq(cwSetPrimaryTab('select'), false, 'viewer cannot open create wizard');
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'denied select restores primary selection');
+      eq(document.activeElement, batches, 'denied select keeps focus on selected tab');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'active', 'denied select keeps dashboard state');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  t('restores prior primary selection and focus after keyboard create close', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true }, { primaryTab:'batches' });
+      window.currentUser = { role:'editor' };
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      batches.focus();
+      batches.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'select', 'keyboard select commits after dialog opens');
+      ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'keyboard select opens create dialog');
+      cwCloseCreate();
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'close restores prior primary selection');
+      eq(document.activeElement, batches, 'close restores focus to prior primary tab');
+      eq(batches.tabIndex, 0, 'restored tab is in tab order');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
   t('keeps primary tablist focus and selection deterministic with arrow keys', () => {
     const cleanup = cwMountFixture();
     try {
@@ -864,6 +921,7 @@ function text(url) {
 
       cwRenderDashboard(model);
       ok(await cwOpenNotification('awaiting_acknowledgement'), 'notification filter opens');
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'notification selects waiting primary tab');
       eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting tab selected');
       has(document.getElementById('cwBatchList').textContent, awaiting.batch_no, 'awaiting acknowledgement filter');
       ok(await cwOpenNotification('awaiting_closure', closure.id), 'batch notification opens exact detail');

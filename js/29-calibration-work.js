@@ -137,7 +137,8 @@
   const cwWizardState = {
     mode: 'create', step: 1, title: '', unitCode: '', instrumentType: '', search: '',
     selected: new Map(), batchId: null, expectedUpdatedAt: null, hadAcknowledgement: false,
-    currentAcknowledgement: false, submitting: false, returnFocus: null
+    currentAcknowledgement: false, submitting: false, returnFocus: null,
+    returnPrimaryTab: null, returnDashboardTab: null
   };
   const cwDocumentState = {
     batchId: null, itemId: null, kind: null, file: null, replacementReason: '',
@@ -240,6 +241,16 @@
 
   let cwPrimaryTab = 'batches';
 
+  const CW_PRIMARY_TO_DASHBOARD = Object.freeze({
+    batches: 'active', waiting: 'waiting', history: 'history'
+  });
+
+  function cwPrimaryForDashboardTab(tab) {
+    if (tab === 'waiting') return 'waiting';
+    if (tab === 'history' || tab === 'completed') return 'history';
+    return 'batches';
+  }
+
   function cwRenderPrimaryTabs() {
     const root = document.getElementById('cwPrimaryTabs');
     if (!root) return;
@@ -251,12 +262,36 @@
     });
   }
 
+  function cwSyncPrimaryState(tab, dashboardTab) {
+    const next = CW_PRIMARY_TABS.includes(tab) ? tab : 'batches';
+    cwPrimaryTab = next;
+    if (next !== 'select') {
+      cwUiState.tab = CW_TABS.some(item => item.key === dashboardTab)
+        ? dashboardTab : CW_PRIMARY_TO_DASHBOARD[next];
+    }
+    cwRenderPrimaryTabs();
+    return next;
+  }
+
   function cwSetPrimaryTab(tab) {
     if (!CW_PRIMARY_TABS.includes(tab)) return false;
-    cwPrimaryTab = tab;
-    cwRenderPrimaryTabs();
-    if (tab === 'select') return cwOpenCreate();
-    cwSetDashboardTab(tab === 'batches' ? 'active' : tab);
+    if (tab === 'select') {
+      const previousPrimaryTab = cwPrimaryTab;
+      const previousDashboardTab = cwUiState.tab;
+      if (!cwOpenCreate()) {
+        cwPrimaryTab = previousPrimaryTab;
+        cwUiState.tab = previousDashboardTab;
+        cwRenderPrimaryTabs();
+        return false;
+      }
+      cwWizardState.returnPrimaryTab = previousPrimaryTab;
+      cwWizardState.returnDashboardTab = previousDashboardTab;
+      cwSyncPrimaryState('select');
+      return true;
+    }
+    cwSyncPrimaryState(tab);
+    cwRenderTabs();
+    cwRenderBatchList();
     return true;
   }
 
@@ -272,11 +307,11 @@
     else index = (index - 1 + CW_PRIMARY_TABS.length) % CW_PRIMARY_TABS.length;
     event.preventDefault();
     const nextKey = CW_PRIMARY_TABS[index];
-    cwSetPrimaryTab(nextKey);
+    const selected = cwSetPrimaryTab(nextKey);
     const nextTab = document.querySelector('#cwPrimaryTabs [data-cw-primary="' + nextKey + '"]');
     const dialogOpen = nextKey === 'select'
       && document.getElementById('cwCreateDialog')?.classList.contains('open');
-    if (nextTab && !dialogOpen) nextTab.focus();
+    if (selected && nextTab && !dialogOpen) nextTab.focus();
   }
 
   function cwRenderTabs() {
@@ -360,16 +395,16 @@
     if (detail) detail.hidden = true;
   }
 
-  function cwRenderDashboard(model) {
+  function cwRenderDashboard(model, options) {
     const hasLocks = Boolean(model && Array.isArray(model.locks));
     cwUiState.model = model && Array.isArray(model.batches)
       ? { ...model, locks: hasLocks ? model.locks : [], locksReady: hasLocks && model.locksReady !== false }
       : { batches: [], locks: [], locksReady: false };
-    cwUiState.tab = 'active';
     cwUiState.notificationFilter = null;
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
-    cwRenderPrimaryTabs();
+    const primaryTab = options && options.primaryTab;
+    cwSyncPrimaryState(primaryTab || 'batches');
     cwSetCreateAccess();
     const list = document.getElementById('cwBatchList');
     if (model && model.error) {
@@ -388,6 +423,7 @@
 
   function cwSetDashboardTab(tab) {
     if (!CW_TABS.some(item => item.key === tab)) return;
+    cwSyncPrimaryState(cwPrimaryForDashboardTab(tab));
     cwUiState.tab = tab;
     cwUiState.notificationFilter = null;
     cwRenderTabs();
@@ -615,15 +651,15 @@
 
   async function cwOpenNotification(kind, batchId) {
     const tabs = {
-      awaiting_acknowledgement: 'waiting', due_today: 'active',
-      overdue_missing_evidence: 'active', awaiting_closure: 'waiting'
+      awaiting_acknowledgement: 'waiting', due_today: 'batches',
+      overdue_missing_evidence: 'batches', awaiting_closure: 'waiting'
     };
     if (!Object.prototype.hasOwnProperty.call(tabs, kind)) return false;
     if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(null);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) return false;
+    cwSyncPrimaryState(tabs[kind]);
     cwUiState.notificationFilter = kind;
-    cwUiState.tab = tabs[kind];
     cwRenderTabs();
     cwRenderBatchList();
     if (batchId != null) {
@@ -641,6 +677,7 @@
     const mapped = id == null ? null : calibrationWorkStatusMap[id];
     if (!mapped || !UUID_PATTERN.test(mapped.batchId || '')) return false;
     const returnFocus = document.activeElement;
+    cwSyncPrimaryState('batches');
     if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(client);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) {
@@ -660,6 +697,7 @@
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
     const integrationGeneration = ++cwIntegrationLoadGeneration;
+    const requestedPrimaryTab = cwPrimaryTab === 'select' ? 'batches' : cwPrimaryTab;
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -682,12 +720,13 @@
       ]);
       if (generation !== cwUiState.loadGeneration) return false;
       const model = cwNormalizeReadModel(batches, items, locks, documents, audit);
-      cwRenderDashboard(model);
+      cwRenderDashboard(model, { primaryTab: requestedPrimaryTab });
       cwPublishCalibrationWorkIntegration(model, null, integrationGeneration);
       return true;
     } catch (error) {
       if (generation !== cwUiState.loadGeneration) return false;
-      cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' });
+      cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' },
+        { primaryTab: requestedPrimaryTab });
       return false;
     }
   }
@@ -1223,6 +1262,8 @@
   function cwOpenCreate() {
     if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
     cwWizardState.returnFocus = document.activeElement;
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     cwResetWizard('create', null);
     return cwOpenDialog();
   }
@@ -1232,6 +1273,8 @@
     const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
     if (!batch || ['completed', 'cancelled'].includes(cwBatchStatus(batch))) return false;
     cwWizardState.returnFocus = document.activeElement;
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     cwResetWizard('edit', batch);
     return cwOpenDialog();
   }
@@ -1243,8 +1286,20 @@
       dialog.classList.remove('open');
       dialog.setAttribute('aria-hidden', 'true');
     }
+    const returnPrimaryTab = cwWizardState.returnPrimaryTab;
+    if (returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)) {
+      cwSyncPrimaryState(returnPrimaryTab, cwWizardState.returnDashboardTab);
+      cwRenderTabs();
+      cwRenderBatchList();
+    }
     const returnFocus = cwWizardState.returnFocus;
     if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.isConnected) returnFocus.focus();
+    else {
+      const fallback = document.querySelector('#cwPrimaryTabs [aria-selected="true"]');
+      if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    }
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     return true;
   }
 
