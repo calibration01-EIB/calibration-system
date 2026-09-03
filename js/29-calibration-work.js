@@ -503,17 +503,20 @@
 
   function cwBuildCalibrationWorkStatusMap(model, todayISO) {
     const next = {};
+    const chosen = {};
     const today = todayISO || cwTodayISO();
     const batches = new Map((model && model.batches || []).map(batch => [batch.id, batch]));
     const locks = new Map((model && model.locks || []).map(lock => [String(lock.instrument_id), lock]));
-    const rank = { awaiting_acknowledgement_pdf: 1, in_progress: 2, overdue: 3, completed: 4 };
     batches.forEach(batch => {
-      if (!batch || ['draft', 'completed', 'cancelled'].includes(batch.status)) return;
+      if (!batch || ['draft', 'cancelled'].includes(batch.status)) return;
+      const closed = batch.status === 'completed';
       (batch.items || []).forEach(item => {
         const instrumentId = cwInstrumentId(item && item.instrument_id);
         if (instrumentId == null || item.is_active === false || item.result_status === 'skipped') return;
-        const lock = locks.get(String(instrumentId));
-        if (!lock || lock.batch_id !== batch.id) return;
+        if (!closed) {
+          const lock = locks.get(String(instrumentId));
+          if (!lock || lock.batch_id !== batch.id) return;
+        }
         let status = null;
         if (item.result_status === 'completed') status = 'completed';
         else if (item.result_status === 'in_progress') {
@@ -521,7 +524,7 @@
           status = displayStatus === 'overdue' ? 'overdue'
             : (batch.status === 'awaiting_acknowledgement_pdf' ? 'awaiting_acknowledgement_pdf' : displayStatus);
         }
-        if (!rank[status]) return;
+        if (!status || (closed && status !== 'completed')) return;
         const candidate = {
           batchId: batch.id,
           batchNo: String(batch.batch_no || ''),
@@ -529,8 +532,16 @@
           plannedDate: String(item.planned_date || ''),
           status
         };
-        const current = next[instrumentId];
-        if (!current || rank[candidate.status] > rank[current.status]) next[instrumentId] = candidate;
+        const priority = closed ? 1 : 2;
+        const updatedAt = String(batch.updated_at || '');
+        const batchId = String(batch.id || '');
+        const current = chosen[instrumentId];
+        if (!current || priority > current.priority
+            || (priority === current.priority && updatedAt > current.updatedAt)
+            || (priority === current.priority && updatedAt === current.updatedAt && batchId > current.batchId)) {
+          chosen[instrumentId] = { priority, updatedAt, batchId };
+          next[instrumentId] = candidate;
+        }
       });
     });
     return next;
@@ -1266,6 +1277,27 @@
     cwWizardState.returnDashboardTab = null;
     cwResetWizard('create', null);
     return cwOpenDialog();
+  }
+
+  function cwOpenCreateWithInstrument(instrumentId) {
+    if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
+    const id = cwInstrumentId(instrumentId);
+    const instrument = id == null ? null : cwRegistry().find(row =>
+      row && cwInstrumentId(row.id) === id);
+    if (!instrument || !instrument.department || !instrument.instrument_type || cwLockFor(id)) return false;
+    const previousPrimaryTab = cwPrimaryTab;
+    const previousDashboardTab = cwUiState.tab;
+    cwWizardState.returnFocus = document.activeElement;
+    cwResetWizard('create', null);
+    cwWizardState.unitCode = String(instrument.department);
+    cwWizardState.instrumentType = String(instrument.instrument_type);
+    cwWizardState.step = 2;
+    cwWizardState.selected.set(String(id), { instrumentId: id, plannedDate: '', item: null });
+    if (!cwOpenDialog()) return false;
+    cwWizardState.returnPrimaryTab = previousPrimaryTab;
+    cwWizardState.returnDashboardTab = previousDashboardTab;
+    cwSyncPrimaryState('select');
+    return true;
   }
 
   async function cwEditBatchItems(batchId) {
@@ -2478,6 +2510,7 @@
   global.cwOpenBatch = cwOpenBatch;
   global.cwCloseBatch = cwCloseBatch;
   global.cwOpenCreate = cwOpenCreate;
+  global.cwOpenCreateWithInstrument = cwOpenCreateWithInstrument;
   global.cwCloseCreate = cwCloseCreate;
   global.cwSetCreateTitle = cwSetCreateTitle;
   global.cwChooseCreateUnit = cwChooseCreateUnit;

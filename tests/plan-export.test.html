@@ -40,17 +40,18 @@ function text(url) {
     document.title = 'FAIL';
     return;
   }
+  const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
 
   t('retires FRM Excel implementation without affecting general imports', () => {
     ['js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js'].forEach(script => {
       lacks(indexSource, script, script + ' index reference');
-      lacks(swSource, './' + script, script + ' cache reference');
+      lacks(appShell, './' + script, script + ' cache reference');
     });
     ['แผน FRM', 'ระบบเก่า', 'ลงแผน FRM', 'FRM-EIB04'].forEach(token =>
       lacks(indexSource, token, token + ' UI surface'));
     ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token =>
       lacks(indexSource, token, token + ' data surface'));
-    lacks(swSource, 'assets/frm-eib04-template.xlsx', 'FRM template cache');
+    lacks(appShell, 'assets/frm-eib04-template.xlsx', 'FRM template cache');
     has(indexSource, 'id="importFileInput"', 'general register import remains');
     has(indexSource, 'handleImportFile(this.files[0])', 'general import handler remains');
   });
@@ -71,6 +72,14 @@ function text(url) {
       lacks(calRecordsSource, token, token + ' calibration-record dependency'));
     has(calRecordsSource, 'calibrationWorkStatusMap', 'unified work status source');
     has(calRecordsSource, 'cwOpenBatchFromInstrument', 'unified work detail navigation');
+    has(calRecordsSource, 'cwOpenCreateWithInstrument(instrumentId)', 'create shortcut preserves exact instrument id');
+    lacks(calRecordsSource, 'async function goToPlanWithItem(_instrumentId)', 'instrument id is not discarded');
+  });
+
+  t('removes dead legacy planner styling and callback selectors', () => {
+    ['.plan-workspace', '.plan-tabs', '.plan-filter-grid', '.plan-upload', '#planTabNew', '#planStep1',
+      '#planStep2', '#planDropZone', '#planFilterType', 'filterPlanInstruments', 'goToPlanStep2', 'submitPlan']
+      .forEach(token => lacks(indexSource, token, token + ' retired CSS'));
   });
 
   document.getElementById('out').textContent = results.join('\n');

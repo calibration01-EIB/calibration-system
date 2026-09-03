@@ -534,7 +534,7 @@ function computeRecalWaiting(orders, rows, planMap) {
     if (!d) return false;
     if (d.cal_date && d.cal_date >= o.completed_date) return false;
     const ps = planMap && planMap[o.instrument_id];
-    if (ps && ps.planned_date && ps.planned_date >= o.completed_date) return false;
+    if (ps && ps.plannedDate && ps.plannedDate >= o.completed_date) return false;
     return true;
   });
 }

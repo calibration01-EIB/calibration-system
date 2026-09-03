@@ -24,7 +24,7 @@ function assetOutGetTemplate() {
   return assetOutTemplateBufPromise;
 }
 
-// แปลงคอลัมน์ตัวอักษร → เลข (ผกผันกับ frmColLetter ใน 15-plan-export.js) — ใช้จัดลำดับตอนแทรกเซลล์ใหม่
+// แปลงคอลัมน์ตัวอักษร → เลข — ใช้จัดลำดับตอนแทรกเซลล์ใหม่
 function aoColIndex(letters) {
   let n = 0;
   for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);

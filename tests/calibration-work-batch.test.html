@@ -3,6 +3,7 @@
 <pre id="out"></pre>
 <script>window.CW_TEST_MODE = true;</script>
 <script src="../js/29-calibration-work.js"></script>
+<script src="../js/23-cal-records.js"></script>
 <script>
 const results = [];
 function t(name, fn) {
@@ -54,6 +55,7 @@ function text(url) {
 
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
   const lower = sql.toLowerCase();
+  const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
 
   t('uses calibration work as the only plan page', () => {
     has(indexSource, '> แผนสอบเทียบ</span>', 'desktop menu title');
@@ -81,7 +83,7 @@ function text(url) {
       lacks(indexSource, token, token + ' HTML');
       lacks(planSource, token, token + ' JavaScript');
     });
-    lacks(swSource, 'frm-eib04-template.xlsx', 'legacy template cache entry');
+    lacks(appShell, 'frm-eib04-template.xlsx', 'legacy template cache entry');
   });
 
   function body(name) {
@@ -226,29 +228,45 @@ function text(url) {
     has(loadBody, 'return false;', 'failed registry refresh result');
   });
 
-  t('registers the status engine after KPI in the exact offline cache generation', () => {
-    const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260903-plan1"></' + 'script>');
+  t('registers one query-qualified script generation with exact offline cache parity', () => {
+    const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260903-plan2"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260903-plan2"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260903-plan1"', 'current calibration stylesheet query version');
-    has(indexSource, 'src="js/10-router.js?v=20260903-plan1"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v159';", 'cache v159');
+    has(indexSource, 'href="theme-aqua.css?v=20260903-plan2"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260903-plan2"', 'current router query version');
+    has(indexSource, "serviceWorker.register('sw.js?v=20260903-plan2')", 'service worker generation');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v160';", 'cache v160');
     [
-      'index.html?v=20260903-plan1',
-      'theme-aqua.css?v=20260903-plan1',
-      'js/10-router.js?v=20260903-plan1',
-      'js/02-dashboard.js?v=20260902-cw7',
-      'js/26-list-ui.js?v=20260902-cw7',
-      'js/29-calibration-work.js?v=20260903-plan1'
+      'index.html?v=20260903-plan2',
+      'theme-aqua.css?v=20260903-plan2',
+      'js/02-dashboard.js?v=20260903-plan2',
+      'js/04-reports.js?v=20260903-plan2',
+      'js/10-router.js?v=20260903-plan2',
+      'js/16-repairs.js?v=20260903-plan2',
+      'js/18-asset-out.js?v=20260903-plan2',
+      'js/23-cal-records.js?v=20260903-plan2',
+      'js/26-list-ui.js?v=20260903-plan2',
+      'js/28-kpi.js?v=20260903-plan2',
+      'js/29-calibration-work.js?v=20260903-plan2'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
     });
-    ['js/02-dashboard.js','js/26-list-ui.js','js/29-calibration-work.js'].forEach(scriptPath => {
-      const indexMatch = indexSource.match(new RegExp('<script src="(' + scriptPath.replace(/\./g, '\\.') + '\\?[^\"]+)"'));
-      ok(indexMatch, scriptPath + ' query-qualified index request');
-      has(swSource, "'./" + indexMatch[1] + "'", scriptPath + ' index URL exactly matches APP_SHELL');
+    const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+    [...parsed.querySelectorAll('script[src^="js/"]')].forEach(script => {
+      const source = script.getAttribute('src');
+      ok(source.includes('?v='), source + ' must be query-qualified');
+      has(swSource, "'./" + source + "'", source + ' exact APP_SHELL parity');
     });
+    ['calibration-app-v159', '20260903-plan1', '20260902-cw7', 'js/06-plan.js',
+      'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'frm-eib04-template.xlsx']
+      .forEach(token => lacks(appShell, token, token + ' stale cache generation'));
+    has(swSource, 'const RETIRED_ASSET_PATHS =', 'retired cache asset contract');
+    ['js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx']
+      .forEach(path => has(swSource, "'" + path + "'", path + ' activation eviction path'));
+    has(swSource, 'await cache.keys()', 'activation inspects existing cache keys');
+    has(swSource, 'cache.delete(request)', 'activation evicts retired requests');
+    has(swSource, 'evictRetiredAssets', 'activation runs retired asset eviction');
   });
 
   function cwMountFixture() {
@@ -795,7 +813,43 @@ function text(url) {
     eq(map[102].batchNo, 'CW7-1', 'batch metadata');
     eq(map[102].plannedDate, '2026-09-01', 'planned date metadata');
     eq(map[102].title, 'Active <script>', 'unescaped data remains data in the map');
-    [105,106,107,108,109].forEach(id => ok(!map[id], 'inactive/terminal/unlocked/skipped id excluded: ' + id));
+    eq(map[105].status, 'completed', 'completed batch remains visible without relying on its stale lock');
+    [106,107,108,109].forEach(id => ok(!map[id], 'inactive/cancelled/unlocked/skipped id excluded: ' + id));
+  });
+
+  t('publishes latest completed work deterministically without weakening active lock ownership', () => {
+    const olderId = cwUuid(740);
+    const newerId = cwUuid(741);
+    const activeId = cwUuid(742);
+    const model = {
+      batches:[
+        {id:newerId,batch_no:'DONE-NEW',title:'newer completion',status:'completed',updated_at:'2026-09-02T09:00:00Z',items:[
+          {id:cwUuid(840),batch_id:newerId,instrument_id:140,is_active:true,result_status:'completed',planned_date:'2026-09-02'}
+        ]},
+        {id:olderId,batch_no:'DONE-OLD',title:'older completion',status:'completed',updated_at:'2026-09-01T09:00:00Z',items:[
+          {id:cwUuid(841),batch_id:olderId,instrument_id:140,is_active:true,result_status:'completed',planned_date:'2026-09-01'},
+          {id:cwUuid(842),batch_id:olderId,instrument_id:141,is_active:true,result_status:'completed',planned_date:'2026-09-01'}
+        ]},
+        {id:activeId,batch_no:'ACTIVE',title:'current locked work',status:'awaiting_calibration',updated_at:'2026-08-30T09:00:00Z',items:[
+          {id:cwUuid(843),batch_id:activeId,instrument_id:141,is_active:true,result_status:'in_progress',planned_date:'2026-09-05'},
+          {id:cwUuid(844),batch_id:activeId,instrument_id:142,is_active:true,result_status:'in_progress',planned_date:'2026-09-05'}
+        ]}
+      ],
+      locks:[{instrument_id:141,batch_id:activeId}]
+    };
+    const map = cwBuildCalibrationWorkStatusMap(model, '2026-09-03');
+    eq(map[140].batchNo, 'DONE-NEW', 'latest completed batch wins independent of input order');
+    eq(map[140].status, 'completed', 'closed item remains completed without a lock');
+    eq(map[141].batchNo, 'ACTIVE', 'current lock-owned work wins over historical completion');
+    ok(!map[142], 'unlocked active item remains excluded');
+
+    Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+    Object.assign(calibrationWorkStatusMap, map);
+    CALRECS = [];
+    const row = crcRowModel({id:140,days_left:5});
+    eq(row.stage[1], 'รอแนบสแกน', 'calibration-record stage does not regress after batch closure');
+    eq(row.done[0], true, 'closed work remains visibly planned');
+    eq(row.done[2], true, 'closed work remains visibly calibrated');
   });
 
   await ta('loads the complete integration map with immutable keysets', async () => {
@@ -1090,6 +1144,55 @@ function text(url) {
       eq(document.querySelectorAll('#cwCreateBody [data-cw-instrument-id]').length, 1, 'search filters exact group rows');
       has(document.getElementById('cwCreateBody').textContent, 'WRM-12', 'search result');
     } finally { cleanup(); }
+  });
+
+  t('opens create flow with the exact requested instrument preselected and rejects unsafe shortcuts', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const ownerId = cwUuid(743);
+      cwRenderDashboard({batches:[{id:ownerId,batch_no:'OWNER-743',status:'draft',items:[],documents:[],audit:[]}],
+        locks:[{instrument_id:15,batch_id:ownerId}]});
+      ok(cwOpenCreateWithInstrument(12), 'manageable unlocked instrument opens wizard');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'false', 'dialog opens');
+      const selected = document.querySelector('[data-cw-instrument-id="12"] input[type="checkbox"]');
+      ok(selected && selected.checked, 'exact requested id reaches wizard selection');
+      eq(document.querySelectorAll('#cwCreateBody input[type="checkbox"]:checked').length, 1, 'only requested instrument is selected');
+      ok(cwGoCreateStep(1), 'preselected shortcut can return to group step');
+      eq(document.getElementById('cwCreateUnit').value, 'WRM1', 'group unit inferred from exact instrument');
+      eq(document.getElementById('cwCreateType').value, 'เครื่องชั่ง (Electronic Balance)', 'group type inferred from exact instrument');
+      cwCloseCreate();
+
+      eq(cwOpenCreateWithInstrument(15), false, 'locked shortcut rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'locked shortcut does not open dialog');
+      cwSetTask4Actor('viewer');
+      eq(cwOpenCreateWithInstrument(12), false, 'read-only shortcut rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'read-only shortcut does not open dialog');
+      cwSetTask4Actor('editor');
+      eq(cwOpenCreateWithInstrument(9999), false, 'unknown shortcut rejected');
+    } finally { cleanup(); }
+  });
+
+  await ta('routes repair/list shortcuts through the unified create flow with the exact id', async () => {
+    const oldShowPage = window.showPage;
+    const oldLoad = window.loadCalibrationWorkPage;
+    const oldOpen = window.cwOpenCreateWithInstrument;
+    let shown = null;
+    let loaded = false;
+    let requested = null;
+    try {
+      window.showPage = page => { shown = page; };
+      window.loadCalibrationWorkPage = async () => { loaded = true; return true; };
+      window.cwOpenCreateWithInstrument = id => { requested = id; return true; };
+      eq(await goToPlanWithItem(12), true, 'shortcut returns unified create result');
+      eq(shown, 'plan', 'shortcut opens the unified plan page');
+      eq(loaded, true, 'shortcut refreshes unified work state first');
+      eq(requested, 12, 'shortcut preserves exact instrument id');
+    } finally {
+      window.showPage = oldShowPage;
+      window.loadCalibrationWorkPage = oldLoad;
+      window.cwOpenCreateWithInstrument = oldOpen;
+    }
   });
 
   t('requires title selection and ISO dates then applies bulk and per-item dates in review', () => {

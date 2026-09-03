@@ -443,10 +443,11 @@ function autoFillPrevCert() {
   }
 }
 
-async function goToPlanWithItem(_instrumentId) {
+async function goToPlanWithItem(instrumentId) {
   showPage('plan');
   if (typeof loadCalibrationWorkPage === 'function') await loadCalibrationWorkPage();
-  if (typeof cwSetPrimaryTab === 'function') cwSetPrimaryTab('select');
+  if (typeof cwOpenCreateWithInstrument === 'function') return cwOpenCreateWithInstrument(instrumentId);
+  return false;
 }
 
 function goToPlanDetail(instrumentId) {

@@ -33,10 +33,11 @@ function text(url) {
     document.title = 'FAIL';
     return;
   }
+  const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
 
   t('cross-month FRM runtime is absent', () => {
     lacks(indexSource, 'js/17-frm-cross-month.js', 'runtime script');
-    lacks(swSource, 'js/17-frm-cross-month.js', 'offline script');
+    lacks(appShell, 'js/17-frm-cross-month.js', 'offline script');
   });
 
   document.getElementById('out').textContent = results.join('\n');
