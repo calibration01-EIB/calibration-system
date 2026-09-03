@@ -36,8 +36,14 @@ function text(url) {
   }
 
   t('retires FRM Excel implementation without affecting general imports', () => {
-    lacks(indexSource, 'js/15-plan-export.js', 'FRM exporter script');
-    lacks(indexSource, 'js/17-frm-cross-month.js', 'cross-month FRM script');
+    ['js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js'].forEach(script => {
+      lacks(indexSource, script, script + ' index reference');
+      lacks(swSource, './' + script, script + ' cache reference');
+    });
+    ['แผน FRM', 'ระบบเก่า', 'ลงแผน FRM', 'FRM-EIB04'].forEach(token =>
+      lacks(indexSource, token, token + ' UI surface'));
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token =>
+      lacks(indexSource, token, token + ' data surface'));
     lacks(swSource, 'assets/frm-eib04-template.xlsx', 'FRM template cache');
     has(indexSource, 'id="importFileInput"', 'general register import remains');
     has(indexSource, 'handleImportFile(this.files[0])', 'general import handler remains');

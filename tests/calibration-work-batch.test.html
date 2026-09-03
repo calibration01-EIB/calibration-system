@@ -60,8 +60,15 @@ function text(url) {
     has(routerSource, "plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง']", 'route title');
     has(indexSource, 'id="pagePlan"', 'single plan page');
     has(indexSource, 'id="cwTabs"', 'work dashboard lives in plan page');
+    lacks(workSource, "showPage('calwork')", 'work module legacy route call removed');
     lacks(indexSource, "showPage('calwork')", 'separate work route removed');
     lacks(routerSource, 'calwork:', 'separate route metadata removed');
+  });
+
+  t('defines exactly four primary plan sections', () => {
+    const keys = [...indexSource.matchAll(/data-cw-primary="([^"]+)"/g)].map(match => match[1]);
+    eq(keys.join(','), 'select,batches,waiting,history', 'primary section keys');
+    ['เลือกเครื่อง', 'ชุดงาน', 'รอดำเนินการ', 'ประวัติ'].forEach(label => has(indexSource, label, 'primary section label'));
   });
 
   t('removes every legacy calibration-plan surface', () => {
@@ -242,7 +249,7 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<div id="pagePlan"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -290,16 +297,15 @@ function text(url) {
     };
   }
 
-  t('adds accessible desktop/mobile navigation page shell and router loading', () => {
-    ['id="nav-calwork"', 'data-page="calwork"', 'id="pageCalwork"', 'id="cwTabs"',
+  t('uses the unified plan navigation page shell and router loading', () => {
+    ['id="nav-plan"', 'data-page="plan"', 'id="pagePlan"', 'id="cwTabs"',
       'id="cwMetrics"', 'id="cwBatchList"', 'id="cwBatchDetail"'].forEach(token => has(indexSource, token, token));
-    has(routerSource, "'calwork'", 'router page registration');
-    has(routerSource, "calwork: ['ชุดงานสอบเทียบ'", 'router title');
-    has(routerSource, "page === 'calwork'", 'router load branch');
+    has(routerSource, "'plan'", 'router page registration');
+    has(routerSource, "plan: ['แผนสอบเทียบ'", 'router title');
+    has(routerSource, "page === 'plan'", 'router load branch');
     has(routerSource, 'loadCalibrationWorkPage()', 'router loader call');
     has(routerSource, 'setTimeout(() => waitAndLoad', 'router waits for app data/client');
-    ok(/<button\s+type="button"\s+class="nav-item"\s+onclick="showPage\('calwork'\)"\s+id="nav-calwork">/.test(indexSource),
-      'desktop navigation must use a native button');
+    has(indexSource, "showPage('plan')", 'plan navigation calls unified route');
   });
 
   t('renders dashboard tabs metrics progress document gates and hostile text safely', () => {
@@ -845,7 +851,7 @@ function text(url) {
       has(document.getElementById('cwBatchDetail').textContent, 'CW7-1', 'validated mapped batch opened');
       ok(!document.querySelector('#cwBatchDetail [data-cw-action]'), 'Viewer receives no mutations');
       cwCloseBatch();
-      eq(pages.join(','), 'calwork,list', 'returns to registry page');
+      eq(pages.join(','), 'plan,list', 'returns to registry page');
       eq(document.activeElement, trigger, 'registry shortcut focus restored');
       eq(await cwOpenBatchFromInstrument(-1), false, 'invalid numeric instrument rejected');
       trigger.remove();
@@ -882,14 +888,14 @@ function text(url) {
       ok(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [])), 'network-backed navigation opens current batch');
       ok(!trigger.isConnected, 'authoritative integration publish replaced original shortcut');
       cwCloseBatch();
-      eq(pages.join(','), 'calwork,list', 'close returns to registry after network navigation');
+      eq(pages.join(','), 'plan,list', 'close returns to registry after network navigation');
       trigger = pageList.querySelectorAll('[data-cw-open-batch-instrument="102"]')[1];
       eq(document.activeElement, trigger, 'newly rendered shortcut receives returned focus');
 
       trigger.focus();
       eq(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [], {calibration_work_items:'offline'})), false,
         'failed authoritative navigation reports failure');
-      eq(pages.slice(-2).join(','), 'calwork,list', 'failed navigation restores registry surface');
+      eq(pages.slice(-2).join(','), 'plan,list', 'failed navigation restores registry surface');
       eq(document.activeElement, trigger, 'failed navigation restores shortcut focus');
     } finally {
       window.showPage = originalShowPage;
@@ -2050,10 +2056,10 @@ function text(url) {
   });
 
   t('scopes responsive dashboard styles without page overflow', () => {
-    has(cssSource, '#app #pageCalwork .cw-', 'scoped calibration styles');
-    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pageCalwork \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
-    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pageCalwork \.cw-/.test(cssSource), 'mobile scoped rules');
-    ok(/#app #pageCalwork[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
+    has(cssSource, '#app #pagePlan .cw-', 'scoped calibration styles');
+    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pagePlan \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pagePlan \.cw-/.test(cssSource), 'mobile scoped rules');
+    ok(/#app #pagePlan[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?min-height:\s*44px/.test(cssSource), 'mobile touch target');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwCreateDialog \.modal-header button[\s\S]*?min-(?:height|block-size):\s*44px/.test(cssSource),
       'mobile dialog close target');

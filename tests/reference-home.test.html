@@ -7,6 +7,7 @@ const results = [];
 function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (e) { results.push('FAIL ' + name + ' — ' + e.message); } }
 function ok(cond, msg) { if (!cond) throw new Error(msg || 'expected true'); }
 function has(hay, needle, label) { if (hay.indexOf(needle) === -1) throw new Error('ไม่พบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
+function lacks(hay, needle, label) { if (hay.indexOf(needle) !== -1) throw new Error('ไม่ควรพบ ' + (label || '') + ' ' + JSON.stringify(needle)); }
 function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg||'') + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b)); }
 
 function text(url) {
@@ -245,8 +246,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
       'branch สุดท้ายของ fetch ต้อง cache.put หลังโหลดสำเร็จ');
     ok(/url\.origin === self\.location\.origin/.test(SW),
       'ต้องจำกัดการเก็บ cache เฉพาะ same-origin กันไปเก็บ response ของ Supabase');
-    // เทมเพลตตัวเล็กยังอยู่ใน precache ได้ (18KB / 36KB)
-    has(SW, './assets/frm-eib04-template.xlsx', 'sw');
+    lacks(SW, './assets/frm-eib04-template.xlsx', 'retired FRM template');
     has(SW, './assets/frm-asset-out-template.xlsx', 'sw');
     ok(SW.indexOf('weight-cal.html ที่เพิ่งถอดออก') === -1,
       'ยังมีคอมเมนต์ runtime เก่าของ weight-cal ใน Service Worker');
