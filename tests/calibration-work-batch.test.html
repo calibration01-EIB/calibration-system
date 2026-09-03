@@ -228,17 +228,18 @@ function text(url) {
 
   t('registers the status engine after KPI in the exact offline cache generation', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260902-cw7"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260903-plan1"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260902-cw7"', 'current calibration stylesheet query version');
-    has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v158';", 'cache v158');
+    has(indexSource, 'href="theme-aqua.css?v=20260903-plan1"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260903-plan1"', 'current router query version');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v159';", 'cache v159');
     [
-      'theme-aqua.css?v=20260902-cw7',
-      'js/10-router.js?v=20260901-cw3',
+      'index.html?v=20260903-plan1',
+      'theme-aqua.css?v=20260903-plan1',
+      'js/10-router.js?v=20260903-plan1',
       'js/02-dashboard.js?v=20260902-cw7',
       'js/26-list-ui.js?v=20260902-cw7',
-      'js/29-calibration-work.js?v=20260902-cw7'
+      'js/29-calibration-work.js?v=20260903-plan1'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -253,7 +254,7 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pagePlan"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<div id="pagePlan"><nav id="cwPrimaryTabs" role="tablist"><button type="button" role="tab" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" role="tab" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" role="tab" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" role="tab" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -319,7 +320,7 @@ function text(url) {
       cwRenderDashboard(cwDashboardModel());
       const tabs = [...document.querySelectorAll('#cwTabs [role="tab"]')];
       eq(tabs.length, 4, 'four dashboard tabs');
-      eq(tabs.map(tab => tab.dataset.count).join(','), '2,1,0,2', 'tab counts');
+      eq(tabs.map(tab => tab.dataset.count).join(','), '2,2,0,0', 'tab counts');
       const metrics = document.getElementById('cwMetrics').textContent.replace(/\s+/g, ' ');
       ['2 ชุดงานกำลังดำเนินการ', '3 / 4 เครื่องเสร็จ', '1 เครื่องเกินแผน', '1 ชุดรอ PDF ปิดแผน'].forEach(value => has(metrics, value, 'metric'));
       const list = document.getElementById('cwBatchList');
@@ -340,11 +341,45 @@ function text(url) {
     try {
       cwRenderDashboard(cwDashboardModel());
       cwSetDashboardTab('waiting');
-      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 1, 'waiting card count');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting card count');
       has(document.getElementById('cwBatchList').textContent, 'PLAN-2026-0002', 'waiting batch');
       const selected = document.querySelector('#cwTabs [aria-selected="true"]');
       eq(selected.dataset.cwTab, 'waiting', 'selected tab');
       eq(selected.tagName, 'BUTTON', 'tab is keyboard operable');
+    } finally { cleanup(); }
+  });
+
+  t('maps persistent primary plan tabs to deterministic dashboard states', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      ok(cwSetPrimaryTab('waiting'), 'waiting primary section is accepted');
+      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'primary waiting tab selected');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting maps to the waiting work state');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting includes calibration and closure queues');
+      cwRenderDashboard({ batches: [
+        { id:'33333333-3333-3333-3333-333333333333', status:'completed', items:[], documents:[] },
+        { id:'44444444-4444-4444-4444-444444444444', status:'cancelled', items:[], documents:[] },
+        { id:'55555555-5555-5555-5555-555555555555', status:'awaiting_calibration', items:[], documents:[] }
+      ], locks:[], locksReady:true });
+      ok(cwSetPrimaryTab('history'), 'history primary section is accepted');
+      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'history', 'history maps to complete and cancelled work');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history includes completed and cancelled batches');
+      eq(cwSetPrimaryTab('unknown'), false, 'unknown primary section is rejected');
+    } finally { cleanup(); }
+  });
+
+  t('keeps primary tablist focus and selection deterministic with arrow keys', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      const tab = key => document.querySelector('#cwPrimaryTabs [data-cw-primary="' + key + '"]');
+      tab('batches').focus();
+      tab('batches').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
+      eq(document.activeElement, tab('waiting'), 'ArrowRight moves primary focus');
+      eq(tab('waiting').getAttribute('aria-selected'), 'true', 'ArrowRight selects primary tab');
+      tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
+      eq(document.activeElement, tab('history'), 'End moves primary focus to last tab');
     } finally { cleanup(); }
   });
 

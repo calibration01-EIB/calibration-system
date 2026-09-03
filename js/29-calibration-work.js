@@ -124,10 +124,11 @@
 
   const CW_TABS = Object.freeze([
     Object.freeze({ key: 'active', label: 'กำลังดำเนินการ' }),
-    Object.freeze({ key: 'waiting', label: 'รอเอกสาร' }),
+    Object.freeze({ key: 'waiting', label: 'คิวรอดำเนินการ' }),
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
-    Object.freeze({ key: 'history', label: 'ประวัติทั้งหมด' })
+    Object.freeze({ key: 'history', label: 'เสร็จสิ้นและยกเลิก' })
   ]);
+  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history']);
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
@@ -227,10 +228,55 @@
     return batches.filter(batch => {
       const status = cwBatchStatus(batch);
       if (key === 'active') return status !== 'completed' && status !== 'cancelled';
-      if (key === 'waiting') return status === 'awaiting_acknowledgement_pdf' || status === 'awaiting_closure_pdf';
+      if (key === 'waiting') return [
+        'awaiting_acknowledgement_pdf', 'awaiting_calibration',
+        'partially_completed', 'awaiting_closure_pdf'
+      ].includes(status);
       if (key === 'completed') return status === 'completed';
+      if (key === 'history') return status === 'completed' || status === 'cancelled';
       return true;
     });
+  }
+
+  let cwPrimaryTab = 'batches';
+
+  function cwRenderPrimaryTabs() {
+    const root = document.getElementById('cwPrimaryTabs');
+    if (!root) return;
+    [...root.querySelectorAll('[data-cw-primary]')].forEach(tab => {
+      const selected = tab.dataset.cwPrimary === cwPrimaryTab;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.setAttribute('tabindex', selected ? '0' : '-1');
+      tab.classList.toggle('is-active', selected);
+    });
+  }
+
+  function cwSetPrimaryTab(tab) {
+    if (!CW_PRIMARY_TABS.includes(tab)) return false;
+    cwPrimaryTab = tab;
+    cwRenderPrimaryTabs();
+    if (tab === 'select') return cwOpenCreate();
+    cwSetDashboardTab(tab === 'batches' ? 'active' : tab);
+    return true;
+  }
+
+  function cwHandlePrimaryTabKey(event) {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!event || !keys.includes(event.key)) return;
+    const currentKey = event.currentTarget && event.currentTarget.dataset.cwPrimary;
+    let index = CW_PRIMARY_TABS.indexOf(currentKey);
+    if (index < 0) return;
+    if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = CW_PRIMARY_TABS.length - 1;
+    else if (event.key === 'ArrowRight') index = (index + 1) % CW_PRIMARY_TABS.length;
+    else index = (index - 1 + CW_PRIMARY_TABS.length) % CW_PRIMARY_TABS.length;
+    event.preventDefault();
+    const nextKey = CW_PRIMARY_TABS[index];
+    cwSetPrimaryTab(nextKey);
+    const nextTab = document.querySelector('#cwPrimaryTabs [data-cw-primary="' + nextKey + '"]');
+    const dialogOpen = nextKey === 'select'
+      && document.getElementById('cwCreateDialog')?.classList.contains('open');
+    if (nextTab && !dialogOpen) nextTab.focus();
   }
 
   function cwRenderTabs() {
@@ -323,6 +369,7 @@
     cwUiState.notificationFilter = null;
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
+    cwRenderPrimaryTabs();
     cwSetCreateAccess();
     const list = document.getElementById('cwBatchList');
     if (model && model.error) {
@@ -572,7 +619,7 @@
       overdue_missing_evidence: 'active', awaiting_closure: 'waiting'
     };
     if (!Object.prototype.hasOwnProperty.call(tabs, kind)) return false;
-    if (typeof global.showPage === 'function') global.showPage('calwork');
+    if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(null);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) return false;
     cwUiState.notificationFilter = kind;
@@ -594,7 +641,7 @@
     const mapped = id == null ? null : calibrationWorkStatusMap[id];
     if (!mapped || !UUID_PATTERN.test(mapped.batchId || '')) return false;
     const returnFocus = document.activeElement;
-    if (typeof global.showPage === 'function') global.showPage('calwork');
+    if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(client);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) {
       cwReturnToRegistry(id, returnFocus);
@@ -2366,6 +2413,9 @@
   global.cwOpenBatchFromInstrument = cwOpenBatchFromInstrument;
   global.loadCalibrationWorkPage = loadCalibrationWorkPage;
   global.cwRenderDashboard = cwRenderDashboard;
+  global.cwRenderPrimaryTabs = cwRenderPrimaryTabs;
+  global.cwSetPrimaryTab = cwSetPrimaryTab;
+  global.cwHandlePrimaryTabKey = cwHandlePrimaryTabKey;
   global.cwSetDashboardTab = cwSetDashboardTab;
   global.cwHandleTabKey = cwHandleTabKey;
   global.cwOpenBatch = cwOpenBatch;

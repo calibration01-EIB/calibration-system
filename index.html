@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta name="app-shell" content="index.html?v=20260903-plan1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบสอบเทียบเครื่องมือ</title>
 <link rel="manifest" href="manifest.json">
@@ -2696,7 +2697,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260902-cw7">
+<link rel="stylesheet" href="theme-aqua.css?v=20260903-plan1">
 </head>
 <body>
 
@@ -2749,8 +2750,7 @@ body.app-mode textarea:focus {
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">📊</span> Dashboard</div>
         <div class="nav-item" onclick="showPage('list')" id="nav-list"><span class="nav-icon">📑</span> รายการเครื่องมือ</div>
-        <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> วางแผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
-        <button type="button" class="nav-item" onclick="showPage('calwork')" id="nav-calwork"><span class="nav-icon">🧰</span> ชุดงานสอบเทียบ</button>
+        <div class="nav-item" onclick="showPage('plan')" id="nav-plan" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📅</span> แผนสอบเทียบ</span><span id="navPlanBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
@@ -2865,63 +2865,6 @@ body.app-mode textarea:focus {
           <section class="ax-tiles" id="axTiles"></section>
         </div>
       </div>
-
-      <div id="pageCalwork" class="page-content" style="display:none">
-        <section class="cw-page-head" aria-labelledby="cwPageTitle">
-          <div>
-            <h1 id="cwPageTitle">ชุดงานสอบเทียบ</h1>
-            <p>ติดตามแผน เอกสาร และผลสอบเทียบรายเครื่อง</p>
-          </div>
-          <div class="cw-page-actions">
-            <button type="button" class="cw-primary" id="cwCreateButton" onclick="cwOpenCreate()" hidden>+ สร้างชุดงาน</button>
-            <button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button>
-          </div>
-        </section>
-        <div id="cwNotifications" class="cw-notifications" aria-label="การแจ้งเตือนชุดงาน" aria-live="polite"></div>
-        <nav id="cwTabs" class="cw-tabs" role="tablist" aria-label="มุมมองชุดงาน"></nav>
-        <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div>
-        <div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div>
-        <div id="cwBatchDetail" class="cw-batch-detail" hidden></div>
-        <div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
-      </div>
-
-      <div class="modal-overlay" id="cwCreateDialog" aria-hidden="true">
-        <div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">
-          <div class="modal-header">
-            <h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2>
-            <button type="button" id="cwCreateClose" onclick="cwCloseCreate()" aria-label="ปิดหน้าต่าง">×</button>
-          </div>
-          <div id="cwCreateSteps" class="cw-create-steps" aria-label="ขั้นตอนการสร้าง"></div>
-          <div id="cwCreateError" class="cw-create-error" role="alert" hidden></div>
-          <div id="cwCreateBody" class="cw-create-body"></div>
-          <div id="cwCreateFooter" class="cw-create-footer"></div>
-        </div>
-      </div>
-
-      <div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true">
-        <div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1">
-          <div class="modal-header">
-            <h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2>
-            <button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()" aria-label="ปิดหน้าต่าง">×</button>
-          </div>
-          <div id="cwDocumentError" class="cw-document-error" role="alert" hidden></div>
-          <div id="cwDocumentBody" class="cw-document-body"></div>
-          <div id="cwDocumentFooter" class="cw-document-footer"></div>
-        </div>
-      </div>
-
-      <div class="modal-overlay" id="cwItemResultDialog" aria-hidden="true">
-        <div class="modal-box cw-item-result-dialog" role="dialog" aria-modal="true" aria-labelledby="cwItemResultDialogTitle" tabindex="-1">
-          <div class="modal-header">
-            <h2 id="cwItemResultDialogTitle">บันทึกผลสอบเทียบ</h2>
-            <button type="button" id="cwItemResultClose" onclick="cwCloseItemResult()" aria-label="ปิดหน้าต่าง">×</button>
-          </div>
-          <div id="cwItemResultError" class="cw-item-result-error" role="alert" hidden></div>
-          <div id="cwItemResultBody" class="cw-item-result-body"></div>
-          <div id="cwItemResultFooter" class="cw-item-result-footer"></div>
-        </div>
-      </div>
-
 
       <div id="pageDashboard" class="page-content" style="display:none">
 
@@ -3260,164 +3203,22 @@ body.app-mode textarea:focus {
 
       <!-- PLAN PAGE -->
       <div id="pagePlan" class="page-content" style="display:none">
-        <div class="plan-workspace">
-          <div class="plan-tabs" role="tablist" aria-label="Calibration plan sections">
-            <button class="plan-tab active" onclick="switchPlanTab('new')" id="planTab-new" type="button"><i class="ti ti-plus"></i><span>เลือกเครื่อง</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('frm')" id="planTab-frm" type="button" style="display:none"><i class="ti ti-table"></i><span>แผน FRM</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('confirm')" id="planTab-confirm" type="button" style="display:none"><i class="ti ti-clipboard-check"></i><span>รอดำเนินการ</span><span class="plan-tab-badge" id="planConfirmBadge">0</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('list')" id="planTab-list" type="button"><i class="ti ti-archive"></i><span>ระบบเก่า</span></button>
-            <button class="plan-tab" onclick="switchPlanTab('history')" id="planTab-history" type="button"><i class="ti ti-history"></i><span>ประวัติ</span></button>
-          </div>
-
-        <!-- TAB: สร้างแผนใหม่ -->
-        <div id="planTabNew">
-          <!-- STEP 1: เลือกเครื่องมือ -->
-          <div id="planStep1">
-            <section class="plan-panel">
-              <div class="plan-panel-head">
-                <div>
-                  <div class="plan-panel-title"><i class="ti ti-filter-search"></i><span>เลือกเครื่องมือเข้ารอบแผน</span></div>
-                  <div class="plan-panel-sub">คัดรายการตามประเภท หน่วยงาน และสถานะครบกำหนด</div>
-                </div>
-                <div class="plan-actions">
-                  <button onclick="selectAllPlanItems()" class="plan-btn" type="button"><i class="ti ti-square-check"></i>เลือกทั้งหมด</button>
-                  <button onclick="clearPlanSelection()" class="plan-btn" type="button"><i class="ti ti-eraser"></i>ล้างการเลือก</button>
-                </div>
-              </div>
-
-              <div class="plan-metrics">
-                <div class="plan-metric"><strong id="planMetricFiltered">0</strong><span>รายการที่พบ</span></div>
-                <div class="plan-metric"><strong id="planMetricSelected">0</strong><span>เลือกไว้</span></div>
-                <div class="plan-metric"><strong id="planMetricOverdue">0</strong><span>เกินกำหนด</span></div>
-                <div class="plan-metric"><strong id="planMetricWarning">0</strong><span>ใกล้ครบ 30 วัน</span></div>
-              </div>
-
-              <div class="plan-filter-grid">
-                <div class="plan-field">
-                  <label for="planFilterSearch">ค้นหา</label>
-                  <input id="planFilterSearch" type="search" placeholder="ID Code, ชื่อเครื่องมือ, CERT, หน่วยงาน" oninput="filterPlanInstruments()">
-                </div>
-                <div class="plan-field">
-                  <label for="planFilterType">ประเภทเครื่องมือ</label>
-                  <select id="planFilterType" onchange="filterPlanInstruments()">
-                    <option value="">ทุกประเภท</option>
-                  </select>
-                </div>
-                <div class="plan-field">
-                  <label for="planFilterDept">หน่วยงาน</label>
-                  <select id="planFilterDept" onchange="filterPlanInstruments()">
-                    <option value="">ทุกหน่วยงาน</option>
-                  </select>
-                </div>
-                <div class="plan-field">
-                  <label for="planFilterStatus">สถานะ</label>
-                  <select id="planFilterStatus" onchange="filterPlanInstruments()">
-                    <option value="">ทั้งหมด</option>
-                    <option value="overdue">เกินกำหนด</option>
-                    <option value="warning">ใกล้ครบ (≤30 วัน)</option>
-                    <option value="ok">ปกติ</option>
-                  </select>
-                </div>
-                <button onclick="filterPlanInstruments()" class="plan-btn primary" type="button"><i class="ti ti-search"></i>กรอง</button>
-              </div>
-            </section>
-
-            <!-- ตารางเลือกเครื่องมือ -->
-            <section class="plan-table-card">
-              <div class="plan-table-head">
-                <div class="plan-table-title"><i class="ti ti-database-search"></i><span>รายการเครื่องมือ</span></div>
-                <div class="plan-table-meta">
-                  <span id="planSelectCount">เลือก 0 รายการ</span>
-                  <span id="planFilterCount"></span>
-                </div>
-              </div>
-              <div class="plan-table-scroll">
-                <table class="plan-table">
-                  <thead>
-                    <tr>
-                      <th class="plan-check"><input type="checkbox" id="planCheckAll" onchange="toggleAllPlanCheck(this)"></th>
-                      <th>ID Code</th>
-                      <th>ชื่อเครื่องมือ</th>
-                      <th>ประเภท</th>
-                      <th>หน่วยงาน</th>
-                      <th>ครบกำหนด</th>
-                      <th>สถานะ</th>
-                    </tr>
-                  </thead>
-                  <tbody id="planInstrumentBody">
-                    <tr><td colspan="7" class="no-data">กำลังโหลดข้อมูล...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="plan-load-more" id="planLoadMoreWrap" style="display:none">
-                <button onclick="loadMorePlanRows()" class="plan-btn" type="button"><i class="ti ti-chevron-down"></i><span id="planLoadMoreText">แสดงเพิ่ม</span></button>
-              </div>
-            </section>
-
-            <div class="plan-footer-actions">
-              <button onclick="goToFrmPlanFromSelection()" class="plan-btn primary" type="button"><i class="ti ti-table"></i> ลงแผน FRM จากที่เลือก <i class="ti ti-arrow-right"></i></button>
-            </div>
-          </div>
+        <section class="cw-page-head" aria-labelledby="cwPageTitle">
+          <div><h1 id="cwPageTitle">แผนสอบเทียบ</h1><p>ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง</p></div>
+          <div class="cw-page-actions"><button type="button" class="cw-primary" id="cwCreateButton" onclick="cwOpenCreate()" hidden>+ สร้างชุดงาน</button><button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button></div>
+        </section>
+        <div class="cw-primary-tabs" id="cwPrimaryTabs" role="tablist" aria-label="ส่วนของแผนสอบเทียบ">
+          <button type="button" role="tab" data-cw-primary="select" onclick="cwSetPrimaryTab('select')" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button>
+          <button type="button" role="tab" data-cw-primary="batches" onclick="cwSetPrimaryTab('batches')" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button>
+          <button type="button" role="tab" data-cw-primary="waiting" onclick="cwSetPrimaryTab('waiting')" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button>
+          <button type="button" role="tab" data-cw-primary="history" onclick="cwSetPrimaryTab('history')" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button>
         </div>
-
-        <!-- TAB: ลงแผน FRM-EIB04 -->
-        <div id="planTabFrm" style="display:none">
-          <section class="plan-panel">
-            <div class="plan-panel-head">
-              <div>
-                <div class="plan-panel-title"><i class="ti ti-table"></i><span>ลงแผน FRM-EIB04</span></div>
-                <div class="plan-panel-sub">แผนที่บันทึกไว้ — คลิกเพื่อเปิดแก้/Export</div>
-              </div>
-              <button class="plan-btn primary" type="button" onclick="frmNewPlanFromSelection()"><i class="ti ti-plus"></i>สร้างแผนใหม่</button>
-            </div>
-            <div id="frmPlanList" style="padding:12px"></div>
-          </section>
-          <div id="frmEditorWrap" style="display:none;margin-top:14px"></div>
-        </div>
-
-        <!-- TAB: แผนทั้งหมด -->
-        <div id="planTabList" style="display:none">
-          <div id="planListContainer" class="plan-workspace">
-            <div class="no-data">กำลังโหลด...</div>
-          </div>
-        </div>
-
-        <!-- TAB: ประวัติ -->
-        <div id="planTabHistory" style="display:none">
-          <div class="plan-panel">
-            <div class="plan-history-filter">
-              <div class="plan-history-title"><i class="ti ti-history"></i> ประวัติการดำเนินการทั้งหมด</div>
-              <div class="plan-field">
-                <select id="historyFilterAction" onchange="loadPlanHistory()">
-                  <option value="">ทุกประเภท</option>
-                  <option value="ส่งขออนุมัติ">ส่งขออนุมัติ</option>
-                  <option value="อนุมัติแผน">อนุมัติแผน</option>
-                  <option value="หน่วยงานรับทราบ">หน่วยงานรับทราบ</option>
-                  <option value="ตีกลับแผน">ตีกลับแผน</option>
-                  <option value="Export FRM">Export FRM</option>
-                  <option value="ส่งผลสอบ">ส่งผลสอบ</option>
-                  <option value="ยืนยันผลสอบ">ยืนยันผลสอบ</option>
-                  <option value="สร้างแผน">สร้างแผน (เก่า)</option>
-                  <option value="แก้ไขแผน">แก้ไขแผน (เก่า)</option>
-                  <option value="ปฏิเสธแผน">ปฏิเสธแผน (เก่า)</option>
-                  <option value="แนบไฟล์สอบ">แนบไฟล์สอบ (เก่า)</option>
-                  <option value="ยืนยันสอบ">ยืนยันสอบ (เก่า)</option>
-                  <option value="ลบแผน">ลบแผน</option>
-                </select>
-              </div>
-            </div>
-            <div id="planHistoryContainer" class="plan-workspace"></div>
-          </div>
-        </div>
-
-        <!-- TAB: รอยืนยัน (Admin/Editor) -->
-        <div id="planTabConfirm" style="display:none">
-          <div id="planConfirmContainer" class="plan-workspace">
-            <div class="no-data">กำลังโหลด...</div>
-          </div>
-        </div>
-
-        </div>
+        <div id="cwNotifications" class="cw-notifications" aria-label="การแจ้งเตือนชุดงาน" aria-live="polite"></div>
+        <nav id="cwTabs" class="cw-tabs" role="tablist" aria-label="ตัวกรองสถานะชุดงาน"></nav>
+        <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div><div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div><div id="cwBatchDetail" class="cw-batch-detail" hidden></div><div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
+        <div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwCreateSteps" class="cw-create-steps" aria-label="ขั้นตอนการสร้าง"></div><div id="cwCreateError" class="cw-create-error" role="alert" hidden></div><div id="cwCreateBody" class="cw-create-body"></div><div id="cwCreateFooter" class="cw-create-footer"></div></div></div>
+        <div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true"><div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2><button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwDocumentError" class="cw-document-error" role="alert" hidden></div><div id="cwDocumentBody" class="cw-document-body"></div><div id="cwDocumentFooter" class="cw-document-footer"></div></div></div>
+        <div class="modal-overlay" id="cwItemResultDialog" aria-hidden="true"><div class="modal-box cw-item-result-dialog" role="dialog" aria-modal="true" aria-labelledby="cwItemResultDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwItemResultDialogTitle">บันทึกผลสอบเทียบ</h2><button type="button" id="cwItemResultClose" onclick="cwCloseItemResult()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwItemResultError" class="cw-item-result-error" role="alert" hidden></div><div id="cwItemResultBody" class="cw-item-result-body"></div><div id="cwItemResultFooter" class="cw-item-result-footer"></div></div></div>
       </div>
 
 
@@ -3792,7 +3593,7 @@ body.app-mode textarea:focus {
           <button class="sw-tab" id="swTabPresets" onclick="switchSWTab('presets')">📋 พรีเซ็ทจุด</button>
         </div>
 
-        <!-- ===== SECTION: STANDARD CERTS (ระบบเก่า — ปิดไว้ รวมเข้ากับ set-view แล้ว) ===== -->
+        <!-- ===== SECTION: STANDARD CERTS (รวมเข้ากับ set-view แล้ว) ===== -->
         <div id="scSection" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
             <div style="background:#00695C;border-radius:14px;padding:14px 16px">
@@ -4171,7 +3972,7 @@ body.app-mode textarea:focus {
 <div class="bottom-nav" style="display:none">
   <button type="button" class="mobile-nav-item" data-page="home" onclick="showPage('home')"><span>⌂</span><span>หน้าแรก</span></button>
   <button type="button" class="mobile-nav-item" data-page="list" onclick="showPage('list')"><span>📑</span><span>รายการ</span></button>
-  <button type="button" class="mobile-nav-item" data-page="plan" onclick="showPage('plan')"><span>📅</span><span>วางแผน</span></button>
+  <button type="button" class="mobile-nav-item" data-page="plan" onclick="showPage('plan')"><span>📅</span><span>แผนสอบเทียบ</span></button>
   <button type="button" class="mobile-nav-item" data-page="calrecs" onclick="showPage('calrecs')"><span>📋</span><span>ติดตาม</span></button>
   <button type="button" class="mobile-nav-item" id="axMobileMoreBtn" onclick="toggleAxMobileMore(event)" aria-haspopup="dialog" aria-expanded="false"><span>•••</span><span>เพิ่มเติม</span></button>
 </div>
@@ -4182,7 +3983,7 @@ body.app-mode textarea:focus {
     <div class="ax-mobile-more-head"><strong>เมนูเพิ่มเติม</strong><button type="button" onclick="closeAxMobileMore()" aria-label="ปิดเมนู">×</button></div>
     <div class="ax-mobile-more-grid">
       <button type="button" onclick="axMobileGo('dashboard')"><span>📊</span><b>Dashboard</b></button>
-      <button type="button" data-page="calwork" onclick="axMobileGo('calwork')"><span>🧰</span><b>ชุดงานสอบเทียบ</b></button>
+      <button type="button" data-page="plan" onclick="axMobileGo('plan')"><span>📅</span><b>แผนสอบเทียบ</b></button>
       <button type="button" onclick="axMobileGo('cert')"><span>🏷️</span><b>ลำดับเลข Cert</b></button>
       <button type="button" onclick="axMobileGo('repairs')" class="ax-mobile-more-repair"><span>🔧</span><b>งานซ่อม</b><i id="bnavRepairBadge">0</i></button>
       <button type="button" onclick="axMobileGo('weights')"><span>📜</span><b>Cert Reference</b></button>
@@ -4781,7 +4582,7 @@ body.app-mode textarea:focus {
         </select>
       </div>
       <div class="form-group" id="uDeptGroup" style="display:none">
-        <label>รหัสหน่วยงาน (Owner) <span style="font-size:12px;color:var(--text3)">เช่น WRM1 — ต้องตรงกับรหัสหน่วยในแผน FRM</span></label>
+        <label>รหัสหน่วยงาน (Owner) <span style="font-size:12px;color:var(--text3)">เช่น WRM1 — ต้องตรงกับรหัสหน่วยในชุดงานสอบเทียบ</span></label>
         <input type="text" id="uDepartment" placeholder="เช่น WRM1" style="text-transform:uppercase">
       </div>
       <div class="form-group" id="uActiveGroup" style="display:none">
@@ -4819,7 +4620,7 @@ body.app-mode textarea:focus {
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260803-deadcode"></script>
 <script src="js/09-cert.js?v=20260803-deadcode"></script>
-<script src="js/10-router.js?v=20260901-cw3"></script>
+<script src="js/10-router.js?v=20260903-plan1"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260803-deadcode"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
@@ -4835,7 +4636,7 @@ body.app-mode textarea:focus {
 <script src="js/26-list-ui.js?v=20260902-cw7"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260819-kpi"></script>
-<script src="js/29-calibration-work.js?v=20260902-cw7"></script>
+<script src="js/29-calibration-work.js?v=20260903-plan1"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
@@ -4885,7 +4686,7 @@ body.app-mode textarea:focus {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=20260903-plan1').catch(() => {});
   });
 }
 </script>

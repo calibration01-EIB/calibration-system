@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','plan','calwork','weights','cert','calrecs','repairs','gate','kpi'];
+  const pages = ['dashboard','list','audit','admin','plan','weights','cert','calrecs','repairs','gate','kpi'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -18,8 +18,7 @@ function showPage(page) {
     list: ['รายการเครื่องมือ','ค้นหา กรอง และจัดการรายการ'],
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
-    plan: ['📅 วางแผนสอบเทียบ','กำหนดตารางและ Export FRM-EIB04'],
-    calwork: ['ชุดงานสอบเทียบ','ติดตามแผน เอกสาร และผลสอบเทียบรายเครื่อง'],
+    plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง'],
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
     calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
@@ -33,8 +32,7 @@ function showPage(page) {
   if (tb) tb.textContent = t[0];
   if (ts) ts.textContent = t[1];
 
-  if (page === 'plan') { loadPlanConfirmBadge(); initPlanPage(); }
-  if (page === 'calwork') {
+  if (page === 'plan' && typeof loadCalibrationWorkPage === 'function') {
     const waitAndLoad = (attempt) => {
       const dataReady = typeof allData !== 'undefined' && Array.isArray(allData);
       const clientReady = typeof sb !== 'undefined' && sb && typeof sb.from === 'function';
