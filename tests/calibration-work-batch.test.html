@@ -35,10 +35,11 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource;
   try {
-    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
+      text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
       text('../sw.js'),
       text('../js/10-router.js'),
@@ -84,6 +85,90 @@ function text(url) {
       lacks(planSource, token, token + ' JavaScript');
     });
     lacks(appShell, 'frm-eib04-template.xlsx', 'legacy template cache entry');
+  });
+
+  t('legacy retirement migration fails closed before destructive DDL', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, 'if v_frm_count <> 3', 'exact FRM precondition');
+    has(source, 'if v_legacy_count <> 0 or v_item_count <> 0 or v_audit_count <> 0', 'empty legacy precondition');
+    has(source, "raise exception 'legacy calibration plan precondition failed", 'abort message');
+    const guard = source.indexOf('legacy calibration plan precondition failed');
+    [
+      'drop table public.plan_audit_log',
+      'drop table public.calibration_plan_items',
+      'drop table public.calibration_plans',
+      'drop table public.frm_plans'
+    ].forEach(token => ok(source.indexOf(token) > guard, token + ' occurs after guard'));
+  });
+
+  t('legacy retirement migration is explicit and one-time fail-closed', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, 'begin;', 'transaction start');
+    has(source, 'commit;', 'transaction commit');
+    lacks(source, 'cascade', 'implicit dependency deletion');
+    lacks(source, 'drop table if exists', 'one-time table retirement must not bypass a partial prior run');
+    [
+      'calibration_work_batches',
+      'calibration_work_items',
+      'calibration_work_instrument_locks',
+      'calibration_work_documents',
+      'calibration_work_cleanup_claims',
+      'calibration_work_audit'
+    ].forEach(table => lacks(source, 'drop table public.' + table, table + ' preservation'));
+  });
+
+  t('legacy retirement migration rejects every frm_plan routine kind', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, "p.prokind in ('a', 'w') and p.proname like 'frm_plan%'",
+      'aggregate and window routine drift guard');
+  });
+
+  t('legacy retirement migration pins and explicitly removes the cataloged dependencies', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    const lock = source.indexOf('lock table');
+    const firstCount = source.indexOf('select count(*) into v_frm_count');
+    ok(lock !== -1 && lock < firstCount, 'legacy tables must be locked before row counts');
+
+    [
+      'frm_plan_acknowledge(uuid, uuid)',
+      'frm_plan_approve(uuid, uuid)',
+      'frm_plan_confirm_results(uuid, uuid)',
+      'frm_plan_guard(uuid, uuid)',
+      'frm_plan_mark_exported(uuid, uuid)',
+      'frm_plan_reject(uuid, uuid, text)',
+      'frm_plan_submit(uuid, uuid)',
+      'frm_plan_submit_results(uuid, uuid)'
+    ].forEach(signature => {
+      has(source, "'public." + signature + "'", signature + ' exact guard');
+      has(source, 'drop function if exists public.' + signature, signature + ' explicit removal');
+    });
+
+    [
+      ['calibration_plan_items_sel', 'calibration_plan_items'],
+      ['calibration_plan_items_wr', 'calibration_plan_items'],
+      ['calibration_plans_sel', 'calibration_plans'],
+      ['calibration_plans_wr', 'calibration_plans'],
+      ['frm_plans_del', 'frm_plans'],
+      ['frm_plans_ins', 'frm_plans'],
+      ['frm_plans_sel', 'frm_plans'],
+      ['frm_plans_upd', 'frm_plans'],
+      ['plan_audit_log_sel', 'plan_audit_log'],
+      ['plan_audit_log_wr', 'plan_audit_log']
+    ].forEach(([policyName, tableName]) => {
+      has(source, "'public." + tableName + '.' + policyName + "'", policyName + ' exact guard');
+      has(source, 'drop policy ' + policyName + ' on public.' + tableName, policyName + ' explicit removal');
+    });
+
+    has(source, 'unexpected trigger', 'zero-trigger guard');
+    has(source, 'unexpected dependent view', 'zero-view guard');
+    [
+      'calibration_plan_items_frm_plan_id_fkey',
+      'calibration_plan_items_plan_id_fkey',
+      'plan_audit_log_plan_id_fkey'
+    ].forEach(name => {
+      has(source, '.' + name + '->public.', name + ' exact guard');
+      has(source, 'drop constraint ' + name, name + ' explicit removal');
+    });
   });
 
   function body(name) {
