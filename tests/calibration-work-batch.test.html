@@ -128,6 +128,10 @@ function text(url) {
     const lock = source.indexOf('lock table');
     const firstCount = source.indexOf('select count(*) into v_frm_count');
     ok(lock !== -1 && lock < firstCount, 'legacy tables must be locked before row counts');
+    const lastDependencyGuard = source.indexOf("raise exception 'legacy calibration plan dependency precondition failed: unexpected foreign keys");
+    const guardBlockEnd = source.indexOf('end; $$;', lastDependencyGuard);
+    ok(lastDependencyGuard !== -1 && guardBlockEnd > lastDependencyGuard,
+      'all dependency guards must finish before destructive DDL');
 
     [
       'frm_plan_acknowledge(uuid, uuid)',
@@ -140,7 +144,9 @@ function text(url) {
       'frm_plan_submit_results(uuid, uuid)'
     ].forEach(signature => {
       has(source, "'public." + signature + "'", signature + ' exact guard');
-      has(source, 'drop function if exists public.' + signature, signature + ' explicit removal');
+      const drop = 'drop function if exists public.' + signature;
+      has(source, drop, signature + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, signature + ' removal occurs after all dependency guards');
     });
 
     [
@@ -156,7 +162,9 @@ function text(url) {
       ['plan_audit_log_wr', 'plan_audit_log']
     ].forEach(([policyName, tableName]) => {
       has(source, "'public." + tableName + '.' + policyName + "'", policyName + ' exact guard');
-      has(source, 'drop policy ' + policyName + ' on public.' + tableName, policyName + ' explicit removal');
+      const drop = 'drop policy ' + policyName + ' on public.' + tableName;
+      has(source, drop, policyName + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, policyName + ' removal occurs after all dependency guards');
     });
 
     has(source, 'unexpected trigger', 'zero-trigger guard');
@@ -167,7 +175,9 @@ function text(url) {
       'plan_audit_log_plan_id_fkey'
     ].forEach(name => {
       has(source, '.' + name + '->public.', name + ' exact guard');
-      has(source, 'drop constraint ' + name, name + ' explicit removal');
+      const drop = 'drop constraint ' + name;
+      has(source, drop, name + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, name + ' removal occurs after all dependency guards');
     });
   });
 
@@ -1571,7 +1581,7 @@ function text(url) {
   function cwTask5Context(status, documents, resultStatus) {
     const batchId = cwUuid(801);
     const itemId = cwUuid(811);
-    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:'2026-09-03',
+    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:cwTodayISO(),
       result_status:resultStatus || 'in_progress',is_active:true,instruments:cwTask4Instruments()[0]};
     const docs = (documents || []).map(documentRow => ({batch_id:batchId,...documentRow}));
     const batch = {id:batchId,batch_no:'PLAN-801',title:'Evidence <batch>',unit_code:'WRM1',
@@ -2078,11 +2088,11 @@ function text(url) {
       cwRenderDashboard(context.model);
       ok(cwOpenItemResult(context.itemId), 'open draft');
       cwSetItemResultField('certNo',' CERT-<DRAFT> ');
-      cwSetItemResultField('calibrationDate','2026-09-03');
+      cwSetItemResultField('calibrationDate',context.item.planned_date);
       cwSetItemResultField('overdueReason','  ');
       eq(await cwSaveItemDraft(evidence.client), true, 'draft save succeeds');
       eq(JSON.stringify(evidence.calls[0]), JSON.stringify({name:'cw_save_item_draft',payload:{
-        p_token:'token',p_item_id:context.itemId,p_cert_no:'CERT-<DRAFT>',p_calibration_date:'2026-09-03',p_overdue_reason:null
+        p_token:'token',p_item_id:context.itemId,p_cert_no:'CERT-<DRAFT>',p_calibration_date:context.item.planned_date,p_overdue_reason:null
       }}), 'exact draft payload');
       eq(evidence.calls.length, 1, 'draft does not complete item');
       eq(cwDashboardModel && document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'authoritative draft stays editable');
