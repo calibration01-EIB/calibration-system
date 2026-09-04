@@ -57,6 +57,7 @@ function text(url) {
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
   const lower = sql.toLowerCase();
   const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
+  const CW_FIXTURE_TODAY = '2026-09-03';
 
   t('uses calibration work as the only plan page', () => {
     has(indexSource, '> แผนสอบเทียบ</span>', 'desktop menu title');
@@ -179,6 +180,16 @@ function text(url) {
       has(source, drop, name + ' explicit removal');
       ok(source.indexOf(drop) > guardBlockEnd, name + ' removal occurs after all dependency guards');
     });
+
+    [
+      'drop table public.plan_audit_log',
+      'drop table public.calibration_plan_items',
+      'drop table public.calibration_plans',
+      'drop table public.frm_plans'
+    ].forEach(drop => {
+      has(source, drop, drop + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, drop + ' occurs after all dependency guards');
+    });
   });
 
   function body(name) {
@@ -218,6 +229,15 @@ function text(url) {
     eq(actual, '2002-01-01', 'fixed UTC instant must roll into the next Bangkok date');
     ok(/^\d{4}-\d{2}-\d{2}$/.test(cwTodayISO()), 'zero-argument behavior must remain available');
   });
+
+  const cwNativeDate = Date;
+  const cwFrozenNow = cwNativeDate.parse(CW_FIXTURE_TODAY + 'T05:00:00.000Z');
+  window.Date = class CwFrozenDate extends cwNativeDate {
+    constructor(...args) {
+      super(...(args.length ? args : [cwFrozenNow]));
+    }
+    static now() { return cwFrozenNow; }
+  };
 
   t('derives item display status with terminal and active-overdue precedence', () => {
     eq(cwItemDisplayStatus({result_status:'completed'}, '2026-08-31'), 'completed');
@@ -1581,7 +1601,7 @@ function text(url) {
   function cwTask5Context(status, documents, resultStatus) {
     const batchId = cwUuid(801);
     const itemId = cwUuid(811);
-    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:cwTodayISO(),
+    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:CW_FIXTURE_TODAY,
       result_status:resultStatus || 'in_progress',is_active:true,instruments:cwTask4Instruments()[0]};
     const docs = (documents || []).map(documentRow => ({batch_id:batchId,...documentRow}));
     const batch = {id:batchId,batch_no:'PLAN-801',title:'Evidence <batch>',unit_code:'WRM1',
@@ -1591,6 +1611,12 @@ function text(url) {
     const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, [item], docs, locks);
     return {batchId,itemId,item,batch,locks,rows,model:{batches:[batch],locks}};
   }
+
+  t('uses an injected frozen Bangkok date for stateful fixtures', () => {
+    eq(cwTask5Context('awaiting_calibration').item.planned_date, CW_FIXTURE_TODAY,
+      'fixture planned date must not depend on the live clock');
+    eq(cwTodayISO(), CW_FIXTURE_TODAY, 'renderer clock must use the injected fixture date');
+  });
 
   function cwEvidenceClient(context, options) {
     const config = options || {};
