@@ -1811,16 +1811,19 @@ tbody tr:hover td { background: #f6fafd !important; }
   margin-bottom: 16px; padding: 5px; border: 1px solid var(--border);
   border-radius: 14px; background: var(--surface);
 }
-#app #pagePlan .cw-primary-tabs [role="tab"] {
+#app #pagePlan .cw-primary-tabs [data-cw-primary] {
   min-height: 44px; padding: 9px 12px; border: 0; border-radius: 10px;
   background: transparent; color: var(--text2); font: 700 13px var(--ff); cursor: pointer;
 }
-#app #pagePlan .cw-primary-tabs [role="tab"].is-active,
-#app #pagePlan .cw-primary-tabs [role="tab"][aria-selected="true"] {
+#app #pagePlan .cw-primary-tabs [data-cw-primary].is-active,
+#app #pagePlan .cw-primary-tabs [data-cw-primary][aria-pressed="true"] {
   background: var(--accent-light); color: var(--accent);
 }
-#app #pagePlan .cw-primary-tabs [role="tab"]:focus-visible {
+#app #pagePlan .cw-primary-tabs [data-cw-primary]:focus-visible {
   outline: 3px solid rgba(8,145,178,.28); outline-offset: 2px;
+}
+#app #pagePlan .cw-primary-tabs [data-cw-primary]:disabled {
+  cursor: not-allowed; opacity: .5;
 }
 #app .sidebar-nav > button.nav-item {
   width: 100%; border-top: 0; border-right: 0; border-bottom: 0; background: transparent;

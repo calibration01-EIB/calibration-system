@@ -115,6 +115,8 @@ function renderMobileCards() {
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || escapeHtmlText(d.department || '-');
     const work = (window.calibrationWorkStatusMap || {})[d.id] || null;
     const activeWork = dashboardWorkIsActive(work);
+    const canManagePlan = typeof currentUser !== 'undefined'
+      && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
     const sMap = {
       awaiting_acknowledgement_pdf: ['รอรับทราบ', '#854F0B', '#FAEEDA'],
       in_progress: ['กำลังสอบเทียบ', '#185FA5', '#E6F1FB'],
@@ -130,7 +132,9 @@ function renderMobileCards() {
       ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
       : (activeWork
         ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>แผน</span></button>'
-        : '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>');
+        : (canManagePlan
+          ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>'
+          : ''));
     return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
       '<div class="mobile-card-head">' +
         '<span class="mobile-type-mark" style="color:' + color + ';background:' + color + '14;border-color:' + color + '40"><i class="ti ' + icon + '"></i><b>' + escapeHtmlText(letter) + '</b></span>' +
@@ -239,9 +243,9 @@ window.whenRegistryDataReady = () => window.registryDataReady
   ? Promise.resolve(true)
   : registryDataReadyPromise;
 
-function markRegistryDataReady() {
-  window.registryDataReady = true;
-  if (registryDataReadyResolve) registryDataReadyResolve(true);
+function markRegistryDataReady(ready = true) {
+  window.registryDataReady = ready === true;
+  if (registryDataReadyResolve) registryDataReadyResolve(window.registryDataReady);
   registryDataReadyResolve = null;
 }
 
@@ -355,7 +359,7 @@ async function loadData(forceRefresh = false) {
   showLoading('กำลังโหลดข้อมูล...');
   try {
     const rows = await fetchFromSupabase();
-    if (!rows) return false;
+    if (!rows) { markRegistryDataReady(false); return false; }
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
@@ -364,6 +368,7 @@ async function loadData(forceRefresh = false) {
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
     return true;
   } catch(e) {
+    markRegistryDataReady(false);
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
     return false;

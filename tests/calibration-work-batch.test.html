@@ -35,9 +35,9 @@ function text(url) {
 }
 
 (async () => {
-  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, releasePlanSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, releasePlanSource;
   try {
-    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, releasePlanSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
@@ -50,6 +50,8 @@ function text(url) {
       text('../js/22-users.js'),
       text('../js/23-cal-records.js'),
       text('../js/24-home.js'),
+      text('../js/26-list-ui.js'),
+      text('../js/25-dashboard-ui.js'),
       text('../docs/superpowers/plans/2026-09-03-replace-legacy-calibration-plan.md')
     ]);
   } catch (error) {
@@ -83,6 +85,10 @@ function text(url) {
     eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
       ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
     ]), 'primary plan tab keys and labels');
+    has(cssSource, '.cw-primary-tabs [data-cw-primary]', 'primary navigation base styles follow button semantics');
+    has(cssSource, '[data-cw-primary][aria-pressed="true"]', 'pressed primary section has selected styling');
+    has(cssSource, '[data-cw-primary]:focus-visible', 'primary buttons retain designed focus styling');
+    has(cssSource, '[data-cw-primary]:disabled', 'read-only selection has disabled styling');
   });
 
   t('removes every legacy calibration-plan surface', () => {
@@ -353,11 +359,29 @@ function text(url) {
     has(dashboardSource, 'window.registryDataReady = false;', 'initial registry readiness flag');
     has(dashboardSource, 'window.whenRegistryDataReady =', 'registry readiness promise interface');
     has(dashboardSource, 'markRegistryDataReady();', 'processed registry rows publish readiness');
+    has(dashboardSource, 'markRegistryDataReady(false);', 'failed registry load settles readiness as unavailable');
+    has(indexSource, 'data-cw-primary="select"', 'selection control exists');
+    has(indexSource, 'disabled aria-disabled="true">เลือกเครื่อง', 'selection starts disabled before registry readiness');
+    has(workSource, 'global.registryDataReady === true', 'selection requires a successful registry snapshot');
     const start = routerSource.indexOf("if (page === 'plan'");
     const end = routerSource.indexOf("if (page === 'weights')", start);
     const branch = routerSource.slice(start, end);
     has(branch, 'await window.whenRegistryDataReady()', 'plan route awaits authoritative registry readiness');
+    has(branch, 'await loadCalibrationWorkPage()', 'work dashboard still loads after readiness settles false');
     lacks(branch, 'Array.isArray(allData)', 'empty initialized registry array is not treated as ready');
+  });
+
+  await ta('settles initial registry readiness on failure and permits a later successful retry', async () => {
+    const start = dashboardSource.indexOf('window.registryDataReady = false;');
+    const end = dashboardSource.indexOf('\n\nfunction escapeHtmlText', start);
+    const stateWindow = {};
+    const controller = new Function('window', dashboardSource.slice(start, end)
+      + '\nreturn { markRegistryDataReady };')(stateWindow);
+    const initial = stateWindow.whenRegistryDataReady();
+    controller.markRegistryDataReady(false);
+    eq(await initial, false, 'initial failure resolves instead of leaving the plan route pending');
+    controller.markRegistryDataReady(true);
+    eq(await stateWindow.whenRegistryDataReady(), true, 'later successful registry processing enables selection');
   });
 
   t('aligns dashboard audit home title role guidance and deployment order with the replacement workflow', () => {
@@ -369,6 +393,11 @@ function text(url) {
     has(usersSource, 'แนบ PDF รับทราบและ PDF ปิดแผน', 'Admin and Editor PDF workflow is documented');
     lacks(indexSource, 'Owner — หน่วยงานเจ้าของเครื่อง (กดรับทราบแผน)', 'role selector removes the retired Owner action');
     has(recordsSource, 'รอ PDF รับทราบ', 'tracking uses the PDF acknowledgement stage');
+    has(dashboardSource, 'canManagePlan', 'mobile dashboard gates plan creation by role');
+    has(listUiSource, '!activeWork && canEdit', 'register list gates plan creation by role');
+    has(recordsSource, '!m.done[0] && canEdit', 'calibration records gate plan creation by role');
+    has(dashboardUiSource, 'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน', 'dashboard pending-work copy matches PDF gates');
+    has(workSource, "document.getElementById('navPlanBadge')", 'work integration publishes the plan badge');
     const deploy = releasePlanSource.indexOf('Step 2: Merge and verify the compatible frontend first');
     const apply = releasePlanSource.indexOf('Step 4: Apply the reviewed migration');
     ok(deploy !== -1 && apply > deploy, 'compatible frontend is deployed before destructive migration');
@@ -393,7 +422,8 @@ function text(url) {
       'js/22-users.js?v=20260904-plan3',
       'js/23-cal-records.js?v=20260904-plan3',
       'js/24-home.js?v=20260904-plan3',
-      'js/26-list-ui.js?v=20260903-plan2',
+      'js/25-dashboard-ui.js?v=20260904-plan3',
+      'js/26-list-ui.js?v=20260904-plan3',
       'js/28-kpi.js?v=20260903-plan2',
       'js/29-calibration-work.js?v=20260904-plan3'
     ].forEach(assetUrl => {
@@ -527,10 +557,12 @@ function text(url) {
     ok(sequence.every(item => !item.includes('06-plan.js.map')), 'pathname matching does not evict similarly named assets');
   });
 
+  window.registryDataReady = true;
+
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<span id="navPlanBadge" style="display:none">0</span><div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -1129,6 +1161,11 @@ function text(url) {
     eq(row.done[2], false, 'closed work without a current certificate is not treated as current calibration');
     eq(row.work, null, 'current work remains empty');
     eq(row.workHistory.batchNo, 'DONE-NEW', 'historical work remains separately available');
+    window.currentUser = {role:'viewer'};
+    lacks(crcActionHtml(row), 'goToPlanWithItem', 'Viewer does not receive a create-plan action');
+    window.currentUser = {role:'editor'};
+    has(crcActionHtml(row), 'goToPlanWithItem', 'Editor retains the create-plan action');
+    delete window.currentUser;
   });
 
   await ta('loads the complete integration map with immutable keysets', async () => {
@@ -1270,6 +1307,8 @@ function text(url) {
       eq(result.dueToday, 1, 'instruments due on deterministic today');
       eq(result.overdueMissingEvidence, 1, 'overdue missing reason/evidence instruments');
       eq(result.awaitingClosure, 1, 'awaiting closure batches');
+      eq(document.getElementById('navPlanBadge').textContent, '4', 'badge counts unique non-terminal batches');
+      eq(document.getElementById('navPlanBadge').style.display, '', 'pending-work badge is visible');
       ['รอ PDF รับทราบ','ครบกำหนดวันนี้','เกินแผนขาดหลักฐาน','รอ PDF ปิดแผน'].forEach(label =>
         has(document.getElementById('cwNotifications').textContent, label, 'notification label'));
 

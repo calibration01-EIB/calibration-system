@@ -197,7 +197,8 @@
 
   function cwSetCreateAccess() {
     const button = document.getElementById('cwCreateButton');
-    const allowed = cwCanManage() && cwUiState.model.locksReady === true;
+    const allowed = cwCanManage() && global.registryDataReady === true
+      && cwUiState.model.locksReady === true;
     if (button) button.hidden = !allowed;
     const selectButton = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
     if (selectButton) {
@@ -620,12 +621,27 @@
       + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
   }
 
+  function cwPublishPlanBadge(model) {
+    const count = (model && model.batches || []).filter(batch => {
+      const status = cwBatchStatus(batch);
+      return status !== 'completed' && status !== 'cancelled';
+    }).length;
+    const badge = document.getElementById('navPlanBadge');
+    if (badge) {
+      badge.textContent = String(count);
+      badge.style.display = count > 0 ? '' : 'none';
+    }
+    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
+    return count;
+  }
+
   async function cwLoadNotifications(sourceOrModel, todayISO) {
     const generation = ++cwIntegrationLoadGeneration;
     if (sourceOrModel && Array.isArray(sourceOrModel.batches) && Array.isArray(sourceOrModel.locks)) {
       if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
       cwNotificationState = cwNotificationSummary(sourceOrModel, todayISO);
       cwRenderNotifications(cwNotificationState);
+      cwPublishPlanBadge(sourceOrModel);
       return cwNotificationState;
     }
     try {
@@ -634,6 +650,7 @@
       if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
       cwNotificationState = cwNotificationSummary(model, todayISO);
       cwRenderNotifications(cwNotificationState);
+      cwPublishPlanBadge(model);
       return cwNotificationState;
     } catch (_error) {
       return { ...cwNotificationState, available: false };
@@ -646,6 +663,7 @@
     cwReplaceStatusMap(cwBuildCalibrationWorkStatusMap(model, todayISO));
     cwNotificationState = cwNotificationSummary(model, todayISO);
     cwRenderNotifications(cwNotificationState);
+    cwPublishPlanBadge(model);
     if (typeof global.renderTable === 'function') global.renderTable();
     return true;
   }

@@ -205,7 +205,7 @@ function crcStepsHtml(m) {
 function crcActionHtml(m) {
   const id = Number(m.d.id) || 0;
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
-  if (!m.done[0])
+  if (!m.done[0] && canEdit)
     return `<button type="button" class="ax-crc-act is-primary" onclick="event.stopPropagation();goToPlanWithItem(${id})"><span>📋</span><span>วางแผน</span></button>`;
   if (!m.done[2])
     return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();goToPlanDetail(${id})"><span>📅</span><span>ดูแผน</span></button>`;

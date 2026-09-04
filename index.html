@@ -3039,7 +3039,7 @@ body.app-mode textarea:focus {
           <div class="cw-page-actions"><button type="button" class="cw-primary" id="cwCreateButton" onclick="cwOpenCreate()" hidden>+ สร้างชุดงาน</button><button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button></div>
         </section>
         <div class="cw-primary-tabs" id="cwPrimaryTabs" aria-label="ส่วนของแผนสอบเทียบ">
-          <button type="button" data-cw-primary="select" onclick="cwSetPrimaryTab('select')" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button>
+          <button type="button" data-cw-primary="select" onclick="cwSetPrimaryTab('select')" onkeydown="cwHandlePrimaryTabKey(event)" disabled aria-disabled="true">เลือกเครื่อง</button>
           <button type="button" data-cw-primary="batches" onclick="cwSetPrimaryTab('batches')" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button>
           <button type="button" data-cw-primary="waiting" onclick="cwSetPrimaryTab('waiting')" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button>
           <button type="button" data-cw-primary="history" onclick="cwSetPrimaryTab('history')" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button>
@@ -4382,8 +4382,8 @@ body.app-mode textarea:focus {
 <script src="js/22-users.js?v=20260904-plan3"></script>
 <script src="js/23-cal-records.js?v=20260904-plan3"></script>
 <script src="js/24-home.js?v=20260904-plan3"></script>
-<script src="js/25-dashboard-ui.js?v=20260817-dash"></script>
-<script src="js/26-list-ui.js?v=20260903-plan2"></script>
+<script src="js/25-dashboard-ui.js?v=20260904-plan3"></script>
+<script src="js/26-list-ui.js?v=20260904-plan3"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260903-plan2"></script>
 <script src="js/29-calibration-work.js?v=20260904-plan3"></script>

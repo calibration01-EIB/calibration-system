@@ -15,7 +15,7 @@ const DASH_TODO = [
     title:'งานซ่อมค้าง',                 desc:'รอตรวจรับ / รอปิดงาน',
     go:"showPage('repairs')" },
   { src:'navPlanBadge',    emoji:'📅', bg:'#ece6fb', color:'#5b3fae',
-    title:'แผนสอบเทียบรอดำเนินการ',      desc:'รออนุมัติหรือรอยืนยัน',
+    title:'แผนสอบเทียบรอดำเนินการ',      desc:'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน',
     go:"showPage('plan')" },
   { src:'statWarning',     emoji:'⏳', bg:'#fdf3dd', color:'#b45309',
     title:'ใกล้ครบกำหนดสอบเทียบ',        desc:'ภายใน 30 วันข้างหน้า',

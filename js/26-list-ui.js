@@ -149,16 +149,16 @@ function listActionCell(d) {
     ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
   const work = workMap[d.id] || null;
   const activeWork = work && work.isActive !== false;
+  const canEdit = typeof currentUser !== 'undefined'
+    && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
   if (cancelled) {
     planBtn = '<span class="ax-act-mute">ไม่ต้องวางแผน</span>';
-  } else if (!activeWork) {
+  } else if (!activeWork && canEdit) {
     planBtn = `<button type="button" class="ax-act-plan" onclick="goToPlanWithItem(${id})">📋 วางแผน</button>`;
   } else {
     planBtn = '';
   }
 
-  const canEdit = typeof currentUser !== 'undefined'
-    && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
   const delBtn = canEdit
     ? `<button type="button" class="btn-del" onclick="deleteInstrument(${id},'${escapeJsSingle(d.instrument_name || '')}')">🗑️</button>`
     : '';
