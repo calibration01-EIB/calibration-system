@@ -32,7 +32,7 @@ function optionalText(url) {
 }
 
 (async () => {
-  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource;
+  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource, shippedJsSources;
   try {
     [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource] = await Promise.all([
       text('../index.html'),
@@ -46,6 +46,9 @@ function optionalText(url) {
       text('../theme-aqua.css'),
       optionalText('../tools/build-frm-eib04-template.ps1')
     ]);
+    const shippedJsPaths = [...new DOMParser().parseFromString(indexSource, 'text/html').querySelectorAll('script[src^="js/"]')]
+      .map(script => script.getAttribute('src').split('?')[0]);
+    shippedJsSources = await Promise.all([...new Set(shippedJsPaths)].map(path => text('../' + path)));
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
     document.title = 'FAIL';
@@ -74,10 +77,10 @@ function optionalText(url) {
     lacks(assetOutSource, 'js/15-plan-export.js', 'asset-out legacy runtime dependency');
   });
 
-  t('retires legacy plan data callers in favor of calibration work', () => {
-    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token => {
-      [planSource, dashboardSource, calRecordsSource, kpiSource].forEach(source =>
-        lacks(source, token, token + ' source reference'));
+  t('retires every legacy plan table caller from all shipped JavaScript', () => {
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items', 'plan_audit_log'].forEach(token => {
+      shippedJsSources.forEach((source, index) =>
+        lacks(source, token, token + ' shipped JavaScript source #' + index));
     });
     ['planSelectedItems', 'switchPlanTab(', 'planStatusMap'].forEach(token =>
       lacks(calRecordsSource, token, token + ' calibration-record dependency'));

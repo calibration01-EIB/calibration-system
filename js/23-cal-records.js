@@ -84,7 +84,7 @@ async function loadCalrecsPage() {
    มุมเครื่องมือ ไม่ใช่มุมใบ Cert: 1 แถว = 1 เครื่อง พร้อมความคืบหน้า 4 ขั้น
    ขั้นตอนแมปจากชุดงานสอบเทียบปัจจุบัน + calibration_records
      1 วางแผน      : มีแผนผูกกับเครื่องนี้
-     2 อนุมัติแผน   : แนบ acknowledgement PDF แล้ว
+     2 PDF รับทราบ  : แนบ acknowledgement PDF แล้ว
      3 สอบเทียบ    : item เสร็จแล้วหรือมีใบ record แล้ว
      4 แนบสแกน     : record.status = approved หรือมีไฟล์สแกน                       */
 
@@ -115,11 +115,13 @@ function crcRowModel(d) {
   const rec = crcLatestRec(d.id);
   const workMap = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
     ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
-  const work = workMap[d.id] || null;
+  const mappedWork = workMap[d.id] || null;
+  const work = mappedWork && mappedWork.isActive !== false ? mappedWork : null;
+  const workHistory = mappedWork && mappedWork.isActive === false ? mappedWork : null;
   const st = work ? work.status : null;
   const done = [
     !!st,                                                            // 1 วางแผน
-    !!st && st !== 'awaiting_acknowledgement_pdf',                   // 2 รับทราบแผน
+    !!st && st !== 'awaiting_acknowledgement_pdf',                   // 2 มี PDF รับทราบ
     st === 'completed' || !!rec,                                     // 3 สอบเทียบ
     !!rec && (rec.status === 'approved' || !!rec.signed_file_path)   // 4 แนบสแกน
   ];
@@ -127,9 +129,9 @@ function crcRowModel(d) {
   if (done[3])            stage = ['✅', 'เสร็จสมบูรณ์',    '#e1f5ee', '#0f6e56', '#c4e8dc'];
   else if (done[2])       stage = ['📎', 'รอแนบสแกน',      '#fdf3dd', '#b45309', '#f3e0b6'];
   else if (done[1])       stage = ['🚚', 'รอผลสอบเทียบ',    '#e6f1fb', '#185fa5', '#cfe1f4'];
-  else if (done[0])       stage = ['🕒', 'รออนุมัติแผน',    '#faeeda', '#854f0b', '#f0dcb4'];
+  else if (done[0])       stage = ['🕒', 'รอ PDF รับทราบ',  '#faeeda', '#854f0b', '#f0dcb4'];
   else                    stage = ['📋', 'ยังไม่ได้วางแผน', '#eef0f3', '#5f6b7a', '#dfe4ea'];
-  return { d, rec, work, planStatus: st, done, stage, rejected: false };
+  return { d, rec, work, workHistory, planStatus: st, done, stage, rejected: false };
 }
 
 function crcMatchScope(m, scope) {
@@ -187,7 +189,7 @@ function setCalrecScope(v) {
 }
 
 function crcStepsHtml(m) {
-  const labels = ['วางแผน', 'อนุมัติแผน', 'สอบเทียบ', 'แนบสแกน'];
+  const labels = ['จัดชุดงาน', 'PDF รับทราบ', 'สอบเทียบ', 'แนบสแกน'];
   return '<span class="ax-steps">' + labels.map((lb, i) => {
     const ok = m.done[i];
     const cls = ok ? 'is-done' : (i > 0 && m.done[i - 1] ? 'is-now' : '');

@@ -232,6 +232,18 @@ async function renderAlerts() {
 // ====================================================
 let allData = [], filteredData = [];
 let fileCountCache = {};
+window.registryDataReady = false;
+let registryDataReadyResolve;
+let registryDataReadyPromise = new Promise(resolve => { registryDataReadyResolve = resolve; });
+window.whenRegistryDataReady = () => window.registryDataReady
+  ? Promise.resolve(true)
+  : registryDataReadyPromise;
+
+function markRegistryDataReady() {
+  window.registryDataReady = true;
+  if (registryDataReadyResolve) registryDataReadyResolve(true);
+  registryDataReadyResolve = null;
+}
 
 function escapeHtmlText(value) {
   return String(value ?? '')
@@ -299,6 +311,7 @@ async function loadData(forceRefresh = false) {
         days_left: (!cancelled && d.due_date) ? Math.round((new Date(d.due_date) - today) / 86400000) : null
       };
     });
+    markRegistryDataReady();
     filteredData = [...allData];
     populateFilters();
     fileCountCache = {};
@@ -685,15 +698,19 @@ async function renderDashboardAuditLog() {
   try {
     const [auditRes, planRes] = await Promise.all([
       sb.from('audit_logs').select('created_at,username,action,id_code,instrument_name,changes').order('created_at', { ascending:false }).limit(12),
-      sb.from('plan_audit_log').select('created_at,username,action,note').order('created_at', { ascending:false }).limit(8)
+      sb.from('calibration_work_audit').select('occurred_at,actor,action,reason,batch_id,after_data').order('occurred_at', { ascending:false }).limit(8)
     ]);
     if (auditRes.error) throw auditRes.error;
 
     const auditItems = (auditRes.data || []).map(row => ({ ...row, source:'instrument' }));
     const planItems = planRes.error ? [] : (planRes.data || []).map(row => ({
-      ...row,
-      source:'plan',
-      instrument_name: row.note || 'แผนสอบเทียบ'
+      created_at: row.occurred_at,
+      username: row.actor,
+      action: row.action,
+      note: row.reason,
+      batch_id: row.batch_id,
+      source:'calibration-work',
+      instrument_name: row.reason || row.after_data?.batch_no || 'แผนสอบเทียบ'
     }));
     const items = auditItems.concat(planItems).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderDashboardAuditItems(items);

@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="app-shell" content="index.html?v=20260903-plan2">
+<meta name="app-shell" content="index.html?v=20260904-plan3">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบสอบเทียบเครื่องมือ</title>
 <link rel="manifest" href="manifest.json">
@@ -2528,7 +2528,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260903-plan2">
+<link rel="stylesheet" href="theme-aqua.css?v=20260904-plan3">
 </head>
 <body>
 
@@ -3038,14 +3038,14 @@ body.app-mode textarea:focus {
           <div><h1 id="cwPageTitle">แผนสอบเทียบ</h1><p>ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง</p></div>
           <div class="cw-page-actions"><button type="button" class="cw-primary" id="cwCreateButton" onclick="cwOpenCreate()" hidden>+ สร้างชุดงาน</button><button type="button" class="cw-refresh" onclick="loadCalibrationWorkPage()" aria-label="รีเฟรชชุดงานสอบเทียบ">↻ รีเฟรช</button></div>
         </section>
-        <div class="cw-primary-tabs" id="cwPrimaryTabs" role="tablist" aria-label="ส่วนของแผนสอบเทียบ">
-          <button type="button" role="tab" data-cw-primary="select" onclick="cwSetPrimaryTab('select')" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button>
-          <button type="button" role="tab" data-cw-primary="batches" onclick="cwSetPrimaryTab('batches')" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button>
-          <button type="button" role="tab" data-cw-primary="waiting" onclick="cwSetPrimaryTab('waiting')" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button>
-          <button type="button" role="tab" data-cw-primary="history" onclick="cwSetPrimaryTab('history')" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button>
+        <div class="cw-primary-tabs" id="cwPrimaryTabs" aria-label="ส่วนของแผนสอบเทียบ">
+          <button type="button" data-cw-primary="select" onclick="cwSetPrimaryTab('select')" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button>
+          <button type="button" data-cw-primary="batches" onclick="cwSetPrimaryTab('batches')" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button>
+          <button type="button" data-cw-primary="waiting" onclick="cwSetPrimaryTab('waiting')" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button>
+          <button type="button" data-cw-primary="history" onclick="cwSetPrimaryTab('history')" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button>
         </div>
         <div id="cwNotifications" class="cw-notifications" aria-label="การแจ้งเตือนชุดงาน" aria-live="polite"></div>
-        <nav id="cwTabs" class="cw-tabs" role="tablist" aria-label="ตัวกรองสถานะชุดงาน"></nav>
+        <nav id="cwTabs" class="cw-tabs" aria-label="ตัวกรองสถานะชุดงาน"></nav>
         <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div><div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div><div id="cwBatchDetail" class="cw-batch-detail" hidden></div><div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
         <div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwCreateSteps" class="cw-create-steps" aria-label="ขั้นตอนการสร้าง"></div><div id="cwCreateError" class="cw-create-error" role="alert" hidden></div><div id="cwCreateBody" class="cw-create-body"></div><div id="cwCreateFooter" class="cw-create-footer"></div></div></div>
         <div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true"><div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2><button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwDocumentError" class="cw-document-error" role="alert" hidden></div><div id="cwDocumentBody" class="cw-document-body"></div><div id="cwDocumentFooter" class="cw-document-footer"></div></div></div>
@@ -4331,7 +4331,7 @@ body.app-mode textarea:focus {
           <option value="viewer">Viewer — ดูข้อมูลอย่างเดียว</option>
           <option value="editor">Editor — แก้ไขข้อมูล + อัพโหลด cert</option>
           <option value="admin">Admin — จัดการทุกอย่าง</option>
-          <option value="owner">Owner — หน่วยงานเจ้าของเครื่อง (กดรับทราบแผน)</option>
+          <option value="owner">Owner — ดูข้อมูลหน่วยงานของตนเอง</option>
         </select>
       </div>
       <div class="form-group" id="uDeptGroup" style="display:none">
@@ -4364,7 +4364,7 @@ body.app-mode textarea:focus {
      ตรวจได้ด้วย: powershell -File tools\verify-app-load.ps1 -->
 <script src="js/00-config.js?v=20260626-config"></script>
 <script src="js/01-core.js?v=20260722-plan-approval"></script>
-<script src="js/02-dashboard.js?v=20260903-plan2"></script>
+<script src="js/02-dashboard.js?v=20260904-plan3"></script>
 <script src="js/03-instruments.js?v=20260803-split"></script>
 <script src="js/04-reports.js?v=20260903-plan2"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
@@ -4372,21 +4372,21 @@ body.app-mode textarea:focus {
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260803-deadcode"></script>
 <script src="js/09-cert.js?v=20260803-deadcode"></script>
-<script src="js/10-router.js?v=20260903-plan2"></script>
+<script src="js/10-router.js?v=20260904-plan3"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260803-deadcode"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
 <script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
 <script src="js/16-repairs.js?v=20260903-plan2"></script>
 <script src="js/18-asset-out.js?v=20260903-plan2"></script>
-<script src="js/22-users.js?v=20260803-split"></script>
-<script src="js/23-cal-records.js?v=20260903-plan2"></script>
-<script src="js/24-home.js?v=20260817-home"></script>
+<script src="js/22-users.js?v=20260904-plan3"></script>
+<script src="js/23-cal-records.js?v=20260904-plan3"></script>
+<script src="js/24-home.js?v=20260904-plan3"></script>
 <script src="js/25-dashboard-ui.js?v=20260817-dash"></script>
 <script src="js/26-list-ui.js?v=20260903-plan2"></script>
 <script src="js/27-asset-out-page.js?v=20260818-gate"></script>
 <script src="js/28-kpi.js?v=20260903-plan2"></script>
-<script src="js/29-calibration-work.js?v=20260903-plan2"></script>
+<script src="js/29-calibration-work.js?v=20260904-plan3"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
@@ -4436,7 +4436,7 @@ body.app-mode textarea:focus {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=20260903-plan2').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=20260904-plan3').catch(() => {});
   });
 }
 </script>

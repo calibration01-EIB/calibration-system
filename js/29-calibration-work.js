@@ -132,7 +132,8 @@
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
-    loadGeneration: 0, notificationFilter: null, registryReturnInstrumentId: null
+    loadGeneration: 0, notificationFilter: null, registryReturnInstrumentId: null,
+    batchReturnFocus: null
   };
   const cwWizardState = {
     mode: 'create', step: 1, title: '', unitCode: '', instrumentType: '', search: '',
@@ -196,7 +197,13 @@
 
   function cwSetCreateAccess() {
     const button = document.getElementById('cwCreateButton');
-    if (button) button.hidden = !cwCanManage() || cwUiState.model.locksReady !== true;
+    const allowed = cwCanManage() && cwUiState.model.locksReady === true;
+    if (button) button.hidden = !allowed;
+    const selectButton = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+    if (selectButton) {
+      selectButton.disabled = !allowed;
+      selectButton.setAttribute('aria-disabled', String(!allowed));
+    }
   }
 
   function cwActiveItems(batch) {
@@ -256,8 +263,7 @@
     if (!root) return;
     [...root.querySelectorAll('[data-cw-primary]')].forEach(tab => {
       const selected = tab.dataset.cwPrimary === cwPrimaryTab;
-      tab.setAttribute('aria-selected', String(selected));
-      tab.setAttribute('tabindex', selected ? '0' : '-1');
+      tab.setAttribute('aria-pressed', String(selected));
       tab.classList.toggle('is-active', selected);
     });
   }
@@ -320,8 +326,8 @@
     root.innerHTML = CW_TABS.map(tab => {
       const selected = cwUiState.tab === tab.key;
       const total = cwTabBatches(tab.key).length;
-      return '<button type="button" class="cw-tab' + (selected ? ' is-active' : '') + '" role="tab"'
-        + ' aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '"'
+      return '<button type="button" class="cw-tab' + (selected ? ' is-active' : '') + '"'
+        + ' aria-pressed="' + selected + '"'
         + ' data-cw-tab="' + tab.key + '" data-count="' + total + '"'
         + ' onclick="cwSetDashboardTab(this.dataset.cwTab)" onkeydown="cwHandleTabKey(event)">'
         + '<span>' + tab.label + '</span><strong>' + total + '</strong></button>';
@@ -983,6 +989,7 @@
     const list = document.getElementById('cwBatchList');
     const detail = document.getElementById('cwBatchDetail');
     if (!detail) return;
+    if (detail.hidden) cwUiState.batchReturnFocus = document.activeElement;
     const progress = cwProgress(batch);
     const status = cwBatchStatus(batch);
     const meta = CW_STATUS[status] || { label: status || '–', color: '#64748B' };
@@ -1014,7 +1021,10 @@
       cwReturnToRegistry(registryReturnInstrumentId);
       return;
     }
+    const returnFocus = cwUiState.batchReturnFocus;
+    cwUiState.batchReturnFocus = null;
     cwShowDashboardSurface();
+    if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
   }
 
   function cwReturnToRegistry(instrumentId, fallback) {
@@ -1326,11 +1336,11 @@
       cwRenderBatchList();
     }
     const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
-      ? document.querySelector('#cwPrimaryTabs [aria-selected="true"]') : null;
+      ? document.querySelector('#cwPrimaryTabs [aria-pressed="true"]') : null;
     const returnFocus = restoredPrimary || cwWizardState.returnFocus;
     if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.isConnected) returnFocus.focus();
     else {
-      const fallback = document.querySelector('#cwPrimaryTabs [aria-selected="true"]');
+      const fallback = document.querySelector('#cwPrimaryTabs [aria-pressed="true"]');
       if (fallback && typeof fallback.focus === 'function') fallback.focus();
     }
     cwWizardState.returnPrimaryTab = null;

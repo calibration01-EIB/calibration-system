@@ -33,13 +33,11 @@ function showPage(page) {
   if (ts) ts.textContent = t[1];
 
   if (page === 'plan' && typeof loadCalibrationWorkPage === 'function') {
-    const waitAndLoad = (attempt) => {
-      const dataReady = typeof allData !== 'undefined' && Array.isArray(allData);
+    void (async () => {
+      if (typeof window.whenRegistryDataReady === 'function') await window.whenRegistryDataReady();
       const clientReady = typeof sb !== 'undefined' && sb && typeof sb.from === 'function';
-      if ((dataReady && clientReady) || attempt > 20) { loadCalibrationWorkPage(); return; }
-      setTimeout(() => waitAndLoad(attempt + 1), 200);
-    };
-    waitAndLoad(0);
+      if (clientReady) await loadCalibrationWorkPage();
+    })();
   }
   if (page === 'weights') { loadStandardWeights(); }
   if (page === 'admin') loadUsers();

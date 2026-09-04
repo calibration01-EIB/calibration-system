@@ -35,9 +35,9 @@ function text(url) {
 }
 
 (async () => {
-  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, releasePlanSource;
   try {
-    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
@@ -46,7 +46,11 @@ function text(url) {
       text('../js/02-dashboard.js'),
       text('../theme-aqua.css'),
       text('../js/29-calibration-work.js'),
-      text('../js/06-plan.js')
+      text('../js/06-plan.js'),
+      text('../js/22-users.js'),
+      text('../js/23-cal-records.js'),
+      text('../js/24-home.js'),
+      text('../docs/superpowers/plans/2026-09-03-replace-legacy-calibration-plan.md')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -71,9 +75,11 @@ function text(url) {
 
   t('defines exactly four primary plan sections', () => {
     const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
-    const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs [role="tab"]')];
+    const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs button[data-cw-primary]')];
     eq(tabs.length, 4, 'primary plan tab count');
     ok(tabs.every(tab => tab.tagName === 'BUTTON'), 'primary plan tabs must be buttons');
+    ok(!parsed.getElementById('cwPrimaryTabs').hasAttribute('role'), 'primary navigation must not claim an incomplete tablist pattern');
+    ok(tabs.every(tab => !tab.hasAttribute('role')), 'primary navigation buttons must not claim tab roles');
     eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
       ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
     ]), 'primary plan tab keys and labels');
@@ -343,26 +349,53 @@ function text(url) {
     has(loadBody, 'return false;', 'failed registry refresh result');
   });
 
+  t('publishes and awaits explicit registry readiness before opening plan work', () => {
+    has(dashboardSource, 'window.registryDataReady = false;', 'initial registry readiness flag');
+    has(dashboardSource, 'window.whenRegistryDataReady =', 'registry readiness promise interface');
+    has(dashboardSource, 'markRegistryDataReady();', 'processed registry rows publish readiness');
+    const start = routerSource.indexOf("if (page === 'plan'");
+    const end = routerSource.indexOf("if (page === 'weights')", start);
+    const branch = routerSource.slice(start, end);
+    has(branch, 'await window.whenRegistryDataReady()', 'plan route awaits authoritative registry readiness');
+    lacks(branch, 'Array.isArray(allData)', 'empty initialized registry array is not treated as ready');
+  });
+
+  t('aligns dashboard audit home title role guidance and deployment order with the replacement workflow', () => {
+    has(dashboardSource, "sb.from('calibration_work_audit')", 'dashboard reads the supported work audit table');
+    lacks(dashboardSource, "sb.from('plan_audit_log')", 'dashboard has no retired audit caller');
+    has(homeSource, "t:'แผนสอบเทียบ'", 'home source exposes the exact plan title');
+    lacks(usersSource, 'อนุมัติแผน', 'role guidance removes the retired approval action');
+    lacks(usersSource, 'รับทราบแผน', 'Owner guidance removes the retired acknowledgement action');
+    has(usersSource, 'แนบ PDF รับทราบและ PDF ปิดแผน', 'Admin and Editor PDF workflow is documented');
+    lacks(indexSource, 'Owner — หน่วยงานเจ้าของเครื่อง (กดรับทราบแผน)', 'role selector removes the retired Owner action');
+    has(recordsSource, 'รอ PDF รับทราบ', 'tracking uses the PDF acknowledgement stage');
+    const deploy = releasePlanSource.indexOf('Step 2: Merge and verify the compatible frontend first');
+    const apply = releasePlanSource.indexOf('Step 4: Apply the reviewed migration');
+    ok(deploy !== -1 && apply > deploy, 'compatible frontend is deployed before destructive migration');
+  });
+
   t('registers one query-qualified script generation with exact offline cache parity', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260903-plan2"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260903-plan2"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260904-plan3"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260903-plan2"', 'current calibration stylesheet query version');
-    has(indexSource, 'src="js/10-router.js?v=20260903-plan2"', 'current router query version');
-    has(indexSource, "serviceWorker.register('sw.js?v=20260903-plan2')", 'service worker generation');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v160';", 'cache v160');
+    has(indexSource, 'href="theme-aqua.css?v=20260904-plan3"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260904-plan3"', 'current router query version');
+    has(indexSource, "serviceWorker.register('sw.js?v=20260904-plan3')", 'service worker generation');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v161';", 'cache v161');
     [
-      'index.html?v=20260903-plan2',
-      'theme-aqua.css?v=20260903-plan2',
-      'js/02-dashboard.js?v=20260903-plan2',
+      'index.html?v=20260904-plan3',
+      'theme-aqua.css?v=20260904-plan3',
+      'js/02-dashboard.js?v=20260904-plan3',
       'js/04-reports.js?v=20260903-plan2',
-      'js/10-router.js?v=20260903-plan2',
+      'js/10-router.js?v=20260904-plan3',
       'js/16-repairs.js?v=20260903-plan2',
       'js/18-asset-out.js?v=20260903-plan2',
-      'js/23-cal-records.js?v=20260903-plan2',
+      'js/22-users.js?v=20260904-plan3',
+      'js/23-cal-records.js?v=20260904-plan3',
+      'js/24-home.js?v=20260904-plan3',
       'js/26-list-ui.js?v=20260903-plan2',
       'js/28-kpi.js?v=20260903-plan2',
-      'js/29-calibration-work.js?v=20260903-plan2'
+      'js/29-calibration-work.js?v=20260904-plan3'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -382,6 +415,79 @@ function text(url) {
     has(swSource, 'await cache.keys()', 'activation inspects existing cache keys');
     has(swSource, 'cache.delete(request)', 'activation evicts retired requests');
     has(swSource, 'evictRetiredAssets', 'activation runs retired asset eviction');
+  });
+
+  await ta('service-worker installation rejects incomplete precache and does not activate it', async () => {
+    const installStart = swSource.indexOf("self.addEventListener('install'");
+    const installEnd = swSource.indexOf('\n});', installStart) + 3;
+    let install;
+    let skipWaitingCalls = 0;
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'install') install = listener; },
+      skipWaiting: () => { skipWaitingCalls += 1; return Promise.resolve(); }
+    };
+    const failure = new Error('precache failed');
+    const cachesStub = { open: async () => ({ addAll: async () => { throw failure; } }) };
+    new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+    let waited;
+    install({ waitUntil: promise => { waited = promise; } });
+    let rejected = false;
+    try { await waited; } catch (error) { rejected = error === failure; }
+    ok(rejected, 'failed precache must reject service-worker installation');
+    eq(skipWaitingCalls, 0, 'failed install must not call skipWaiting or reach activation cleanup');
+  });
+
+  await ta('service-worker installation calls skipWaiting only after complete precache', async () => {
+    const installStart = swSource.indexOf("self.addEventListener('install'");
+    const installEnd = swSource.indexOf('\n});', installStart) + 3;
+    let install;
+    let resolvePrecache;
+    const sequence = [];
+    const precache = new Promise(resolve => { resolvePrecache = resolve; });
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'install') install = listener; },
+      skipWaiting: () => { sequence.push('skipWaiting'); return Promise.resolve(); }
+    };
+    const cachesStub = { open: async () => ({ addAll: () => { sequence.push('addAll'); return precache; } }) };
+    new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+    let waited;
+    install({ waitUntil: promise => { waited = promise; } });
+    await Promise.resolve();
+    eq(sequence.join(','), 'addAll', 'skipWaiting is held until addAll succeeds');
+    resolvePrecache();
+    await waited;
+    eq(sequence.join(','), 'addAll,skipWaiting', 'successful precache activates the new worker');
+  });
+
+  await ta('service-worker navigation falls back to the canonical cached start URL', async () => {
+    const fetchStart = swSource.indexOf("self.addEventListener('fetch'");
+    const fetchEnd = swSource.indexOf('\n});', fetchStart) + 3;
+    let fetchListener;
+    const request = { method:'GET', url:'https://app.test/calibration-system/index.html', mode:'navigate', destination:'document' };
+    const canonical = { marker:'canonical-index' };
+    const cacheLookups = [];
+    const selfStub = {
+      location: { origin:'https://app.test' },
+      addEventListener: (kind, listener) => { if (kind === 'fetch') fetchListener = listener; }
+    };
+    const cachesStub = {
+      match: async key => {
+        cacheLookups.push(key);
+        return key === './index.html' ? canonical : undefined;
+      },
+      open: async () => ({ put: async () => {} })
+    };
+    new Function('self', 'caches', 'fetch', 'withAppInjections', 'Response',
+      swSource.slice(fetchStart, fetchEnd))(
+        selfStub, cachesStub, async () => { throw new Error('offline'); }, async response => response,
+        { error: () => ({ marker:'error' }) });
+    let responsePromise;
+    fetchListener({ request, respondWith: promise => { responsePromise = promise; } });
+    const response = await responsePromise;
+    eq(response, canonical, 'offline manifest start URL resolves to cached canonical shell');
+    ok(cacheLookups.includes('./index.html'), 'fetch handler explicitly checks canonical index cache key');
   });
 
   await ta('service-worker activation evicts query variants before claiming clients', async () => {
@@ -407,12 +513,12 @@ function text(url) {
       delete: async request => { sequence.push('retired:' + request.url); return true; }
     };
     const cachesStub = {
-      keys: async () => ['old-cache', 'calibration-app-v160'],
+      keys: async () => ['old-cache', 'calibration-app-v161'],
       delete: async key => { sequence.push('cache:' + key); return true; },
       open: async () => cache
     };
     new Function('self', 'caches', 'CACHE_NAME', 'evictRetiredAssets',
-      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v160', evict);
+      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v161', evict);
     let waited;
     activation({waitUntil: promise => { waited = promise; }});
     await waited;
@@ -424,7 +530,7 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pagePlan"><nav id="cwPrimaryTabs" role="tablist"><button type="button" role="tab" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" role="tab" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" role="tab" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" role="tab" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -479,7 +585,7 @@ function text(url) {
     has(routerSource, "plan: ['แผนสอบเทียบ'", 'router title');
     has(routerSource, "page === 'plan'", 'router load branch');
     has(routerSource, 'loadCalibrationWorkPage()', 'router loader call');
-    has(routerSource, 'setTimeout(() => waitAndLoad', 'router waits for app data/client');
+    has(routerSource, 'await window.whenRegistryDataReady()', 'router awaits registry data readiness');
     has(indexSource, "showPage('plan')", 'plan navigation calls unified route');
   });
 
@@ -488,8 +594,9 @@ function text(url) {
     try {
       window.cwXss = 0;
       cwRenderDashboard(cwDashboardModel());
-      const tabs = [...document.querySelectorAll('#cwTabs [role="tab"]')];
+      const tabs = [...document.querySelectorAll('#cwTabs [data-cw-tab]')];
       eq(tabs.length, 4, 'four dashboard tabs');
+      ok(tabs.every(tab => !tab.hasAttribute('role')), 'status filters do not claim tab roles without tabpanels');
       eq(tabs.map(tab => tab.dataset.count).join(','), '2,2,0,0', 'tab counts');
       const metrics = document.getElementById('cwMetrics').textContent.replace(/\s+/g, ' ');
       ['2 ชุดงานกำลังดำเนินการ', '3 / 4 เครื่องเสร็จ', '1 เครื่องเกินแผน', '1 ชุดรอ PDF ปิดแผน'].forEach(value => has(metrics, value, 'metric'));
@@ -513,7 +620,7 @@ function text(url) {
       cwSetDashboardTab('waiting');
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting card count');
       has(document.getElementById('cwBatchList').textContent, 'PLAN-2026-0002', 'waiting batch');
-      const selected = document.querySelector('#cwTabs [aria-selected="true"]');
+      const selected = document.querySelector('#cwTabs [aria-pressed="true"]');
       eq(selected.dataset.cwTab, 'waiting', 'selected tab');
       eq(selected.tagName, 'BUTTON', 'tab is keyboard operable');
     } finally { cleanup(); }
@@ -524,8 +631,8 @@ function text(url) {
     try {
       cwRenderDashboard(cwDashboardModel());
       ok(cwSetPrimaryTab('waiting'), 'waiting primary section is accepted');
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'primary waiting tab selected');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting maps to the waiting work state');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'primary waiting button selected');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting maps to the waiting work state');
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting includes calibration and closure queues');
       cwRenderDashboard({ batches: [
         { id:'33333333-3333-3333-3333-333333333333', status:'completed', items:[], documents:[] },
@@ -533,7 +640,7 @@ function text(url) {
         { id:'55555555-5555-5555-5555-555555555555', status:'awaiting_calibration', items:[], documents:[] }
       ], locks:[], locksReady:true });
       ok(cwSetPrimaryTab('history'), 'history primary section is accepted');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'history', 'history maps to complete and cancelled work');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'history', 'history maps to complete and cancelled work');
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history includes completed and cancelled batches');
       eq(cwSetPrimaryTab('unknown'), false, 'unknown primary section is rejected');
     } finally { cleanup(); }
@@ -546,8 +653,8 @@ function text(url) {
       cwRenderDashboard(waitingModel);
       ok(cwSetPrimaryTab('waiting'), 'waiting selected before refresh');
       cwRenderDashboard(waitingModel, { primaryTab: 'waiting' });
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'waiting remains selected after refresh');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting inner state survives refresh');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'waiting remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting inner state survives refresh');
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting content survives refresh');
 
       const historyModel = { batches: [
@@ -557,8 +664,8 @@ function text(url) {
       ], locks:[], locksReady:true };
       cwSetPrimaryTab('history');
       cwRenderDashboard(historyModel, { primaryTab: 'history' });
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'history', 'history remains selected after refresh');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'history', 'history inner state survives refresh');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'history', 'history remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'history', 'history inner state survives refresh');
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history content survives refresh');
     } finally { cleanup(); }
   });
@@ -571,10 +678,26 @@ function text(url) {
       batches.focus();
       window.currentUser = { role:'viewer' };
       eq(cwSetPrimaryTab('select'), false, 'viewer cannot open create wizard');
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'denied select restores primary selection');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'denied select restores primary selection');
       eq(document.activeElement, batches, 'denied select keeps focus on selected tab');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'active', 'denied select keeps dashboard state');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'active', 'denied select keeps dashboard state');
       delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  await ta('exposes selection as disabled for read-only users and restores a batch card after detail closes', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      window.currentUser = { role:'viewer' };
+      cwRenderDashboard(cwDashboardModel());
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      eq(select.disabled, true, 'read-only selection control is disabled');
+      eq(select.getAttribute('aria-disabled'), 'true', 'read-only state is announced');
+      const card = document.querySelector('#cwBatchList .cw-batch-card');
+      card.focus();
+      await cwOpenBatch(card.dataset.batchId);
+      cwCloseBatch();
+      eq(document.activeElement, card, 'closing detail restores the originating batch card');
     } finally { cleanup(); delete window.currentUser; }
   });
 
@@ -586,10 +709,10 @@ function text(url) {
       const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
       batches.focus();
       batches.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'select', 'keyboard select commits after dialog opens');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'select', 'keyboard select commits after dialog opens');
       ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'keyboard select opens create dialog');
       cwCloseCreate();
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'close restores prior primary selection');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'close restores prior primary selection');
       eq(document.activeElement, batches, 'close restores focus to prior primary tab');
       eq(batches.tabIndex, 0, 'restored tab is in tab order');
       delete window.currentUser;
@@ -607,10 +730,10 @@ function text(url) {
       batches.focus();
       select.focus();
       select.dispatchEvent(new MouseEvent('click', { bubbles:true }));
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'select', 'pointer select opens and selects tab');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'select', 'pointer select opens and selects button');
       ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'pointer select opens create dialog');
       cwCloseCreate();
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'batches', 'pointer close restores prior selection');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'pointer close restores prior selection');
       eq(document.activeElement, batches, 'pointer close focuses restored selected tab');
       eq(batches.tabIndex, 0, 'restored pointer tab is in tab order');
       delete window.currentUser;
@@ -625,13 +748,13 @@ function text(url) {
       tab('batches').focus();
       tab('batches').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
       eq(document.activeElement, tab('waiting'), 'ArrowRight moves primary focus');
-      eq(tab('waiting').getAttribute('aria-selected'), 'true', 'ArrowRight selects primary tab');
+      eq(tab('waiting').getAttribute('aria-pressed'), 'true', 'ArrowRight selects primary section');
       tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
       eq(document.activeElement, tab('history'), 'End moves primary focus to last tab');
     } finally { cleanup(); }
   });
 
-  t('implements the ARIA tabs keyboard focus and selection model', () => {
+  t('keeps status filter buttons keyboard accessible while supporting arrow shortcuts', () => {
     const cleanup = cwMountFixture();
     try {
       cwRenderDashboard(cwDashboardModel());
@@ -639,8 +762,8 @@ function text(url) {
       tab('active').focus();
       tab('active').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
       eq(document.activeElement, tab('waiting'), 'ArrowRight moves focus');
-      eq(tab('waiting').getAttribute('aria-selected'), 'true', 'ArrowRight selects next tab');
-      eq(tab('active').tabIndex, -1, 'previous tab leaves tab order');
+      eq(tab('waiting').getAttribute('aria-pressed'), 'true', 'ArrowRight selects next filter');
+      eq(tab('active').tabIndex, 0, 'previous filter remains in normal tab order');
       tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
       eq(document.activeElement, tab('history'), 'End moves to last tab');
       tab('history').dispatchEvent(new KeyboardEvent('keydown', {key:'Home', bubbles:true}));
@@ -1001,9 +1124,11 @@ function text(url) {
     Object.assign(calibrationWorkStatusMap, map);
     CALRECS = [];
     const row = crcRowModel({id:140,days_left:5});
-    eq(row.stage[1], 'รอแนบสแกน', 'calibration-record stage does not regress after batch closure');
-    eq(row.done[0], true, 'closed work remains visibly planned');
-    eq(row.done[2], true, 'closed work remains visibly calibrated');
+    eq(row.stage[1], 'ยังไม่ได้วางแผน', 'historical completion does not suppress the next calibration cycle');
+    eq(row.done[0], false, 'closed work is not treated as a current plan');
+    eq(row.done[2], false, 'closed work without a current certificate is not treated as current calibration');
+    eq(row.work, null, 'current work remains empty');
+    eq(row.workHistory.batchNo, 'DONE-NEW', 'historical work remains separately available');
   });
 
   await ta('loads the complete integration map with immutable keysets', async () => {
@@ -1150,8 +1275,8 @@ function text(url) {
 
       cwRenderDashboard(model);
       ok(await cwOpenNotification('awaiting_acknowledgement'), 'notification filter opens');
-      eq(document.querySelector('#cwPrimaryTabs [aria-selected="true"]').dataset.cwPrimary, 'waiting', 'notification selects waiting primary tab');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting tab selected');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'notification selects waiting primary section');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting filter selected');
       has(document.getElementById('cwBatchList').textContent, awaiting.batch_no, 'awaiting acknowledgement filter');
       ok(await cwOpenNotification('awaiting_closure', closure.id), 'batch notification opens exact detail');
       has(document.getElementById('cwBatchDetail').textContent, closure.batch_no, 'correct notification detail');
