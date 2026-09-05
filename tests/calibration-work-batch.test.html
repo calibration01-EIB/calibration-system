@@ -35,9 +35,9 @@ function text(url) {
 }
 
 (async () => {
-  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, releasePlanSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
   try {
-    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, releasePlanSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
@@ -52,6 +52,7 @@ function text(url) {
       text('../js/24-home.js'),
       text('../js/26-list-ui.js'),
       text('../js/25-dashboard-ui.js'),
+      text('../js/16-repairs.js'),
       text('../docs/superpowers/plans/2026-09-03-replace-legacy-calibration-plan.md')
     ]);
   } catch (error) {
@@ -398,6 +399,8 @@ function text(url) {
     has(recordsSource, '!m.done[0] && canEdit', 'calibration records gate plan creation by role');
     has(dashboardUiSource, 'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน', 'dashboard pending-work copy matches PDF gates');
     has(workSource, "document.getElementById('navPlanBadge')", 'work integration publishes the plan badge');
+    has(repairsSource, 'const canPlan = typeof currentUser', 'repair widget gates plan creation by role');
+    lacks(repairsSource, 'คลิกรหัสเพื่อส่งเข้าแผน', 'repair widget removes misleading read-only action copy');
     const deploy = releasePlanSource.indexOf('Step 2: Merge and verify the compatible frontend first');
     const apply = releasePlanSource.indexOf('Step 4: Apply the reviewed migration');
     ok(deploy !== -1 && apply > deploy, 'compatible frontend is deployed before destructive migration');
@@ -417,7 +420,7 @@ function text(url) {
       'js/02-dashboard.js?v=20260904-plan3',
       'js/04-reports.js?v=20260903-plan2',
       'js/10-router.js?v=20260904-plan3',
-      'js/16-repairs.js?v=20260903-plan2',
+      'js/16-repairs.js?v=20260904-plan3',
       'js/18-asset-out.js?v=20260903-plan2',
       'js/22-users.js?v=20260904-plan3',
       'js/23-cal-records.js?v=20260904-plan3',
@@ -731,6 +734,25 @@ function text(url) {
       cwCloseBatch();
       eq(document.activeElement, card, 'closing detail restores the originating batch card');
     } finally { cleanup(); delete window.currentUser; }
+  });
+
+  t('blocks every create entry point when the registry snapshot is unavailable', () => {
+    const cleanup = cwMountFixture();
+    try {
+      window.currentUser = { role:'editor' };
+      window.registryDataReady = false;
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true });
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      eq(select.disabled, true, 'selection stays disabled despite a ready lock snapshot');
+      eq(cwSetPrimaryTab('select'), false, 'programmatic keyboard path cannot open creation');
+      eq(cwOpenCreate(), false, 'direct create call is rejected');
+      eq(cwOpenCreateWithInstrument(12), false, 'stale registry shortcut is rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'wizard remains closed');
+    } finally {
+      window.registryDataReady = true;
+      cleanup();
+      delete window.currentUser;
+    }
   });
 
   t('restores prior primary selection and focus after keyboard create close', () => {
@@ -1163,6 +1185,8 @@ function text(url) {
     eq(row.workHistory.batchNo, 'DONE-NEW', 'historical work remains separately available');
     window.currentUser = {role:'viewer'};
     lacks(crcActionHtml(row), 'goToPlanWithItem', 'Viewer does not receive a create-plan action');
+    lacks(crcActionHtml(row), 'goToPlanDetail', 'Viewer without current work does not receive a dead view-plan action');
+    has(crcActionHtml(row), 'openCalHistory', 'Viewer retains a valid history action');
     window.currentUser = {role:'editor'};
     has(crcActionHtml(row), 'goToPlanWithItem', 'Editor retains the create-plan action');
     delete window.currentUser;

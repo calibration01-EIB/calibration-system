@@ -183,6 +183,11 @@
     return role === 'admin' || role === 'editor';
   }
 
+  function cwCanCreate() {
+    return cwCanManage() && global.registryDataReady === true
+      && cwUiState.model.locksReady === true;
+  }
+
   function cwResolveClient(client) {
     if (client) return client;
     if (typeof sb !== 'undefined') return sb;
@@ -197,8 +202,7 @@
 
   function cwSetCreateAccess() {
     const button = document.getElementById('cwCreateButton');
-    const allowed = cwCanManage() && global.registryDataReady === true
-      && cwUiState.model.locksReady === true;
+    const allowed = cwCanCreate();
     if (button) button.hidden = !allowed;
     const selectButton = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
     if (selectButton) {
@@ -1300,7 +1304,7 @@
   }
 
   function cwOpenCreate() {
-    if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
+    if (!cwCanCreate()) return false;
     cwWizardState.returnFocus = document.activeElement;
     cwWizardState.returnPrimaryTab = null;
     cwWizardState.returnDashboardTab = null;
@@ -1309,7 +1313,7 @@
   }
 
   function cwOpenCreateWithInstrument(instrumentId) {
-    if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
+    if (!cwCanCreate()) return false;
     const id = cwInstrumentId(instrumentId);
     const instrument = id == null ? null : cwRegistry().find(row =>
       row && cwInstrumentId(row.id) === id);

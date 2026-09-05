@@ -568,11 +568,15 @@ function renderRepairDashboard() {
   const strip = document.getElementById('repairRecalStrip');
   const waiting = computeRecalWaiting(repairOrders, allData || [],
     typeof calibrationWorkStatusMap !== 'undefined' ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {});
+  const canPlan = typeof currentUser !== 'undefined'
+    && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
   if (strip) strip.innerHTML = waiting.length ? `
     <div style="background:#fdf3dd;border:1px solid #f0d9a8;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px">
       ⚠️ <strong>ซ่อมเสร็จ รอสอบเทียบใหม่ ${waiting.length} เครื่อง:</strong>
-      ${waiting.slice(0, 5).map(o => { const d = repairInstrument(o.instrument_id); return `<a href="javascript:void(0)" onclick="goToPlanWithItem(${o.instrument_id})" style="color:#b45309;font-weight:600;margin-left:6px">${escapeHtmlText(d?.id_code || '?')}</a>`; }).join('')}
-      <span style="color:var(--text3)">— คลิกรหัสเพื่อส่งเข้าแผน</span>
+      ${waiting.slice(0, 5).map(o => { const d = repairInstrument(o.instrument_id); return canPlan
+        ? `<button type="button" onclick="goToPlanWithItem(${o.instrument_id})" style="color:#b45309;font-weight:600;margin-left:6px;border:0;background:transparent;cursor:pointer">${escapeHtmlText(d?.id_code || '?')}</button>`
+        : `<span style="color:#b45309;font-weight:600;margin-left:6px">${escapeHtmlText(d?.id_code || '?')}</span>`; }).join('')}
+      <span style="color:var(--text3)">${canPlan ? '— เลือกรหัสเพื่อเพิ่มเข้าแผน' : '— ติดต่อ Admin หรือ Editor เพื่อเพิ่มเข้าแผน'}</span>
     </div>` : '';
 
   // ลิสต์งานค้าง 5 รายการ (แจ้งเก่าสุดก่อน)
