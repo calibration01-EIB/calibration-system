@@ -200,6 +200,18 @@
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
   }
 
+  function cwParseDisplayDate(value) {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || '').trim());
+    if (!match) return '';
+    const iso = match[3] + '-' + match[2] + '-' + match[1];
+    return cwValidISODate(iso) ? iso : '';
+  }
+
+  function cwFormatDisplayDate(isoDate) {
+    return cwValidISODate(isoDate)
+      ? isoDate.slice(8, 10) + '/' + isoDate.slice(5, 7) + '/' + isoDate.slice(0, 4) : '';
+  }
+
   function cwSetCreateAccess() {
     const button = document.getElementById('cwCreateButton');
     const allowed = cwCanCreate();
@@ -1240,7 +1252,11 @@
         + cwEscapeHtml(cwWizardState.reason) + '</textarea></label>' : '';
     return acknowledgement + '<div class="cw-item-tools"><label class="cw-field"><span>ค้นหา</span><input id="cwCreateSearch" type="search" value="'
       + cwEscapeHtml(cwWizardState.search) + '" oninput="cwSetCreateSearch(this.value)" placeholder="รหัสหรือชื่อเครื่องมือ"></label>'
-      + '<label class="cw-field"><span>กำหนดวันที่ที่เลือกทั้งหมด</span><input id="cwCreateBulkDate" type="date" onchange="cwSetCreateBulkDate(this.value)"></label></div>'
+      + '<label class="cw-field"><span>กำหนดวันที่ที่เลือกทั้งหมด</span><span class="cw-bulk-date-control">'
+      + '<input id="cwCreateBulkDate" type="text" inputmode="numeric" maxlength="10" placeholder="วว/ดด/ปปปป" '
+      + 'aria-label="กำหนดวันที่ที่เลือกทั้งหมด วัน เดือน ปี" onchange="cwApplyCreateBulkDate(this.value)">'
+      + '<input id="cwCreateBulkDatePicker" type="date" aria-label="เลือกวันที่จากปฏิทิน" onchange="cwPickCreateBulkDate(this.value)">'
+      + '</span></label></div>'
       + '<div class="cw-instrument-list">' + (rows || '<p class="cw-empty">ไม่พบเครื่องมือที่ตรงกับกลุ่มนี้</p>') + '</div>' + reason;
   }
 
@@ -1484,6 +1500,29 @@
     }
     cwShowCreateError('');
     cwRenderCreateDialogWithFocus('#cwCreateBulkDate');
+    return true;
+  }
+
+  function cwApplyCreateBulkDate(value) {
+    const isoDate = cwParseDisplayDate(value);
+    if (!isoDate) {
+      cwShowCreateError('กรุณาระบุวันที่แบบ วัน/เดือน/ปี');
+      return false;
+    }
+    if (!cwSetCreateBulkDate(isoDate)) return false;
+    const input = document.getElementById('cwCreateBulkDate');
+    if (input) input.value = cwFormatDisplayDate(isoDate);
+    const picker = document.getElementById('cwCreateBulkDatePicker');
+    if (picker) picker.value = isoDate;
+    return true;
+  }
+
+  function cwPickCreateBulkDate(isoDate) {
+    if (!cwSetCreateBulkDate(isoDate)) return false;
+    const input = document.getElementById('cwCreateBulkDate');
+    if (input) input.value = cwFormatDisplayDate(isoDate);
+    const picker = document.getElementById('cwCreateBulkDatePicker');
+    if (picker) picker.value = isoDate;
     return true;
   }
 
@@ -2553,6 +2592,10 @@
   global.cwToggleCreateItem = cwToggleCreateItem;
   global.cwSetCreatePlannedDate = cwSetCreatePlannedDate;
   global.cwSetCreateBulkDate = cwSetCreateBulkDate;
+  global.cwParseDisplayDate = cwParseDisplayDate;
+  global.cwFormatDisplayDate = cwFormatDisplayDate;
+  global.cwApplyCreateBulkDate = cwApplyCreateBulkDate;
+  global.cwPickCreateBulkDate = cwPickCreateBulkDate;
   global.cwSetCreateSearch = cwSetCreateSearch;
   global.cwSetEditReason = cwSetEditReason;
   global.cwSubmitCreate = cwSubmitCreate;

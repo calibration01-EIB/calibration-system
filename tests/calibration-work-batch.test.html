@@ -408,27 +408,27 @@ function text(url) {
 
   t('registers one query-qualified script generation with exact offline cache parity', () => {
     const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260903-plan2"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260904-plan3"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260905-date1"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260904-plan3"', 'current calibration stylesheet query version');
-    has(indexSource, 'src="js/10-router.js?v=20260904-plan3"', 'current router query version');
-    has(indexSource, "serviceWorker.register('sw.js?v=20260904-plan3')", 'service worker generation');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v161';", 'cache v161');
+    has(indexSource, 'href="theme-aqua.css?v=20260905-date1"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260905-date1"', 'current router query version');
+    has(indexSource, "serviceWorker.register('sw.js?v=20260905-date1')", 'service worker generation');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v162';", 'cache v162');
     [
-      'index.html?v=20260904-plan3',
-      'theme-aqua.css?v=20260904-plan3',
-      'js/02-dashboard.js?v=20260904-plan3',
+      'index.html?v=20260905-date1',
+      'theme-aqua.css?v=20260905-date1',
+      'js/02-dashboard.js?v=20260905-date1',
       'js/04-reports.js?v=20260903-plan2',
-      'js/10-router.js?v=20260904-plan3',
-      'js/16-repairs.js?v=20260904-plan3',
+      'js/10-router.js?v=20260905-date1',
+      'js/16-repairs.js?v=20260905-date1',
       'js/18-asset-out.js?v=20260903-plan2',
-      'js/22-users.js?v=20260904-plan3',
-      'js/23-cal-records.js?v=20260904-plan3',
-      'js/24-home.js?v=20260904-plan3',
-      'js/25-dashboard-ui.js?v=20260904-plan3',
-      'js/26-list-ui.js?v=20260904-plan3',
+      'js/22-users.js?v=20260905-date1',
+      'js/23-cal-records.js?v=20260905-date1',
+      'js/24-home.js?v=20260905-date1',
+      'js/25-dashboard-ui.js?v=20260905-date1',
+      'js/26-list-ui.js?v=20260905-date1',
       'js/28-kpi.js?v=20260903-plan2',
-      'js/29-calibration-work.js?v=20260904-plan3'
+      'js/29-calibration-work.js?v=20260905-date1'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
@@ -462,7 +462,7 @@ function text(url) {
     const failure = new Error('precache failed');
     const cachesStub = { open: async () => ({ addAll: async () => { throw failure; } }) };
     new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
-      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v162', []);
     let waited;
     install({ waitUntil: promise => { waited = promise; } });
     let rejected = false;
@@ -484,7 +484,7 @@ function text(url) {
     };
     const cachesStub = { open: async () => ({ addAll: () => { sequence.push('addAll'); return precache; } }) };
     new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
-      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v162', []);
     let waited;
     install({ waitUntil: promise => { waited = promise; } });
     await Promise.resolve();
@@ -546,12 +546,12 @@ function text(url) {
       delete: async request => { sequence.push('retired:' + request.url); return true; }
     };
     const cachesStub = {
-      keys: async () => ['old-cache', 'calibration-app-v161'],
+      keys: async () => ['old-cache', 'calibration-app-v162'],
       delete: async key => { sequence.push('cache:' + key); return true; },
       open: async () => cache
     };
     new Function('self', 'caches', 'CACHE_NAME', 'evictRetiredAssets',
-      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v161', evict);
+      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v162', evict);
     let waited;
     activation({waitUntil: promise => { waited = promise; }});
     await waited;
@@ -1558,6 +1558,31 @@ function text(url) {
       const review = document.getElementById('cwCreateBody').textContent;
       ['กันยายน 2026','WRM1','เครื่องชั่ง (Electronic Balance)','WRM-11','2026-09-03','WRM-12','2026-09-05']
         .forEach(value => has(review, value, 'review'));
+    } finally { cleanup(); }
+  });
+
+  t('accepts a typed day-first bulk date and synchronizes calendar selection', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      cwRenderDashboard({batches:[],locks:[]});
+      ok(cwOpenCreate(), 'open wizard');
+      ok(cwSetCreateGroup('WRM1', 'เครื่องชั่ง (Electronic Balance)'), 'valid group');
+      cwSetInput('cwCreateTitle', 'กันยายน 2026');
+      ok(cwGoCreateStep(2), 'step 2');
+      ok(cwToggleCreateItem(11, true), 'select 11');
+      const display = document.getElementById('cwCreateBulkDate');
+      eq(display.type, 'text', 'bulk date accepts direct typing');
+      eq(display.placeholder, 'วว/ดด/ปปปป', 'Thai day-first hint');
+      has(cssSource, '.cw-bulk-date-control', 'bulk date controls share one row');
+      ok(cwApplyCreateBulkDate('05/09/2026'), 'valid typed date applies');
+      eq(document.querySelector('[data-cw-instrument-id="11"] input[type="date"]').value,
+        '2026-09-05', 'typed date normalizes to ISO');
+      eq(cwApplyCreateBulkDate('31/02/2026'), false, 'impossible date is rejected');
+      eq(document.querySelector('[data-cw-instrument-id="11"] input[type="date"]').value,
+        '2026-09-05', 'invalid input preserves state');
+      ok(cwPickCreateBulkDate('2027-01-30'), 'calendar date applies');
+      eq(document.getElementById('cwCreateBulkDate').value, '30/01/2027', 'calendar synchronizes display');
     } finally { cleanup(); }
   });
 

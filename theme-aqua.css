@@ -2044,6 +2044,9 @@ tbody tr:hover td { background: #f6fafd !important; }
 }
 #app #cwCreateDialog .cw-field textarea { min-height: 76px; resize: vertical; }
 #app #cwCreateDialog .cw-item-tools { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(190px,.6fr); gap: 10px; margin-bottom: 12px; }
+#app #cwCreateDialog .cw-bulk-date-control { display: grid; grid-template-columns: minmax(0,1fr) 48px; gap: 6px; }
+#app #cwCreateDialog .cw-bulk-date-control input[type="date"] { padding-inline: 9px; color: transparent; cursor: pointer; }
+#app #cwCreateDialog .cw-bulk-date-control input[type="date"]::-webkit-calendar-picker-indicator { width: 22px; height: 22px; margin: auto; cursor: pointer; }
 #app #cwCreateDialog .cw-instrument-list { display: grid; gap: 8px; }
 #app #cwCreateDialog .cw-instrument-row {
   min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) 150px; align-items: center; gap: 12px;
