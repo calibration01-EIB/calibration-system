@@ -124,19 +124,22 @@
 
   const CW_TABS = Object.freeze([
     Object.freeze({ key: 'active', label: 'กำลังดำเนินการ' }),
-    Object.freeze({ key: 'waiting', label: 'รอเอกสาร' }),
+    Object.freeze({ key: 'waiting', label: 'คิวรอดำเนินการ' }),
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
-    Object.freeze({ key: 'history', label: 'ประวัติทั้งหมด' })
+    Object.freeze({ key: 'history', label: 'เสร็จสิ้นและยกเลิก' })
   ]);
+  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history']);
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
-    loadGeneration: 0, notificationFilter: null, registryReturnInstrumentId: null
+    loadGeneration: 0, notificationFilter: null, registryReturnInstrumentId: null,
+    batchReturnFocus: null
   };
   const cwWizardState = {
     mode: 'create', step: 1, title: '', unitCode: '', instrumentType: '', search: '',
     selected: new Map(), batchId: null, expectedUpdatedAt: null, hadAcknowledgement: false,
-    currentAcknowledgement: false, submitting: false, returnFocus: null
+    currentAcknowledgement: false, submitting: false, returnFocus: null,
+    returnPrimaryTab: null, returnDashboardTab: null
   };
   const cwDocumentState = {
     batchId: null, itemId: null, kind: null, file: null, replacementReason: '',
@@ -180,6 +183,11 @@
     return role === 'admin' || role === 'editor';
   }
 
+  function cwCanCreate() {
+    return cwCanManage() && global.registryDataReady === true
+      && cwUiState.model.locksReady === true;
+  }
+
   function cwResolveClient(client) {
     if (client) return client;
     if (typeof sb !== 'undefined') return sb;
@@ -194,7 +202,13 @@
 
   function cwSetCreateAccess() {
     const button = document.getElementById('cwCreateButton');
-    if (button) button.hidden = !cwCanManage() || cwUiState.model.locksReady !== true;
+    const allowed = cwCanCreate();
+    if (button) button.hidden = !allowed;
+    const selectButton = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+    if (selectButton) {
+      selectButton.disabled = !allowed;
+      selectButton.setAttribute('aria-disabled', String(!allowed));
+    }
   }
 
   function cwActiveItems(batch) {
@@ -227,10 +241,88 @@
     return batches.filter(batch => {
       const status = cwBatchStatus(batch);
       if (key === 'active') return status !== 'completed' && status !== 'cancelled';
-      if (key === 'waiting') return status === 'awaiting_acknowledgement_pdf' || status === 'awaiting_closure_pdf';
+      if (key === 'waiting') return [
+        'awaiting_acknowledgement_pdf', 'awaiting_calibration',
+        'partially_completed', 'awaiting_closure_pdf'
+      ].includes(status);
       if (key === 'completed') return status === 'completed';
+      if (key === 'history') return status === 'completed' || status === 'cancelled';
       return true;
     });
+  }
+
+  let cwPrimaryTab = 'batches';
+
+  const CW_PRIMARY_TO_DASHBOARD = Object.freeze({
+    batches: 'active', waiting: 'waiting', history: 'history'
+  });
+
+  function cwPrimaryForDashboardTab(tab) {
+    if (tab === 'waiting') return 'waiting';
+    if (tab === 'history' || tab === 'completed') return 'history';
+    return 'batches';
+  }
+
+  function cwRenderPrimaryTabs() {
+    const root = document.getElementById('cwPrimaryTabs');
+    if (!root) return;
+    [...root.querySelectorAll('[data-cw-primary]')].forEach(tab => {
+      const selected = tab.dataset.cwPrimary === cwPrimaryTab;
+      tab.setAttribute('aria-pressed', String(selected));
+      tab.classList.toggle('is-active', selected);
+    });
+  }
+
+  function cwSyncPrimaryState(tab, dashboardTab) {
+    const next = CW_PRIMARY_TABS.includes(tab) ? tab : 'batches';
+    cwPrimaryTab = next;
+    if (next !== 'select') {
+      cwUiState.tab = CW_TABS.some(item => item.key === dashboardTab)
+        ? dashboardTab : CW_PRIMARY_TO_DASHBOARD[next];
+    }
+    cwRenderPrimaryTabs();
+    return next;
+  }
+
+  function cwSetPrimaryTab(tab) {
+    if (!CW_PRIMARY_TABS.includes(tab)) return false;
+    if (tab === 'select') {
+      const previousPrimaryTab = cwPrimaryTab;
+      const previousDashboardTab = cwUiState.tab;
+      if (!cwOpenCreate()) {
+        cwPrimaryTab = previousPrimaryTab;
+        cwUiState.tab = previousDashboardTab;
+        cwRenderPrimaryTabs();
+        return false;
+      }
+      cwWizardState.returnPrimaryTab = previousPrimaryTab;
+      cwWizardState.returnDashboardTab = previousDashboardTab;
+      cwSyncPrimaryState('select');
+      return true;
+    }
+    cwSyncPrimaryState(tab);
+    cwRenderTabs();
+    cwRenderBatchList();
+    return true;
+  }
+
+  function cwHandlePrimaryTabKey(event) {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!event || !keys.includes(event.key)) return;
+    const currentKey = event.currentTarget && event.currentTarget.dataset.cwPrimary;
+    let index = CW_PRIMARY_TABS.indexOf(currentKey);
+    if (index < 0) return;
+    if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = CW_PRIMARY_TABS.length - 1;
+    else if (event.key === 'ArrowRight') index = (index + 1) % CW_PRIMARY_TABS.length;
+    else index = (index - 1 + CW_PRIMARY_TABS.length) % CW_PRIMARY_TABS.length;
+    event.preventDefault();
+    const nextKey = CW_PRIMARY_TABS[index];
+    const selected = cwSetPrimaryTab(nextKey);
+    const nextTab = document.querySelector('#cwPrimaryTabs [data-cw-primary="' + nextKey + '"]');
+    const dialogOpen = nextKey === 'select'
+      && document.getElementById('cwCreateDialog')?.classList.contains('open');
+    if (selected && nextTab && !dialogOpen) nextTab.focus();
   }
 
   function cwRenderTabs() {
@@ -239,8 +331,8 @@
     root.innerHTML = CW_TABS.map(tab => {
       const selected = cwUiState.tab === tab.key;
       const total = cwTabBatches(tab.key).length;
-      return '<button type="button" class="cw-tab' + (selected ? ' is-active' : '') + '" role="tab"'
-        + ' aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '"'
+      return '<button type="button" class="cw-tab' + (selected ? ' is-active' : '') + '"'
+        + ' aria-pressed="' + selected + '"'
         + ' data-cw-tab="' + tab.key + '" data-count="' + total + '"'
         + ' onclick="cwSetDashboardTab(this.dataset.cwTab)" onkeydown="cwHandleTabKey(event)">'
         + '<span>' + tab.label + '</span><strong>' + total + '</strong></button>';
@@ -314,15 +406,16 @@
     if (detail) detail.hidden = true;
   }
 
-  function cwRenderDashboard(model) {
+  function cwRenderDashboard(model, options) {
     const hasLocks = Boolean(model && Array.isArray(model.locks));
     cwUiState.model = model && Array.isArray(model.batches)
       ? { ...model, locks: hasLocks ? model.locks : [], locksReady: hasLocks && model.locksReady !== false }
       : { batches: [], locks: [], locksReady: false };
-    cwUiState.tab = 'active';
     cwUiState.notificationFilter = null;
     cwUiState.openBatchId = null;
     cwShowDashboardSurface();
+    const primaryTab = options && options.primaryTab;
+    cwSyncPrimaryState(primaryTab || 'batches');
     cwSetCreateAccess();
     const list = document.getElementById('cwBatchList');
     if (model && model.error) {
@@ -341,6 +434,7 @@
 
   function cwSetDashboardTab(tab) {
     if (!CW_TABS.some(item => item.key === tab)) return;
+    cwSyncPrimaryState(cwPrimaryForDashboardTab(tab));
     cwUiState.tab = tab;
     cwUiState.notificationFilter = null;
     cwRenderTabs();
@@ -420,17 +514,20 @@
 
   function cwBuildCalibrationWorkStatusMap(model, todayISO) {
     const next = {};
+    const chosen = {};
     const today = todayISO || cwTodayISO();
     const batches = new Map((model && model.batches || []).map(batch => [batch.id, batch]));
     const locks = new Map((model && model.locks || []).map(lock => [String(lock.instrument_id), lock]));
-    const rank = { awaiting_acknowledgement_pdf: 1, in_progress: 2, overdue: 3, completed: 4 };
     batches.forEach(batch => {
-      if (!batch || ['draft', 'completed', 'cancelled'].includes(batch.status)) return;
+      if (!batch || ['draft', 'cancelled'].includes(batch.status)) return;
+      const closed = batch.status === 'completed';
       (batch.items || []).forEach(item => {
         const instrumentId = cwInstrumentId(item && item.instrument_id);
         if (instrumentId == null || item.is_active === false || item.result_status === 'skipped') return;
-        const lock = locks.get(String(instrumentId));
-        if (!lock || lock.batch_id !== batch.id) return;
+        if (!closed) {
+          const lock = locks.get(String(instrumentId));
+          if (!lock || lock.batch_id !== batch.id) return;
+        }
         let status = null;
         if (item.result_status === 'completed') status = 'completed';
         else if (item.result_status === 'in_progress') {
@@ -438,16 +535,25 @@
           status = displayStatus === 'overdue' ? 'overdue'
             : (batch.status === 'awaiting_acknowledgement_pdf' ? 'awaiting_acknowledgement_pdf' : displayStatus);
         }
-        if (!rank[status]) return;
+        if (!status || (closed && status !== 'completed')) return;
         const candidate = {
           batchId: batch.id,
           batchNo: String(batch.batch_no || ''),
           title: String(batch.title || ''),
           plannedDate: String(item.planned_date || ''),
-          status
+          status,
+          isActive: !closed
         };
-        const current = next[instrumentId];
-        if (!current || rank[candidate.status] > rank[current.status]) next[instrumentId] = candidate;
+        const priority = closed ? 1 : 2;
+        const updatedAt = String(batch.updated_at || '');
+        const batchId = String(batch.id || '');
+        const current = chosen[instrumentId];
+        if (!current || priority > current.priority
+            || (priority === current.priority && updatedAt > current.updatedAt)
+            || (priority === current.priority && updatedAt === current.updatedAt && batchId > current.batchId)) {
+          chosen[instrumentId] = { priority, updatedAt, batchId };
+          next[instrumentId] = candidate;
+        }
       });
     });
     return next;
@@ -519,12 +625,27 @@
       + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
   }
 
+  function cwPublishPlanBadge(model) {
+    const count = (model && model.batches || []).filter(batch => {
+      const status = cwBatchStatus(batch);
+      return status !== 'completed' && status !== 'cancelled';
+    }).length;
+    const badge = document.getElementById('navPlanBadge');
+    if (badge) {
+      badge.textContent = String(count);
+      badge.style.display = count > 0 ? '' : 'none';
+    }
+    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
+    return count;
+  }
+
   async function cwLoadNotifications(sourceOrModel, todayISO) {
     const generation = ++cwIntegrationLoadGeneration;
     if (sourceOrModel && Array.isArray(sourceOrModel.batches) && Array.isArray(sourceOrModel.locks)) {
       if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
       cwNotificationState = cwNotificationSummary(sourceOrModel, todayISO);
       cwRenderNotifications(cwNotificationState);
+      cwPublishPlanBadge(sourceOrModel);
       return cwNotificationState;
     }
     try {
@@ -533,6 +654,7 @@
       if (generation !== cwIntegrationLoadGeneration) return { ...cwNotificationState, available: false };
       cwNotificationState = cwNotificationSummary(model, todayISO);
       cwRenderNotifications(cwNotificationState);
+      cwPublishPlanBadge(model);
       return cwNotificationState;
     } catch (_error) {
       return { ...cwNotificationState, available: false };
@@ -545,6 +667,7 @@
     cwReplaceStatusMap(cwBuildCalibrationWorkStatusMap(model, todayISO));
     cwNotificationState = cwNotificationSummary(model, todayISO);
     cwRenderNotifications(cwNotificationState);
+    cwPublishPlanBadge(model);
     if (typeof global.renderTable === 'function') global.renderTable();
     return true;
   }
@@ -568,15 +691,15 @@
 
   async function cwOpenNotification(kind, batchId) {
     const tabs = {
-      awaiting_acknowledgement: 'waiting', due_today: 'active',
-      overdue_missing_evidence: 'active', awaiting_closure: 'waiting'
+      awaiting_acknowledgement: 'waiting', due_today: 'batches',
+      overdue_missing_evidence: 'batches', awaiting_closure: 'waiting'
     };
     if (!Object.prototype.hasOwnProperty.call(tabs, kind)) return false;
-    if (typeof global.showPage === 'function') global.showPage('calwork');
+    if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(null);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) return false;
+    cwSyncPrimaryState(tabs[kind]);
     cwUiState.notificationFilter = kind;
-    cwUiState.tab = tabs[kind];
     cwRenderTabs();
     cwRenderBatchList();
     if (batchId != null) {
@@ -594,7 +717,8 @@
     const mapped = id == null ? null : calibrationWorkStatusMap[id];
     if (!mapped || !UUID_PATTERN.test(mapped.batchId || '')) return false;
     const returnFocus = document.activeElement;
-    if (typeof global.showPage === 'function') global.showPage('calwork');
+    cwSyncPrimaryState('batches');
+    if (typeof global.showPage === 'function') global.showPage('plan');
     const source = cwResolveClient(client);
     if (source && typeof source.from === 'function' && !await loadCalibrationWorkPage(source)) {
       cwReturnToRegistry(id, returnFocus);
@@ -613,6 +737,7 @@
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
     const integrationGeneration = ++cwIntegrationLoadGeneration;
+    const requestedPrimaryTab = cwPrimaryTab === 'select' ? 'batches' : cwPrimaryTab;
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -635,12 +760,13 @@
       ]);
       if (generation !== cwUiState.loadGeneration) return false;
       const model = cwNormalizeReadModel(batches, items, locks, documents, audit);
-      cwRenderDashboard(model);
+      cwRenderDashboard(model, { primaryTab: requestedPrimaryTab });
       cwPublishCalibrationWorkIntegration(model, null, integrationGeneration);
       return true;
     } catch (error) {
       if (generation !== cwUiState.loadGeneration) return false;
-      cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' });
+      cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' },
+        { primaryTab: requestedPrimaryTab });
       return false;
     }
   }
@@ -885,6 +1011,7 @@
     const list = document.getElementById('cwBatchList');
     const detail = document.getElementById('cwBatchDetail');
     if (!detail) return;
+    if (detail.hidden) cwUiState.batchReturnFocus = document.activeElement;
     const progress = cwProgress(batch);
     const status = cwBatchStatus(batch);
     const meta = CW_STATUS[status] || { label: status || '–', color: '#64748B' };
@@ -916,7 +1043,10 @@
       cwReturnToRegistry(registryReturnInstrumentId);
       return;
     }
+    const returnFocus = cwUiState.batchReturnFocus;
+    cwUiState.batchReturnFocus = null;
     cwShowDashboardSurface();
+    if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
   }
 
   function cwReturnToRegistry(instrumentId, fallback) {
@@ -1174,10 +1304,33 @@
   }
 
   function cwOpenCreate() {
-    if (!cwCanManage() || cwUiState.model.locksReady !== true) return false;
+    if (!cwCanCreate()) return false;
     cwWizardState.returnFocus = document.activeElement;
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     cwResetWizard('create', null);
     return cwOpenDialog();
+  }
+
+  function cwOpenCreateWithInstrument(instrumentId) {
+    if (!cwCanCreate()) return false;
+    const id = cwInstrumentId(instrumentId);
+    const instrument = id == null ? null : cwRegistry().find(row =>
+      row && cwInstrumentId(row.id) === id);
+    if (!instrument || !instrument.department || !instrument.instrument_type || cwLockFor(id)) return false;
+    const previousPrimaryTab = cwPrimaryTab;
+    const previousDashboardTab = cwUiState.tab;
+    cwWizardState.returnFocus = document.activeElement;
+    cwResetWizard('create', null);
+    cwWizardState.unitCode = String(instrument.department);
+    cwWizardState.instrumentType = String(instrument.instrument_type);
+    cwWizardState.step = 2;
+    cwWizardState.selected.set(String(id), { instrumentId: id, plannedDate: '', item: null });
+    if (!cwOpenDialog()) return false;
+    cwWizardState.returnPrimaryTab = previousPrimaryTab;
+    cwWizardState.returnDashboardTab = previousDashboardTab;
+    cwSyncPrimaryState('select');
+    return true;
   }
 
   async function cwEditBatchItems(batchId) {
@@ -1185,6 +1338,8 @@
     const batch = (cwUiState.model.batches || []).find(row => row.id === batchId);
     if (!batch || ['completed', 'cancelled'].includes(cwBatchStatus(batch))) return false;
     cwWizardState.returnFocus = document.activeElement;
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     cwResetWizard('edit', batch);
     return cwOpenDialog();
   }
@@ -1196,8 +1351,22 @@
       dialog.classList.remove('open');
       dialog.setAttribute('aria-hidden', 'true');
     }
-    const returnFocus = cwWizardState.returnFocus;
+    const returnPrimaryTab = cwWizardState.returnPrimaryTab;
+    if (returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)) {
+      cwSyncPrimaryState(returnPrimaryTab, cwWizardState.returnDashboardTab);
+      cwRenderTabs();
+      cwRenderBatchList();
+    }
+    const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
+      ? document.querySelector('#cwPrimaryTabs [aria-pressed="true"]') : null;
+    const returnFocus = restoredPrimary || cwWizardState.returnFocus;
     if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.isConnected) returnFocus.focus();
+    else {
+      const fallback = document.querySelector('#cwPrimaryTabs [aria-pressed="true"]');
+      if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    }
+    cwWizardState.returnPrimaryTab = null;
+    cwWizardState.returnDashboardTab = null;
     return true;
   }
 
@@ -2366,11 +2535,15 @@
   global.cwOpenBatchFromInstrument = cwOpenBatchFromInstrument;
   global.loadCalibrationWorkPage = loadCalibrationWorkPage;
   global.cwRenderDashboard = cwRenderDashboard;
+  global.cwRenderPrimaryTabs = cwRenderPrimaryTabs;
+  global.cwSetPrimaryTab = cwSetPrimaryTab;
+  global.cwHandlePrimaryTabKey = cwHandlePrimaryTabKey;
   global.cwSetDashboardTab = cwSetDashboardTab;
   global.cwHandleTabKey = cwHandleTabKey;
   global.cwOpenBatch = cwOpenBatch;
   global.cwCloseBatch = cwCloseBatch;
   global.cwOpenCreate = cwOpenCreate;
+  global.cwOpenCreateWithInstrument = cwOpenCreateWithInstrument;
   global.cwCloseCreate = cwCloseCreate;
   global.cwSetCreateTitle = cwSetCreateTitle;
   global.cwChooseCreateUnit = cwChooseCreateUnit;

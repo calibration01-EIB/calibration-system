@@ -1,194 +1,112 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
-<pre id="out"></pre><pre id="b64"></pre>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="../js/15-plan-export.js"></script>
+<!doctype html>
+<html><head><meta charset="utf-8"><title>plan retirement contract</title></head><body>
+<pre id="out"></pre>
 <script>
 const results = [];
-function eq(name, got, want) { results.push((String(got) === String(want) ? 'PASS ' : 'FAIL ') + name + ' | got=' + got + ' want=' + want); }
-function ok(name, cond) { results.push((cond ? 'PASS ' : 'FAIL ') + name); }
-function finish() {
-  const fails = results.filter(r => r.indexOf('FAIL') === 0).length;
-  document.getElementById('out').textContent = results.join('\n');
-  document.title = fails ? ('FAIL ' + fails) : 'ALLPASS';
+function t(name, fn) {
+  try { fn(); results.push('PASS ' + name); }
+  catch (e) { results.push('FAIL ' + name + ' — ' + e.message); }
 }
-async function main() {
-  eq('colLetter F', frmColLetter(6), 'F');
-  eq('colLetter Z', frmColLetter(26), 'Z');
-  eq('colLetter AA', frmColLetter(27), 'AA');
-  eq('colLetter AJ', frmColLetter(36), 'AJ');
-  eq('colLetter AQ', frmColLetter(43), 'AQ');
-  eq('serial 26/02/2026', frmDateSerial('2026-02-26'), 46079);
-  eq('serial 28/10/2026', frmDateSerial('2026-10-28'), 46323);
-  eq('serial null', frmDateSerial(null), null);
-  eq('month name', frmMonthName(2), 'February');
-  eq('escape', frmEscapeXml('a<b>&"c'), 'a&lt;b&gt;&amp;&quot;c');
+function ok(value, message) { if (!value) throw new Error(message || 'expected true'); }
+function has(source, token, label) { ok(source.indexOf(token) !== -1, (label || 'source') + ' must contain ' + JSON.stringify(token)); }
+function lacks(source, token, label) { ok(source.indexOf(token) === -1, (label || 'source') + ' must not contain ' + JSON.stringify(token)); }
+function text(url) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => request.status === 200 || request.status === 0 && request.responseText
+      ? resolve(request.responseText)
+      : reject(new Error('cannot read ' + url));
+    request.onerror = () => reject(new Error('cannot read ' + url));
+    request.send();
+  });
+}
+function optionalText(url) {
+  return new Promise(resolve => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.onload = () => resolve(request.status === 200 || request.status === 0 ? request.responseText : '');
+    request.onerror = () => resolve('');
+    request.send();
+  });
+}
 
-  const item = { id_code: 'WRM1BB05-WI01', instrument_name: 'BALANCE  30  kg', location: 'B.4/2', due_date: '2026-02-26' };
-  const xml = frmBuildItemRows(item, 1, 10, 2, true);
-  ok('row attrs', xml.includes('<row r="10" spans="1:44" ht="21.75" customHeight="1">'));
-  ok('item no (first-row style)', xml.includes('<c r="A10" s="72"><v>1</v></c>'));
-  ok('name inline', xml.includes('<c r="B10" s="21" t="inlineStr"><is><t xml:space="preserve">BALANCE  30  kg</t></is></c>'));
-  ok('id code', xml.includes('<c r="C10" s="22" t="inlineStr"><is><t xml:space="preserve">WRM1BB05-WI01</t></is></c>'));
-  ok('due serial', xml.includes('<c r="E10" s="74"><v>46079</v></c>'));
-  ok('top day25 plain (s=76)', xml.includes('<c r="AD10" s="76"/>'));
-  ok('top day26 blue (s=179)', xml.includes('<c r="AE10" s="179"/>'));
-  ok('top day31 blue (s=180)', xml.includes('<c r="AJ10" s="180"/>'));
-  ok('bottom day1 num (s=178)', xml.includes('<c r="F11" s="178"><v>2</v></c>'));
-  ok('bottom day26 num (s=179)', xml.includes('<c r="AE11" s="179"><v>2</v></c>'));
-  ok('bottom day27 plain (s=83)', xml.includes('<c r="AF11" s="83"/>'));
-  ok('bottom day31 plain (s=84)', xml.includes('<c r="AJ11" s="84"/>'));
-  ok('eib cols first row', xml.includes('<c r="AK10" s="75"/><c r="AL10" s="78"/><c r="AM10" s="76"/><c r="AN10" s="77"/><c r="AO10" s="77"/><c r="AP10" s="76"/><c r="AQ10" s="79"/>'));
-  ok('eib cols bottom row (generic)', xml.includes('<c r="AK11" s="82"/><c r="AL11" s="85"/><c r="AM11" s="83"/><c r="AN11" s="84"/><c r="AO11" s="84"/><c r="AP11" s="83"/><c r="AQ11" s="86"/>'));
-
-  // เครื่องใหม่: ไม่มี due (และไม่ได้สั่ง is_new:false) → Due Date = "New"
-  const xml2 = frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null }, 2, 12, 2, false);
-  ok('new: E = "New"', xml2.includes('<c r="E12" s="81" t="inlineStr"><is><t xml:space="preserve">New</t></is></c>'));
-  ok('new: no blue (ยังไม่มาร์กวัน)', xml2.indexOf('s="178"') < 0 && xml2.indexOf('s="179"') < 0 && xml2.indexOf('s="180"') < 0);
-  ok('new: top day1 plain (s=82)', xml2.includes('<c r="F12" s="82"/>'));
-  ok('new: bottom day1 plain (s=82)', xml2.includes('<c r="F13" s="82"/>'));
-  // เครื่องใหม่มาร์กวันเดียว (ตามตัวอย่าง BALANCE-01): ช่องฟ้าเฉพาะวันนั้นบนแถวบน ไม่มีเลขเดือนแถวล่าง
-  const xn = frmBuildItemRows({ id_code: 'N1', instrument_name: 'NB', location: '', due_date: null, bar_start: 5, bar_end: 5 }, 4, 16, 1, false);
-  ok('new-bar: top day5 blue', xn.includes('<c r="J16" s="179"/>'));
-  ok('new-bar: top day4/6 plain', xn.includes('<c r="I16" s="83"/>') && xn.includes('<c r="K16" s="83"/>'));
-  ok('new-bar: top day31 plain (ไม่ลากถึงสิ้นเดือน)', xn.includes('<c r="AJ16" s="84"/>'));
-  ok('new-bar: bottom day5 ไม่มีเลขเดือน', xn.includes('<c r="J17" s="83"/>'));
-  ok('new-off: is_new=false + no due → E ว่าง', frmBuildItemRows({ id_code: 'X', instrument_name: 'Y', location: '', due_date: null, is_new: false }, 5, 18, 1, false).includes('<c r="E18" s="81"/>'));
-  // bar_mode ติ๊กเองได้ทั้งใหม่/เก่า: เครื่องเก่า (มี due) เลือก 'day' → ฟ้าเฉพาะช่วง ไม่มีเลขเดือน, due ยังลงเป็นวันที่
-  const xd = frmBuildItemRows({ id_code: 'O1', instrument_name: 'OB', location: '', due_date: '2026-02-26', bar_mode: 'day', bar_start: 5, bar_end: 7 }, 6, 20, 2, false);
-  ok('mode-day(old): due ยังเป็นวันที่', xd.includes('<c r="E20" s="81"><v>46079</v></c>'));
-  ok('mode-day(old): top day5-7 blue', xd.includes('<c r="J20" s="179"/>') && xd.includes('<c r="L20" s="179"/>'));
-  ok('mode-day(old): top day8/26/31 plain', xd.includes('<c r="M20" s="83"/>') && xd.includes('<c r="AE20" s="83"/>') && xd.includes('<c r="AJ20" s="84"/>'));
-  ok('mode-day(old): bottom ไม่มีเลขเดือน', xd.indexOf('<v>2</v></c>', xd.indexOf('<row r="21"')) < 0);
-  // เครื่องใหม่เลือก 'due' → กลับไปแบบแถบยาว (เลขเดือน + ฟ้าถึงสิ้นเดือน) แต่ E ยัง "New"
-  const xnd = frmBuildItemRows({ id_code: 'N2', instrument_name: 'NB2', location: '', due_date: null, bar_mode: 'due', bar_start: 1, bar_end: 5 }, 7, 22, 1, false);
-  ok('mode-due(new): E = New', xnd.includes('<c r="E22" s="81" t="inlineStr"><is><t xml:space="preserve">New</t></is></c>'));
-  ok('mode-due(new): bottom day1-5 num', xnd.includes('<c r="F23" s="178"><v>1</v></c>') && xnd.includes('<c r="J23" s="179"><v>1</v></c>'));
-  ok('mode-due(new): top day5..31 blue', xnd.includes('<c r="J22" s="179"/>') && xnd.includes('<c r="AJ22" s="180"/>'));
-
-  const sig = frmBuildSignatureRows(30);
-  ok('sig row1 attrs', sig.includes('<row r="30" spans="1:43" ht="33" customHeight="1">'));
-  ok('sig row2 attrs', sig.includes('<row r="31" spans="1:43" ht="19.5" customHeight="1" thickBot="1">'));
-  ok('sig prepared text', sig.includes('Prepared by :___________(EIB)'));
-  ok('sig owner text', sig.includes('The owner accepts the work by'));
-  ok('sig styles', sig.includes('<c r="A30" s="8"') && sig.includes('<c r="AQ31" s="122"/>'));
-
-  // ---- แถวเซ็นออนไลน์: ชื่อพิมพ์ + วันที่อนุมัติ (อนุมัติครบแล้วจึง Export ได้) ----
-  eq('sigdate', frmSigDate('2026-07-15T12:00:00Z'), '15/07/2026');
-  eq('sigdate null', frmSigDate(null), '');
-  eq('sigline blank = ของเดิม', frmSigLine(null), FRM_SIG_TEXT.prepared);
-  const osig = { prepared_by: 'สมชาย ใจดี', prepared_at: '2026-07-15T12:00:00Z',
-                 approved_by: 'สมหญิง หัวหน้า', approved_at: '2026-07-16T12:00:00Z',
-                 acknowledged_by: 'สมปอง เจ้าของ', acknowledged_at: '2026-07-17T12:00:00Z' };
-  const sline = frmSigLine(osig);
-  ok('sig prepared', sline.includes('Prepared by : สมชาย ใจดี (EIB)  Date 15/07/2026'));
-  ok('sig approved', sline.includes('Approved by : สมหญิง หัวหน้า (EIB)  Date 16/07/2026'));
-  ok('sig ack', sline.includes('Acknowledge by สมปอง เจ้าของ (Owner) Date 17/07/2026'));
-  ok('sig row has names', frmBuildSignatureRows(30, osig).includes('สมชาย ใจดี'));
-  ok('sig row blank เมื่อไม่ส่ง sig', frmBuildSignatureRows(30).includes('___________(EIB)'));
-  ok('canExport gate', !frmCanExport({ status: 'draft' }) && !frmCanExport({ status: 'approved' })
-     && frmCanExport({ status: 'acknowledged' }) && frmCanExport({ status: 'pending_cert' }) && frmCanExport({ status: 'completed' }));
-
-  const closing = frmBuildClosingRow(26);
-  ok('closing row attrs', closing.includes('<row r="26" spans="1:44" ht="21.75" customHeight="1">'));
-  ok('closing styles', closing.includes('<c r="A26" s="95"/>') && closing.includes('<c r="F26" s="96"/>') && closing.includes('<c r="AJ26" s="98"/>') && closing.includes('<c r="AQ26" s="100"/>'));
-
-  // 10 เครื่อง/บล็อก (scale เดิม 77% พอดี 1 หน้า วัดจริงด้วย Excel COM 2026-07-20): 13 เครื่อง = บล็อกแรก 10 (แถว 10-29) + ปิด 30 + เซ็น 31-32, ที่เหลือ 3 (33-38) + ปิด 39 + เซ็น 40-41
-  const items = []; for (let i = 0; i < 13; i++) items.push(item);
-  const built = frmBuildSheetRows(items, 2);
-  eq('lastRow (13 items)', built.lastRow, 41);
-  ok('sig after 10th', built.xml.includes('<row r="31" spans="1:43"'));
-  ok('item11 at r33 (first-row style ของหน้า 2)', built.xml.includes('<c r="A33" s="72"><v>11</v></c>'));
-  eq('merges', built.merges.join(' '), 'AK31:AQ31 AK32:AQ32 AK40:AQ40 AK41:AQ41');
-  eq('breaks (13 items) หลังบล็อกแรก', built.breaks.join(' '), '32');
-  const built10 = frmBuildSheetRows(items.slice(0, 10), 2);
-  eq('lastRow (10 items, sig once)', built10.lastRow, 32);
-  eq('merges (10 items)', built10.merges.join(' '), 'AK31:AQ31 AK32:AQ32');
-  eq('breaks (10 items) ไม่มี', built10.breaks.length, 0);
-
-  // 1 แผน = 1 หน่วยงาน (ID CODE 4 ตัวแรก) + 1 ประเภทเครื่องมือ — WRM1/WRM2 ต้องแยกกัน
-  eq('unitCode WRM1', frmUnitCode({ id_code: 'WRM1BB05-WI01' }), 'WRM1');
-  eq('unitCode PDB4', frmUnitCode({ id_code: 'PDB4CE14' }), 'PDB4');
-  eq('unitCode fallback dept', frmUnitCode({ id_code: '', department: 'PMT1' }), 'PMT1');
-  eq('unitCode none', frmUnitCode({}), 'ไม่ระบุ');
-  const groups = frmBuildGroups([
-    { id_code: 'WRM1BB05-WI01', instrument_type: 'เครื่องชั่ง (Electronic Balance)', due_date: '2026-02-26', department: 'General Raw Material:WRM1', division: 'Warehouse - Raw Material' },
-    { id_code: 'WRM2BB01-WI01', instrument_type: 'เครื่องชั่ง (Electronic Balance)' },
-    { id_code: 'WRM1TM01-WI01', instrument_type: 'เครื่องวัดอุณหภูมิ' },
-    { instrument_type: 'เครื่องชั่ง (Electronic Balance)' }
-  ]);
-  eq('group count (แยก WRM1/WRM2 + แยกประเภท)', groups.length, 4);
-  eq('group units', groups.map(x => x.unitCode).join(','), 'WRM1,WRM1,WRM2,ไม่ระบุ');
-  ok('WRM1 สองประเภทแยกกลุ่ม', groups[0].typeName !== groups[1].typeName);
-  eq('unit header จากทะเบียน', groups.filter(x => x.typeName.indexOf('ชั่ง') >= 0 && x.unitCode === 'WRM1')[0].header.unit, 'General Raw Material:WRM1');
-  eq('unit header fallback = unitCode', groups[2].header.unit, 'WRM2');
-  const hd = frmDefaultHeader([
-    { due_date: '2026-02-20', instrument_type: 'เครื่องชั่ง (Electronic Balance)', cal_type: 'ภายใน', department: 'WRM1', division: 'Warehouse - Raw Material' },
-    { due_date: '2026-02-25', instrument_type: 'เครื่องชั่ง (Electronic Balance)', cal_type: 'ภายใน', department: 'WRM1', division: 'Warehouse - Raw Material' },
-    { due_date: '2026-03-01', instrument_type: 'อื่นๆ', cal_type: 'ภายนอก', department: 'WRM1', division: 'Warehouse - Raw Material' }]);
-  eq('hd month', hd.monthNum, 2);
-  eq('hd year', hd.year, 2026);
-  eq('hd group', hd.group, 'BALANCE');
-  eq('hd unit', hd.unit, 'WRM1');
-  eq('hd section', hd.section, 'Warehouse - Raw Material');
-  ok('hd internal', hd.internal === true && hd.external === false);
-
-  // override รายเครื่อง (bar_start/bar_end/month_num) + name fallback
-  const xo = frmBuildItemRows({ id_code: 'X', name: 'Y2', location: '', due_date: '2026-02-26', bar_start: 5, bar_end: 12, month_num: 3 }, 3, 14, 2, false);
-  ok('ovr: name fallback', xo.includes('<t xml:space="preserve">Y2</t>'));
-  ok('ovr: due ยังลง E', xo.includes('<c r="E14" s="81"><v>46079</v></c>'));
-  ok('ovr: day4 bottom plain', xo.includes('<c r="I15" s="83"/>'));
-  ok('ovr: day5 num=3', xo.includes('<c r="J15" s="179"><v>3</v></c>'));
-  ok('ovr: day12 num=3', xo.includes('<c r="Q15" s="179"><v>3</v></c>'));
-  ok('ovr: day13 bottom plain', xo.includes('<c r="R15" s="83"/>'));
-  ok('ovr: top day11 plain', xo.includes('<c r="P14" s="83"/>'));
-  ok('ovr: top day12 blue', xo.includes('<c r="Q14" s="179"/>'));
-  const itf = frmItemFromInstrument({ id: 9, id_code: 'WRM1BB05-WI01', instrument_name: 'BALANCE 30 kg', location: 'B.4/2', due_date: '2026-02-26' }, 2);
-  eq('itemFrom: bar', itf.bar_start + '-' + itf.bar_end, '1-26');
-  eq('itemFrom: month', itf.month_num, 2);
-  eq('itemFrom: id', itf.instrument_id, 9);
-  const itn = frmItemFromInstrument({ id: 1, id_code: 'A1X', instrument_name: 'B', location: '', due_date: null }, 2);
-  eq('itemFrom: no due bar', itn.bar_start + '-' + itn.bar_end, '0-0');
-  eq('itemFrom: no due → is_new', itn.is_new, true);
-  eq('itemFrom: no due → bar_mode day', itn.bar_mode, 'day');
-  eq('itemFrom: มี due → ไม่ new', frmItemFromInstrument({ id: 2, due_date: '2026-02-26' }, 2).is_new, false);
-  eq('itemFrom: มี due → bar_mode due', frmItemFromInstrument({ id: 2, due_date: '2026-02-26' }, 2).bar_mode, 'due');
-
-  // ---- template render (ต้องรันด้วย --allow-file-access-from-files) ----
+(async () => {
+  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource, shippedJsSources;
   try {
-    const buf = await new Promise((res, rej) => {
-      const x = new XMLHttpRequest();
-      x.open('GET', '../assets/frm-eib04-template.xlsx');
-      x.responseType = 'arraybuffer';
-      x.onload = () => res(x.response); x.onerror = () => rej(new Error('xhr template'));
-      x.send();
-    });
-    const header = { monthNum: 2, year: 2026, group: 'BALANCE', unit: 'General Raw Material:WRM1',
-      section: 'Warehouse - Raw Material', internal: true, external: false, drug: false, cosmetic: true, otherText: '' };
-    const blob = await frmRenderTemplate(buf, header, items); // 13 ชิ้นจาก block ก่อนหน้า
-    const z2 = await JSZip.loadAsync(blob);
-    const sh = await z2.file('xl/worksheets/sheet1.xml').async('string');
-    const dr = await z2.file('xl/drawings/drawing1.xml').async('string');
-    ok('render: rows in sheetData', sh.includes('<c r="A10" s="72"><v>1</v></c>') && sh.includes('<row r="41"'));
-    ok('render: dimension', sh.includes('<dimension ref="A1:AR41"/>'));
-    ok('render: merge added', sh.includes('<mergeCell ref="AK31:AQ31"/>') && sh.includes('<mergeCell ref="AK41:AQ41"/>'));
-    ok('render: merge count', /<mergeCells count="(\d+)">/.exec(sh) && ((sh.match(/<mergeCell /g) || []).length === Number(/<mergeCells count="(\d+)">/.exec(sh)[1])));
-    ok('render: no token left (sheet)', sh.indexOf('{{') < 0);
-    ok('render: no token left (drawing)', dr.indexOf('{{') < 0);
-    ok('render: month/year textbox', dr.includes('<a:t>February</a:t>') && dr.includes('<a:t>2026</a:t>'));
-    ok('render: unit/section textbox', dr.includes('<a:t>General Raw Material:WRM1</a:t>') && dr.includes('<a:t>Warehouse - Raw Material</a:t>'));
-    const ss = await z2.file('xl/sharedStrings.xml').async('string');
-    ok('render: เส้นใต้ยังอยู่ในเซลล์ (sharedStrings)', ss.includes('Month  ____') && ss.includes('หน่วยงาน (Unit) ____'));
-    ok('render: chk int/ext', sh.includes('☑ สอบเทียบภายใน') && sh.includes('☐ สอบเทียบภายนอก'));
-    ok('render: chk drug/cos', sh.includes('☐ Drug product') && sh.includes('☑ Cosmetic product'));
-    ok('render: other blank', sh.includes('☐ Other ____'));
-    ok('render: row break หลังบล็อกแรก', sh.includes('<rowBreaks count="1" manualBreakCount="1"><brk id="32" max="16383" man="1"/></rowBreaks>'));
-    // base64 สำหรับ E2E (Task 5)
-    document.getElementById('b64').textContent = await new Promise(res => {
-      const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob);
-    });
-  } catch (e) { results.push('FAIL render ' + (e && e.message || e)); }
+    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource] = await Promise.all([
+      text('../index.html'),
+      text('../sw.js'),
+      text('../js/06-plan.js'),
+      text('../js/04-reports.js'),
+      text('../js/18-asset-out.js'),
+      text('../js/02-dashboard.js'),
+      text('../js/23-cal-records.js'),
+      text('../js/28-kpi.js'),
+      text('../theme-aqua.css'),
+      optionalText('../tools/build-frm-eib04-template.ps1')
+    ]);
+    const shippedJsPaths = [...new DOMParser().parseFromString(indexSource, 'text/html').querySelectorAll('script[src^="js/"]')]
+      .map(script => script.getAttribute('src').split('?')[0]);
+    shippedJsSources = await Promise.all([...new Set(shippedJsPaths)].map(path => text('../' + path)));
+  } catch (error) {
+    document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
+    document.title = 'FAIL';
+    return;
+  }
+  const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
 
-  finish();
-}
-main().catch(e => { results.push('FAIL exception ' + e); finish(); });
-</script></body></html>
+  t('retires FRM Excel implementation without affecting general imports', () => {
+    ['js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js'].forEach(script => {
+      lacks(indexSource, script, script + ' index reference');
+      lacks(appShell, './' + script, script + ' cache reference');
+    });
+    ['แผน FRM', 'ระบบเก่า', 'ลงแผน FRM', 'FRM-EIB04'].forEach(token =>
+      lacks(indexSource, token, token + ' UI surface'));
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token =>
+      lacks(indexSource, token, token + ' data surface'));
+    lacks(appShell, 'assets/frm-eib04-template.xlsx', 'FRM template cache');
+    has(indexSource, 'id="importFileInput"', 'general register import remains');
+    has(indexSource, 'handleImportFile(this.files[0])', 'general import handler remains');
+  });
+
+  t('preserves unrelated Excel exports without the retired runtime', () => {
+    has(reportsSource, 'function exportExcel()', 'general register export remains');
+    has(assetOutSource, 'function assetOutEscapeXml', 'asset-out XML helper remains');
+    has(assetOutSource, 'function assetOutDateSerial', 'asset-out date helper remains');
+    lacks(assetOutSource, 'js/15-plan-export.js', 'asset-out legacy runtime dependency');
+  });
+
+  t('retires every legacy plan table caller from all shipped JavaScript', () => {
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items', 'plan_audit_log'].forEach(token => {
+      shippedJsSources.forEach((source, index) =>
+        lacks(source, token, token + ' shipped JavaScript source #' + index));
+    });
+    ['planSelectedItems', 'switchPlanTab(', 'planStatusMap'].forEach(token =>
+      lacks(calRecordsSource, token, token + ' calibration-record dependency'));
+    has(calRecordsSource, 'calibrationWorkStatusMap', 'unified work status source');
+    has(calRecordsSource, 'cwOpenBatchFromInstrument', 'unified work detail navigation');
+    has(calRecordsSource, 'cwOpenCreateWithInstrument(instrumentId)', 'create shortcut preserves exact instrument id');
+    lacks(calRecordsSource, 'async function goToPlanWithItem(_instrumentId)', 'instrument id is not discarded');
+  });
+
+  t('removes dead legacy planner styling and callback selectors', () => {
+    ['.plan-workspace', '.plan-tabs', '.plan-filter-grid', '.plan-upload', '#planTabNew', '#planStep1',
+      '#planStep2', '#planDropZone', '#planFilterType', 'filterPlanInstruments', 'goToPlanStep2', 'submitPlan']
+      .forEach(token => lacks(indexSource, token, token + ' retired CSS'));
+    ['.plan-workspace', '.plan-tabs', '.plan-filter-grid', '.plan-upload', '#planDropZone',
+      'filterPlanInstruments', 'goToPlanStep2', 'submitPlan']
+      .forEach(token => lacks(themeSource, token, token + ' retired theme selector'));
+  });
+
+  t('retirement deletes the legacy FRM generation helper', () => {
+    ok(helperSource === '', 'legacy FRM generation helper must be absent');
+    lacks(swSource, 'build-frm-eib04-template.ps1', 'service worker does not expose generator');
+    lacks(themeSource, 'build-frm-eib04-template.ps1', 'theme does not expose generator');
+  });
+
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})();
+</script>
+</body></html>

@@ -3,6 +3,7 @@
 <pre id="out"></pre>
 <script>window.CW_TEST_MODE = true;</script>
 <script src="../js/29-calibration-work.js"></script>
+<script src="../js/23-cal-records.js"></script>
 <script>
 const results = [];
 function t(name, fn) {
@@ -34,16 +35,25 @@ function text(url) {
 }
 
 (async () => {
-  let sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
   try {
-    [sql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
+      text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
       text('../sw.js'),
       text('../js/10-router.js'),
       text('../js/02-dashboard.js'),
       text('../theme-aqua.css'),
-      text('../js/29-calibration-work.js')
+      text('../js/29-calibration-work.js'),
+      text('../js/06-plan.js'),
+      text('../js/22-users.js'),
+      text('../js/23-cal-records.js'),
+      text('../js/24-home.js'),
+      text('../js/26-list-ui.js'),
+      text('../js/25-dashboard-ui.js'),
+      text('../js/16-repairs.js'),
+      text('../docs/superpowers/plans/2026-09-03-replace-legacy-calibration-plan.md')
     ]);
   } catch (error) {
     document.getElementById('out').textContent = 'FAIL Task source unavailable — ' + error.message;
@@ -53,6 +63,148 @@ function text(url) {
 
   const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
   const lower = sql.toLowerCase();
+  const appShell = swSource.slice(swSource.indexOf('const APP_SHELL'), swSource.indexOf('];', swSource.indexOf('const APP_SHELL')) + 2);
+  const CW_FIXTURE_TODAY = '2026-09-03';
+
+  t('uses calibration work as the only plan page', () => {
+    has(indexSource, '> แผนสอบเทียบ</span>', 'desktop menu title');
+    has(routerSource, "plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง']", 'route title');
+    has(indexSource, 'id="pagePlan"', 'single plan page');
+    has(indexSource, 'id="cwTabs"', 'work dashboard lives in plan page');
+    lacks(workSource, "showPage('calwork')", 'work module legacy route call removed');
+    lacks(indexSource, "showPage('calwork')", 'separate work route removed');
+    lacks(routerSource, 'calwork:', 'separate route metadata removed');
+  });
+
+  t('defines exactly four primary plan sections', () => {
+    const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+    const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs button[data-cw-primary]')];
+    eq(tabs.length, 4, 'primary plan tab count');
+    ok(tabs.every(tab => tab.tagName === 'BUTTON'), 'primary plan tabs must be buttons');
+    ok(!parsed.getElementById('cwPrimaryTabs').hasAttribute('role'), 'primary navigation must not claim an incomplete tablist pattern');
+    ok(tabs.every(tab => !tab.hasAttribute('role')), 'primary navigation buttons must not claim tab roles');
+    eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
+      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
+    ]), 'primary plan tab keys and labels');
+    has(cssSource, '.cw-primary-tabs [data-cw-primary]', 'primary navigation base styles follow button semantics');
+    has(cssSource, '[data-cw-primary][aria-pressed="true"]', 'pressed primary section has selected styling');
+    has(cssSource, '[data-cw-primary]:focus-visible', 'primary buttons retain designed focus styling');
+    has(cssSource, '[data-cw-primary]:disabled', 'read-only selection has disabled styling');
+  });
+
+  t('removes every legacy calibration-plan surface', () => {
+    ['แผน FRM', 'ระบบเก่า', 'ลงแผน FRM', 'FRM-EIB04'].forEach(token => lacks(indexSource, token, token));
+    ['frm_plans', 'calibration_plans', 'calibration_plan_items'].forEach(token => {
+      lacks(indexSource, token, token + ' HTML');
+      lacks(planSource, token, token + ' JavaScript');
+    });
+    lacks(appShell, 'frm-eib04-template.xlsx', 'legacy template cache entry');
+  });
+
+  t('legacy retirement migration fails closed before destructive DDL', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, 'if v_frm_count <> 3', 'exact FRM precondition');
+    has(source, 'if v_legacy_count <> 0 or v_item_count <> 0 or v_audit_count <> 0', 'empty legacy precondition');
+    has(source, "raise exception 'legacy calibration plan precondition failed", 'abort message');
+    const guard = source.indexOf('legacy calibration plan precondition failed');
+    [
+      'drop table public.plan_audit_log',
+      'drop table public.calibration_plan_items',
+      'drop table public.calibration_plans',
+      'drop table public.frm_plans'
+    ].forEach(token => ok(source.indexOf(token) > guard, token + ' occurs after guard'));
+  });
+
+  t('legacy retirement migration is explicit and one-time fail-closed', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, 'begin;', 'transaction start');
+    has(source, 'commit;', 'transaction commit');
+    lacks(source, 'cascade', 'implicit dependency deletion');
+    lacks(source, 'drop table if exists', 'one-time table retirement must not bypass a partial prior run');
+    [
+      'calibration_work_batches',
+      'calibration_work_items',
+      'calibration_work_instrument_locks',
+      'calibration_work_documents',
+      'calibration_work_cleanup_claims',
+      'calibration_work_audit'
+    ].forEach(table => lacks(source, 'drop table public.' + table, table + ' preservation'));
+  });
+
+  t('legacy retirement migration rejects every frm_plan routine kind', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    has(source, "p.prokind in ('a', 'w') and p.proname like 'frm_plan%'",
+      'aggregate and window routine drift guard');
+  });
+
+  t('legacy retirement migration pins and explicitly removes the cataloged dependencies', () => {
+    const source = retireSql.toLowerCase().replace(/\s+/g, ' ');
+    const lock = source.indexOf('lock table');
+    const firstCount = source.indexOf('select count(*) into v_frm_count');
+    ok(lock !== -1 && lock < firstCount, 'legacy tables must be locked before row counts');
+    const lastDependencyGuard = source.indexOf("raise exception 'legacy calibration plan dependency precondition failed: unexpected foreign keys");
+    const guardBlockEnd = source.indexOf('end; $$;', lastDependencyGuard);
+    ok(lastDependencyGuard !== -1 && guardBlockEnd > lastDependencyGuard,
+      'all dependency guards must finish before destructive DDL');
+
+    [
+      'frm_plan_acknowledge(uuid, uuid)',
+      'frm_plan_approve(uuid, uuid)',
+      'frm_plan_confirm_results(uuid, uuid)',
+      'frm_plan_guard(uuid, uuid)',
+      'frm_plan_mark_exported(uuid, uuid)',
+      'frm_plan_reject(uuid, uuid, text)',
+      'frm_plan_submit(uuid, uuid)',
+      'frm_plan_submit_results(uuid, uuid)'
+    ].forEach(signature => {
+      has(source, "'public." + signature + "'", signature + ' exact guard');
+      const drop = 'drop function if exists public.' + signature;
+      has(source, drop, signature + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, signature + ' removal occurs after all dependency guards');
+    });
+
+    [
+      ['calibration_plan_items_sel', 'calibration_plan_items'],
+      ['calibration_plan_items_wr', 'calibration_plan_items'],
+      ['calibration_plans_sel', 'calibration_plans'],
+      ['calibration_plans_wr', 'calibration_plans'],
+      ['frm_plans_del', 'frm_plans'],
+      ['frm_plans_ins', 'frm_plans'],
+      ['frm_plans_sel', 'frm_plans'],
+      ['frm_plans_upd', 'frm_plans'],
+      ['plan_audit_log_sel', 'plan_audit_log'],
+      ['plan_audit_log_wr', 'plan_audit_log']
+    ].forEach(([policyName, tableName]) => {
+      has(source, "'public." + tableName + '.' + policyName + "'", policyName + ' exact guard');
+      const drop = 'drop policy ' + policyName + ' on public.' + tableName;
+      has(source, drop, policyName + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, policyName + ' removal occurs after all dependency guards');
+    });
+
+    has(source, 'unexpected trigger', 'zero-trigger guard');
+    has(source, 'unexpected dependent view', 'zero-view guard');
+    [
+      'calibration_plan_items_frm_plan_id_fkey',
+      'calibration_plan_items_plan_id_fkey',
+      'plan_audit_log_plan_id_fkey'
+    ].forEach(name => {
+      has(source, '.' + name + '->public.', name + ' exact guard');
+      const drop = 'drop constraint ' + name;
+      has(source, drop, name + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, name + ' removal occurs after all dependency guards');
+    });
+
+    [
+      'drop table public.plan_audit_log',
+      'drop table public.calibration_plan_items',
+      'drop table public.calibration_plans',
+      'drop table public.frm_plans'
+    ].forEach(drop => {
+      has(source, drop, drop + ' explicit removal');
+      ok(source.indexOf(drop) > guardBlockEnd, drop + ' occurs after all dependency guards');
+    });
+  });
+
   function body(name) {
     const marker = 'create or replace function public.' + name;
     const start = lower.indexOf(marker);
@@ -90,6 +242,15 @@ function text(url) {
     eq(actual, '2002-01-01', 'fixed UTC instant must roll into the next Bangkok date');
     ok(/^\d{4}-\d{2}-\d{2}$/.test(cwTodayISO()), 'zero-argument behavior must remain available');
   });
+
+  const cwNativeDate = Date;
+  const cwFrozenNow = cwNativeDate.parse(CW_FIXTURE_TODAY + 'T05:00:00.000Z');
+  window.Date = class CwFrozenDate extends cwNativeDate {
+    constructor(...args) {
+      super(...(args.length ? args : [cwFrozenNow]));
+    }
+    static now() { return cwFrozenNow; }
+  };
 
   t('derives item display status with terminal and active-overdue precedence', () => {
     eq(cwItemDisplayStatus({result_status:'completed'}, '2026-08-31'), 'completed');
@@ -195,34 +356,216 @@ function text(url) {
     has(loadBody, 'return false;', 'failed registry refresh result');
   });
 
-  t('registers the status engine after KPI in the exact offline cache generation', () => {
-    const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260819-kpi"></' + 'script>');
-    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260902-cw7"></' + 'script>');
+  t('publishes and awaits explicit registry readiness before opening plan work', () => {
+    has(dashboardSource, 'window.registryDataReady = false;', 'initial registry readiness flag');
+    has(dashboardSource, 'window.whenRegistryDataReady =', 'registry readiness promise interface');
+    has(dashboardSource, 'markRegistryDataReady();', 'processed registry rows publish readiness');
+    has(dashboardSource, 'markRegistryDataReady(false);', 'failed registry load settles readiness as unavailable');
+    has(indexSource, 'data-cw-primary="select"', 'selection control exists');
+    has(indexSource, 'disabled aria-disabled="true">เลือกเครื่อง', 'selection starts disabled before registry readiness');
+    has(workSource, 'global.registryDataReady === true', 'selection requires a successful registry snapshot');
+    const start = routerSource.indexOf("if (page === 'plan'");
+    const end = routerSource.indexOf("if (page === 'weights')", start);
+    const branch = routerSource.slice(start, end);
+    has(branch, 'await window.whenRegistryDataReady()', 'plan route awaits authoritative registry readiness');
+    has(branch, 'await loadCalibrationWorkPage()', 'work dashboard still loads after readiness settles false');
+    lacks(branch, 'Array.isArray(allData)', 'empty initialized registry array is not treated as ready');
+  });
+
+  await ta('settles initial registry readiness on failure and permits a later successful retry', async () => {
+    const start = dashboardSource.indexOf('window.registryDataReady = false;');
+    const end = dashboardSource.indexOf('\n\nfunction escapeHtmlText', start);
+    const stateWindow = {};
+    const controller = new Function('window', dashboardSource.slice(start, end)
+      + '\nreturn { markRegistryDataReady };')(stateWindow);
+    const initial = stateWindow.whenRegistryDataReady();
+    controller.markRegistryDataReady(false);
+    eq(await initial, false, 'initial failure resolves instead of leaving the plan route pending');
+    controller.markRegistryDataReady(true);
+    eq(await stateWindow.whenRegistryDataReady(), true, 'later successful registry processing enables selection');
+  });
+
+  t('aligns dashboard audit home title role guidance and deployment order with the replacement workflow', () => {
+    has(dashboardSource, "sb.from('calibration_work_audit')", 'dashboard reads the supported work audit table');
+    lacks(dashboardSource, "sb.from('plan_audit_log')", 'dashboard has no retired audit caller');
+    has(homeSource, "t:'แผนสอบเทียบ'", 'home source exposes the exact plan title');
+    lacks(usersSource, 'อนุมัติแผน', 'role guidance removes the retired approval action');
+    lacks(usersSource, 'รับทราบแผน', 'Owner guidance removes the retired acknowledgement action');
+    has(usersSource, 'แนบ PDF รับทราบและ PDF ปิดแผน', 'Admin and Editor PDF workflow is documented');
+    lacks(indexSource, 'Owner — หน่วยงานเจ้าของเครื่อง (กดรับทราบแผน)', 'role selector removes the retired Owner action');
+    has(recordsSource, 'รอ PDF รับทราบ', 'tracking uses the PDF acknowledgement stage');
+    has(dashboardSource, 'canManagePlan', 'mobile dashboard gates plan creation by role');
+    has(listUiSource, '!activeWork && canEdit', 'register list gates plan creation by role');
+    has(recordsSource, '!m.done[0] && canEdit', 'calibration records gate plan creation by role');
+    has(dashboardUiSource, 'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน', 'dashboard pending-work copy matches PDF gates');
+    has(workSource, "document.getElementById('navPlanBadge')", 'work integration publishes the plan badge');
+    has(repairsSource, 'const canPlan = typeof currentUser', 'repair widget gates plan creation by role');
+    lacks(repairsSource, 'คลิกรหัสเพื่อส่งเข้าแผน', 'repair widget removes misleading read-only action copy');
+    const deploy = releasePlanSource.indexOf('Step 2: Merge and verify the compatible frontend first');
+    const apply = releasePlanSource.indexOf('Step 4: Apply the reviewed migration');
+    ok(deploy !== -1 && apply > deploy, 'compatible frontend is deployed before destructive migration');
+  });
+
+  t('registers one query-qualified script generation with exact offline cache parity', () => {
+    const kpi = indexSource.indexOf('<script src="js/28-kpi.js?v=20260903-plan2"></' + 'script>');
+    const work = indexSource.indexOf('<script src="js/29-calibration-work.js?v=20260904-plan3"></' + 'script>');
     ok(kpi !== -1 && work > kpi, 'status engine script must load after KPI');
-    has(indexSource, 'href="theme-aqua.css?v=20260902-cw7"', 'current calibration stylesheet query version');
-    has(indexSource, 'src="js/10-router.js?v=20260901-cw3"', 'current router query version');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v158';", 'cache v158');
+    has(indexSource, 'href="theme-aqua.css?v=20260904-plan3"', 'current calibration stylesheet query version');
+    has(indexSource, 'src="js/10-router.js?v=20260904-plan3"', 'current router query version');
+    has(indexSource, "serviceWorker.register('sw.js?v=20260904-plan3')", 'service worker generation');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v161';", 'cache v161');
     [
-      'theme-aqua.css?v=20260902-cw7',
-      'js/10-router.js?v=20260901-cw3',
-      'js/02-dashboard.js?v=20260902-cw7',
-      'js/26-list-ui.js?v=20260902-cw7',
-      'js/29-calibration-work.js?v=20260902-cw7'
+      'index.html?v=20260904-plan3',
+      'theme-aqua.css?v=20260904-plan3',
+      'js/02-dashboard.js?v=20260904-plan3',
+      'js/04-reports.js?v=20260903-plan2',
+      'js/10-router.js?v=20260904-plan3',
+      'js/16-repairs.js?v=20260904-plan3',
+      'js/18-asset-out.js?v=20260903-plan2',
+      'js/22-users.js?v=20260904-plan3',
+      'js/23-cal-records.js?v=20260904-plan3',
+      'js/24-home.js?v=20260904-plan3',
+      'js/25-dashboard-ui.js?v=20260904-plan3',
+      'js/26-list-ui.js?v=20260904-plan3',
+      'js/28-kpi.js?v=20260903-plan2',
+      'js/29-calibration-work.js?v=20260904-plan3'
     ].forEach(assetUrl => {
       has(indexSource, assetUrl, assetUrl + ' index request');
       has(swSource, "'./" + assetUrl + "'", assetUrl + ' exact fresh precache key');
     });
-    ['js/02-dashboard.js','js/26-list-ui.js','js/29-calibration-work.js'].forEach(scriptPath => {
-      const indexMatch = indexSource.match(new RegExp('<script src="(' + scriptPath.replace(/\./g, '\\.') + '\\?[^\"]+)"'));
-      ok(indexMatch, scriptPath + ' query-qualified index request');
-      has(swSource, "'./" + indexMatch[1] + "'", scriptPath + ' index URL exactly matches APP_SHELL');
+    const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+    [...parsed.querySelectorAll('script[src^="js/"]')].forEach(script => {
+      const source = script.getAttribute('src');
+      ok(source.includes('?v='), source + ' must be query-qualified');
+      has(swSource, "'./" + source + "'", source + ' exact APP_SHELL parity');
     });
+    ['calibration-app-v159', '20260903-plan1', '20260902-cw7', 'js/06-plan.js',
+      'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'frm-eib04-template.xlsx']
+      .forEach(token => lacks(appShell, token, token + ' stale cache generation'));
+    has(swSource, 'const RETIRED_ASSET_PATHS =', 'retired cache asset contract');
+    ['js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx']
+      .forEach(path => has(swSource, "'" + path + "'", path + ' activation eviction path'));
+    has(swSource, 'await cache.keys()', 'activation inspects existing cache keys');
+    has(swSource, 'cache.delete(request)', 'activation evicts retired requests');
+    has(swSource, 'evictRetiredAssets', 'activation runs retired asset eviction');
   });
+
+  await ta('service-worker installation rejects incomplete precache and does not activate it', async () => {
+    const installStart = swSource.indexOf("self.addEventListener('install'");
+    const installEnd = swSource.indexOf('\n});', installStart) + 3;
+    let install;
+    let skipWaitingCalls = 0;
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'install') install = listener; },
+      skipWaiting: () => { skipWaitingCalls += 1; return Promise.resolve(); }
+    };
+    const failure = new Error('precache failed');
+    const cachesStub = { open: async () => ({ addAll: async () => { throw failure; } }) };
+    new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+    let waited;
+    install({ waitUntil: promise => { waited = promise; } });
+    let rejected = false;
+    try { await waited; } catch (error) { rejected = error === failure; }
+    ok(rejected, 'failed precache must reject service-worker installation');
+    eq(skipWaitingCalls, 0, 'failed install must not call skipWaiting or reach activation cleanup');
+  });
+
+  await ta('service-worker installation calls skipWaiting only after complete precache', async () => {
+    const installStart = swSource.indexOf("self.addEventListener('install'");
+    const installEnd = swSource.indexOf('\n});', installStart) + 3;
+    let install;
+    let resolvePrecache;
+    const sequence = [];
+    const precache = new Promise(resolve => { resolvePrecache = resolve; });
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'install') install = listener; },
+      skipWaiting: () => { sequence.push('skipWaiting'); return Promise.resolve(); }
+    };
+    const cachesStub = { open: async () => ({ addAll: () => { sequence.push('addAll'); return precache; } }) };
+    new Function('self', 'caches', 'CACHE_NAME', 'APP_SHELL',
+      swSource.slice(installStart, installEnd))(selfStub, cachesStub, 'calibration-app-v161', []);
+    let waited;
+    install({ waitUntil: promise => { waited = promise; } });
+    await Promise.resolve();
+    eq(sequence.join(','), 'addAll', 'skipWaiting is held until addAll succeeds');
+    resolvePrecache();
+    await waited;
+    eq(sequence.join(','), 'addAll,skipWaiting', 'successful precache activates the new worker');
+  });
+
+  await ta('service-worker navigation falls back to the canonical cached start URL', async () => {
+    const fetchStart = swSource.indexOf("self.addEventListener('fetch'");
+    const fetchEnd = swSource.indexOf('\n});', fetchStart) + 3;
+    let fetchListener;
+    const request = { method:'GET', url:'https://app.test/calibration-system/index.html', mode:'navigate', destination:'document' };
+    const canonical = { marker:'canonical-index' };
+    const cacheLookups = [];
+    const selfStub = {
+      location: { origin:'https://app.test' },
+      addEventListener: (kind, listener) => { if (kind === 'fetch') fetchListener = listener; }
+    };
+    const cachesStub = {
+      match: async key => {
+        cacheLookups.push(key);
+        return key === './index.html' ? canonical : undefined;
+      },
+      open: async () => ({ put: async () => {} })
+    };
+    new Function('self', 'caches', 'fetch', 'withAppInjections', 'Response',
+      swSource.slice(fetchStart, fetchEnd))(
+        selfStub, cachesStub, async () => { throw new Error('offline'); }, async response => response,
+        { error: () => ({ marker:'error' }) });
+    let responsePromise;
+    fetchListener({ request, respondWith: promise => { responsePromise = promise; } });
+    const response = await responsePromise;
+    eq(response, canonical, 'offline manifest start URL resolves to cached canonical shell');
+    ok(cacheLookups.includes('./index.html'), 'fetch handler explicitly checks canonical index cache key');
+  });
+
+  await ta('service-worker activation evicts query variants before claiming clients', async () => {
+    const evictStart = swSource.indexOf('async function evictRetiredAssets(cache)');
+    const evictEnd = swSource.indexOf('\n\n/*', evictStart);
+    const evict = new Function('RETIRED_ASSET_PATHS', 'return ' + swSource.slice(evictStart, evictEnd))([
+      'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
+    ]);
+    const activationStart = swSource.indexOf("self.addEventListener('activate'");
+    const activationEnd = swSource.indexOf('\n});', activationStart) + 3;
+    const sequence = [];
+    let activation;
+    const selfStub = {
+      addEventListener: (kind, listener) => { if (kind === 'activate') activation = listener; },
+      clients: { claim: () => { sequence.push('claim'); return Promise.resolve(); } }
+    };
+    const cache = {
+      keys: async () => [
+        {url:'https://app.test/js/06-plan.js?v=old'},
+        {url:'https://app.test/assets/frm-eib04-template.xlsx'},
+        {url:'https://app.test/js/06-plan.js.map'}
+      ],
+      delete: async request => { sequence.push('retired:' + request.url); return true; }
+    };
+    const cachesStub = {
+      keys: async () => ['old-cache', 'calibration-app-v161'],
+      delete: async key => { sequence.push('cache:' + key); return true; },
+      open: async () => cache
+    };
+    new Function('self', 'caches', 'CACHE_NAME', 'evictRetiredAssets',
+      swSource.slice(activationStart, activationEnd))(selfStub, cachesStub, 'calibration-app-v161', evict);
+    let waited;
+    activation({waitUntil: promise => { waited = promise; }});
+    await waited;
+    eq(sequence.filter(item => item.startsWith('retired:')).length, 2, 'only retired path requests are evicted');
+    ok(sequence[sequence.length - 1] === 'claim', 'clients.claim waits until cache cleanup completes');
+    ok(sequence.every(item => !item.includes('06-plan.js.map')), 'pathname matching does not evict similarly named assets');
+  });
+
+  window.registryDataReady = true;
 
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<div id="pageCalwork"><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<span id="navPlanBadge" style="display:none">0</span><div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -270,16 +613,15 @@ function text(url) {
     };
   }
 
-  t('adds accessible desktop/mobile navigation page shell and router loading', () => {
-    ['id="nav-calwork"', 'data-page="calwork"', 'id="pageCalwork"', 'id="cwTabs"',
+  t('uses the unified plan navigation page shell and router loading', () => {
+    ['id="nav-plan"', 'data-page="plan"', 'id="pagePlan"', 'id="cwTabs"',
       'id="cwMetrics"', 'id="cwBatchList"', 'id="cwBatchDetail"'].forEach(token => has(indexSource, token, token));
-    has(routerSource, "'calwork'", 'router page registration');
-    has(routerSource, "calwork: ['ชุดงานสอบเทียบ'", 'router title');
-    has(routerSource, "page === 'calwork'", 'router load branch');
+    has(routerSource, "'plan'", 'router page registration');
+    has(routerSource, "plan: ['แผนสอบเทียบ'", 'router title');
+    has(routerSource, "page === 'plan'", 'router load branch');
     has(routerSource, 'loadCalibrationWorkPage()', 'router loader call');
-    has(routerSource, 'setTimeout(() => waitAndLoad', 'router waits for app data/client');
-    ok(/<button\s+type="button"\s+class="nav-item"\s+onclick="showPage\('calwork'\)"\s+id="nav-calwork">/.test(indexSource),
-      'desktop navigation must use a native button');
+    has(routerSource, 'await window.whenRegistryDataReady()', 'router awaits registry data readiness');
+    has(indexSource, "showPage('plan')", 'plan navigation calls unified route');
   });
 
   t('renders dashboard tabs metrics progress document gates and hostile text safely', () => {
@@ -287,9 +629,10 @@ function text(url) {
     try {
       window.cwXss = 0;
       cwRenderDashboard(cwDashboardModel());
-      const tabs = [...document.querySelectorAll('#cwTabs [role="tab"]')];
+      const tabs = [...document.querySelectorAll('#cwTabs [data-cw-tab]')];
       eq(tabs.length, 4, 'four dashboard tabs');
-      eq(tabs.map(tab => tab.dataset.count).join(','), '2,1,0,2', 'tab counts');
+      ok(tabs.every(tab => !tab.hasAttribute('role')), 'status filters do not claim tab roles without tabpanels');
+      eq(tabs.map(tab => tab.dataset.count).join(','), '2,2,0,0', 'tab counts');
       const metrics = document.getElementById('cwMetrics').textContent.replace(/\s+/g, ' ');
       ['2 ชุดงานกำลังดำเนินการ', '3 / 4 เครื่องเสร็จ', '1 เครื่องเกินแผน', '1 ชุดรอ PDF ปิดแผน'].forEach(value => has(metrics, value, 'metric'));
       const list = document.getElementById('cwBatchList');
@@ -310,15 +653,162 @@ function text(url) {
     try {
       cwRenderDashboard(cwDashboardModel());
       cwSetDashboardTab('waiting');
-      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 1, 'waiting card count');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting card count');
       has(document.getElementById('cwBatchList').textContent, 'PLAN-2026-0002', 'waiting batch');
-      const selected = document.querySelector('#cwTabs [aria-selected="true"]');
+      const selected = document.querySelector('#cwTabs [aria-pressed="true"]');
       eq(selected.dataset.cwTab, 'waiting', 'selected tab');
       eq(selected.tagName, 'BUTTON', 'tab is keyboard operable');
     } finally { cleanup(); }
   });
 
-  t('implements the ARIA tabs keyboard focus and selection model', () => {
+  t('maps persistent primary plan tabs to deterministic dashboard states', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      ok(cwSetPrimaryTab('waiting'), 'waiting primary section is accepted');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'primary waiting button selected');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting maps to the waiting work state');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting includes calibration and closure queues');
+      cwRenderDashboard({ batches: [
+        { id:'33333333-3333-3333-3333-333333333333', status:'completed', items:[], documents:[] },
+        { id:'44444444-4444-4444-4444-444444444444', status:'cancelled', items:[], documents:[] },
+        { id:'55555555-5555-5555-5555-555555555555', status:'awaiting_calibration', items:[], documents:[] }
+      ], locks:[], locksReady:true });
+      ok(cwSetPrimaryTab('history'), 'history primary section is accepted');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'history', 'history maps to complete and cancelled work');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history includes completed and cancelled batches');
+      eq(cwSetPrimaryTab('unknown'), false, 'unknown primary section is rejected');
+    } finally { cleanup(); }
+  });
+
+  t('keeps primary and inner state aligned after waiting/history refreshes', () => {
+    const cleanup = cwMountFixture();
+    try {
+      const waitingModel = cwDashboardModel();
+      cwRenderDashboard(waitingModel);
+      ok(cwSetPrimaryTab('waiting'), 'waiting selected before refresh');
+      cwRenderDashboard(waitingModel, { primaryTab: 'waiting' });
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'waiting remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting inner state survives refresh');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'waiting content survives refresh');
+
+      const historyModel = { batches: [
+        { id:'66666666-6666-6666-6666-666666666666', status:'completed', items:[], documents:[] },
+        { id:'77777777-7777-7777-7777-777777777777', status:'cancelled', items:[], documents:[] },
+        { id:'88888888-8888-8888-8888-888888888888', status:'awaiting_calibration', items:[], documents:[] }
+      ], locks:[], locksReady:true };
+      cwSetPrimaryTab('history');
+      cwRenderDashboard(historyModel, { primaryTab: 'history' });
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'history', 'history remains selected after refresh');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'history', 'history inner state survives refresh');
+      eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history content survives refresh');
+    } finally { cleanup(); }
+  });
+
+  t('rolls back denied primary select without stealing focus or selection', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      batches.focus();
+      window.currentUser = { role:'viewer' };
+      eq(cwSetPrimaryTab('select'), false, 'viewer cannot open create wizard');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'denied select restores primary selection');
+      eq(document.activeElement, batches, 'denied select keeps focus on selected tab');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'active', 'denied select keeps dashboard state');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  await ta('exposes selection as disabled for read-only users and restores a batch card after detail closes', async () => {
+    const cleanup = cwMountFixture();
+    try {
+      window.currentUser = { role:'viewer' };
+      cwRenderDashboard(cwDashboardModel());
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      eq(select.disabled, true, 'read-only selection control is disabled');
+      eq(select.getAttribute('aria-disabled'), 'true', 'read-only state is announced');
+      const card = document.querySelector('#cwBatchList .cw-batch-card');
+      card.focus();
+      await cwOpenBatch(card.dataset.batchId);
+      cwCloseBatch();
+      eq(document.activeElement, card, 'closing detail restores the originating batch card');
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  t('blocks every create entry point when the registry snapshot is unavailable', () => {
+    const cleanup = cwMountFixture();
+    try {
+      window.currentUser = { role:'editor' };
+      window.registryDataReady = false;
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true });
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      eq(select.disabled, true, 'selection stays disabled despite a ready lock snapshot');
+      eq(cwSetPrimaryTab('select'), false, 'programmatic keyboard path cannot open creation');
+      eq(cwOpenCreate(), false, 'direct create call is rejected');
+      eq(cwOpenCreateWithInstrument(12), false, 'stale registry shortcut is rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'wizard remains closed');
+    } finally {
+      window.registryDataReady = true;
+      cleanup();
+      delete window.currentUser;
+    }
+  });
+
+  t('restores prior primary selection and focus after keyboard create close', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true }, { primaryTab:'batches' });
+      window.currentUser = { role:'editor' };
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      batches.focus();
+      batches.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'select', 'keyboard select commits after dialog opens');
+      ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'keyboard select opens create dialog');
+      cwCloseCreate();
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'close restores prior primary selection');
+      eq(document.activeElement, batches, 'close restores focus to prior primary tab');
+      eq(batches.tabIndex, 0, 'restored tab is in tab order');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  t('restores the selected primary tab after pointer create close', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true }, { primaryTab:'batches' });
+      window.currentUser = { role:'editor' };
+      const batches = document.querySelector('#cwPrimaryTabs [data-cw-primary="batches"]');
+      const select = document.querySelector('#cwPrimaryTabs [data-cw-primary="select"]');
+      select.onclick = () => cwSetPrimaryTab('select');
+      batches.focus();
+      select.focus();
+      select.dispatchEvent(new MouseEvent('click', { bubbles:true }));
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'select', 'pointer select opens and selects button');
+      ok(document.getElementById('cwCreateDialog').classList.contains('open'), 'pointer select opens create dialog');
+      cwCloseCreate();
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'batches', 'pointer close restores prior selection');
+      eq(document.activeElement, batches, 'pointer close focuses restored selected tab');
+      eq(batches.tabIndex, 0, 'restored pointer tab is in tab order');
+      delete window.currentUser;
+    } finally { cleanup(); delete window.currentUser; }
+  });
+
+  t('keeps primary tablist focus and selection deterministic with arrow keys', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwRenderDashboard(cwDashboardModel());
+      const tab = key => document.querySelector('#cwPrimaryTabs [data-cw-primary="' + key + '"]');
+      tab('batches').focus();
+      tab('batches').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
+      eq(document.activeElement, tab('waiting'), 'ArrowRight moves primary focus');
+      eq(tab('waiting').getAttribute('aria-pressed'), 'true', 'ArrowRight selects primary section');
+      tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
+      eq(document.activeElement, tab('history'), 'End moves primary focus to last tab');
+    } finally { cleanup(); }
+  });
+
+  t('keeps status filter buttons keyboard accessible while supporting arrow shortcuts', () => {
     const cleanup = cwMountFixture();
     try {
       cwRenderDashboard(cwDashboardModel());
@@ -326,8 +816,8 @@ function text(url) {
       tab('active').focus();
       tab('active').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
       eq(document.activeElement, tab('waiting'), 'ArrowRight moves focus');
-      eq(tab('waiting').getAttribute('aria-selected'), 'true', 'ArrowRight selects next tab');
-      eq(tab('active').tabIndex, -1, 'previous tab leaves tab order');
+      eq(tab('waiting').getAttribute('aria-pressed'), 'true', 'ArrowRight selects next filter');
+      eq(tab('active').tabIndex, 0, 'previous filter remains in normal tab order');
       tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
       eq(document.activeElement, tab('history'), 'End moves to last tab');
       tab('history').dispatchEvent(new KeyboardEvent('keydown', {key:'Home', bubbles:true}));
@@ -652,7 +1142,54 @@ function text(url) {
     eq(map[102].batchNo, 'CW7-1', 'batch metadata');
     eq(map[102].plannedDate, '2026-09-01', 'planned date metadata');
     eq(map[102].title, 'Active <script>', 'unescaped data remains data in the map');
-    [105,106,107,108,109].forEach(id => ok(!map[id], 'inactive/terminal/unlocked/skipped id excluded: ' + id));
+    eq(map[105].status, 'completed', 'completed batch remains visible without relying on its stale lock');
+    eq(map[105].isActive, false, 'completed batch is historical rather than active');
+    eq(map[102].isActive, true, 'matching lock marks active work explicitly');
+    [106,107,108,109].forEach(id => ok(!map[id], 'inactive/cancelled/unlocked/skipped id excluded: ' + id));
+  });
+
+  t('publishes latest completed work deterministically without weakening active lock ownership', () => {
+    const olderId = cwUuid(740);
+    const newerId = cwUuid(741);
+    const activeId = cwUuid(742);
+    const model = {
+      batches:[
+        {id:newerId,batch_no:'DONE-NEW',title:'newer completion',status:'completed',updated_at:'2026-09-02T09:00:00Z',items:[
+          {id:cwUuid(840),batch_id:newerId,instrument_id:140,is_active:true,result_status:'completed',planned_date:'2026-09-02'}
+        ]},
+        {id:olderId,batch_no:'DONE-OLD',title:'older completion',status:'completed',updated_at:'2026-09-01T09:00:00Z',items:[
+          {id:cwUuid(841),batch_id:olderId,instrument_id:140,is_active:true,result_status:'completed',planned_date:'2026-09-01'},
+          {id:cwUuid(842),batch_id:olderId,instrument_id:141,is_active:true,result_status:'completed',planned_date:'2026-09-01'}
+        ]},
+        {id:activeId,batch_no:'ACTIVE',title:'current locked work',status:'awaiting_calibration',updated_at:'2026-08-30T09:00:00Z',items:[
+          {id:cwUuid(843),batch_id:activeId,instrument_id:141,is_active:true,result_status:'in_progress',planned_date:'2026-09-05'},
+          {id:cwUuid(844),batch_id:activeId,instrument_id:142,is_active:true,result_status:'in_progress',planned_date:'2026-09-05'}
+        ]}
+      ],
+      locks:[{instrument_id:141,batch_id:activeId}]
+    };
+    const map = cwBuildCalibrationWorkStatusMap(model, '2026-09-03');
+    eq(map[140].batchNo, 'DONE-NEW', 'latest completed batch wins independent of input order');
+    eq(map[140].status, 'completed', 'closed item remains completed without a lock');
+    eq(map[141].batchNo, 'ACTIVE', 'current lock-owned work wins over historical completion');
+    ok(!map[142], 'unlocked active item remains excluded');
+
+    Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+    Object.assign(calibrationWorkStatusMap, map);
+    CALRECS = [];
+    const row = crcRowModel({id:140,days_left:5});
+    eq(row.stage[1], 'ยังไม่ได้วางแผน', 'historical completion does not suppress the next calibration cycle');
+    eq(row.done[0], false, 'closed work is not treated as a current plan');
+    eq(row.done[2], false, 'closed work without a current certificate is not treated as current calibration');
+    eq(row.work, null, 'current work remains empty');
+    eq(row.workHistory.batchNo, 'DONE-NEW', 'historical work remains separately available');
+    window.currentUser = {role:'viewer'};
+    lacks(crcActionHtml(row), 'goToPlanWithItem', 'Viewer does not receive a create-plan action');
+    lacks(crcActionHtml(row), 'goToPlanDetail', 'Viewer without current work does not receive a dead view-plan action');
+    has(crcActionHtml(row), 'openCalHistory', 'Viewer retains a valid history action');
+    window.currentUser = {role:'editor'};
+    has(crcActionHtml(row), 'goToPlanWithItem', 'Editor retains the create-plan action');
+    delete window.currentUser;
   });
 
   await ta('loads the complete integration map with immutable keysets', async () => {
@@ -794,12 +1331,15 @@ function text(url) {
       eq(result.dueToday, 1, 'instruments due on deterministic today');
       eq(result.overdueMissingEvidence, 1, 'overdue missing reason/evidence instruments');
       eq(result.awaitingClosure, 1, 'awaiting closure batches');
+      eq(document.getElementById('navPlanBadge').textContent, '4', 'badge counts unique non-terminal batches');
+      eq(document.getElementById('navPlanBadge').style.display, '', 'pending-work badge is visible');
       ['รอ PDF รับทราบ','ครบกำหนดวันนี้','เกินแผนขาดหลักฐาน','รอ PDF ปิดแผน'].forEach(label =>
         has(document.getElementById('cwNotifications').textContent, label, 'notification label'));
 
       cwRenderDashboard(model);
       ok(await cwOpenNotification('awaiting_acknowledgement'), 'notification filter opens');
-      eq(document.querySelector('#cwTabs [aria-selected="true"]').dataset.cwTab, 'waiting', 'waiting tab selected');
+      eq(document.querySelector('#cwPrimaryTabs [aria-pressed="true"]').dataset.cwPrimary, 'waiting', 'notification selects waiting primary section');
+      eq(document.querySelector('#cwTabs [aria-pressed="true"]').dataset.cwTab, 'waiting', 'waiting filter selected');
       has(document.getElementById('cwBatchList').textContent, awaiting.batch_no, 'awaiting acknowledgement filter');
       ok(await cwOpenNotification('awaiting_closure', closure.id), 'batch notification opens exact detail');
       has(document.getElementById('cwBatchDetail').textContent, closure.batch_no, 'correct notification detail');
@@ -825,7 +1365,7 @@ function text(url) {
       has(document.getElementById('cwBatchDetail').textContent, 'CW7-1', 'validated mapped batch opened');
       ok(!document.querySelector('#cwBatchDetail [data-cw-action]'), 'Viewer receives no mutations');
       cwCloseBatch();
-      eq(pages.join(','), 'calwork,list', 'returns to registry page');
+      eq(pages.join(','), 'plan,list', 'returns to registry page');
       eq(document.activeElement, trigger, 'registry shortcut focus restored');
       eq(await cwOpenBatchFromInstrument(-1), false, 'invalid numeric instrument rejected');
       trigger.remove();
@@ -862,14 +1402,14 @@ function text(url) {
       ok(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [])), 'network-backed navigation opens current batch');
       ok(!trigger.isConnected, 'authoritative integration publish replaced original shortcut');
       cwCloseBatch();
-      eq(pages.join(','), 'calwork,list', 'close returns to registry after network navigation');
+      eq(pages.join(','), 'plan,list', 'close returns to registry after network navigation');
       trigger = pageList.querySelectorAll('[data-cw-open-batch-instrument="102"]')[1];
       eq(document.activeElement, trigger, 'newly rendered shortcut receives returned focus');
 
       trigger.focus();
       eq(await cwOpenBatchFromInstrument(102, cwPagedClient(rows, [], {calibration_work_items:'offline'})), false,
         'failed authoritative navigation reports failure');
-      eq(pages.slice(-2).join(','), 'calwork,list', 'failed navigation restores registry surface');
+      eq(pages.slice(-2).join(','), 'plan,list', 'failed navigation restores registry surface');
       eq(document.activeElement, trigger, 'failed navigation restores shortcut focus');
     } finally {
       window.showPage = originalShowPage;
@@ -946,6 +1486,55 @@ function text(url) {
       eq(document.querySelectorAll('#cwCreateBody [data-cw-instrument-id]').length, 1, 'search filters exact group rows');
       has(document.getElementById('cwCreateBody').textContent, 'WRM-12', 'search result');
     } finally { cleanup(); }
+  });
+
+  t('opens create flow with the exact requested instrument preselected and rejects unsafe shortcuts', () => {
+    const cleanup = cwMountFixture();
+    try {
+      cwSetTask4Actor('editor');
+      const ownerId = cwUuid(743);
+      cwRenderDashboard({batches:[{id:ownerId,batch_no:'OWNER-743',status:'draft',items:[],documents:[],audit:[]}],
+        locks:[{instrument_id:15,batch_id:ownerId}]});
+      ok(cwOpenCreateWithInstrument(12), 'manageable unlocked instrument opens wizard');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'false', 'dialog opens');
+      const selected = document.querySelector('[data-cw-instrument-id="12"] input[type="checkbox"]');
+      ok(selected && selected.checked, 'exact requested id reaches wizard selection');
+      eq(document.querySelectorAll('#cwCreateBody input[type="checkbox"]:checked').length, 1, 'only requested instrument is selected');
+      ok(cwGoCreateStep(1), 'preselected shortcut can return to group step');
+      eq(document.getElementById('cwCreateUnit').value, 'WRM1', 'group unit inferred from exact instrument');
+      eq(document.getElementById('cwCreateType').value, 'เครื่องชั่ง (Electronic Balance)', 'group type inferred from exact instrument');
+      cwCloseCreate();
+
+      eq(cwOpenCreateWithInstrument(15), false, 'locked shortcut rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'locked shortcut does not open dialog');
+      cwSetTask4Actor('viewer');
+      eq(cwOpenCreateWithInstrument(12), false, 'read-only shortcut rejected');
+      eq(document.getElementById('cwCreateDialog').getAttribute('aria-hidden'), 'true', 'read-only shortcut does not open dialog');
+      cwSetTask4Actor('editor');
+      eq(cwOpenCreateWithInstrument(9999), false, 'unknown shortcut rejected');
+    } finally { cleanup(); }
+  });
+
+  await ta('routes repair/list shortcuts through the unified create flow with the exact id', async () => {
+    const oldShowPage = window.showPage;
+    const oldLoad = window.loadCalibrationWorkPage;
+    const oldOpen = window.cwOpenCreateWithInstrument;
+    let shown = null;
+    let loaded = false;
+    let requested = null;
+    try {
+      window.showPage = page => { shown = page; };
+      window.loadCalibrationWorkPage = async () => { loaded = true; return true; };
+      window.cwOpenCreateWithInstrument = id => { requested = id; return true; };
+      eq(await goToPlanWithItem(12), true, 'shortcut returns unified create result');
+      eq(shown, 'plan', 'shortcut opens the unified plan page');
+      eq(loaded, true, 'shortcut refreshes unified work state first');
+      eq(requested, 12, 'shortcut preserves exact instrument id');
+    } finally {
+      window.showPage = oldShowPage;
+      window.loadCalibrationWorkPage = oldLoad;
+      window.cwOpenCreateWithInstrument = oldOpen;
+    }
   });
 
   t('requires title selection and ISO dates then applies bulk and per-item dates in review', () => {
@@ -1200,7 +1789,7 @@ function text(url) {
   function cwTask5Context(status, documents, resultStatus) {
     const batchId = cwUuid(801);
     const itemId = cwUuid(811);
-    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:'2026-09-03',
+    const item = {id:itemId,batch_id:batchId,instrument_id:11,planned_date:CW_FIXTURE_TODAY,
       result_status:resultStatus || 'in_progress',is_active:true,instruments:cwTask4Instruments()[0]};
     const docs = (documents || []).map(documentRow => ({batch_id:batchId,...documentRow}));
     const batch = {id:batchId,batch_no:'PLAN-801',title:'Evidence <batch>',unit_code:'WRM1',
@@ -1210,6 +1799,12 @@ function text(url) {
     const rows = cwTask4Rows({...batch,items:undefined,documents:undefined,audit:undefined}, [item], docs, locks);
     return {batchId,itemId,item,batch,locks,rows,model:{batches:[batch],locks}};
   }
+
+  t('uses an injected frozen Bangkok date for stateful fixtures', () => {
+    eq(cwTask5Context('awaiting_calibration').item.planned_date, CW_FIXTURE_TODAY,
+      'fixture planned date must not depend on the live clock');
+    eq(cwTodayISO(), CW_FIXTURE_TODAY, 'renderer clock must use the injected fixture date');
+  });
 
   function cwEvidenceClient(context, options) {
     const config = options || {};
@@ -1707,11 +2302,11 @@ function text(url) {
       cwRenderDashboard(context.model);
       ok(cwOpenItemResult(context.itemId), 'open draft');
       cwSetItemResultField('certNo',' CERT-<DRAFT> ');
-      cwSetItemResultField('calibrationDate','2026-09-03');
+      cwSetItemResultField('calibrationDate',context.item.planned_date);
       cwSetItemResultField('overdueReason','  ');
       eq(await cwSaveItemDraft(evidence.client), true, 'draft save succeeds');
       eq(JSON.stringify(evidence.calls[0]), JSON.stringify({name:'cw_save_item_draft',payload:{
-        p_token:'token',p_item_id:context.itemId,p_cert_no:'CERT-<DRAFT>',p_calibration_date:'2026-09-03',p_overdue_reason:null
+        p_token:'token',p_item_id:context.itemId,p_cert_no:'CERT-<DRAFT>',p_calibration_date:context.item.planned_date,p_overdue_reason:null
       }}), 'exact draft payload');
       eq(evidence.calls.length, 1, 'draft does not complete item');
       eq(cwDashboardModel && document.getElementById('cwItemResultDialog').getAttribute('aria-hidden'), 'false', 'authoritative draft stays editable');
@@ -2030,10 +2625,10 @@ function text(url) {
   });
 
   t('scopes responsive dashboard styles without page overflow', () => {
-    has(cssSource, '#app #pageCalwork .cw-', 'scoped calibration styles');
-    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pageCalwork \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
-    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pageCalwork \.cw-/.test(cssSource), 'mobile scoped rules');
-    ok(/#app #pageCalwork[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
+    has(cssSource, '#app #pagePlan .cw-', 'scoped calibration styles');
+    ok(/@media\s*\(max-width:\s*1100px\)[\s\S]*?#app #pagePlan \.cw-detail-grid/.test(cssSource), 'tablet detail stack');
+    ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #pagePlan \.cw-/.test(cssSource), 'mobile scoped rules');
+    ok(/#app #pagePlan[^\{]*\{[^}]*overflow-x:\s*hidden/.test(cssSource), 'page overflow guard');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?min-height:\s*44px/.test(cssSource), 'mobile touch target');
     ok(/@media\s*\(max-width:\s*767px\)[\s\S]*?#app #cwCreateDialog \.modal-header button[\s\S]*?min-(?:height|block-size):\s*44px/.test(cssSource),
       'mobile dialog close target');
