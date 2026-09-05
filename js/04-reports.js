@@ -132,6 +132,35 @@ table td, table th { white-space: nowrap; }
   win.onload = () => { win.print(); };
 }
 
+// Export the currently filtered instrument register. This is intentionally
+// separate from the retired calibration-plan workbook implementation.
+function exportExcel() {
+  if (!filteredData.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
+  if (typeof XLSX === 'undefined') { showToast('โหลด SheetJS ไม่สำเร็จ', 'error'); return; }
+
+  const headers = ['#','ประเภทเครื่องมือ','ชื่อเครื่องจักร','สถานที่ใช้งาน','ชื่อเครื่องมือ',
+    'ยี่ห้อ/รุ่น','Range','Tolerance (±)','S/N','Asset No.','หน่วยงาน','ID Code','CERT.',
+    'วันสอบเทียบ','วันครบกำหนด','เหลือ (วัน)','ความถี่สอบเทียบ','ภายใน/ภายนอก','สถานะ','Remark'];
+
+  const rows = filteredData.map((d, i) => {
+    const days = d.days_left;
+    const status = days === null ? '–' : days < 0 ? 'เลยกำหนด' : days <= 30 ? 'ใกล้ครบ' : 'ปกติ';
+    return [i+1, d.instrument_type||'', d.machine_name||'', d.location||'', d.instrument_name||'',
+      d.brand||'', d.range_val||'', d.tolerance ? '±'+d.tolerance : '', d.serial_no||'', d.asset_no||'',
+      d.department||'', d.id_code||'', d.cert_no||'', d.cal_date||'', d.due_date||'',
+      days !== null ? days : '', d.cal_frequency||'', d.cal_type||'', status, d.remark||''];
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:4},{wch:32},{wch:20},{wch:16},{wch:24},{wch:20},{wch:12},{wch:14},
+    {wch:16},{wch:14},{wch:12},{wch:20},{wch:16},{wch:14},{wch:14},{wch:10},{wch:20},{wch:14},{wch:12},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws, 'เครื่องมือ');
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, 'calibration_' + today + '.xlsx');
+  showToast('✅ Export ' + filteredData.length + ' รายการสำเร็จ', 'success');
+}
+
 
 // ====================================================
 // CATEGORY (กลุ่มเครื่องมือ ดึงจาก Supabase column category)

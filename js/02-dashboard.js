@@ -1,5 +1,21 @@
 /* ===== 02-dashboard.js ===== (generated from index.html inline app script) */
 
+function dashboardWorkIsActive(work) {
+  return Boolean(work && work.isActive !== false);
+}
+
+function dashboardIsDueAlertCandidate(instrument, workMap) {
+  if (!instrument || instrument.days_left === null || instrument.days_left === undefined) return false;
+  const work = (workMap || {})[instrument.id] || null;
+  if (dashboardWorkIsActive(work)) return false;
+  return instrument.days_left >= -30 && instrument.days_left <= 60;
+}
+
+if (typeof window !== 'undefined') {
+  window.dashboardWorkIsActive = dashboardWorkIsActive;
+  window.dashboardIsDueAlertCandidate = dashboardIsDueAlertCandidate;
+}
+
 let _monthlyBarChart = null;
 function renderMonthlyBarChart() {
   const canvas = document.getElementById('monthlyBarChart');
@@ -97,23 +113,28 @@ function renderMobileCards() {
     const idCertLine = [d.id_code, d.cert_no].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
     const brandDept = [d.brand, d.department].filter(Boolean).map(escapeHtmlText).join(' · ') || '-';
     const machineLoc = [d.machine_name, d.location].filter(Boolean).map(escapeHtmlText).join(' · ') || escapeHtmlText(d.department || '-');
-    const ps = planStatusMap[d.id];
+    const work = (window.calibrationWorkStatusMap || {})[d.id] || null;
+    const activeWork = dashboardWorkIsActive(work);
+    const canManagePlan = typeof currentUser !== 'undefined'
+      && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
     const sMap = {
-      pending_plan: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E41;&#x0E1C;&#x0E19;', '#854F0B', '#FAEEDA'],
-      planned:      ['&#x0E27;&#x0E32;&#x0E07;&#x0E41;&#x0E1C;&#x0E19;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#3B6D11', '#EAF3DE'],
-      pending_cert: ['&#x0E23;&#x0E2D;&#x0E22;&#x0E37;&#x0E19;&#x0E22;&#x0E31;&#x0E19;&#x0E2A;&#x0E2D;&#x0E1A;', '#185FA5', '#E6F1FB'],
-      completed:    ['&#x0E2A;&#x0E2D;&#x0E1A;&#x0E40;&#x0E17;&#x0E35;&#x0E22;&#x0E1A;&#x0E41;&#x0E25;&#x0E49;&#x0E27;', '#0F6E56', '#E1F5EE'],
+      awaiting_acknowledgement_pdf: ['รอรับทราบ', '#854F0B', '#FAEEDA'],
+      in_progress: ['กำลังสอบเทียบ', '#185FA5', '#E6F1FB'],
+      overdue: ['เกินแผน', '#A32D2D', '#FCEBEB'],
+      completed: ['เสร็จแล้ว', '#0F6E56', '#E1F5EE'],
     };
     const planMeta = cancelled
       ? ['ไม่ต้องวางแผน', '#8A1F1F', '#FCEBEB']
-      : (ps ? (sMap[ps.status] || [escapeHtmlText(ps.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
+      : (work ? (sMap[work.status] || [escapeHtmlText(work.status), '#52667d', '#f2f6fb']) : ['ยังไม่วางแผน', '#52667d', '#f2f6fb']);
     const planBadge = '<div class="mobile-plan-row"><span class="mobile-plan-badge" style="color:' + planMeta[1] + ';background:' + planMeta[2] + '">' + planMeta[0] + '</span></div>';
     const workBadge = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
     const planBtn = cancelled
       ? '<button class="mobile-card-action" disabled><i class="ti ti-calendar-off"></i><span>งดแผน</span></button>'
-      : (ps
+      : (activeWork
         ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanDetail(' + id + ')"><i class="ti ti-calendar-check"></i><span>แผน</span></button>'
-        : '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>');
+        : (canManagePlan
+          ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>'
+          : ''));
     return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
       '<div class="mobile-card-head">' +
         '<span class="mobile-type-mark" style="color:' + color + ';background:' + color + '14;border-color:' + color + '40"><i class="ti ' + icon + '"></i><b>' + escapeHtmlText(letter) + '</b></span>' +
@@ -165,23 +186,11 @@ async function renderAlerts() {
 
   el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px 0">กำลังโหลด...</div>';
 
-  // ดึง instrument_id ที่มีแผน active อยู่แล้ว
-  let plannedIds = new Set();
-  try {
-    const { data: planItems } = await sb
-      .from('calibration_plan_items')
-      .select('instrument_id, calibration_plans!inner(status)')
-      .in('calibration_plans.status', ['pending_plan','planned','pending_cert']);
-    if (planItems) planItems.forEach(p => plannedIds.add(p.instrument_id));
-  } catch(e) { /* ถ้าดึงไม่ได้ก็แสดงทั้งหมด */ }
-
   const today = new Date(); today.setHours(0,0,0,0);
 
   // กรองเครื่องมือที่ยังไม่มีแผนและ due ภายใน 60 วัน
   const alerts = allData.filter(d => {
-    if (d.days_left === null) return false;
-    if (plannedIds.has(d.id)) return false;
-    return d.days_left >= -30 && d.days_left <= 60;
+    return dashboardIsDueAlertCandidate(d, window.calibrationWorkStatusMap || {});
   }).sort((a,b) => a.days_left - b.days_left).slice(0, 12);
 
   if (!alerts.length) {
@@ -227,6 +236,18 @@ async function renderAlerts() {
 // ====================================================
 let allData = [], filteredData = [];
 let fileCountCache = {};
+window.registryDataReady = false;
+let registryDataReadyResolve;
+let registryDataReadyPromise = new Promise(resolve => { registryDataReadyResolve = resolve; });
+window.whenRegistryDataReady = () => window.registryDataReady
+  ? Promise.resolve(true)
+  : registryDataReadyPromise;
+
+function markRegistryDataReady(ready = true) {
+  window.registryDataReady = ready === true;
+  if (registryDataReadyResolve) registryDataReadyResolve(window.registryDataReady);
+  registryDataReadyResolve = null;
+}
 
 function escapeHtmlText(value) {
   return String(value ?? '')
@@ -294,6 +315,7 @@ async function loadData(forceRefresh = false) {
         days_left: (!cancelled && d.due_date) ? Math.round((new Date(d.due_date) - today) / 86400000) : null
       };
     });
+    markRegistryDataReady();
     filteredData = [...allData];
     populateFilters();
     fileCountCache = {};
@@ -305,7 +327,6 @@ async function loadData(forceRefresh = false) {
     renderMonthlyBarChart();
     renderDashboardAuditLog();
     renderPendingCertWidget();
-    loadPlanStatusMap();
     if (typeof loadCalibrationWorkStatusMap === 'function') void loadCalibrationWorkStatusMap();
     if (typeof loadRepairData === 'function') loadRepairData();
     updateNotificationBell();
@@ -338,7 +359,7 @@ async function loadData(forceRefresh = false) {
   showLoading('กำลังโหลดข้อมูล...');
   try {
     const rows = await fetchFromSupabase();
-    if (!rows) return false;
+    if (!rows) { markRegistryDataReady(false); return false; }
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
@@ -347,6 +368,7 @@ async function loadData(forceRefresh = false) {
     setDriveStatus(true, 'อัพเดท ' + new Date().toLocaleTimeString('th-TH'));
     return true;
   } catch(e) {
+    markRegistryDataReady(false);
     setDriveStatus(false, 'โหลดไม่สำเร็จ');
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
     return false;
@@ -681,15 +703,19 @@ async function renderDashboardAuditLog() {
   try {
     const [auditRes, planRes] = await Promise.all([
       sb.from('audit_logs').select('created_at,username,action,id_code,instrument_name,changes').order('created_at', { ascending:false }).limit(12),
-      sb.from('plan_audit_log').select('created_at,username,action,note').order('created_at', { ascending:false }).limit(8)
+      sb.from('calibration_work_audit').select('occurred_at,actor,action,reason,batch_id,after_data').order('occurred_at', { ascending:false }).limit(8)
     ]);
     if (auditRes.error) throw auditRes.error;
 
     const auditItems = (auditRes.data || []).map(row => ({ ...row, source:'instrument' }));
     const planItems = planRes.error ? [] : (planRes.data || []).map(row => ({
-      ...row,
-      source:'plan',
-      instrument_name: row.note || 'แผนสอบเทียบ'
+      created_at: row.occurred_at,
+      username: row.actor,
+      action: row.action,
+      note: row.reason,
+      batch_id: row.batch_id,
+      source:'calibration-work',
+      instrument_name: row.reason || row.after_data?.batch_no || 'แผนสอบเทียบ'
     }));
     const items = auditItems.concat(planItems).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderDashboardAuditItems(items);
@@ -778,7 +804,6 @@ function renderTable() {
     const idCode = escapeHtmlText(d.id_code || '–');
     const certNo = escapeHtmlText(d.cert_no || '–');
     const instrumentName = escapeHtmlText(d.instrument_name || '–');
-    const planTitle = escapeHtmlAttr(planStatusMap[d.id]?.title || '');
     const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
     const displayType = getDisplayInstrumentType(d);
     const [letter, icon, color] = regTypeMeta(displayType, d);
@@ -802,16 +827,10 @@ function renderTable() {
       <td>${statusBadge}${typeof repairBadgeHtml === 'function' && repairBadgeHtml(d.id) ? '<br>' + repairBadgeHtml(d.id) : ''}</td>
       <td>${(()=>{
         if (cancelled) return '<span class="badge badge-gray">ไม่ต้องวางแผน</span>';
-        const ps = planStatusMap[d.id];
-        if (!ps) return `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
-        const sMap = {
-          pending_plan: ['🟡 รอยืนยันแผน','#854F0B','#FAEEDA'],
-          planned:      ['✅ วางแผนแล้ว','#3B6D11','#EAF3DE'],
-          pending_cert: ['🔵 รอยืนยันสอบ','#185FA5','#E6F1FB'],
-          completed:    ['🏆 สอบเทียบแล้ว','#0F6E56','#E1F5EE'],
-        };
-        const [lbl,color2,bg] = sMap[ps.status] || ['–','#888','#f5f5f5'];
-        return `<button onclick="goToPlanDetail(${id})" title="ดูแผน: ${planTitle}" style="font-size:11px;background:${bg};color:${color2};border:1px solid ${color2}40;border-radius:6px;padding:2px 8px;white-space:nowrap;cursor:pointer;font-family:var(--font);font-weight:500">${lbl}</button>`;
+        const work = (window.calibrationWorkStatusMap || {})[id] || null;
+        const shortcut = typeof cwRegistryShortcutHtml === 'function' ? cwRegistryShortcutHtml(id) : '';
+        const plan = `<button onclick="goToPlanWithItem(${id})" style="font-size:11px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px;cursor:pointer;white-space:nowrap;font-family:var(--font)">📋 วางแผน</button>`;
+        return !dashboardWorkIsActive(work) ? plan + shortcut : (shortcut || plan);
       })()}</td>
       <td><button id="certbtn-${id}" class="btn-cert ${fileCountCache[d.id]>0?'btn-cert-has':'btn-cert-empty'}" onclick="${openCertCall}" >📎 ${fileCountCache[d.id]>0?fileCountCache[d.id]+' ไฟล์':'ไฟล์'}</button></td>
       <td style="white-space:nowrap" class="td-manage"></td>

@@ -388,7 +388,7 @@ Run the commands from Step 1 again and record their exact passing summaries.
 
 ---
 
-### Task 6: Push, merge, apply migration, and verify production
+### Task 6: Push, deploy compatible frontend, apply migration, and verify production
 
 **Files:**
 - No new source files unless a production verification exposes a defect.
@@ -405,7 +405,17 @@ git push -u origin codex/replace-legacy-calibration-plan
 
 Create a PR targeting `main` with test summaries and the exact destructive objects listed.
 
-- [ ] **Step 2: Recheck production preconditions immediately before apply**
+- [ ] **Step 2: Merge and verify the compatible frontend first**
+
+Merge only after source checks pass. Fetch `origin/main`, verify the merge commit, rerun
+`tools/run-tests.ps1` from updated local `main`, and confirm GitHub Pages serves the new
+`20260904-plan3` application shell. The deployed frontend must contain no live caller for
+the four retired tables before any database object is removed.
+
+- [ ] **Step 3: Coordinate reload, then recheck production preconditions immediately before apply**
+
+Use a short maintenance/reload window so open or cached legacy clients are closed or
+refreshed to the verified frontend. Then run:
 
 Run:
 
@@ -418,11 +428,11 @@ union all select 'plan_audit_log', count(*) from public.plan_audit_log;
 
 Expected exactly: `3, 0, 0, 0`. Stop without mutation on any difference.
 
-- [ ] **Step 3: Apply the reviewed migration**
+- [ ] **Step 4: Apply the reviewed migration**
 
 Use Supabase `apply_migration` with name `remove_legacy_calibration_plans` and the exact committed SQL. Do not paste a modified ad-hoc variant.
 
-- [ ] **Step 4: Verify production postconditions**
+- [ ] **Step 5: Verify production postconditions**
 
 ```sql
 select
@@ -435,10 +445,6 @@ select
 ```
 
 Expected: all values `true`. Then run Supabase security and performance advisors and review only newly introduced findings.
-
-- [ ] **Step 5: Merge PR and verify deployed `main`**
-
-Merge only after source checks pass. Fetch `origin/main`, verify the merge commit, and rerun `tools/run-tests.ps1` from updated local `main`.
 
 - [ ] **Step 6: Manual smoke test without test pollution**
 

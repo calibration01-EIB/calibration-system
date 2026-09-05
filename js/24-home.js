@@ -23,7 +23,7 @@ const AX_TILES = [
   { k:'calrecs',   img:'03_calibration_tracking', page:'calrecs',   t:'ติดตามผลสอบเทียบ',              d:'ติดตามสถานะและผลการสอบเทียบของเครื่องมือวัด', badge:'navCalrecsBadge', tone:'warn' },
   { k:'cert',      img:'04_cert_number',          page:'cert',      t:'ลำดับเลข Cert',                 d:'ทะเบียนหมายเลขลำดับใบรับรองผลสอบเทียบ' },
   { k:'weights',   img:'05_cert_reference',       page:'weights',   t:'ใบ Cert Reference',             d:'ค้นหาและอ้างอิงใบรับรองการสอบเทียบ' },
-  { k:'plan',      img:'06_calibration_planning', page:'plan',      t:'วางแผนสอบเทียบ',                d:'วางแผนและกำหนดรอบการสอบเทียบ', badge:'navPlanBadge', tone:'warn' },
+  { k:'plan',      img:'06_calibration_planning', page:'plan',      t:'แผนสอบเทียบ',                   d:'จัดชุดงาน แนบ PDF และติดตามผลสอบเทียบ', badge:'navPlanBadge', tone:'warn' },
   { k:'dailylog',  img:'07_daily_scale_record',   page:'soon',      t:'ใบบันทึกประจำวันเครื่องชั่ง',   d:'จัดเก็บและเพิ่มเอกสารแนบตามหน่วยงาน' },
   { k:'repairs',   img:'08_repair',               page:'repairs',   t:'งานซ่อม',                      d:'จัดการข้อมูลการซ่อมแซมเครื่องมือวัด', badge:'navRepairBadge', tone:'danger' },
   { k:'gate',      img:'09_offsite_equipment',    page:'gate',      t:'นำของออกนอกสถานที่',            d:'บันทึกใบขออนุญาต ติดตามการรับกลับ และประวัติย้อนหลัง' },

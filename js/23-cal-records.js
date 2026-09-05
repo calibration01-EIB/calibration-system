@@ -82,10 +82,10 @@ async function loadCalrecsPage() {
 }
 /* ===== ติดตามผลสอบเทียบ (ดีไซน์ Calibration App) =====
    มุมเครื่องมือ ไม่ใช่มุมใบ Cert: 1 แถว = 1 เครื่อง พร้อมความคืบหน้า 4 ขั้น
-   ขั้นตอนแมปจากของที่มีอยู่แล้ว — planStatusMap (06-plan) + calibration_records
+   ขั้นตอนแมปจากชุดงานสอบเทียบปัจจุบัน + calibration_records
      1 วางแผน      : มีแผนผูกกับเครื่องนี้
-     2 อนุมัติแผน   : plan.status ≥ planned
-     3 สอบเทียบ    : plan.status = completed หรือมีใบ record แล้ว
+     2 PDF รับทราบ  : แนบ acknowledgement PDF แล้ว
+     3 สอบเทียบ    : item เสร็จแล้วหรือมีใบ record แล้ว
      4 แนบสแกน     : record.status = approved หรือมีไฟล์สแกน                       */
 
 const CRC_SCOPES = [
@@ -113,22 +113,25 @@ function crcLatestRec(instrumentId) {
 
 function crcRowModel(d) {
   const rec = crcLatestRec(d.id);
-  const ps = (typeof planStatusMap !== 'undefined' ? planStatusMap[d.id] : null) || null;
-  const st = ps ? ps.status : null;
+  const workMap = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
+    ? calibrationWorkStatusMap : window.calibrationWorkStatusMap || {};
+  const mappedWork = workMap[d.id] || null;
+  const work = mappedWork && mappedWork.isActive !== false ? mappedWork : null;
+  const workHistory = mappedWork && mappedWork.isActive === false ? mappedWork : null;
+  const st = work ? work.status : null;
   const done = [
     !!st,                                                            // 1 วางแผน
-    ['planned', 'pending_cert', 'completed'].includes(st),           // 2 อนุมัติแผน
+    !!st && st !== 'awaiting_acknowledgement_pdf',                   // 2 มี PDF รับทราบ
     st === 'completed' || !!rec,                                     // 3 สอบเทียบ
     !!rec && (rec.status === 'approved' || !!rec.signed_file_path)   // 4 แนบสแกน
   ];
-  // rejected ไม่ใช่ "ขั้น" — เป็นธงเสริมข้าง ๆ (แผนถูกตีกลับ = ยังค้างอยู่ที่ขั้นอนุมัติแผน)
   let stage;
   if (done[3])            stage = ['✅', 'เสร็จสมบูรณ์',    '#e1f5ee', '#0f6e56', '#c4e8dc'];
   else if (done[2])       stage = ['📎', 'รอแนบสแกน',      '#fdf3dd', '#b45309', '#f3e0b6'];
   else if (done[1])       stage = ['🚚', 'รอผลสอบเทียบ',    '#e6f1fb', '#185fa5', '#cfe1f4'];
-  else if (done[0])       stage = ['🕒', 'รออนุมัติแผน',    '#faeeda', '#854f0b', '#f0dcb4'];
+  else if (done[0])       stage = ['🕒', 'รอ PDF รับทราบ',  '#faeeda', '#854f0b', '#f0dcb4'];
   else                    stage = ['📋', 'ยังไม่ได้วางแผน', '#eef0f3', '#5f6b7a', '#dfe4ea'];
-  return { d, rec, ps, planStatus: st, done, stage, rejected: st === 'rejected' };
+  return { d, rec, work, workHistory, planStatus: st, done, stage, rejected: false };
 }
 
 function crcMatchScope(m, scope) {
@@ -186,7 +189,7 @@ function setCalrecScope(v) {
 }
 
 function crcStepsHtml(m) {
-  const labels = ['วางแผน', 'อนุมัติแผน', 'สอบเทียบ', 'แนบสแกน'];
+  const labels = ['จัดชุดงาน', 'PDF รับทราบ', 'สอบเทียบ', 'แนบสแกน'];
   return '<span class="ax-steps">' + labels.map((lb, i) => {
     const ok = m.done[i];
     const cls = ok ? 'is-done' : (i > 0 && m.done[i - 1] ? 'is-now' : '');
@@ -202,9 +205,9 @@ function crcStepsHtml(m) {
 function crcActionHtml(m) {
   const id = Number(m.d.id) || 0;
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
-  if (!m.done[0])
+  if (!m.done[0] && canEdit)
     return `<button type="button" class="ax-crc-act is-primary" onclick="event.stopPropagation();goToPlanWithItem(${id})"><span>📋</span><span>วางแผน</span></button>`;
-  if (!m.done[2])
+  if (m.done[0] && !m.done[2])
     return `<button type="button" class="ax-crc-act" onclick="event.stopPropagation();goToPlanDetail(${id})"><span>📅</span><span>ดูแผน</span></button>`;
   if (!m.done[3] && m.rec && canEdit)
     return `<button type="button" class="ax-crc-act is-primary" onclick="event.stopPropagation();calRecComplete('${m.rec.id}')"><span>📎</span><span>แนบสแกน</span></button>`;
@@ -442,33 +445,15 @@ function autoFillPrevCert() {
   }
 }
 
-function goToPlanWithItem(instrumentId) {
-  const d = allData.find(x => x.id == instrumentId);
-  if (d && !planSelectedItems.some(s => s.id == d.id)) {
-    planSelectedItems.push(d);
-  }
+async function goToPlanWithItem(instrumentId) {
   showPage('plan');
+  if (typeof loadCalibrationWorkPage === 'function') await loadCalibrationWorkPage();
+  if (typeof cwOpenCreateWithInstrument === 'function') return cwOpenCreateWithInstrument(instrumentId);
+  return false;
 }
 
 function goToPlanDetail(instrumentId) {
+  if (typeof cwOpenBatchFromInstrument === 'function') return cwOpenBatchFromInstrument(instrumentId);
   showPage('plan');
-  setTimeout(() => {
-    switchPlanTab('list');
-    setTimeout(() => {
-      const ps = planStatusMap[instrumentId];
-      if (!ps) return;
-      const cards = document.querySelectorAll('#planListContainer > div');
-      cards.forEach(card => {
-        const titleEl = card.querySelector('span[style*="font-size:15px"]');
-        if (titleEl && titleEl.textContent.trim() === ps.title) {
-          card.style.transition = 'box-shadow .3s';
-          card.style.boxShadow = '0 0 0 3px #00897B';
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          const itemDiv = card.querySelector('[id^="items_"]');
-          if (itemDiv) itemDiv.style.display = 'block';
-          setTimeout(() => { card.style.boxShadow = ''; }, 3000);
-        }
-      });
-    }, 800);
-  }, 400);
+  return false;
 }

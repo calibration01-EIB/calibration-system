@@ -1,6 +1,19 @@
 // ===== 18-asset-out.js ===== ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท (FRM asset-out)
-// export .xlsx จาก template ด้วย JSZip (แพตเทิร์นเดียวกับ 15-plan-export.js)
-// ใช้ global helper จาก js/15-plan-export.js ตรง (global scope เดียวกัน — ไม่ทำซ้ำ): frmEscapeXml, frmDateSerial
+// export .xlsx จาก template ด้วย JSZip
+function assetOutEscapeXml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function assetOutDateSerial(iso) {
+  if (!iso) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+  if (!match) return null;
+  const utc = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Math.floor((utc - Date.UTC(1899, 11, 30)) / 86400000);
+}
+
 let assetOutTemplateBufPromise = null;
 function assetOutGetTemplate() {
   if (!assetOutTemplateBufPromise) {
@@ -11,7 +24,7 @@ function assetOutGetTemplate() {
   return assetOutTemplateBufPromise;
 }
 
-// แปลงคอลัมน์ตัวอักษร → เลข (ผกผันกับ frmColLetter ใน 15-plan-export.js) — ใช้จัดลำดับตอนแทรกเซลล์ใหม่
+// แปลงคอลัมน์ตัวอักษร → เลข — ใช้จัดลำดับตอนแทรกเซลล์ใหม่
 function aoColIndex(letters) {
   let n = 0;
   for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
@@ -43,7 +56,7 @@ function aoInsertCell(sheet, addr, cellXml) {
 // template (Task 2 SaveAs) เพราะเป็นเซลล์ว่างไม่มี border/รูปแบบเด่น (s="6" ล้วน ไม่ใช่ merge anchor)
 // → ต้องแทรกใหม่ ไม่ใช่แค่แทนที่ ไม่งั้นค่าจะเงียบหายไปโดยไม่มี error
 function aoSetCellText(sheet, addr, text) {
-  const esc = frmEscapeXml(text);
+  const esc = assetOutEscapeXml(text);
   const re = new RegExp('<c r="' + addr + '"([^>]*?)(?:/>|>[\\s\\S]*?</c>)');
   if (re.test(sheet)) {
     return sheet.replace(re, (m, attrs) => {
@@ -56,7 +69,7 @@ function aoSetCellText(sheet, addr, text) {
 }
 
 function aoSetCellDate(sheet, addr, iso) {
-  const serial = frmDateSerial(iso);
+  const serial = assetOutDateSerial(iso);
   if (serial == null) return sheet;
   const re = new RegExp('<c r="' + addr + '"([^>]*?)(?:/>|>[\\s\\S]*?</c>)');
   if (re.test(sheet)) {
@@ -120,9 +133,9 @@ async function openAssetOutModal(instrumentId) {
     </div>
     <div class="modal-body">
       <div class="meta-row">
-        <div class="meta-item"><label>เครื่องมือ</label><span>${frmEscapeXml(data.instrument_name || '')}</span></div>
-        <div class="meta-item"><label>รหัสทรัพย์สิน</label><span>${frmEscapeXml(data.asset_no || '')}</span></div>
-        <div class="meta-item"><label>ID Code</label><span>${frmEscapeXml(data.id_code || '')}</span></div>
+        <div class="meta-item"><label>เครื่องมือ</label><span>${assetOutEscapeXml(data.instrument_name || '')}</span></div>
+        <div class="meta-item"><label>รหัสทรัพย์สิน</label><span>${assetOutEscapeXml(data.asset_no || '')}</span></div>
+        <div class="meta-item"><label>ID Code</label><span>${assetOutEscapeXml(data.id_code || '')}</span></div>
       </div>
       <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
         <div class="form-group"><label>วันที่</label><input id="ao_date" type="date" value="${today}"></div>
@@ -145,7 +158,7 @@ async function openAssetOutModal(instrumentId) {
         </div>
       </div>
       <div class="ao-hint" style="margin-top:10px;color:var(--text3);font-size:13px">
-        Cost Center: ${frmEscapeXml(data.cost_center || '(ยังไม่ตั้ง)')} · หน่วยงาน: ${frmEscapeXml(dept)}
+        Cost Center: ${assetOutEscapeXml(data.cost_center || '(ยังไม่ตั้ง)')} · หน่วยงาน: ${assetOutEscapeXml(dept)}
       </div>
     </div>
     <div class="modal-footer">
@@ -226,8 +239,8 @@ async function openAssetOutHistory(instrumentId) {
   const { data, error } = await sb.from('asset_out_permits')
     .select('*').eq('instrument_id', instrumentId).order('created_at', { ascending: false });
   const rows = (data || []).map(p => `<tr>
-    <td>${(p.permit_date || '-')}</td><td>${frmEscapeXml(p.vendor_name || '-')}</td>
-    <td>${frmEscapeXml(p.created_by || '-')}</td>
+    <td>${(p.permit_date || '-')}</td><td>${assetOutEscapeXml(p.vendor_name || '-')}</td>
+    <td>${assetOutEscapeXml(p.created_by || '-')}</td>
     <td><button onclick="assetOutReprint(${p.id})">พิมพ์ซ้ำ</button></td></tr>`).join('');
   document.getElementById('assetOutBody').innerHTML = `
     <h3>ประวัติใบนำทรัพย์สินออก</h3>

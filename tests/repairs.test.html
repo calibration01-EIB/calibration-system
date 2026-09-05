@@ -31,13 +31,19 @@ t('computeTopRepairs เรียงตามจำนวน ไม่นับ 
   eq(top[0].instrument_id, 2); eq(top[0].count, 2); eq(top[0].totalCost, 1200);
   eq(top[1].id_code, 'A-01'); eq(top[1].totalCost, 500);
 });
-t('computeRecalWaiting — สอบแล้ว/ลงแผนแล้ว ไม่ขึ้นเตือน', () => {
+t('computeRecalWaiting — unified work map suppresses already-batched repaired instruments', () => {
   // r1: cal_date 10 ก.ค. > completed 5 ก.ค. → ไม่เตือน · r2: ยังไม่สอบ ไม่มีแผน → เตือน
   eq(computeRecalWaiting(orders, rows, {}).map(o => o.id), ['r2']);
-  // มีแผน planned_date หลังปิดงาน → หยุดเตือน
-  eq(computeRecalWaiting(orders, rows, { 2: { planned_date: '2026-07-01' } }).length, 0);
+  // รูปร่างจริงจาก cwBuildCalibrationWorkStatusMap: plannedDate หลังปิดงาน → หยุดเตือน
+  eq(computeRecalWaiting(orders, rows, { 2: {
+    batchId: '00000000-0000-0000-0000-000000000702', batchNo: 'CW-702', title: 'Recalibration',
+    plannedDate: '2026-07-01', status: 'in_progress'
+  } }).length, 0);
   // แผนเก่ากว่าวันปิดงาน → ยังเตือน
-  eq(computeRecalWaiting(orders, rows, { 2: { planned_date: '2026-05-01' } }).map(o => o.id), ['r2']);
+  eq(computeRecalWaiting(orders, rows, { 2: {
+    batchId: '00000000-0000-0000-0000-000000000701', batchNo: 'CW-701', title: 'Old plan',
+    plannedDate: '2026-05-01', status: 'completed'
+  } }).map(o => o.id), ['r2']);
 });
 document.getElementById('out').textContent = results.join('\n');
 document.title = results.some(r => r.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
