@@ -316,36 +316,52 @@ function text(url) {
     eq(filteredData.map(row => row.id), [801], 'type filter must not be intersected with a stale Dashboard category');
   });
 
-  t('selecting Balance clears the Dashboard category and rerenders category pills', () => {
+  t('selecting the canonical Balance pill clears the Dashboard category and filters matching rows', () => {
     allData = [
       { id: 811, id_code: 'BAL-811', instrument_name: 'Balance', instrument_type: 'Balance', department: 'WRM1', days_left: 60 },
       { id: 812, id_code: 'DIM-812', instrument_name: 'Dimension', instrument_type: 'Dimension', department: 'WRM1', days_left: 60 }
     ];
     activeCategory = 'Dimension';
     const strip = document.getElementById('listCategoryStrip');
-    strip.innerHTML = 'stale pills';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    renderListCategoryPills();
+    const balancePill = [...strip.querySelectorAll('.reg-pill')].find(pill =>
+      pill.getAttribute('onclick') === "setListCategory('เครื่องชั่ง (Balance)')");
 
-    setListCategory('Balance');
+    ok(balancePill, 'canonical Balance pill must render');
+    setListCategory('เครื่องชั่ง (Balance)');
 
-    eq(document.getElementById('typeFilter').value, 'Balance', 'selected type');
+    eq(document.getElementById('typeFilter').value, 'เครื่องชั่ง (Balance)', 'selected type');
     eq(activeCategory, 'all', 'Dashboard category must reset');
-    has(strip.innerHTML, 'Balance', 'category pills rerender');
+    eq(filteredData.map(row => row.id), [811], 'canonical Balance pill must filter matching rows');
+    const activePills = [...strip.querySelectorAll('.reg-pill.active')];
+    eq(activePills.map(pill => pill.getAttribute('onclick')), ["setListCategory('เครื่องชั่ง (Balance)')"],
+      'canonical Balance pill must be the sole active pill');
   });
 
-  t('clearing the list category clears Dashboard category and rerenders category pills', () => {
+  t('clearing the list category activates only the all pill and restores matching rows', () => {
     allData = [
       { id: 821, id_code: 'BAL-821', instrument_name: 'Balance', instrument_type: 'Balance', department: 'WRM1', days_left: 60 },
       { id: 822, id_code: 'DIM-822', instrument_name: 'Dimension', instrument_type: 'Dimension', department: 'WRM1', days_left: 60 }
     ];
     activeCategory = 'Dimension';
     const strip = document.getElementById('listCategoryStrip');
-    strip.innerHTML = 'stale pills';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = 'เครื่องชั่ง (Balance)';
+    renderListCategoryPills();
+    const allPill = [...strip.querySelectorAll('.reg-pill')].find(pill =>
+      pill.getAttribute('onclick') === "setListCategory('')");
 
+    ok(allPill, 'all category pill must render');
     setListCategory('');
 
     eq(document.getElementById('typeFilter').value, '', 'cleared type');
     eq(activeCategory, 'all', 'Dashboard category must reset');
-    has(strip.innerHTML, 'Balance', 'category pills rerender');
+    eq(filteredData.map(row => row.id), [821, 822], 'clearing the category must restore matching rows');
+    const activePills = [...strip.querySelectorAll('.reg-pill.active')];
+    eq(activePills.map(pill => pill.getAttribute('onclick')), ["setListCategory('')"],
+      'all category pill must be the sole active pill after clearing');
   });
 
   document.getElementById('out').textContent = results.join('\n');
