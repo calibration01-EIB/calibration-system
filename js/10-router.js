@@ -232,7 +232,7 @@ function filterByStatus(status) {
       const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : row.instrument_type;
       if (type && displayType !== type) return false;
       if (unit && row.department !== unit) return false;
-      if (typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all') {
+      if (!type && typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all') {
         const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(row) : row.instrument_type;
         if (category !== activeCategory) return false;
       }
@@ -250,6 +250,7 @@ function filterByStatus(status) {
     currentPage = keepPage ? Math.min(Math.max(previousPage, 1), totalPages) : 1;
     if (typeof updateStats === 'function') updateStats();
     if (typeof renderTable === 'function') renderTable();
+    if (typeof renderListCategoryPills === 'function') renderListCategoryPills();
   }
 
   function restoreListState(state) {

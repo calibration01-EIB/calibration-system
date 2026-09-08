@@ -151,9 +151,9 @@ function text(url) {
   window.updatePaginationUI = () => {};
   window.renderMobileCards = () => {};
   window.dashboardWorkIsActive = () => false;
-  eval(LIST_JS);
   eval(DASHBOARD_JS);
   eval(ROUTER_JS);
+  eval(LIST_JS);
 
   t('renderer สร้าง native Detail button โดยไม่มี nested interactive card', () => {
     const html = listSpecCardHtml({ id: 7, id_code: 'PFP3BB03-WI01', cert_no: 'CAL-7', due_date: '2027-08-24', days_left: 40, instrument_name: 'Electronic Balance' });
