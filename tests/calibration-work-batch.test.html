@@ -76,16 +76,20 @@ function text(url) {
     lacks(routerSource, 'calwork:', 'separate route metadata removed');
   });
 
-  t('defines exactly four primary plan sections', () => {
+  t('defines five primary plan sections including results', () => {
     const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
     const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs button[data-cw-primary]')];
-    eq(tabs.length, 4, 'primary plan tab count');
+    eq(tabs.length, 5, 'primary plan tab count');
     ok(tabs.every(tab => tab.tagName === 'BUTTON'), 'primary plan tabs must be buttons');
     ok(!parsed.getElementById('cwPrimaryTabs').hasAttribute('role'), 'primary navigation must not claim an incomplete tablist pattern');
     ok(tabs.every(tab => !tab.hasAttribute('role')), 'primary navigation buttons must not claim tab roles');
     eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
-      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
+      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'],
+      ['history', 'ประวัติ'], ['results', 'ผลและใบรับรอง']
     ]), 'primary plan tab keys and labels');
+    ok(parsed.getElementById('cwWorkSurface'), 'work surface exists');
+    ok(parsed.getElementById('cwResultsSurface'), 'results surface exists');
+    ok(!parsed.getElementById('pageCalrecs'), 'standalone results page removed');
     has(cssSource, '.cw-primary-tabs [data-cw-primary]', 'primary navigation base styles follow button semantics');
     has(cssSource, '[data-cw-primary][aria-pressed="true"]', 'pressed primary section has selected styling');
     has(cssSource, '[data-cw-primary]:focus-visible', 'primary buttons retain designed focus styling');

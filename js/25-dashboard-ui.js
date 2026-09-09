@@ -10,7 +10,7 @@ const DASH_TODO = [
     go:"filterByStatus('overdue')" },
   { src:'scanNotifCount',  emoji:'📎', bg:'#fdf3dd', color:'#b45309',
     title:'สอบเสร็จแล้ว รอแนบสแกน',      desc:'ยังไม่ได้แนบไฟล์ใบรับรอง',
-    go:"showPage('calrecs')" },
+    go:"openCalibrationResults()" },
   { src:'navRepairBadge',  emoji:'🔧', bg:'#fde8e8', color:'#b91c1c',
     title:'งานซ่อมค้าง',                 desc:'รอตรวจรับ / รอปิดงาน',
     go:"showPage('repairs')" },

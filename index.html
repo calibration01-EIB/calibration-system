@@ -2585,7 +2585,6 @@ body.app-mode textarea:focus {
         <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none"><span class="nav-icon">👥</span> จัดการผู้ใช้</div>
         <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none"><span class="nav-icon">📋</span> Audit Log</div>
         <div class="nav-item" onclick="showPage('cert')" id="nav-cert"><span class="nav-icon">🏷️</span> ออก Cert</div>
-        <div class="nav-item" onclick="showPage('calrecs')" id="nav-calrecs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">📋</span> ติดตามผลสอบเทียบ</span><span id="navCalrecsBadge" style="display:none;background:#f0a500;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('repairs')" id="nav-repairs" style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:10px"><span class="nav-icon">🔧</span> งานซ่อม</span><span id="navRepairBadge" style="display:none;background:#E53935;color:white;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;min-width:18px;text-align:center">0</span></div>
         <div class="nav-item" onclick="showPage('weights')" id="nav-weights"><span class="nav-icon">📜</span> ใบ Cert Reference</div>
       </nav>
@@ -3043,10 +3042,70 @@ body.app-mode textarea:focus {
           <button type="button" data-cw-primary="batches" onclick="cwSetPrimaryTab('batches')" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button>
           <button type="button" data-cw-primary="waiting" onclick="cwSetPrimaryTab('waiting')" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button>
           <button type="button" data-cw-primary="history" onclick="cwSetPrimaryTab('history')" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button>
+          <button type="button" data-cw-primary="results" onclick="cwSetPrimaryTab('results')" onkeydown="cwHandlePrimaryTabKey(event)">ผลและใบรับรอง</button>
         </div>
-        <div id="cwNotifications" class="cw-notifications" aria-label="การแจ้งเตือนชุดงาน" aria-live="polite"></div>
-        <nav id="cwTabs" class="cw-tabs" aria-label="ตัวกรองสถานะชุดงาน"></nav>
-        <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div><div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div><div id="cwBatchDetail" class="cw-batch-detail" hidden></div><div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
+        <div id="cwWorkSurface">
+          <div id="cwNotifications" class="cw-notifications" aria-label="การแจ้งเตือนชุดงาน" aria-live="polite"></div>
+          <nav id="cwTabs" class="cw-tabs" aria-label="ตัวกรองสถานะชุดงาน"></nav>
+          <div id="cwMetrics" class="cw-metrics" aria-label="ข้อมูลสรุปชุดงาน"></div><div id="cwBatchList" class="cw-batch-list" aria-live="polite"></div><div id="cwBatchDetail" class="cw-batch-detail" hidden></div><div id="cwActionError" class="cw-action-error" role="alert" hidden></div>
+        </div>
+        <section id="cwResultsSurface" hidden aria-labelledby="cwResultsTitle">
+          <div class="ax-page-head">
+            <div><h2 id="cwResultsTitle">ผลและใบรับรอง</h2><p id="calrecCount">–</p></div>
+            <div class="ax-head-actions">
+              <button type="button" class="ax-ghost-btn" onclick="loadCalrecsPage()"><span>↻</span><span>รีเฟรช</span></button>
+            </div>
+          </div>
+
+          <div class="ax-crc-tiles" id="calrecTiles"></div>
+
+          <div class="ax-filter-card">
+            <div class="ax-crc-head">
+              <div class="dsh-sect">
+                <h2 id="calrecScopeTitle">เครื่องมือที่ครบกำหนดภายใน 1 เดือน</h2>
+                <p id="calrecScopeMeta">–</p>
+              </div>
+              <label class="ax-search ax-search--sm">
+                <span aria-hidden="true">🔍</span>
+                <input id="calrecSearch" type="search" placeholder="ค้นหาชื่อเครื่องมือ, ID.No., ผู้ดูแล" oninput="filterCalrecs()">
+              </label>
+            </div>
+            <div class="ax-chips" id="calrecChips"></div>
+            <!-- ขอบเขตเลือกผ่านชิปด้านบน — select นี้เก็บสถานะไว้ให้ filterCalrecs() อ่าน -->
+            <select id="calrecStatus" onchange="filterCalrecs()" class="ax-hidden-field" tabindex="-1" aria-hidden="true">
+              <option value="due30">ครบกำหนดใน 30 วัน</option>
+              <option value="noplan">ยังไม่ได้วางแผน</option>
+              <option value="running">อยู่ระหว่างดำเนินการ</option>
+              <option value="scan">รอแนบสแกน</option>
+              <option value="done">เสร็จสมบูรณ์</option>
+            </select>
+          </div>
+
+          <div class="ax-tablecard">
+            <div class="table-wrap">
+              <table class="ax-table ax-table-crc">
+                <thead>
+                  <tr>
+                    <th class="c-no">ลำดับ</th>
+                    <th class="c-name">เครื่องมือ<span>(Instrument · ID.No.)</span></th>
+                    <th class="c-dept">หน่วยงาน</th>
+                    <th class="c-due">ครบกำหนด<span>(Due date)</span></th>
+                    <th class="c-by">ผู้ให้บริการ<span>(Cal. by)</span></th>
+                    <th class="c-prog">ความคืบหน้าการติดตาม<span>(Follow-up progress)</span></th>
+                    <th class="c-rec">ผลที่บันทึก<span>(Recorded result)</span></th>
+                    <th class="c-act">ดำเนินการ<span>(Action)</span></th>
+                  </tr>
+                </thead>
+                <tbody id="calrecBody"></tbody>
+              </table>
+            </div>
+            <div class="ax-empty ax-empty--inline" id="calrecEmpty" style="display:none">
+              <span class="ax-empty-ic">🔍</span>
+              <b>ไม่พบรายการที่ตรงกับตัวกรอง</b>
+              <span>ลองล้างคำค้นหาหรือเลือกสถานะอื่น</span>
+            </div>
+          </div>
+        </section>
         <div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwCreateSteps" class="cw-create-steps" aria-label="ขั้นตอนการสร้าง"></div><div id="cwCreateError" class="cw-create-error" role="alert" hidden></div><div id="cwCreateBody" class="cw-create-body"></div><div id="cwCreateFooter" class="cw-create-footer"></div></div></div>
         <div class="modal-overlay" id="cwDocumentDialog" aria-hidden="true"><div class="modal-box cw-document-dialog" role="dialog" aria-modal="true" aria-labelledby="cwDocumentDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwDocumentDialogTitle">แนบหลักฐาน PDF</h2><button type="button" id="cwDocumentClose" onclick="cwCloseDocumentUpload()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwDocumentError" class="cw-document-error" role="alert" hidden></div><div id="cwDocumentBody" class="cw-document-body"></div><div id="cwDocumentFooter" class="cw-document-footer"></div></div></div>
         <div class="modal-overlay" id="cwItemResultDialog" aria-hidden="true"><div class="modal-box cw-item-result-dialog" role="dialog" aria-modal="true" aria-labelledby="cwItemResultDialogTitle" tabindex="-1"><div class="modal-header"><h2 id="cwItemResultDialogTitle">บันทึกผลสอบเทียบ</h2><button type="button" id="cwItemResultClose" onclick="cwCloseItemResult()" aria-label="ปิดหน้าต่าง">×</button></div><div id="cwItemResultError" class="cw-item-result-error" role="alert" hidden></div><div id="cwItemResultBody" class="cw-item-result-body"></div><div id="cwItemResultFooter" class="cw-item-result-footer"></div></div></div>
@@ -3203,68 +3262,6 @@ body.app-mode textarea:focus {
               <span id="certHistPageLabel"></span>
               <button id="certHistNext" type="button" class="ax-ghost-btn" onclick="certHistGoPage(1)">ถัดไป ›</button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="pageCalrecs" class="page-content" style="display:none">
-
-        <div class="ax-page-head">
-          <div>
-            <h1>ติดตามผลสอบเทียบ</h1>
-            <p id="calrecCount">–</p>
-          </div>
-          <div class="ax-head-actions">
-            <button type="button" class="ax-ghost-btn" onclick="loadCalrecsPage()"><span>↻</span><span>รีเฟรช</span></button>
-          </div>
-        </div>
-
-        <div class="ax-crc-tiles" id="calrecTiles"></div>
-
-        <div class="ax-filter-card">
-          <div class="ax-crc-head">
-            <div class="dsh-sect">
-              <h2 id="calrecScopeTitle">เครื่องมือที่ครบกำหนดภายใน 1 เดือน</h2>
-              <p id="calrecScopeMeta">–</p>
-            </div>
-            <label class="ax-search ax-search--sm">
-              <span aria-hidden="true">🔍</span>
-              <input id="calrecSearch" type="search" placeholder="ค้นหาชื่อเครื่องมือ, ID.No., ผู้ดูแล" oninput="filterCalrecs()">
-            </label>
-          </div>
-          <div class="ax-chips" id="calrecChips"></div>
-          <!-- ขอบเขตเลือกผ่านชิปด้านบน — select นี้เก็บสถานะไว้ให้ filterCalrecs() อ่าน -->
-          <select id="calrecStatus" onchange="filterCalrecs()" class="ax-hidden-field" tabindex="-1" aria-hidden="true">
-            <option value="due30">ครบกำหนดใน 30 วัน</option>
-            <option value="noplan">ยังไม่ได้วางแผน</option>
-            <option value="running">อยู่ระหว่างดำเนินการ</option>
-            <option value="scan">รอแนบสแกน</option>
-            <option value="done">เสร็จสมบูรณ์</option>
-          </select>
-        </div>
-
-        <div class="ax-tablecard">
-          <div class="table-wrap">
-            <table class="ax-table ax-table-crc">
-              <thead>
-                <tr>
-                  <th class="c-no">ลำดับ</th>
-                  <th class="c-name">เครื่องมือ<span>(Instrument · ID.No.)</span></th>
-                  <th class="c-dept">หน่วยงาน</th>
-                  <th class="c-due">ครบกำหนด<span>(Due date)</span></th>
-                  <th class="c-by">ผู้ให้บริการ<span>(Cal. by)</span></th>
-                  <th class="c-prog">ความคืบหน้าการติดตาม<span>(Follow-up progress)</span></th>
-                  <th class="c-rec">ผลที่บันทึก<span>(Recorded result)</span></th>
-                  <th class="c-act">ดำเนินการ<span>(Action)</span></th>
-                </tr>
-              </thead>
-              <tbody id="calrecBody"></tbody>
-            </table>
-          </div>
-          <div class="ax-empty ax-empty--inline" id="calrecEmpty" style="display:none">
-            <span class="ax-empty-ic">🔍</span>
-            <b>ไม่พบรายการที่ตรงกับตัวกรอง</b>
-            <span>ลองล้างคำค้นหาหรือเลือกสถานะอื่น</span>
           </div>
         </div>
       </div>
@@ -3804,7 +3801,6 @@ body.app-mode textarea:focus {
   <button type="button" class="mobile-nav-item" data-page="home" onclick="showPage('home')"><span>⌂</span><span>หน้าแรก</span></button>
   <button type="button" class="mobile-nav-item" data-page="list" onclick="showPage('list')"><span>📑</span><span>รายการ</span></button>
   <button type="button" class="mobile-nav-item" data-page="plan" onclick="showPage('plan')"><span>📅</span><span>แผนสอบเทียบ</span></button>
-  <button type="button" class="mobile-nav-item" data-page="calrecs" onclick="showPage('calrecs')"><span>📋</span><span>ติดตาม</span></button>
   <button type="button" class="mobile-nav-item" id="axMobileMoreBtn" onclick="toggleAxMobileMore(event)" aria-haspopup="dialog" aria-expanded="false"><span>•••</span><span>เพิ่มเติม</span></button>
 </div>
 
