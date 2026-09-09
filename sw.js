@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v163';
+const CACHE_NAME = 'calibration-app-v164';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -19,7 +19,6 @@ const APP_SHELL = [
   './assets/home-hero-calibration-lab-v2.webp',
   './assets/tiles/01_dashboard.png',
   './assets/tiles/02_instrument_list.png',
-  './assets/tiles/03_calibration_tracking.png',
   './assets/tiles/04_cert_number.png',
   './assets/tiles/05_cert_reference.png',
   './assets/tiles/06_calibration_planning.png',
