@@ -73,14 +73,18 @@ function renderScanNotifDropdown() {
         <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${idc} &nbsp;·&nbsp; สอบ ${fmt(r.cal_date)} &nbsp;·&nbsp; ${escapeHtmlText(r.calibrated_by || '–')}</div>
       </div>`;
     }).join('')}
-    <div style="padding:10px 16px;text-align:center;font-size:12px;color:var(--accent);cursor:pointer;font-weight:600" onclick="scanNotifGo()">ไปหน้าติดตามผลสอบเทียบ${recs.length > 10 ? ' (ทั้งหมด ' + recs.length + ' ใบ)' : ''} →</div>
+    <div style="padding:10px 16px;text-align:center;font-size:12px;color:var(--accent);cursor:pointer;font-weight:600" onclick="scanNotifGo()">ไปที่ผลและใบรับรอง…${recs.length > 10 ? ' (ทั้งหมด ' + recs.length + ' ใบ)' : ''} →</div>
   `;
 }
 
-function scanNotifGo() {
+function closeScanNotif() {
   const dd = document.getElementById('scanNotifDropdown');
   if (dd) dd.style.display = 'none';
-  showPage('calrecs');
+}
+
+function scanNotifGo() {
+  closeScanNotif();
+  if (typeof openCalibrationResults === 'function') openCalibrationResults('scan');
 }
 
 function renderNotifDropdown() {

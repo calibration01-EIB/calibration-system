@@ -10,6 +10,7 @@
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   const BATCH_DOCUMENT_KINDS = new Set(['acknowledgement', 'closure']);
   const ITEM_DOCUMENT_KINDS = new Set(['certificate', 'overdue']);
+  const cwPlanBadgeCounts = { work: 0, scan: 0 };
 
   const CW_STATUS = Object.freeze({
     draft: Object.freeze({ label: 'ร่าง', color: '#64748B' }),
@@ -678,18 +679,27 @@
       + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
   }
 
+  function updatePlanNavBadge(component, count) {
+    if (!Object.prototype.hasOwnProperty.call(cwPlanBadgeCounts, component)) {
+      return cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
+    }
+    cwPlanBadgeCounts[component] = Math.max(0, Number(count) || 0);
+    const total = cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
+    const badge = document.getElementById('navPlanBadge');
+    if (badge) {
+      badge.textContent = String(total);
+      badge.style.display = total > 0 ? '' : 'none';
+    }
+    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
+    return total;
+  }
+
   function cwPublishPlanBadge(model) {
     const count = (model && model.batches || []).filter(batch => {
       const status = cwBatchStatus(batch);
       return status !== 'completed' && status !== 'cancelled';
     }).length;
-    const badge = document.getElementById('navPlanBadge');
-    if (badge) {
-      badge.textContent = String(count);
-      badge.style.display = count > 0 ? '' : 'none';
-    }
-    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
-    return count;
+    return updatePlanNavBadge('work', count);
   }
 
   async function cwLoadNotifications(sourceOrModel, todayISO) {
@@ -2620,6 +2630,7 @@
   global.cwDocumentPath = cwDocumentPath;
   global.cwBuildCalibrationWorkStatusMap = cwBuildCalibrationWorkStatusMap;
   global.loadCalibrationWorkStatusMap = loadCalibrationWorkStatusMap;
+  global.updatePlanNavBadge = updatePlanNavBadge;
   global.cwLoadNotifications = cwLoadNotifications;
   global.cwOpenNotification = cwOpenNotification;
   global.cwOpenBatchFromInstrument = cwOpenBatchFromInstrument;

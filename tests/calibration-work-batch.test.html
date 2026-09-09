@@ -35,9 +35,9 @@ function text(url) {
 }
 
 (async () => {
-  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, notificationSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
   try {
-    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, notificationSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
@@ -49,6 +49,7 @@ function text(url) {
       text('../js/06-plan.js'),
       text('../js/22-users.js'),
       text('../js/23-cal-records.js'),
+      text('../js/07-notifications.js'),
       text('../js/24-home.js'),
       text('../js/26-list-ui.js'),
       text('../js/25-dashboard-ui.js'),
@@ -401,7 +402,7 @@ function text(url) {
     has(dashboardSource, 'canManagePlan', 'mobile dashboard gates plan creation by role');
     has(listUiSource, '!activeWork && canEdit', 'register list gates plan creation by role');
     has(recordsSource, '!m.done[0] && canEdit', 'calibration records gate plan creation by role');
-    has(dashboardUiSource, 'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน', 'dashboard pending-work copy matches PDF gates');
+    has(dashboardUiSource, 'ติดตามชุดงาน ผลสอบเทียบ และใบรับรองที่รอแนบสแกน', 'dashboard pending-work copy matches combined badge');
     has(workSource, "document.getElementById('navPlanBadge')", 'work integration publishes the plan badge');
     has(repairsSource, 'const canPlan = typeof currentUser', 'repair widget gates plan creation by role');
     lacks(repairsSource, 'คลิกรหัสเพื่อส่งเข้าแผน', 'repair widget removes misleading read-only action copy');
@@ -768,6 +769,22 @@ function text(url) {
 
   t('signed-scan refresh requires a rendered results surface', () => {
     has(recordsSource, 'surface.offsetParent !== null', 'signed-scan refresh visibility guard');
+  });
+
+  t('plan badge combines work and pending scan counts without overwrite', () => {
+    document.body.insertAdjacentHTML('beforeend', '<span id="navPlanBadge" style="display:none"></span>');
+    eq(updatePlanNavBadge('work', 3), 3, 'work component');
+    eq(updatePlanNavBadge('scan', 2), 5, 'combined count');
+    eq(document.getElementById('navPlanBadge').textContent, '5', 'combined badge text');
+    eq(updatePlanNavBadge('work', 0), 2, 'scan component remains');
+    document.getElementById('navPlanBadge').remove();
+    updatePlanNavBadge('scan', 0);
+  });
+
+  t('scan notification opens result tab with scan filter', () => {
+    has(notificationSource, "openCalibrationResults('scan')", 'scan notification destination');
+    lacks(notificationSource, "showPage('calrecs')", 'legacy notification destination');
+    lacks(recordsSource, 'navCalrecsBadge', 'retired standalone badge');
   });
 
   t('keeps primary and inner state aligned after waiting/history refreshes', () => {

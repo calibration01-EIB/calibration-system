@@ -52,8 +52,7 @@ async function renderPendingCertWidget() {
     recs = data || [];
   } catch (e) { recs = []; }
   window._scanNotifRecs = recs;
-  const navBadge = document.getElementById('navCalrecsBadge');
-  if (navBadge) { navBadge.textContent = recs.length; navBadge.style.display = recs.length ? 'inline-block' : 'none'; }
+  if (typeof updatePlanNavBadge === 'function') updatePlanNavBadge('scan', recs.length);
   const badge = document.getElementById('scanNotifBadge');
   const countEl = document.getElementById('scanNotifCount');
   if (badge) badge.style.display = recs.length ? 'flex' : 'none';
