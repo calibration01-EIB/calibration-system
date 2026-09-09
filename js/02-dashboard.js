@@ -567,6 +567,7 @@ function renderListCategoryPills() {
 function setListCategory(type) {
   const sel = document.getElementById('typeFilter');
   if (sel) sel.value = type;
+  if (typeof activeCategory !== 'undefined') activeCategory = 'all';
   filterData();
 }
 
@@ -737,7 +738,7 @@ function filterData() {
     if (type && displayType !== type) return false;
     if (unit && d.department !== unit) return false;
     // กรองตาม activeCategory (การ์ดประเภทเครื่องมือ)
-    if (activeCategory && activeCategory !== 'all') {
+    if (!type && activeCategory && activeCategory !== 'all') {
       const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(d) : d.instrument_type;
       if (category !== activeCategory) return false;
     }

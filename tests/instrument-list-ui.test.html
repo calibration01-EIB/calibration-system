@@ -30,11 +30,11 @@ function text(url) {
 }
 
 (async () => {
-  let INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, CSS;
+  let INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, ROUTER_JS, CSS;
   try {
-    [INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, CSS] = await Promise.all([
+    [INDEX, REPORTS_JS, INSTRUMENTS_JS, LIST_JS, DASHBOARD_JS, ROUTER_JS, CSS] = await Promise.all([
       text('../index.html'), text('../js/04-reports.js'),
-      text('../js/03-instruments.js'), text('../js/26-list-ui.js'), text('../js/02-dashboard.js'), text('../theme-aqua.css')
+      text('../js/03-instruments.js'), text('../js/26-list-ui.js'), text('../js/02-dashboard.js'), text('../js/10-router.js'), text('../theme-aqua.css')
     ]);
   } catch (e) {
     document.getElementById('out').textContent = 'FAIL โหลดไฟล์ต้นทางไม่ได้ — ' + e.message;
@@ -126,14 +126,18 @@ function text(url) {
   const fixture = document.createElement('section');
   fixture.innerHTML = `
     <input id="searchInput" value="">
-    <select id="typeFilter"><option value="">ทุกประเภท</option><option value="Balance">Balance</option></select>
+    <select id="typeFilter"><option value="">ทุกประเภท</option><option value="Balance">Balance</option><option value="เครื่องชั่ง (Balance)">Balance</option></select>
     <select id="unitFilter"><option value="">ทุกหน่วยงาน</option><option value="WRM1">WRM1</option></select>
     <select id="monthFilter"><option value="">ทุกเดือน</option><option value="8">สิงหาคม</option></select>
     <select id="statusFilter"><option value="">ทุกสถานะ</option><option value="warning">ใกล้ครบ</option></select>
+    <select id="pageSizeSelect"><option value="20" selected>20</option></select>
     <button id="listAdvancedToggle" aria-expanded="false"><span>เปิดหมวดและสถานะ</span></button>
     <button id="listResetButton" hidden></button>
     <div id="listFilterSummary" hidden></div>
-    <div id="listAdvancedPanel" hidden></div>`;
+    <div id="listAdvancedPanel" hidden></div>
+    <div id="listCategoryStrip"></div>
+    <span id="statTotal"></span><span id="statOk"></span><span id="statOverdue"></span><span id="statWarning"></span>
+    <table><tbody id="dataTable"></tbody></table>`;
   document.body.appendChild(fixture);
   window.escapeHtmlText = value => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   window.escapeHtmlAttr = window.escapeHtmlText;
@@ -143,8 +147,13 @@ function text(url) {
   window.instPhotoFolder = d => `photos_${d.id}_${d.id_code}`;
   window.INST_PHOTO_MAX = 5;
   window.instPhotoArrange = items => ({ bySlot: { overview: items.find(item => /^overview_/.test(item.name)) } });
-  eval(LIST_JS);
+  window.getSession = () => null;
+  window.updatePaginationUI = () => {};
+  window.renderMobileCards = () => {};
+  window.dashboardWorkIsActive = () => false;
   eval(DASHBOARD_JS);
+  eval(ROUTER_JS);
+  eval(LIST_JS);
 
   t('renderer สร้าง native Detail button โดยไม่มี nested interactive card', () => {
     const html = listSpecCardHtml({ id: 7, id_code: 'PFP3BB03-WI01', cert_no: 'CAL-7', due_date: '2027-08-24', days_left: 40, instrument_name: 'Electronic Balance' });
@@ -292,6 +301,67 @@ function text(url) {
     document.getElementById('searchInput').value = 'balance';
     syncListFilterUi();
     ok(!reset.hidden, 'มีคำค้นแล้ว reset ต้องแสดง');
+  });
+
+  t('router filter keeps a visible Balance type when Dashboard has a stale category', () => {
+    allData = [
+      { id: 801, id_code: 'BAL-801', instrument_name: 'Visible Balance', instrument_type: 'Balance', department: 'WRM1', days_left: 60 },
+      { id: 802, id_code: 'DIM-802', instrument_name: 'Stale Dashboard category', instrument_type: 'Dimension', department: 'WRM1', days_left: 60 }
+    ];
+    activeCategory = 'Dimension';
+    document.getElementById('typeFilter').value = 'เครื่องชั่ง (Balance)';
+
+    filterData();
+
+    eq(filteredData.map(row => row.id), [801], 'type filter must not be intersected with a stale Dashboard category');
+  });
+
+  t('selecting the canonical Balance pill clears the Dashboard category and filters matching rows', () => {
+    allData = [
+      { id: 811, id_code: 'BAL-811', instrument_name: 'Balance', instrument_type: 'Balance', department: 'WRM1', days_left: 60 },
+      { id: 812, id_code: 'DIM-812', instrument_name: 'Dimension', instrument_type: 'Dimension', department: 'WRM1', days_left: 60 }
+    ];
+    activeCategory = 'Dimension';
+    const strip = document.getElementById('listCategoryStrip');
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    renderListCategoryPills();
+    const balancePill = [...strip.querySelectorAll('.reg-pill')].find(pill =>
+      pill.getAttribute('onclick') === "setListCategory('เครื่องชั่ง (Balance)')");
+
+    ok(balancePill, 'canonical Balance pill must render');
+    setListCategory('เครื่องชั่ง (Balance)');
+
+    eq(document.getElementById('typeFilter').value, 'เครื่องชั่ง (Balance)', 'selected type');
+    eq(activeCategory, 'all', 'Dashboard category must reset');
+    eq(filteredData.map(row => row.id), [811], 'canonical Balance pill must filter matching rows');
+    const activePills = [...strip.querySelectorAll('.reg-pill.active')];
+    eq(activePills.map(pill => pill.getAttribute('onclick')), ["setListCategory('เครื่องชั่ง (Balance)')"],
+      'canonical Balance pill must be the sole active pill');
+  });
+
+  t('clearing the list category activates only the all pill and restores matching rows', () => {
+    allData = [
+      { id: 821, id_code: 'BAL-821', instrument_name: 'Balance', instrument_type: 'Balance', department: 'WRM1', days_left: 60 },
+      { id: 822, id_code: 'DIM-822', instrument_name: 'Dimension', instrument_type: 'Dimension', department: 'WRM1', days_left: 60 }
+    ];
+    activeCategory = 'Dimension';
+    const strip = document.getElementById('listCategoryStrip');
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = 'เครื่องชั่ง (Balance)';
+    renderListCategoryPills();
+    const allPill = [...strip.querySelectorAll('.reg-pill')].find(pill =>
+      pill.getAttribute('onclick') === "setListCategory('')");
+
+    ok(allPill, 'all category pill must render');
+    setListCategory('');
+
+    eq(document.getElementById('typeFilter').value, '', 'cleared type');
+    eq(activeCategory, 'all', 'Dashboard category must reset');
+    eq(filteredData.map(row => row.id), [821, 822], 'clearing the category must restore matching rows');
+    const activePills = [...strip.querySelectorAll('.reg-pill.active')];
+    eq(activePills.map(pill => pill.getAttribute('onclick')), ["setListCategory('')"],
+      'all category pill must be the sole active pill after clearing');
   });
 
   document.getElementById('out').textContent = results.join('\n');
