@@ -2,7 +2,9 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const pages = ['dashboard','list','audit','admin','plan','weights','cert','calrecs','repairs','gate','kpi'];
+  const requestedResults = page === 'calrecs';
+  if (page === 'calrecs') page = 'plan';
+  const pages = ['dashboard','list','audit','admin','plan','weights','cert','repairs','gate','kpi'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';
@@ -21,7 +23,6 @@ function showPage(page) {
     plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง'],
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
-    calrecs: ['📋 ติดตามผลสอบเทียบ','สถานะใบรับรอง — รอแนบสแกน/อนุมัติ และเสร็จสมบูรณ์'],
     repairs: ['🔧 งานซ่อม','แจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมเครื่องมือ'],
     gate: ['📤 นำของออกนอกสถานที่','ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท'],
     kpi: ['📈 KPI งานสอบเทียบ','ผลการดำเนินงานเทียบกับแผน'],
@@ -39,6 +40,7 @@ function showPage(page) {
       if (clientReady) await loadCalibrationWorkPage();
     })();
   }
+  if (requestedResults && typeof cwSetPrimaryTab === 'function') cwSetPrimaryTab('results');
   if (page === 'weights') { loadStandardWeights(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
@@ -52,13 +54,6 @@ function showPage(page) {
   if (page === 'kpi') {
     const waitAndLoad = (attempt) => {
       if ((allData && allData.length > 0) || attempt > 20) { loadKpiPage(); return; }
-      setTimeout(() => waitAndLoad(attempt + 1), 200);
-    };
-    waitAndLoad(0);
-  }
-  if (page === 'calrecs') {
-    const waitAndLoad = (attempt) => {
-      if ((allData && allData.length > 0) || attempt > 20) { loadCalrecsPage(); return; }
       setTimeout(() => waitAndLoad(attempt + 1), 200);
     };
     waitAndLoad(0);

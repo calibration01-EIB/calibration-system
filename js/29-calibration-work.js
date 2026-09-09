@@ -128,7 +128,7 @@
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
     Object.freeze({ key: 'history', label: 'เสร็จสิ้นและยกเลิก' })
   ]);
-  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history']);
+  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history', 'results']);
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
@@ -269,6 +269,33 @@
     batches: 'active', waiting: 'waiting', history: 'history'
   });
 
+  function cwShowPrimarySurface(tab) {
+    const results = tab === 'results';
+    const work = document.getElementById('cwWorkSurface');
+    const resultSurface = document.getElementById('cwResultsSurface');
+    if (work) work.hidden = results;
+    if (resultSurface) resultSurface.hidden = !results;
+    return results;
+  }
+
+  function cwLoadResultsWhenReady(filter) {
+    if (filter) {
+      const status = document.getElementById('calrecStatus');
+      if (status) status.value = filter;
+    }
+    const run = attempt => {
+      if ((global.allData && global.allData.length) || attempt > 20) {
+        if (typeof global.loadCalrecsPage === 'function') void global.loadCalrecsPage();
+        return;
+      }
+      setTimeout(() => run(attempt + 1), 200);
+    };
+    const registryReady = typeof global.whenRegistryDataReady === 'function'
+      ? Promise.resolve().then(() => global.whenRegistryDataReady()).catch(() => false)
+      : Promise.resolve();
+    void registryReady.then(() => run(0));
+  }
+
   function cwPrimaryForDashboardTab(tab) {
     if (tab === 'waiting') return 'waiting';
     if (tab === 'history' || tab === 'completed') return 'history';
@@ -288,7 +315,7 @@
   function cwSyncPrimaryState(tab, dashboardTab) {
     const next = CW_PRIMARY_TABS.includes(tab) ? tab : 'batches';
     cwPrimaryTab = next;
-    if (next !== 'select') {
+    if (next !== 'select' && next !== 'results') {
       cwUiState.tab = CW_TABS.some(item => item.key === dashboardTab)
         ? dashboardTab : CW_PRIMARY_TO_DASHBOARD[next];
     }
@@ -298,13 +325,15 @@
 
   function cwSetPrimaryTab(tab) {
     if (!CW_PRIMARY_TABS.includes(tab)) return false;
+    const previousPrimaryTab = cwPrimaryTab;
+    const previousDashboardTab = cwUiState.tab;
+    cwShowPrimarySurface(tab);
     if (tab === 'select') {
-      const previousPrimaryTab = cwPrimaryTab;
-      const previousDashboardTab = cwUiState.tab;
       if (!cwOpenCreate()) {
         cwPrimaryTab = previousPrimaryTab;
         cwUiState.tab = previousDashboardTab;
         cwRenderPrimaryTabs();
+        cwShowPrimarySurface(previousPrimaryTab);
         return false;
       }
       cwWizardState.returnPrimaryTab = previousPrimaryTab;
@@ -313,8 +342,20 @@
       return true;
     }
     cwSyncPrimaryState(tab);
+    if (tab === 'results') {
+      cwLoadResultsWhenReady();
+      return true;
+    }
     cwRenderTabs();
     cwRenderBatchList();
+    return true;
+  }
+
+  function openCalibrationResults(filter) {
+    cwSyncPrimaryState('results');
+    if (typeof global.showPage === 'function') global.showPage('plan');
+    cwShowPrimarySurface('results');
+    cwLoadResultsWhenReady(filter);
     return true;
   }
 
@@ -773,12 +814,14 @@
       if (generation !== cwUiState.loadGeneration) return false;
       const model = cwNormalizeReadModel(batches, items, locks, documents, audit);
       cwRenderDashboard(model, { primaryTab: requestedPrimaryTab });
+      cwShowPrimarySurface(requestedPrimaryTab);
       cwPublishCalibrationWorkIntegration(model, null, integrationGeneration);
       return true;
     } catch (error) {
       if (generation !== cwUiState.loadGeneration) return false;
       cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' },
         { primaryTab: requestedPrimaryTab });
+      cwShowPrimarySurface(requestedPrimaryTab);
       return false;
     }
   }
@@ -1370,8 +1413,11 @@
     const returnPrimaryTab = cwWizardState.returnPrimaryTab;
     if (returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)) {
       cwSyncPrimaryState(returnPrimaryTab, cwWizardState.returnDashboardTab);
-      cwRenderTabs();
-      cwRenderBatchList();
+      cwShowPrimarySurface(returnPrimaryTab);
+      if (returnPrimaryTab !== 'results') {
+        cwRenderTabs();
+        cwRenderBatchList();
+      }
     }
     const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
       ? document.querySelector('#cwPrimaryTabs [aria-pressed="true"]') : null;
@@ -2576,6 +2622,7 @@
   global.cwRenderDashboard = cwRenderDashboard;
   global.cwRenderPrimaryTabs = cwRenderPrimaryTabs;
   global.cwSetPrimaryTab = cwSetPrimaryTab;
+  global.openCalibrationResults = openCalibrationResults;
   global.cwHandlePrimaryTabKey = cwHandlePrimaryTabKey;
   global.cwSetDashboardTab = cwSetDashboardTab;
   global.cwHandleTabKey = cwHandleTabKey;

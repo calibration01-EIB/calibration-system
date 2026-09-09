@@ -22,8 +22,8 @@ async function calRecComplete(recordId) {
       if (error) throw error;
       showToast('แนบไฟล์สแกน + ทำให้สมบูรณ์แล้ว', 'success');
       if (typeof renderPendingCertWidget === 'function') renderPendingCertWidget();
-      const cp = document.getElementById('pageCalrecs');
-      if (cp && cp.style.display !== 'none' && typeof loadCalrecsPage === 'function') loadCalrecsPage();
+      const surface = document.getElementById('cwResultsSurface');
+      if (surface && !surface.hidden && surface.offsetParent !== null && typeof loadCalrecsPage === 'function') loadCalrecsPage();
       const hm = document.getElementById('calHistoryModal');
       if (calHistInstId && hm && hm.classList.contains('open')) openCalHistory(calHistInstId);
     } catch (e) { showToast('ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
