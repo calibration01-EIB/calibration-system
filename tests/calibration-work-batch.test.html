@@ -1281,6 +1281,53 @@ function text(url) {
     delete window.currentUser;
   });
 
+  await ta('refreshes visible results progress after plan-map publication without reloading records', async () => {
+    const cleanup = cwMountFixture();
+    const previousAllData = window.allData;
+    const previousLoad = window.loadCalrecsPage;
+    const previousRecords = CALRECS;
+    const previousMap = { ...calibrationWorkStatusMap };
+    const previousEscape = window.escapeHtmlText;
+    const previousUser = window.currentUser;
+    const batchId = cwUuid(745);
+    let recordLoads = 0;
+    try {
+      const surface = document.getElementById('cwResultsSurface');
+      surface.innerHTML = '<select id="calrecStatus"><option value="due30">due30</option></select>' +
+        '<div class="ax-tablecard"><div class="table-wrap"><table><tbody id="calrecBody"></tbody></table></div></div>';
+      document.getElementById('cwWorkSurface').hidden = true;
+      surface.hidden = false;
+      window.allData = [{id:301,id_code:'WRM-301',instrument_name:'Visible result',department:'WRM',days_left:5}];
+      window.loadCalrecsPage = () => { recordLoads += 1; };
+      window.escapeHtmlText = value => String(value == null ? '' : value);
+      window.currentUser = {role:'viewer'};
+      CALRECS = [];
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      cwRenderDashboard({batches:[],locks:[],locksReady:true}, {primaryTab:'results'});
+      renderCalrecsTable();
+      has(document.getElementById('calrecBody').textContent, 'ยังไม่ได้วางแผน', 'records render before plan map publication');
+
+      const rows = {
+        calibration_work_batches:[{id:batchId,batch_no:'CW-745',title:'Visible progress',status:'awaiting_calibration'}],
+        calibration_work_items:[{id:cwUuid(845),batch_id:batchId,instrument_id:301,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:301,batch_id:batchId}],
+        calibration_work_documents:[], calibration_work_audit:[]
+      };
+      ok(await loadCalibrationWorkPage(cwPagedClient(rows, [])), 'plan snapshot publishes successfully');
+      has(document.getElementById('calrecBody').textContent, 'รอผลสอบเทียบ', 'published map refreshes visible results progress');
+      eq(recordLoads, 0, 'progress refresh does not reload calibration records');
+    } finally {
+      cleanup();
+      window.allData = previousAllData;
+      window.loadCalrecsPage = previousLoad;
+      window.escapeHtmlText = previousEscape;
+      window.currentUser = previousUser;
+      CALRECS = previousRecords;
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      Object.assign(calibrationWorkStatusMap, previousMap);
+    }
+  });
+
   await ta('loads the complete integration map with immutable keysets', async () => {
     const batchId = cwUuid(700);
     const rows = {

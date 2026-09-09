@@ -722,6 +722,11 @@
     cwRenderNotifications(cwNotificationState);
     cwPublishPlanBadge(model);
     if (typeof global.renderTable === 'function') global.renderTable();
+    const resultsSurface = document.getElementById('cwResultsSurface');
+    if (cwPrimaryTab === 'results' && resultsSurface && !resultsSurface.hidden
+        && resultsSurface.offsetParent !== null && typeof global.renderCalrecsTable === 'function') {
+      global.renderCalrecsTable();
+    }
     return true;
   }
 
