@@ -149,7 +149,6 @@ a:hover { color: var(--accent-h); }
   display: flex; align-items: center; justify-content: center;
   border: 2px solid #fff; font-family: var(--ff-num);
 }
-.ax-actions .notif-badge--scan { background: var(--warn) !important; }
 
 .ax-user-wrap { position: relative; }
 .ax-user {
@@ -820,7 +819,7 @@ tbody tr:hover td { background: #f6fafd !important; }
 #app .ax-pager-ctl #pageNum { font-size: 15.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 #app .ax-pager-ctl .ax-ghost-btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--line); color: var(--text3); }
 
-/* ---------- 7d) หน้าติดตามผลสอบเทียบ ตามดีไซน์ ---------- */
+/* ---------- 7d) การ์ดสถิติและปุ่มดำเนินการที่ใช้ร่วมกัน ---------- */
 .ax-crc-tiles {
   display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr));
   gap: 14px; margin-bottom: 18px;

@@ -32,16 +32,15 @@ function optionalText(url) {
 }
 
 (async () => {
-  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource, shippedJsSources;
+  let indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, kpiSource, themeSource, helperSource, shippedJsSources;
   try {
-    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, calRecordsSource, kpiSource, themeSource, helperSource] = await Promise.all([
+    [indexSource, swSource, planSource, reportsSource, assetOutSource, dashboardSource, kpiSource, themeSource, helperSource] = await Promise.all([
       text('../index.html'),
       text('../sw.js'),
       text('../js/06-plan.js'),
       text('../js/04-reports.js'),
       text('../js/18-asset-out.js'),
       text('../js/02-dashboard.js'),
-      text('../js/23-cal-records.js'),
       text('../js/28-kpi.js'),
       text('../theme-aqua.css'),
       optionalText('../tools/build-frm-eib04-template.ps1')
@@ -82,12 +81,8 @@ function optionalText(url) {
       shippedJsSources.forEach((source, index) =>
         lacks(source, token, token + ' shipped JavaScript source #' + index));
     });
-    ['planSelectedItems', 'switchPlanTab(', 'planStatusMap'].forEach(token =>
-      lacks(calRecordsSource, token, token + ' calibration-record dependency'));
-    has(calRecordsSource, 'calibrationWorkStatusMap', 'unified work status source');
-    has(calRecordsSource, 'cwOpenBatchFromInstrument', 'unified work detail navigation');
-    has(calRecordsSource, 'cwOpenCreateWithInstrument(instrumentId)', 'create shortcut preserves exact instrument id');
-    lacks(calRecordsSource, 'async function goToPlanWithItem(_instrumentId)', 'instrument id is not discarded');
+    lacks(indexSource, 'js/23-cal-records.js', 'retired calibration-record module');
+    lacks(appShell, './js/23-cal-records.js', 'retired calibration-record cache entry');
   });
 
   t('removes dead legacy planner styling and callback selectors', () => {

@@ -326,7 +326,6 @@ async function loadData(forceRefresh = false) {
     renderDonut();
     renderMonthlyBarChart();
     renderDashboardAuditLog();
-    renderPendingCertWidget();
     if (typeof loadCalibrationWorkStatusMap === 'function') void loadCalibrationWorkStatusMap();
     if (typeof loadRepairData === 'function') loadRepairData();
     updateNotificationBell();

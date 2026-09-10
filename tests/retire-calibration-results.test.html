@@ -1,0 +1,37 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><title>RUNNING</title></head>
+<body><pre id="out"></pre><script>
+const results = [];
+function t(name, fn) { try { fn(); results.push('PASS ' + name); } catch (error) { results.push('FAIL ' + name + ' — ' + error.message); } }
+function ok(value, message) { if (!value) throw new Error(message); }
+function has(source, token, message) { ok(source.includes(token), message + ' missing ' + token); }
+function lacks(source, token, message) { ok(!source.includes(token), message + ' still contains ' + token); }
+async function text(path) { const response = await fetch(path); if (!response.ok) throw new Error(path); return response.text(); }
+(async () => {
+  const [indexSource, workSource, routerSource, dashboardSource, importSource, notificationSource, dashboardUiSource, swSource] = await Promise.all([
+    text('../index.html'), text('../js/29-calibration-work.js'), text('../js/10-router.js'), text('../js/02-dashboard.js'),
+    text('../js/06b-import-register.js'), text('../js/07-notifications.js'), text('../js/25-dashboard-ui.js'), text('../sw.js')
+  ]);
+  t('Plan has exactly four primary sections', () => {
+    const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+    const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs [data-cw-primary]')];
+    ok(tabs.length === 4, 'expected 4 tabs, found ' + tabs.length);
+    ok(tabs.map(tab => tab.dataset.cwPrimary).join(',') === 'select,batches,waiting,history', 'unexpected Plan tabs');
+  });
+  t('results and signed-scan surfaces are retired', () => {
+    ['data-cw-primary="results"', 'id="cwResultsSurface"', 'id="scanNotifWrapper"', 'js/23-cal-records.js'].forEach(token => lacks(indexSource, token, 'index'));
+    lacks(swSource, 'js/23-cal-records.js', 'service worker');
+    lacks(workSource, "'results'", 'calibration work');
+    lacks(dashboardSource, 'renderPendingCertWidget', 'dashboard loader');
+    lacks(importSource, 'scanNotif', 'role visibility');
+    lacks(notificationSource, 'scanNotif', 'notifications');
+    lacks(dashboardUiSource, 'scanNotifCount', 'dashboard summary');
+  });
+  t('old result links open Plan History', () => {
+    has(routerSource, "page === 'calrecs'", 'legacy alias');
+    has(routerSource, "cwSetPrimaryTab('history')", 'history destination');
+    lacks(routerSource, "cwSetPrimaryTab('results')", 'retired destination');
+  });
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL' : 'ALL PASS';
+})().catch(error => { document.getElementById('out').textContent = 'FAIL ' + error.message; document.title = 'FAIL'; });
+</script></body></html>

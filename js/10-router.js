@@ -2,7 +2,7 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
-  const requestedResults = page === 'calrecs';
+  const requestedHistory = page === 'calrecs';
   if (page === 'calrecs') page = 'plan';
   const pages = ['dashboard','list','audit','admin','plan','weights','cert','repairs','gate','kpi'];
   pages.forEach(p => {
@@ -20,7 +20,7 @@ function showPage(page) {
     list: ['รายการเครื่องมือ','ค้นหา กรอง และจัดการรายการ'],
     audit: ['Audit Log','ประวัติการเปลี่ยนแปลง'],
     admin: ['จัดการผู้ใช้','ตั้งค่าบัญชีและสิทธิ์'],
-    plan: ['แผนสอบเทียบ','ติดตามชุดงาน เอกสาร และผลสอบเทียบรายเครื่อง'],
+    plan: ['แผนสอบเทียบ','จัดทำ ติดตาม และตรวจสอบชุดงานสอบเทียบ'],
     weights: ['📜 ใบ Cert Reference','ทะเบียนใบ Cert อ้างอิงและค่ามาตรฐาน'],
     cert: ['🏷️ ออก Cert','บันทึกการออกหมายเลขใบรับรองผลการสอบเทียบ'],
     repairs: ['🔧 งานซ่อม','แจ้งซ่อม ติดตามสถานะ และประวัติการซ่อมเครื่องมือ'],
@@ -40,7 +40,7 @@ function showPage(page) {
       if (clientReady) await loadCalibrationWorkPage();
     })();
   }
-  if (requestedResults && typeof cwSetPrimaryTab === 'function') cwSetPrimaryTab('results');
+  if (requestedHistory && typeof cwSetPrimaryTab === 'function') cwSetPrimaryTab('history');
   if (page === 'weights') { loadStandardWeights(); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();

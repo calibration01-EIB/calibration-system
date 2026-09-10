@@ -10,7 +10,6 @@
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   const BATCH_DOCUMENT_KINDS = new Set(['acknowledgement', 'closure']);
   const ITEM_DOCUMENT_KINDS = new Set(['certificate', 'overdue']);
-  const cwPlanBadgeCounts = { work: 0, scan: 0 };
 
   const CW_STATUS = Object.freeze({
     draft: Object.freeze({ label: 'ร่าง', color: '#64748B' }),
@@ -129,7 +128,7 @@
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
     Object.freeze({ key: 'history', label: 'เสร็จสิ้นและยกเลิก' })
   ]);
-  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history', 'results']);
+  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history']);
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
@@ -270,35 +269,10 @@
     batches: 'active', waiting: 'waiting', history: 'history'
   });
 
-  function cwShowPrimarySurface(tab) {
-    const results = tab === 'results';
+  function cwShowPrimarySurface() {
     const work = document.getElementById('cwWorkSurface');
-    const resultSurface = document.getElementById('cwResultsSurface');
-    if (work) work.hidden = results;
-    if (resultSurface) resultSurface.hidden = !results;
-    return results;
-  }
-
-  function cwLoadResultsWhenReady(filter) {
-    if (filter) {
-      const status = document.getElementById('calrecStatus');
-      if (status) status.value = filter;
-    }
-    const load = () => {
-      if (typeof global.loadCalrecsPage === 'function') void global.loadCalrecsPage();
-    };
-    if (typeof global.whenRegistryDataReady === 'function') {
-      void Promise.resolve().then(() => global.whenRegistryDataReady()).catch(() => false).then(load);
-      return;
-    }
-    const run = attempt => {
-      if ((global.allData && global.allData.length) || attempt > 20) {
-        load();
-        return;
-      }
-      setTimeout(() => run(attempt + 1), 200);
-    };
-    void Promise.resolve().then(() => run(0));
+    if (work) work.hidden = false;
+    return false;
   }
 
   function cwPrimaryForDashboardTab(tab) {
@@ -320,7 +294,7 @@
   function cwSyncPrimaryState(tab, dashboardTab) {
     const next = CW_PRIMARY_TABS.includes(tab) ? tab : 'batches';
     cwPrimaryTab = next;
-    if (next !== 'select' && next !== 'results') {
+    if (next !== 'select') {
       cwUiState.tab = CW_TABS.some(item => item.key === dashboardTab)
         ? dashboardTab : CW_PRIMARY_TO_DASHBOARD[next];
     }
@@ -347,20 +321,8 @@
       return true;
     }
     cwSyncPrimaryState(tab);
-    if (tab === 'results') {
-      cwLoadResultsWhenReady();
-      return true;
-    }
     cwRenderTabs();
     cwRenderBatchList();
-    return true;
-  }
-
-  function openCalibrationResults(filter) {
-    cwSyncPrimaryState('results');
-    if (typeof global.showPage === 'function') global.showPage('plan');
-    cwShowPrimarySurface('results');
-    cwLoadResultsWhenReady(filter);
     return true;
   }
 
@@ -683,12 +645,8 @@
       + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
   }
 
-  function updatePlanNavBadge(component, count) {
-    if (!Object.prototype.hasOwnProperty.call(cwPlanBadgeCounts, component)) {
-      return cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
-    }
-    cwPlanBadgeCounts[component] = Math.max(0, Number(count) || 0);
-    const total = cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
+  function updatePlanNavBadge(_component, count) {
+    const total = Math.max(0, Number(count) || 0);
     const badge = document.getElementById('navPlanBadge');
     if (badge) {
       badge.textContent = String(total);
@@ -736,12 +694,6 @@
     cwRenderNotifications(cwNotificationState);
     cwPublishPlanBadge(model);
     if (typeof global.renderTable === 'function') global.renderTable();
-    const resultsSurface = document.getElementById('cwResultsSurface');
-    if (cwPrimaryTab === 'results' && resultsSurface && !resultsSurface.hidden
-        && typeof global.hasCalrecsSnapshot === 'function' && global.hasCalrecsSnapshot()
-        && resultsSurface.offsetParent !== null && typeof global.renderCalrecsTable === 'function') {
-      global.renderCalrecsTable();
-    }
     return true;
   }
 
@@ -1433,10 +1385,8 @@
     if (returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)) {
       cwSyncPrimaryState(returnPrimaryTab, cwWizardState.returnDashboardTab);
       cwShowPrimarySurface(returnPrimaryTab);
-      if (returnPrimaryTab !== 'results') {
-        cwRenderTabs();
-        cwRenderBatchList();
-      }
+      cwRenderTabs();
+      cwRenderBatchList();
     }
     const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
       ? document.querySelector('#cwPrimaryTabs [aria-pressed="true"]') : null;
@@ -2642,7 +2592,6 @@
   global.cwRenderDashboard = cwRenderDashboard;
   global.cwRenderPrimaryTabs = cwRenderPrimaryTabs;
   global.cwSetPrimaryTab = cwSetPrimaryTab;
-  global.openCalibrationResults = openCalibrationResults;
   global.cwHandlePrimaryTabKey = cwHandlePrimaryTabKey;
   global.cwSetDashboardTab = cwSetDashboardTab;
   global.cwHandleTabKey = cwHandleTabKey;
