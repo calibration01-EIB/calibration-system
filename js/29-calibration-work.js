@@ -10,6 +10,7 @@
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   const BATCH_DOCUMENT_KINDS = new Set(['acknowledgement', 'closure']);
   const ITEM_DOCUMENT_KINDS = new Set(['certificate', 'overdue']);
+  const cwPlanBadgeCounts = { work: 0, scan: 0 };
 
   const CW_STATUS = Object.freeze({
     draft: Object.freeze({ label: 'ร่าง', color: '#64748B' }),
@@ -128,7 +129,7 @@
     Object.freeze({ key: 'completed', label: 'เสร็จสิ้น' }),
     Object.freeze({ key: 'history', label: 'เสร็จสิ้นและยกเลิก' })
   ]);
-  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history']);
+  const CW_PRIMARY_TABS = Object.freeze(['select', 'batches', 'waiting', 'history', 'results']);
   const CW_READ_PAGE_SIZE = 200;
   const cwUiState = {
     model: { batches: [], locks: [], locksReady: false }, tab: 'active', openBatchId: null,
@@ -269,6 +270,37 @@
     batches: 'active', waiting: 'waiting', history: 'history'
   });
 
+  function cwShowPrimarySurface(tab) {
+    const results = tab === 'results';
+    const work = document.getElementById('cwWorkSurface');
+    const resultSurface = document.getElementById('cwResultsSurface');
+    if (work) work.hidden = results;
+    if (resultSurface) resultSurface.hidden = !results;
+    return results;
+  }
+
+  function cwLoadResultsWhenReady(filter) {
+    if (filter) {
+      const status = document.getElementById('calrecStatus');
+      if (status) status.value = filter;
+    }
+    const load = () => {
+      if (typeof global.loadCalrecsPage === 'function') void global.loadCalrecsPage();
+    };
+    if (typeof global.whenRegistryDataReady === 'function') {
+      void Promise.resolve().then(() => global.whenRegistryDataReady()).catch(() => false).then(load);
+      return;
+    }
+    const run = attempt => {
+      if ((global.allData && global.allData.length) || attempt > 20) {
+        load();
+        return;
+      }
+      setTimeout(() => run(attempt + 1), 200);
+    };
+    void Promise.resolve().then(() => run(0));
+  }
+
   function cwPrimaryForDashboardTab(tab) {
     if (tab === 'waiting') return 'waiting';
     if (tab === 'history' || tab === 'completed') return 'history';
@@ -288,7 +320,7 @@
   function cwSyncPrimaryState(tab, dashboardTab) {
     const next = CW_PRIMARY_TABS.includes(tab) ? tab : 'batches';
     cwPrimaryTab = next;
-    if (next !== 'select') {
+    if (next !== 'select' && next !== 'results') {
       cwUiState.tab = CW_TABS.some(item => item.key === dashboardTab)
         ? dashboardTab : CW_PRIMARY_TO_DASHBOARD[next];
     }
@@ -298,13 +330,15 @@
 
   function cwSetPrimaryTab(tab) {
     if (!CW_PRIMARY_TABS.includes(tab)) return false;
+    const previousPrimaryTab = cwPrimaryTab;
+    const previousDashboardTab = cwUiState.tab;
+    cwShowPrimarySurface(tab);
     if (tab === 'select') {
-      const previousPrimaryTab = cwPrimaryTab;
-      const previousDashboardTab = cwUiState.tab;
       if (!cwOpenCreate()) {
         cwPrimaryTab = previousPrimaryTab;
         cwUiState.tab = previousDashboardTab;
         cwRenderPrimaryTabs();
+        cwShowPrimarySurface(previousPrimaryTab);
         return false;
       }
       cwWizardState.returnPrimaryTab = previousPrimaryTab;
@@ -313,8 +347,20 @@
       return true;
     }
     cwSyncPrimaryState(tab);
+    if (tab === 'results') {
+      cwLoadResultsWhenReady();
+      return true;
+    }
     cwRenderTabs();
     cwRenderBatchList();
+    return true;
+  }
+
+  function openCalibrationResults(filter) {
+    cwSyncPrimaryState('results');
+    if (typeof global.showPage === 'function') global.showPage('plan');
+    cwShowPrimarySurface('results');
+    cwLoadResultsWhenReady(filter);
     return true;
   }
 
@@ -637,18 +683,27 @@
       + row[1] + '</span><strong>' + row[2] + '</strong></button>').join('');
   }
 
+  function updatePlanNavBadge(component, count) {
+    if (!Object.prototype.hasOwnProperty.call(cwPlanBadgeCounts, component)) {
+      return cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
+    }
+    cwPlanBadgeCounts[component] = Math.max(0, Number(count) || 0);
+    const total = cwPlanBadgeCounts.work + cwPlanBadgeCounts.scan;
+    const badge = document.getElementById('navPlanBadge');
+    if (badge) {
+      badge.textContent = String(total);
+      badge.style.display = total > 0 ? '' : 'none';
+    }
+    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
+    return total;
+  }
+
   function cwPublishPlanBadge(model) {
     const count = (model && model.batches || []).filter(batch => {
       const status = cwBatchStatus(batch);
       return status !== 'completed' && status !== 'cancelled';
     }).length;
-    const badge = document.getElementById('navPlanBadge');
-    if (badge) {
-      badge.textContent = String(count);
-      badge.style.display = count > 0 ? '' : 'none';
-    }
-    if (typeof global.renderDashTodo === 'function') global.renderDashTodo();
-    return count;
+    return updatePlanNavBadge('work', count);
   }
 
   async function cwLoadNotifications(sourceOrModel, todayISO) {
@@ -681,6 +736,12 @@
     cwRenderNotifications(cwNotificationState);
     cwPublishPlanBadge(model);
     if (typeof global.renderTable === 'function') global.renderTable();
+    const resultsSurface = document.getElementById('cwResultsSurface');
+    if (cwPrimaryTab === 'results' && resultsSurface && !resultsSurface.hidden
+        && typeof global.hasCalrecsSnapshot === 'function' && global.hasCalrecsSnapshot()
+        && resultsSurface.offsetParent !== null && typeof global.renderCalrecsTable === 'function') {
+      global.renderCalrecsTable();
+    }
     return true;
   }
 
@@ -749,7 +810,6 @@
   async function loadCalibrationWorkPage(client) {
     const generation = ++cwUiState.loadGeneration;
     const integrationGeneration = ++cwIntegrationLoadGeneration;
-    const requestedPrimaryTab = cwPrimaryTab === 'select' ? 'batches' : cwPrimaryTab;
     const list = document.getElementById('cwBatchList');
     const tabs = document.getElementById('cwTabs');
     const metrics = document.getElementById('cwMetrics');
@@ -772,13 +832,15 @@
       ]);
       if (generation !== cwUiState.loadGeneration) return false;
       const model = cwNormalizeReadModel(batches, items, locks, documents, audit);
-      cwRenderDashboard(model, { primaryTab: requestedPrimaryTab });
+      cwRenderDashboard(model, { primaryTab: cwPrimaryTab === 'select' ? 'batches' : cwPrimaryTab });
+      cwShowPrimarySurface(cwPrimaryTab);
       cwPublishCalibrationWorkIntegration(model, null, integrationGeneration);
       return true;
     } catch (error) {
       if (generation !== cwUiState.loadGeneration) return false;
       cwRenderDashboard({ batches: [], error: error && error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล' },
-        { primaryTab: requestedPrimaryTab });
+        { primaryTab: cwPrimaryTab === 'select' ? 'batches' : cwPrimaryTab });
+      cwShowPrimarySurface(cwPrimaryTab);
       return false;
     }
   }
@@ -1370,8 +1432,11 @@
     const returnPrimaryTab = cwWizardState.returnPrimaryTab;
     if (returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)) {
       cwSyncPrimaryState(returnPrimaryTab, cwWizardState.returnDashboardTab);
-      cwRenderTabs();
-      cwRenderBatchList();
+      cwShowPrimarySurface(returnPrimaryTab);
+      if (returnPrimaryTab !== 'results') {
+        cwRenderTabs();
+        cwRenderBatchList();
+      }
     }
     const restoredPrimary = returnPrimaryTab && CW_PRIMARY_TABS.includes(returnPrimaryTab)
       ? document.querySelector('#cwPrimaryTabs [aria-pressed="true"]') : null;
@@ -2569,6 +2634,7 @@
   global.cwDocumentPath = cwDocumentPath;
   global.cwBuildCalibrationWorkStatusMap = cwBuildCalibrationWorkStatusMap;
   global.loadCalibrationWorkStatusMap = loadCalibrationWorkStatusMap;
+  global.updatePlanNavBadge = updatePlanNavBadge;
   global.cwLoadNotifications = cwLoadNotifications;
   global.cwOpenNotification = cwOpenNotification;
   global.cwOpenBatchFromInstrument = cwOpenBatchFromInstrument;
@@ -2576,6 +2642,7 @@
   global.cwRenderDashboard = cwRenderDashboard;
   global.cwRenderPrimaryTabs = cwRenderPrimaryTabs;
   global.cwSetPrimaryTab = cwSetPrimaryTab;
+  global.openCalibrationResults = openCalibrationResults;
   global.cwHandlePrimaryTabKey = cwHandlePrimaryTabKey;
   global.cwSetDashboardTab = cwSetDashboardTab;
   global.cwHandleTabKey = cwHandleTabKey;

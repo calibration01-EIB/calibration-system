@@ -6,6 +6,7 @@
 <script src="../js/23-cal-records.js"></script>
 <script>
 const results = [];
+const originalLoadCalrecsPage = window.loadCalrecsPage;
 function t(name, fn) {
   try { fn(); results.push('PASS ' + name); }
   catch (e) { results.push('FAIL ' + name + ' — ' + e.message); }
@@ -35,9 +36,9 @@ function text(url) {
 }
 
 (async () => {
-  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
+  let sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, notificationSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource;
   try {
-    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
+    [sql, retireSql, indexSource, swSource, routerSource, dashboardSource, cssSource, workSource, planSource, usersSource, recordsSource, notificationSource, homeSource, listUiSource, dashboardUiSource, repairsSource, releasePlanSource] = await Promise.all([
       text('../tools/sql/calibration-work-batches.sql'),
       text('../tools/sql/remove-legacy-calibration-plans.sql'),
       text('../index.html'),
@@ -49,6 +50,7 @@ function text(url) {
       text('../js/06-plan.js'),
       text('../js/22-users.js'),
       text('../js/23-cal-records.js'),
+      text('../js/07-notifications.js'),
       text('../js/24-home.js'),
       text('../js/26-list-ui.js'),
       text('../js/25-dashboard-ui.js'),
@@ -76,16 +78,20 @@ function text(url) {
     lacks(routerSource, 'calwork:', 'separate route metadata removed');
   });
 
-  t('defines exactly four primary plan sections', () => {
+  t('defines five primary plan sections including results', () => {
     const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
     const tabs = [...parsed.querySelectorAll('#cwPrimaryTabs button[data-cw-primary]')];
-    eq(tabs.length, 4, 'primary plan tab count');
+    eq(tabs.length, 5, 'primary plan tab count');
     ok(tabs.every(tab => tab.tagName === 'BUTTON'), 'primary plan tabs must be buttons');
     ok(!parsed.getElementById('cwPrimaryTabs').hasAttribute('role'), 'primary navigation must not claim an incomplete tablist pattern');
     ok(tabs.every(tab => !tab.hasAttribute('role')), 'primary navigation buttons must not claim tab roles');
     eq(JSON.stringify(tabs.map(tab => [tab.dataset.cwPrimary, tab.textContent.trim()])), JSON.stringify([
-      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'], ['history', 'ประวัติ']
+      ['select', 'เลือกเครื่อง'], ['batches', 'ชุดงาน'], ['waiting', 'รอดำเนินการ'],
+      ['history', 'ประวัติ'], ['results', 'ผลและใบรับรอง']
     ]), 'primary plan tab keys and labels');
+    ok(parsed.getElementById('cwWorkSurface'), 'work surface exists');
+    ok(parsed.getElementById('cwResultsSurface'), 'results surface exists');
+    ok(!parsed.getElementById('pageCalrecs'), 'standalone results page removed');
     has(cssSource, '.cw-primary-tabs [data-cw-primary]', 'primary navigation base styles follow button semantics');
     has(cssSource, '[data-cw-primary][aria-pressed="true"]', 'pressed primary section has selected styling');
     has(cssSource, '[data-cw-primary]:focus-visible', 'primary buttons retain designed focus styling');
@@ -397,7 +403,7 @@ function text(url) {
     has(dashboardSource, 'canManagePlan', 'mobile dashboard gates plan creation by role');
     has(listUiSource, '!activeWork && canEdit', 'register list gates plan creation by role');
     has(recordsSource, '!m.done[0] && canEdit', 'calibration records gate plan creation by role');
-    has(dashboardUiSource, 'ติดตาม PDF รับทราบ ผลสอบเทียบ และ PDF ปิดแผน', 'dashboard pending-work copy matches PDF gates');
+    has(dashboardUiSource, 'ติดตามชุดงาน ผลสอบเทียบ และใบรับรองที่รอแนบสแกน', 'dashboard pending-work copy matches combined badge');
     has(workSource, "document.getElementById('navPlanBadge')", 'work integration publishes the plan badge');
     has(repairsSource, 'const canPlan = typeof currentUser', 'repair widget gates plan creation by role');
     lacks(repairsSource, 'คลิกรหัสเพื่อส่งเข้าแผน', 'repair widget removes misleading read-only action copy');
@@ -413,7 +419,7 @@ function text(url) {
     has(indexSource, 'href="theme-aqua.css?v=20260908-filter1"', 'current calibration stylesheet query version');
     has(indexSource, 'src="js/10-router.js?v=20260908-filter1"', 'current router query version');
     has(indexSource, "serviceWorker.register('sw.js?v=20260908-filter1')", 'service worker generation');
-    has(swSource, "const CACHE_NAME = 'calibration-app-v163';", 'cache v163');
+    has(swSource, "const CACHE_NAME = 'calibration-app-v164';", 'cache v164');
     [
       'index.html?v=20260908-filter1',
       'theme-aqua.css?v=20260908-filter1',
@@ -565,7 +571,7 @@ function text(url) {
   function cwMountFixture() {
     const fixture = document.createElement('div');
     fixture.id = 'cwTestFixture';
-    fixture.innerHTML = '<span id="navPlanBadge" style="display:none">0</span><div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div>'
+    fixture.innerHTML = '<span id="navPlanBadge" style="display:none">0</span><div id="pagePlan"><nav id="cwPrimaryTabs"><button type="button" data-cw-primary="select" onkeydown="cwHandlePrimaryTabKey(event)">เลือกเครื่อง</button><button type="button" data-cw-primary="batches" onkeydown="cwHandlePrimaryTabKey(event)">ชุดงาน</button><button type="button" data-cw-primary="waiting" onkeydown="cwHandlePrimaryTabKey(event)">รอดำเนินการ</button><button type="button" data-cw-primary="history" onkeydown="cwHandlePrimaryTabKey(event)">ประวัติ</button><button type="button" data-cw-primary="results" onkeydown="cwHandlePrimaryTabKey(event)">ผลและใบรับรอง</button></nav><button type="button" id="cwCreateButton" hidden>สร้างชุดงาน</button><div id="cwWorkSurface"><div id="cwNotifications"></div><nav id="cwTabs"></nav><div id="cwMetrics"></div><div id="cwBatchList"></div><div id="cwBatchDetail" hidden></div><div id="cwActionError" role="alert" hidden></div></div><section id="cwResultsSurface" hidden></section></div>'
       + '<div class="modal-overlay" id="cwCreateDialog" aria-hidden="true"><div class="modal-box cw-dialog" role="dialog" aria-modal="true" aria-labelledby="cwCreateDialogTitle" tabindex="-1">'
       + '<div class="modal-header"><h2 id="cwCreateDialogTitle">สร้างชุดงานสอบเทียบ</h2><button type="button" id="cwCreateClose" onclick="cwCloseCreate()">×</button></div>'
       + '<div id="cwCreateSteps"></div><div id="cwCreateError" role="alert" hidden></div><div id="cwCreateBody"></div><div id="cwCreateFooter"></div></div></div>'
@@ -679,6 +685,181 @@ function text(url) {
       eq(document.querySelectorAll('#cwBatchList .cw-batch-card').length, 2, 'history includes completed and cancelled batches');
       eq(cwSetPrimaryTab('unknown'), false, 'unknown primary section is rejected');
     } finally { cleanup(); }
+  });
+
+  await ta('results primary tab switches surfaces and keeps batch state', async () => {
+    const fixture = document.createElement('div');
+    const previousAllData = window.allData;
+    fixture.innerHTML = '<div id="cwPrimaryTabs">' +
+      '<button data-cw-primary="batches"></button><button data-cw-primary="results"></button></div>' +
+      '<div id="cwWorkSurface"></div><section id="cwResultsSurface" hidden></section>';
+    document.body.appendChild(fixture);
+    window.allData = [{ id: 1 }];
+    window.loadCalrecsPage = () => { window.__resultsLoads = (window.__resultsLoads || 0) + 1; };
+    try {
+      ok(cwSetPrimaryTab('results'), 'results selected');
+      ok(document.getElementById('cwWorkSurface').hidden, 'work hidden');
+      ok(!document.getElementById('cwResultsSurface').hidden, 'results shown');
+      await Promise.resolve();
+      eq(window.__resultsLoads, 1, 'results loaded');
+      ok(cwSetPrimaryTab('batches'), 'batches restored');
+      ok(!document.getElementById('cwWorkSurface').hidden, 'work shown again');
+    } finally {
+      fixture.remove();
+      window.allData = previousAllData;
+      delete window.loadCalrecsPage;
+      delete window.__resultsLoads;
+    }
+  });
+
+  t('legacy calrecs route is normalized to plan results', () => {
+    has(routerSource, "if (page === 'calrecs')", 'legacy alias guard');
+    has(routerSource, "cwSetPrimaryTab('results')", 'legacy alias target');
+    lacks(routerSource, "calrecs: ['📋 ติดตามผลสอบเทียบ'", 'standalone route title');
+  });
+
+  await ta('wrapped legacy calrecs route keeps desktop and mobile Plan active', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+      app.document.body.innerHTML = '<div id="pagePlan"><div id="cwWorkSurface"></div><section id="cwResultsSurface" hidden></section></div>' +
+        '<button class="nav-item" id="nav-plan"></button>' + parsed.querySelector('.bottom-nav').outerHTML;
+      app.CW_TEST_MODE = true;
+      app.getSession = () => null;
+      app.eval(workSource);
+      app.eval(routerSource);
+      app.eval(homeSource);
+      app.allData = [{id:1}];
+      app.loadCalrecsPage = () => {};
+      app.showPage('calrecs');
+      eq(app.document.getElementById('pagePlan').style.display, 'block', 'Plan page visible');
+      ok(!app.document.getElementById('cwResultsSurface').hidden, 'Results visible');
+      ok(app.document.getElementById('nav-plan').classList.contains('active'), 'desktop Plan active');
+      ok(app.document.querySelector('.bottom-nav [data-page="plan"]').classList.contains('active'), 'mobile Plan active after home wrapper');
+      eq(app.document.querySelectorAll('.bottom-nav .active').length, 1, 'only Plan is active');
+    } finally { frame.remove(); }
+  });
+
+  await ta('results wait for registry readiness before loading records', async () => {
+    const fixture = document.createElement('div');
+    const previousAllData = window.allData;
+    const previousReady = window.whenRegistryDataReady;
+    const previousLoad = window.loadCalrecsPage;
+    let releaseRegistry;
+    fixture.innerHTML = '<div id="cwPrimaryTabs"><button data-cw-primary="results"></button></div>' +
+      '<div id="cwWorkSurface"></div><section id="cwResultsSurface" hidden></section>';
+    document.body.appendChild(fixture);
+    window.allData = [{ id: 1 }];
+    window.whenRegistryDataReady = () => new Promise(resolve => { releaseRegistry = resolve; });
+    window.loadCalrecsPage = () => { window.__resultsLoads = (window.__resultsLoads || 0) + 1; };
+    try {
+      ok(cwSetPrimaryTab('results'), 'results selected while registry is pending');
+      await Promise.resolve();
+      eq(window.__resultsLoads || 0, 0, 'results wait for registry readiness');
+      releaseRegistry(true);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      eq(window.__resultsLoads, 1, 'results load after registry readiness');
+    } finally {
+      fixture.remove();
+      window.allData = previousAllData;
+      window.whenRegistryDataReady = previousReady;
+      window.loadCalrecsPage = previousLoad;
+      delete window.__resultsLoads;
+    }
+  });
+
+  await ta('readiness API loads Results immediately with lexical registry data', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.CW_TEST_MODE = true;
+      const registry = app.document.createElement('script');
+      registry.textContent = 'let allData = [{id:1}];';
+      app.document.body.appendChild(registry);
+      app.eval(workSource);
+      const ready = cwDeferred();
+      app.whenRegistryDataReady = () => ready.promise;
+      let loads = 0;
+      const retries = [];
+      app.loadCalrecsPage = () => { loads += 1; };
+      app.setTimeout = (callback, delay) => { retries.push({callback, delay}); };
+      eq(app.allData, undefined, 'top-level let is absent from window');
+      app.cwSetPrimaryTab('results');
+      await Promise.resolve();
+      eq(loads, 0, 'records wait for readiness');
+      ready.resolve(true);
+      for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+      eq(loads, 1, 'readiness API starts records load without retry delay');
+      eq(retries.length, 0, 'no readiness polling scheduled');
+    } finally { frame.remove(); }
+  });
+
+  await ta('Results retains bounded polling only without a readiness API', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.CW_TEST_MODE = true;
+      app.eval(workSource);
+      let loads = 0;
+      const retries = [];
+      app.loadCalrecsPage = () => { loads += 1; };
+      app.setTimeout = callback => { retries.push(callback); };
+      app.cwSetPrimaryTab('results');
+      for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+      eq(loads, 0, 'fallback initially waits');
+      for (let attempt = 0; attempt < 21; attempt++) {
+        eq(retries.length, 1, 'one bounded retry pending');
+        retries.shift()();
+      }
+      eq(loads, 1, 'fallback eventually loads even an empty registry');
+      eq(retries.length, 0, 'fallback stops polling');
+    } finally { frame.remove(); }
+  });
+
+  t('closing create from results restores the results surface', () => {
+    const cleanup = cwMountFixture();
+    const previousAllData = window.allData;
+    const previousLoad = window.loadCalrecsPage;
+    try {
+      window.allData = [{ id: 1 }];
+      window.loadCalrecsPage = () => {};
+      window.currentUser = { role:'editor' };
+      cwRenderDashboard({ ...cwDashboardModel(), locks:[], locksReady:true }, { primaryTab:'batches' });
+      ok(cwSetPrimaryTab('results'), 'results selected before create');
+      ok(cwSetPrimaryTab('select'), 'create opens from results');
+      ok(cwCloseCreate(), 'create closes');
+      ok(!document.getElementById('cwResultsSurface').hidden, 'results surface is restored');
+      ok(document.getElementById('cwWorkSurface').hidden, 'work surface remains hidden');
+    } finally {
+      cleanup();
+      window.allData = previousAllData;
+      window.loadCalrecsPage = previousLoad;
+      delete window.currentUser;
+    }
+  });
+
+  t('signed-scan refresh requires a rendered results surface', () => {
+    has(recordsSource, 'surface.offsetParent !== null', 'signed-scan refresh visibility guard');
+  });
+
+  t('plan badge combines work and pending scan counts without overwrite', () => {
+    document.body.insertAdjacentHTML('beforeend', '<span id="navPlanBadge" style="display:none"></span>');
+    eq(updatePlanNavBadge('work', 3), 3, 'work component');
+    eq(updatePlanNavBadge('scan', 2), 5, 'combined count');
+    eq(document.getElementById('navPlanBadge').textContent, '5', 'combined badge text');
+    eq(updatePlanNavBadge('work', 0), 2, 'scan component remains');
+    document.getElementById('navPlanBadge').remove();
+    updatePlanNavBadge('scan', 0);
+  });
+
+  t('scan notification opens result tab with scan filter', () => {
+    has(notificationSource, "openCalibrationResults('scan')", 'scan notification destination');
+    lacks(notificationSource, "showPage('calrecs')", 'legacy notification destination');
+    lacks(recordsSource, 'navCalrecsBadge', 'retired standalone badge');
   });
 
   t('keeps primary and inner state aligned after waiting/history refreshes', () => {
@@ -804,7 +985,7 @@ function text(url) {
       eq(document.activeElement, tab('waiting'), 'ArrowRight moves primary focus');
       eq(tab('waiting').getAttribute('aria-pressed'), 'true', 'ArrowRight selects primary section');
       tab('waiting').dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
-      eq(document.activeElement, tab('history'), 'End moves primary focus to last tab');
+      eq(document.activeElement, tab('results'), 'End moves primary focus to last tab');
     } finally { cleanup(); }
   });
 
@@ -992,6 +1173,34 @@ function text(url) {
       has(document.getElementById('cwBatchList').textContent, 'lock read unavailable', 'authoritative lock error remains visible');
     } finally { cleanup(); }
   });
+
+  for (const failed of [false, true]) {
+    for (const [initial, selected] of [['batches', 'results'], ['results', 'batches']]) {
+      await ta('preserves newer primary selection ' + initial + ' to ' + selected + ' after ' + (failed ? 'failed' : 'successful') + ' Plan load', async () => {
+        const cleanup = cwMountFixture();
+        const previousData = window.allData;
+        const previousLoad = window.loadCalrecsPage;
+        try {
+          window.allData = [{id:1}];
+          window.loadCalrecsPage = () => {};
+          cwRenderDashboard({batches:[],locks:[]}, {primaryTab:initial});
+          const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+          const pending = loadCalibrationWorkPage(cwDeferredClient(deferred));
+          ok(cwSetPrimaryTab(selected), 'user selects newer tab');
+          Object.entries(deferred).forEach(([table, response]) => response.resolve({
+            data:[], error:failed && table === 'calibration_work_batches' ? {message:'Plan unavailable'} : null
+          }));
+          eq(await pending, !failed, 'load outcome');
+          eq(document.querySelector('[data-cw-primary="' + selected + '"]').getAttribute('aria-pressed'), 'true', 'newer primary remains selected');
+          eq(document.getElementById('cwResultsSurface').hidden, selected !== 'results', 'newer surface remains visible');
+        } finally {
+          cleanup();
+          window.allData = previousData;
+          window.loadCalrecsPage = previousLoad;
+        }
+      });
+    }
+  }
 
   await ta('ignores stale overlapping load success and restores the list before refresh', async () => {
     const cleanup = cwMountFixture();
@@ -1190,6 +1399,102 @@ function text(url) {
     window.currentUser = {role:'editor'};
     has(crcActionHtml(row), 'goToPlanWithItem', 'Editor retains the create-plan action');
     delete window.currentUser;
+  });
+
+  await ta('keeps records load error visible after successful Plan publication', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.document.body.innerHTML = '<div id="cwWorkSurface"></div><section id="cwResultsSurface"><table><tbody id="calrecBody"></tbody></table></section>';
+      app.CW_TEST_MODE = true;
+      app.allData = [{id:301,id_code:'WRM-301',days_left:5}];
+      app.currentUser = {role:'viewer'};
+      app.escapeHtmlText = value => String(value);
+      app.eval(workSource);
+      app.eval(recordsSource);
+      let recordsError = null;
+      app.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { resolve({data:[],error:recordsError}); }
+      }; return query; }};
+      app.cwRenderDashboard({batches:[],locks:[]}, {primaryTab:'results'});
+      await app.loadCalrecsPage();
+      recordsError = {message:'Records unavailable'};
+      await app.loadCalrecsPage();
+      const errorHtml = app.document.getElementById('calrecBody').innerHTML;
+      has(errorHtml, 'Records unavailable', 'records request shows its error');
+      ok(await app.loadCalibrationWorkPage(cwPagedClient({}, [])), 'Plan snapshot succeeds');
+      eq(app.document.getElementById('calrecBody').innerHTML, errorHtml, 'Plan publication preserves records load error');
+      const pendingResponse = cwDeferred();
+      const recordsClient = app.sb;
+      app.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { return pendingResponse.promise.then(resolve); }
+      }; return query; }};
+      const pendingRecords = app.loadCalrecsPage();
+      app.sb = recordsClient;
+      recordsError = null;
+      await app.loadCalrecsPage();
+      pendingResponse.resolve({data:null,error:{message:'Late records failure'}});
+      await pendingRecords;
+      const lateErrorHtml = app.document.getElementById('calrecBody').innerHTML;
+      has(lateErrorHtml, 'Late records failure', 'overlapping failure replaces earlier success');
+      ok(await app.loadCalibrationWorkPage(cwPagedClient({}, [])), 'Plan snapshot after overlapping records requests succeeds');
+      eq(app.document.getElementById('calrecBody').innerHTML, lateErrorHtml, 'overlapping records load error also remains visible');
+    } finally { frame.remove(); }
+  });
+
+  await ta('refreshes visible results progress after plan-map publication without reloading records', async () => {
+    const cleanup = cwMountFixture();
+    const previousAllData = window.allData;
+    const previousLoad = window.loadCalrecsPage;
+    const previousRecords = CALRECS;
+    const previousClient = window.sb;
+    const previousMap = { ...calibrationWorkStatusMap };
+    const previousEscape = window.escapeHtmlText;
+    const previousUser = window.currentUser;
+    const batchId = cwUuid(745);
+    let recordLoads = 0;
+    try {
+      const surface = document.getElementById('cwResultsSurface');
+      surface.innerHTML = '<select id="calrecStatus"><option value="due30">due30</option></select>' +
+        '<div class="ax-tablecard"><div class="table-wrap"><table><tbody id="calrecBody"></tbody></table></div></div>';
+      document.getElementById('cwWorkSurface').hidden = true;
+      surface.hidden = false;
+      window.allData = [{id:301,id_code:'WRM-301',instrument_name:'Visible result',department:'WRM',days_left:5}];
+      window.loadCalrecsPage = () => { recordLoads += 1; };
+      window.escapeHtmlText = value => String(value == null ? '' : value);
+      window.currentUser = {role:'viewer'};
+      window.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { resolve({data:[],error:null}); }
+      }; return query; }};
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      cwRenderDashboard({batches:[],locks:[],locksReady:true}, {primaryTab:'results'});
+      await originalLoadCalrecsPage();
+      has(document.getElementById('calrecBody').textContent, 'ยังไม่ได้วางแผน', 'records render before plan map publication');
+
+      const rows = {
+        calibration_work_batches:[{id:batchId,batch_no:'CW-745',title:'Visible progress',status:'awaiting_calibration'}],
+        calibration_work_items:[{id:cwUuid(845),batch_id:batchId,instrument_id:301,is_active:true,result_status:'in_progress',planned_date:'2026-09-03'}],
+        calibration_work_instrument_locks:[{instrument_id:301,batch_id:batchId}],
+        calibration_work_documents:[], calibration_work_audit:[]
+      };
+      ok(await loadCalibrationWorkPage(cwPagedClient(rows, [])), 'plan snapshot publishes successfully');
+      has(document.getElementById('calrecBody').textContent, 'รอผลสอบเทียบ', 'published map refreshes visible results progress');
+      eq(recordLoads, 0, 'progress refresh does not reload calibration records');
+    } finally {
+      cleanup();
+      window.allData = previousAllData;
+      window.loadCalrecsPage = previousLoad;
+      window.escapeHtmlText = previousEscape;
+      window.currentUser = previousUser;
+      CALRECS = previousRecords;
+      window.sb = previousClient;
+      Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
+      Object.assign(calibrationWorkStatusMap, previousMap);
+    }
   });
 
   await ta('loads the complete integration map with immutable keysets', async () => {

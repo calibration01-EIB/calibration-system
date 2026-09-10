@@ -22,8 +22,8 @@ async function calRecComplete(recordId) {
       if (error) throw error;
       showToast('แนบไฟล์สแกน + ทำให้สมบูรณ์แล้ว', 'success');
       if (typeof renderPendingCertWidget === 'function') renderPendingCertWidget();
-      const cp = document.getElementById('pageCalrecs');
-      if (cp && cp.style.display !== 'none' && typeof loadCalrecsPage === 'function') loadCalrecsPage();
+      const surface = document.getElementById('cwResultsSurface');
+      if (surface && !surface.hidden && surface.offsetParent !== null && typeof loadCalrecsPage === 'function') loadCalrecsPage();
       const hm = document.getElementById('calHistoryModal');
       if (calHistInstId && hm && hm.classList.contains('open')) openCalHistory(calHistInstId);
     } catch (e) { showToast('ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
@@ -52,8 +52,7 @@ async function renderPendingCertWidget() {
     recs = data || [];
   } catch (e) { recs = []; }
   window._scanNotifRecs = recs;
-  const navBadge = document.getElementById('navCalrecsBadge');
-  if (navBadge) { navBadge.textContent = recs.length; navBadge.style.display = recs.length ? 'inline-block' : 'none'; }
+  if (typeof updatePlanNavBadge === 'function') updatePlanNavBadge('scan', recs.length);
   const badge = document.getElementById('scanNotifBadge');
   const countEl = document.getElementById('scanNotifCount');
   if (badge) badge.style.display = recs.length ? 'flex' : 'none';
@@ -64,7 +63,12 @@ async function renderPendingCertWidget() {
 
 // ===== หน้าติดตามผลสอบเทียบ: โหลด calibration_records ทั้งหมดมาไว้จับคู่กับเครื่องมือ =====
 let CALRECS = [];
+let calrecsSnapshotAvailable = false;
+function hasCalrecsSnapshot() {
+  return calrecsSnapshotAvailable;
+}
 async function loadCalrecsPage() {
+  calrecsSnapshotAvailable = false;
   const body = document.getElementById('calrecBody');
   if (body) body.innerHTML = '<tr><td colspan="8" class="no-data">กำลังโหลด...</td></tr>';
   try {
@@ -73,8 +77,10 @@ async function loadCalrecsPage() {
       .order('cal_date', { ascending: false }).order('created_at', { ascending: false });
     if (error) throw error;
     CALRECS = data || [];
+    calrecsSnapshotAvailable = true;
   } catch (e) {
     CALRECS = [];
+    calrecsSnapshotAvailable = false;
     if (body) body.innerHTML = `<tr><td colspan="8" class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(e.message || '')}</td></tr>`;
     return;
   }

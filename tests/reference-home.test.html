@@ -44,8 +44,8 @@ function pngHeader(u8, name) {
   return { w: be(16), h: be(20), depth: u8[24], colorType: u8[25] };
 }
 
-const TILE_ASSETS = ['01_dashboard.png','02_instrument_list.png','03_calibration_tracking.png',
-  '04_cert_number.png','05_cert_reference.png','06_calibration_planning.png',
+const TILE_ASSETS = ['01_dashboard.png','02_instrument_list.png','04_cert_number.png',
+  '05_cert_reference.png','06_calibration_planning.png',
   '07_daily_scale_record.png','08_repair.png','09_offsite_equipment.png'];
 
 /* ขนาดรูปการ์ด: แสดงจริง 108px (มือถือ 76px) เดิมเป็น 1024px = ใหญ่เกินจำเป็นราว 90 เท่า
@@ -89,7 +89,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
   });
 
   t('ลำดับการ์ดและปลายทางตรงกับระบบจริง', () => {
-    const expected = [['dashboard','Dashboard'],['list','รายการเครื่องมือ'],['calrecs','ติดตามผลสอบเทียบ'],
+    const expected = [['dashboard','Dashboard'],['list','รายการเครื่องมือ'],
       ['cert','ลำดับเลข Cert'],['weights','ใบ Cert Reference'],['plan','แผนสอบเทียบ'],
       ['soon','ใบบันทึกประจำวันเครื่องชั่ง'],['repairs','งานซ่อม'],['gate','นำของออกนอกสถานที่']];
     const pos = expected.map(([page, title]) => {
@@ -99,6 +99,9 @@ const TILE_MIN = 216, TILE_MAX = 512;
       return m.index;
     });
     eq(pos, pos.slice().sort((a,b) => a-b), 'ลำดับการ์ดต้องเรียงตามนี้');
+    lacks(HOME_JS, "k:'calrecs'", 'standalone home tile');
+    lacks(INDEX, 'id="nav-calrecs"', 'standalone desktop nav');
+    lacks(INDEX, 'data-page="calrecs"', 'standalone mobile nav');
   });
 
   t('ตัวเชื่อมกับระบบเดิมยังอยู่', () => {
@@ -119,8 +122,11 @@ const TILE_MIN = 216, TILE_MAX = 512;
     ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode #app \.sidebar\s*\{[^}]*display:\s*none\s*!important/.test(CSS), 'hide duplicate sidebar');
     ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-header-inner\s*\{[^}]*height:\s*56px/.test(CSS), 'compact white header');
     ok(/@media \(max-width: 768px\)[\s\S]*?\.ax-menu\s*\{[^}]*position:\s*fixed[^}]*top:\s*62px[^}]*right:\s*10px[^}]*width:\s*min\(290px,\s*calc\(100vw - 20px\)\)/.test(CSS), 'mobile user menu stays inside viewport');
-    ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode \.bottom-nav\s*\{[^}]*position:\s*fixed\s*!important[^}]*bottom:\s*0\s*!important[^}]*grid-template-columns:\s*repeat\(5,\s*1fr\)[^}]*overflow:\s*visible\s*!important/.test(CSS), 'five fixed nav items');
-    ['home','list','plan','calrecs'].forEach(page => has(INDEX, 'data-page="' + page + '"', 'primary mobile nav ' + page));
+    ok(/@media \(max-width: 768px\)[\s\S]*?body\.app-mode \.bottom-nav\s*\{[^}]*position:\s*fixed\s*!important[^}]*bottom:\s*0\s*!important[^}]*grid-template-columns:\s*repeat\(4,\s*1fr\)[^}]*overflow:\s*visible\s*!important/.test(CSS), 'four fixed nav items');
+    const parsed = new DOMParser().parseFromString(INDEX, 'text/html');
+    const destinations = [...parsed.querySelectorAll('.bottom-nav > button')].map(button =>
+      button.dataset.page || (button.id === 'axMobileMoreBtn' ? 'more' : 'unknown'));
+    eq(destinations, ['home','list','plan','more'], 'exactly four mobile destinations');
     ['toggleAxMobileMore','closeAxMobileMore','syncAxMobileNav'].forEach(name => has(HOME_JS, name, 'mobile more behavior'));
   });
 
@@ -226,7 +232,7 @@ const TILE_MIN = 216, TILE_MAX = 512;
     has(SW, './assets/home-hero-calibration-lab-v2.webp', 'home hero');
     has(SW, './assets/calibration-lab-hero.png', 'login and splash hero');
     ok(SW.indexOf('./assets/hero-lab.jpg') === -1, 'hero-lab.jpg ไม่ควรอยู่ใน APP_SHELL');
-    has(SW, "const CACHE_NAME = 'calibration-app-v163';", 'cache bump');
+    has(SW, "const CACHE_NAME = 'calibration-app-v164';", 'cache bump');
   });
 
   t('ไม่มีไฟล์กำพร้าใน APP_SHELL (ทุก path ต้องมีคนอ้างถึง)', () => {
