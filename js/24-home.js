@@ -144,6 +144,7 @@ function axMobileGo(page) {
 }
 
 function syncAxMobileNav(page) {
+  if (page === 'calrecs') page = 'plan';
   document.querySelectorAll('.bottom-nav .mobile-nav-item[data-page]').forEach(item => {
     item.classList.toggle('active', item.getAttribute('data-page') === page);
   });

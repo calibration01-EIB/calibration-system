@@ -63,7 +63,12 @@ async function renderPendingCertWidget() {
 
 // ===== หน้าติดตามผลสอบเทียบ: โหลด calibration_records ทั้งหมดมาไว้จับคู่กับเครื่องมือ =====
 let CALRECS = [];
+let calrecsSnapshotAvailable = false;
+function hasCalrecsSnapshot() {
+  return calrecsSnapshotAvailable;
+}
 async function loadCalrecsPage() {
+  calrecsSnapshotAvailable = false;
   const body = document.getElementById('calrecBody');
   if (body) body.innerHTML = '<tr><td colspan="8" class="no-data">กำลังโหลด...</td></tr>';
   try {
@@ -72,8 +77,10 @@ async function loadCalrecsPage() {
       .order('cal_date', { ascending: false }).order('created_at', { ascending: false });
     if (error) throw error;
     CALRECS = data || [];
+    calrecsSnapshotAvailable = true;
   } catch (e) {
     CALRECS = [];
+    calrecsSnapshotAvailable = false;
     if (body) body.innerHTML = `<tr><td colspan="8" class="no-data" style="color:var(--red)">โหลดไม่สำเร็จ: ${escapeHtmlText(e.message || '')}</td></tr>`;
     return;
   }

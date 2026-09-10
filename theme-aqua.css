@@ -1726,7 +1726,7 @@ tbody tr:hover td { background: #f6fafd !important; }
     display: grid !important;
     position: fixed !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
     z-index: 180 !important;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     align-items: stretch !important; justify-content: stretch !important;
     gap: 0 !important; overflow: visible !important;
     padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)) !important;

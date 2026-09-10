@@ -6,6 +6,7 @@
 <script src="../js/23-cal-records.js"></script>
 <script>
 const results = [];
+const originalLoadCalrecsPage = window.loadCalrecsPage;
 function t(name, fn) {
   try { fn(); results.push('PASS ' + name); }
   catch (e) { results.push('FAIL ' + name + ' — ' + e.message); }
@@ -717,6 +718,30 @@ function text(url) {
     lacks(routerSource, "calrecs: ['📋 ติดตามผลสอบเทียบ'", 'standalone route title');
   });
 
+  await ta('wrapped legacy calrecs route keeps desktop and mobile Plan active', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      const parsed = new DOMParser().parseFromString(indexSource, 'text/html');
+      app.document.body.innerHTML = '<div id="pagePlan"><div id="cwWorkSurface"></div><section id="cwResultsSurface" hidden></section></div>' +
+        '<button class="nav-item" id="nav-plan"></button>' + parsed.querySelector('.bottom-nav').outerHTML;
+      app.CW_TEST_MODE = true;
+      app.getSession = () => null;
+      app.eval(workSource);
+      app.eval(routerSource);
+      app.eval(homeSource);
+      app.allData = [{id:1}];
+      app.loadCalrecsPage = () => {};
+      app.showPage('calrecs');
+      eq(app.document.getElementById('pagePlan').style.display, 'block', 'Plan page visible');
+      ok(!app.document.getElementById('cwResultsSurface').hidden, 'Results visible');
+      ok(app.document.getElementById('nav-plan').classList.contains('active'), 'desktop Plan active');
+      ok(app.document.querySelector('.bottom-nav [data-page="plan"]').classList.contains('active'), 'mobile Plan active after home wrapper');
+      eq(app.document.querySelectorAll('.bottom-nav .active').length, 1, 'only Plan is active');
+    } finally { frame.remove(); }
+  });
+
   await ta('results wait for registry readiness before loading records', async () => {
     const fixture = document.createElement('div');
     const previousAllData = window.allData;
@@ -743,6 +768,56 @@ function text(url) {
       window.loadCalrecsPage = previousLoad;
       delete window.__resultsLoads;
     }
+  });
+
+  await ta('readiness API loads Results immediately with lexical registry data', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.CW_TEST_MODE = true;
+      const registry = app.document.createElement('script');
+      registry.textContent = 'let allData = [{id:1}];';
+      app.document.body.appendChild(registry);
+      app.eval(workSource);
+      const ready = cwDeferred();
+      app.whenRegistryDataReady = () => ready.promise;
+      let loads = 0;
+      const retries = [];
+      app.loadCalrecsPage = () => { loads += 1; };
+      app.setTimeout = (callback, delay) => { retries.push({callback, delay}); };
+      eq(app.allData, undefined, 'top-level let is absent from window');
+      app.cwSetPrimaryTab('results');
+      await Promise.resolve();
+      eq(loads, 0, 'records wait for readiness');
+      ready.resolve(true);
+      for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+      eq(loads, 1, 'readiness API starts records load without retry delay');
+      eq(retries.length, 0, 'no readiness polling scheduled');
+    } finally { frame.remove(); }
+  });
+
+  await ta('Results retains bounded polling only without a readiness API', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.CW_TEST_MODE = true;
+      app.eval(workSource);
+      let loads = 0;
+      const retries = [];
+      app.loadCalrecsPage = () => { loads += 1; };
+      app.setTimeout = callback => { retries.push(callback); };
+      app.cwSetPrimaryTab('results');
+      for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+      eq(loads, 0, 'fallback initially waits');
+      for (let attempt = 0; attempt < 21; attempt++) {
+        eq(retries.length, 1, 'one bounded retry pending');
+        retries.shift()();
+      }
+      eq(loads, 1, 'fallback eventually loads even an empty registry');
+      eq(retries.length, 0, 'fallback stops polling');
+    } finally { frame.remove(); }
   });
 
   t('closing create from results restores the results surface', () => {
@@ -1099,6 +1174,34 @@ function text(url) {
     } finally { cleanup(); }
   });
 
+  for (const failed of [false, true]) {
+    for (const [initial, selected] of [['batches', 'results'], ['results', 'batches']]) {
+      await ta('preserves newer primary selection ' + initial + ' to ' + selected + ' after ' + (failed ? 'failed' : 'successful') + ' Plan load', async () => {
+        const cleanup = cwMountFixture();
+        const previousData = window.allData;
+        const previousLoad = window.loadCalrecsPage;
+        try {
+          window.allData = [{id:1}];
+          window.loadCalrecsPage = () => {};
+          cwRenderDashboard({batches:[],locks:[]}, {primaryTab:initial});
+          const deferred = Object.fromEntries(['calibration_work_batches','calibration_work_items','calibration_work_instrument_locks','calibration_work_documents','calibration_work_audit'].map(table => [table, cwDeferred()]));
+          const pending = loadCalibrationWorkPage(cwDeferredClient(deferred));
+          ok(cwSetPrimaryTab(selected), 'user selects newer tab');
+          Object.entries(deferred).forEach(([table, response]) => response.resolve({
+            data:[], error:failed && table === 'calibration_work_batches' ? {message:'Plan unavailable'} : null
+          }));
+          eq(await pending, !failed, 'load outcome');
+          eq(document.querySelector('[data-cw-primary="' + selected + '"]').getAttribute('aria-pressed'), 'true', 'newer primary remains selected');
+          eq(document.getElementById('cwResultsSurface').hidden, selected !== 'results', 'newer surface remains visible');
+        } finally {
+          cleanup();
+          window.allData = previousData;
+          window.loadCalrecsPage = previousLoad;
+        }
+      });
+    }
+  }
+
   await ta('ignores stale overlapping load success and restores the list before refresh', async () => {
     const cleanup = cwMountFixture();
     try {
@@ -1298,11 +1401,56 @@ function text(url) {
     delete window.currentUser;
   });
 
+  await ta('keeps records load error visible after successful Plan publication', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    try {
+      const app = frame.contentWindow;
+      app.document.body.innerHTML = '<div id="cwWorkSurface"></div><section id="cwResultsSurface"><table><tbody id="calrecBody"></tbody></table></section>';
+      app.CW_TEST_MODE = true;
+      app.allData = [{id:301,id_code:'WRM-301',days_left:5}];
+      app.currentUser = {role:'viewer'};
+      app.escapeHtmlText = value => String(value);
+      app.eval(workSource);
+      app.eval(recordsSource);
+      let recordsError = null;
+      app.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { resolve({data:[],error:recordsError}); }
+      }; return query; }};
+      app.cwRenderDashboard({batches:[],locks:[]}, {primaryTab:'results'});
+      await app.loadCalrecsPage();
+      recordsError = {message:'Records unavailable'};
+      await app.loadCalrecsPage();
+      const errorHtml = app.document.getElementById('calrecBody').innerHTML;
+      has(errorHtml, 'Records unavailable', 'records request shows its error');
+      ok(await app.loadCalibrationWorkPage(cwPagedClient({}, [])), 'Plan snapshot succeeds');
+      eq(app.document.getElementById('calrecBody').innerHTML, errorHtml, 'Plan publication preserves records load error');
+      const pendingResponse = cwDeferred();
+      const recordsClient = app.sb;
+      app.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { return pendingResponse.promise.then(resolve); }
+      }; return query; }};
+      const pendingRecords = app.loadCalrecsPage();
+      app.sb = recordsClient;
+      recordsError = null;
+      await app.loadCalrecsPage();
+      pendingResponse.resolve({data:null,error:{message:'Late records failure'}});
+      await pendingRecords;
+      const lateErrorHtml = app.document.getElementById('calrecBody').innerHTML;
+      has(lateErrorHtml, 'Late records failure', 'overlapping failure replaces earlier success');
+      ok(await app.loadCalibrationWorkPage(cwPagedClient({}, [])), 'Plan snapshot after overlapping records requests succeeds');
+      eq(app.document.getElementById('calrecBody').innerHTML, lateErrorHtml, 'overlapping records load error also remains visible');
+    } finally { frame.remove(); }
+  });
+
   await ta('refreshes visible results progress after plan-map publication without reloading records', async () => {
     const cleanup = cwMountFixture();
     const previousAllData = window.allData;
     const previousLoad = window.loadCalrecsPage;
     const previousRecords = CALRECS;
+    const previousClient = window.sb;
     const previousMap = { ...calibrationWorkStatusMap };
     const previousEscape = window.escapeHtmlText;
     const previousUser = window.currentUser;
@@ -1318,10 +1466,13 @@ function text(url) {
       window.loadCalrecsPage = () => { recordLoads += 1; };
       window.escapeHtmlText = value => String(value == null ? '' : value);
       window.currentUser = {role:'viewer'};
-      CALRECS = [];
+      window.sb = {from() { const query = {
+        select() { return query; }, order() { return query; },
+        then(resolve) { resolve({data:[],error:null}); }
+      }; return query; }};
       Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
       cwRenderDashboard({batches:[],locks:[],locksReady:true}, {primaryTab:'results'});
-      renderCalrecsTable();
+      await originalLoadCalrecsPage();
       has(document.getElementById('calrecBody').textContent, 'ยังไม่ได้วางแผน', 'records render before plan map publication');
 
       const rows = {
@@ -1340,6 +1491,7 @@ function text(url) {
       window.escapeHtmlText = previousEscape;
       window.currentUser = previousUser;
       CALRECS = previousRecords;
+      window.sb = previousClient;
       Object.keys(calibrationWorkStatusMap).forEach(key => delete calibrationWorkStatusMap[key]);
       Object.assign(calibrationWorkStatusMap, previousMap);
     }
