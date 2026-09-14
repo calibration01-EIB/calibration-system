@@ -1,0 +1,13 @@
+#pageKpi .kpt-filters{display:flex;flex-wrap:wrap;gap:16px;align-items:end;margin-bottom:20px}
+#pageKpi .kpt-filters label{display:grid;gap:6px;color:#456078;max-width:100%}
+#pageKpi .kpt-filters select{padding:10px 12px;border:1px solid #cedeea;border-radius:10px;background:white;max-width:100%;min-width:160px}
+#pageKpi .kpt-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:20px}
+#pageKpi .kpt-table{min-width:1040px;width:100%}
+#pageKpi .kpt-table th,#pageKpi .kpt-table td{padding:14px;text-align:center;white-space:nowrap}
+#pageKpi .kpt-table th:first-child{text-align:left;white-space:normal;min-width:200px}
+#pageKpi .kpt-table progress{width:75px;height:9px;accent-color:#0f9c88}
+#pageKpi .kpt-table small{display:block;color:#657d90}
+#pageKpi .kpt-overdue{color:#b91c1c;font-weight:700}
+#pageKpi .kpt-notes{margin-top:18px;color:#526b80;line-height:1.7}
+#pageKpi .kpt-notes summary{cursor:pointer;font-weight:600}
+@media(max-width:700px){#pageKpi .kpt-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#pageKpi .kpt-filters label{width:100%}#pageKpi .kpt-filters select{width:100%;min-width:0}}

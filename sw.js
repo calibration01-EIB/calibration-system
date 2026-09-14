@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v169';
+const CACHE_NAME = 'calibration-app-v170';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -47,7 +47,9 @@ const APP_SHELL = [
   './js/25-dashboard-ui.js?v=20260908-filter1',
   './js/26-list-ui.js?v=20260908-filter1',
   './js/27-asset-out-page.js?v=20260911-asset-out2',
-  './js/28-kpi.js?v=20260903-plan2',
+  './js/28-kpi.js?v=20260914-kpi1',
+  './js/31-kpi-types.js?v=20260914-kpi1',
+  './kpi-types.css?v=20260914-kpi1',
   './js/29-calibration-work.js?v=20260908-filter1',
   './js/30-reference-library.js?v=20260914-reference1',
   // หน้าสอบเทียบเครื่องชั่ง = งานหลัก เปิดเป็นแท็บใหม่จาก openBalanceCal()

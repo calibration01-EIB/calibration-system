@@ -14,7 +14,7 @@
    ============================================================ */
 
 let kpiYear = new Date().getFullYear();
-let kpiView = 'year';
+let kpiView = 'types';
 let kpiMonth = new Date().getMonth();   // 0-11
 const KPI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -87,19 +87,19 @@ function renderKpiPage() {
   if (!host) return;
   const nav = document.getElementById('kpiSubNav');
   if (nav) {
-    nav.innerHTML = [['year', '📅', 'ภาพรวมรายปี'], ['month', '🗓️', 'เจาะรายเดือน']]
+    nav.innerHTML = [['types', '📊', 'แยกประเภทเครื่องมือ'], ['year', '📅', 'ทะเบียนรายปี'], ['month', '🗓️', 'ทะเบียนรายเดือน']]
       .map(([k, e, lb]) => '<button type="button" class="ax-kpi-pill' + (kpiView === k ? ' is-on' : '') + '"'
         + ' onclick="kpiSetView(\'' + k + '\')"><span>' + e + '</span><span>' + lb + '</span></button>').join('');
   }
   const yearSel = document.getElementById('kpiYear');
   if (yearSel) {
     const years = [...new Set(kpiRows().map(d => (kpiMonthOf(d.cal_date) || {}).year)
-      .concat(kpiRows().map(d => (kpiMonthOf(d.due_date) || {}).year)).filter(Boolean))].sort((a, b) => b - a);
+      .concat(kpiRows().map(d => (kpiMonthOf(d.due_date) || {}).year)).concat(typeof kptState !== 'undefined' ? kptState.items.map(d => (kpiMonthOf(d.planned_date) || {}).year) : []).filter(Boolean))].sort((a, b) => b - a);
     if (!years.includes(kpiYear)) years.unshift(kpiYear);
     yearSel.innerHTML = years.map(y => '<option value="' + y + '">ปี ' + y + '</option>').join('');
     yearSel.value = String(kpiYear);
   }
-  host.innerHTML = kpiView === 'year' ? kpiYearViewHtml() : kpiMonthViewHtml();
+  host.innerHTML = kpiView === 'types' ? kptHtml() : kpiView === 'year' ? kpiYearViewHtml() : kpiMonthViewHtml();
 }
 
 function kpiYearViewHtml() {
@@ -233,4 +233,4 @@ function kpiMonthViewHtml() {
       + '</table></div></div>';
 }
 
-function loadKpiPage() { renderKpiPage(); }
+function loadKpiPage() { kptLoad(); }
