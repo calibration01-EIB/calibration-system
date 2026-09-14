@@ -41,7 +41,7 @@ function showPage(page) {
     })();
   }
   if (requestedHistory && typeof cwSetPrimaryTab === 'function') cwSetPrimaryTab('history');
-  if (page === 'weights') { loadStandardWeights(); }
+  if (page === 'weights') { switchSWTab('certs'); }
   if (page === 'admin') loadUsers();
   if (page === 'audit') loadAuditLogs();
   if (page === 'gate') {

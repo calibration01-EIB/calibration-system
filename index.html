@@ -2528,6 +2528,7 @@ body.app-mode textarea:focus {
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
 <link rel="stylesheet" href="theme-aqua.css?v=20260908-filter1">
+<link rel="stylesheet" href="reference-library.css?v=20260914-reference1">
 </head>
 <body>
 
@@ -3290,6 +3291,7 @@ body.app-mode textarea:focus {
             <p>ใบขออนุญาตนำทรัพย์สินออกนอกบริษัท · บันทึกการนำเครื่องมือออก ติดตามกำหนดกลับ และประวัติย้อนหลัง</p>
           </div>
           <div class="ax-head-actions">
+            <button type="button" id="gateAddBtn" class="ax-primary-btn" style="display:none" onclick="openAssetOutPicker()">＋ เพิ่มเครื่องมือนำออก</button>
             <button type="button" class="ax-ghost-btn" onclick="loadAssetOutPage()"><span>↻</span><span>รีเฟรช</span></button>
           </div>
         </div>
@@ -3348,11 +3350,70 @@ body.app-mode textarea:focus {
 
       <div id="pageWeights" class="page-content" style="display:none">
 
-        <!-- TABS: ใบ Cert Reference / ลูกตุ้มรายลูก -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">📜 ใบ Cert Reference (ตุ้มมาตรฐาน)</button>
-          <button class="sw-tab" id="swTabCmc" onclick="switchSWTab('cmc')">📐 CMC</button>
-          <button class="sw-tab" id="swTabPresets" onclick="switchSWTab('presets')">📋 พรีเซ็ทจุด</button>
+        <div class="ax-page-head ref-page-head">
+          <div><h1>ใบ Cert Reference</h1><p>จัดการใบรับรองอ้างอิงและค่ามาตรฐาน แยกตามหมวดและประเภทเครื่องมือ</p></div>
+        </div>
+        <nav class="ref-primary-tabs" aria-label="งานมาตรฐานอ้างอิง">
+          <button type="button" class="sw-tab active" id="swTabCerts" onclick="switchSWTab('certs')">คลังใบรับรอง</button>
+          <button type="button" class="sw-tab" id="swTabCmc" onclick="switchSWTab('cmc')">ขอบข่าย CMC</button>
+          <button type="button" class="sw-tab" id="swTabPresets" onclick="switchSWTab('presets')">พรีเซ็ตจุดสอบเทียบ</button>
+        </nav>
+
+        <section id="refSection" aria-label="คลังใบรับรองอ้างอิง">
+          <div class="ref-summary">
+            <div><span>รายการอ้างอิงทั้งหมด</span><strong id="refTotal">–</strong></div>
+            <button type="button" onclick="refStatFilter('warn')"><span>ครบกำหนดใน 60 วัน</span><strong id="refExpiring" class="ref-number-warn">–</strong></button>
+            <button type="button" onclick="refStatFilter('expired')"><span>หมดอายุ</span><strong id="refExpired" class="ref-number-danger">–</strong></button>
+            <button type="button" onclick="refStatFilter('pending')"><span>ชุดตุ้มรออนุมัติ</span><strong id="refPending">–</strong></button>
+          </div>
+          <p id="refCountsNote" class="ref-counts-note"></p>
+          <div class="ref-layout">
+            <aside class="ref-sidebar"><h2>หมวดมาตรฐาน</h2><nav id="refCategories" aria-label="หมวดมาตรฐาน"></nav>
+              <p class="ref-sidebar-note">เลือกหมวด แล้วกรองประเภทหรือ Class เพื่อดูรายการที่ต้องการ</p>
+            </aside>
+            <div class="ref-main">
+              <div class="ref-list-heading"><div><h2 id="refHeading">ทั้งหมด</h2><span id="refCount">กำลังโหลด…</span></div>
+                <div class="ref-heading-actions">
+                  <button type="button" id="refRefresh" class="ax-ghost-btn" onclick="loadReferencePage()">↻ รีเฟรช</button>
+                  <details class="ref-add-menu" id="refAddMenu" hidden><summary class="ax-primary-btn">＋ เพิ่มใบ Cert</summary>
+                    <div class="ref-add-options"><span>เลือกประเภทมาตรฐาน</span>
+                      <button type="button" onclick="refAdd('weights')">ตุ้มน้ำหนักมาตรฐาน</button>
+                      <button type="button" onclick="refAdd('balance')">เครื่องชั่ง</button>
+                      <button type="button" onclick="refAdd('temperature')">อุณหภูมิ</button>
+                      <button type="button" onclick="refAdd('pressure')">ความดัน</button>
+                      <button type="button" onclick="refAdd('length')">ความยาว / มิติ</button>
+                      <button type="button" onclick="refAdd('electrical')">ไฟฟ้า</button>
+                      <button type="button" onclick="refAdd('other')">อื่น ๆ</button>
+                    </div>
+                  </details>
+                </div>
+              </div>
+              <div class="ref-filters">
+                <label class="ref-search-field"><span>ค้นหาใบรับรอง</span><input id="refSearch" type="search" placeholder="เลข Cert, ชื่อเครื่องมือ, ชุดมาตรฐาน หรือ S/N" oninput="refApplyFilters()"></label>
+                <div class="ref-filter-options">
+                  <label><span>ประเภทเครื่องมือ</span><select id="refType" onchange="refApplyFilters()"><option value="">ทุกประเภท</option></select></label>
+                  <label id="refGradeField" hidden><span>Class / Grade</span><select id="refGrade" onchange="refApplyFilters()"><option value="">ทุก Class / Grade</option></select></label>
+                  <label><span>สถานะ</span><select id="refStatus" onchange="refApplyFilters()">
+                    <option value="">ทุกสถานะ</option><option value="ok">ยังไม่ครบกำหนด</option><option value="warn">ครบกำหนดใน 60 วัน</option>
+                    <option value="expired">หมดอายุ</option><option value="pending">ชุดตุ้มรออนุมัติ</option><option value="superseded">มีใบใหม่แทน</option><option value="nodue">ไม่ระบุวันครบกำหนด</option>
+                  </select></label>
+                  <button type="button" class="ref-reset" onclick="refResetFilters()">ล้างตัวกรอง</button>
+                </div>
+              </div>
+              <div id="refLoadNote" class="ref-load-note" role="status" hidden></div>
+              <div class="ref-list">
+                <div class="ref-list-columns" aria-hidden="true"><span>มาตรฐาน / ใบรับรอง</span><span>ประเภท</span><span>ครบกำหนด</span><span>สถานะ</span><span></span></div>
+                <div id="refResults"></div>
+                <div class="ref-list-footer"><span id="refPageLabel"></span><div id="refPagerButtons" hidden>
+                  <button id="refPrev" type="button" onclick="refGoPage(-1)">ก่อนหน้า</button><button id="refNext" type="button" onclick="refGoPage(1)">ถัดไป</button>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="modal-overlay" id="refWeightModal" role="dialog" aria-modal="true" aria-labelledby="refWeightTitle" onclick="if(event.target===this)refCloseWeightDetail()" onkeydown="if(event.key==='Escape')refCloseWeightDetail()">
+          <div class="modal-box ref-weight-modal"><div class="modal-header"><h3 id="refWeightTitle">รายละเอียดชุดตุ้ม</h3><button type="button" id="refWeightClose" class="btn-close" aria-label="ปิดรายละเอียด" onclick="refCloseWeightDetail()">×</button></div><div class="modal-body" id="refWeightBody"></div></div>
         </div>
 
         <!-- ===== SECTION: STANDARD CERTS (รวมเข้ากับ set-view แล้ว) ===== -->
@@ -3416,7 +3477,7 @@ body.app-mode textarea:focus {
         </div>
 
         <!-- ===== SECTION: STANDARD WEIGHTS / ใบ Cert Reference (set-view) ===== -->
-        <div id="swSection">
+        <div id="swSection" style="display:none">
 
         <style>
           .sw-card{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
@@ -4300,22 +4361,23 @@ body.app-mode textarea:focus {
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06b-import-register.js?v=20260803-split"></script>
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
-<script src="js/08-weights.js?v=20260803-deadcode"></script>
+<script src="js/08-weights.js?v=20260914-reference1"></script>
 <script src="js/09-cert.js?v=20260803-deadcode"></script>
-<script src="js/10-router.js?v=20260908-filter1"></script>
+<script src="js/10-router.js?v=20260914-reference1"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
-<script src="js/12-standard-certs.js?v=20260803-deadcode"></script>
+<script src="js/12-standard-certs.js?v=20260914-reference1"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
 <script src="js/14-cal-presets.js?v=20260630-presetsetup2"></script>
 <script src="js/16-repairs.js?v=20260908-filter1"></script>
-<script src="js/18-asset-out.js?v=20260903-plan2"></script>
+<script src="js/18-asset-out.js?v=20260911-asset-out2"></script>
 <script src="js/22-users.js?v=20260908-filter1"></script>
 <script src="js/24-home.js?v=20260908-filter1"></script>
 <script src="js/25-dashboard-ui.js?v=20260908-filter1"></script>
 <script src="js/26-list-ui.js?v=20260908-filter1"></script>
-<script src="js/27-asset-out-page.js?v=20260818-gate"></script>
+<script src="js/27-asset-out-page.js?v=20260911-asset-out2"></script>
 <script src="js/28-kpi.js?v=20260903-plan2"></script>
 <script src="js/29-calibration-work.js?v=20260908-filter1"></script>
+<script src="js/30-reference-library.js?v=20260914-reference1"></script>
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-overlay" id="importModal">
@@ -4365,7 +4427,7 @@ body.app-mode textarea:focus {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=20260908-filter1').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=20260914-reference1').catch(() => {});
   });
 }
 </script>

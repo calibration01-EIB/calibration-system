@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v165';
+const CACHE_NAME = 'calibration-app-v169';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './theme-aqua.css?v=20260908-filter1',
+  './reference-library.css?v=20260914-reference1',
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
   './assets/nac-thailand.png',
@@ -33,26 +34,27 @@ const APP_SHELL = [
   './js/05-audit.js?v=20260622-audit-fit',
   './js/06b-import-register.js?v=20260803-split',
   './js/07-notifications.js?v=20260610-notif-cancel-fix',
-  './js/08-weights.js?v=20260803-deadcode',
+  './js/08-weights.js?v=20260914-reference1',
   './js/09-cert.js?v=20260803-deadcode',
-  './js/10-router.js?v=20260908-filter1',
-  './js/12-standard-certs.js?v=20260803-deadcode',
+  './js/10-router.js?v=20260914-reference1',
+  './js/12-standard-certs.js?v=20260914-reference1',
   './js/13-cmc.js?v=20260618-cmc',
   './js/14-cal-presets.js?v=20260630-presetsetup2',
   './js/16-repairs.js?v=20260908-filter1',
-  './js/18-asset-out.js?v=20260903-plan2',
+  './js/18-asset-out.js?v=20260911-asset-out2',
   './js/22-users.js?v=20260908-filter1',
   './js/24-home.js?v=20260908-filter1',
   './js/25-dashboard-ui.js?v=20260908-filter1',
   './js/26-list-ui.js?v=20260908-filter1',
-  './js/27-asset-out-page.js?v=20260818-gate',
+  './js/27-asset-out-page.js?v=20260911-asset-out2',
   './js/28-kpi.js?v=20260903-plan2',
   './js/29-calibration-work.js?v=20260908-filter1',
+  './js/30-reference-library.js?v=20260914-reference1',
   // หน้าสอบเทียบเครื่องชั่ง = งานหลัก เปิดเป็นแท็บใหม่จาก openBalanceCal()
   // จึงต้อง precache เพื่อให้ช่างหน้างานใช้งานได้แม้เครือข่ายไม่พร้อม
   './balance-cal.html',
   './js/balance-cal.js',
-  './assets/frm-asset-out-template.xlsx',
+  './assets/frm-asset-out-template.xlsx?v=20260911-asset-out2',
   IMPORT_TEMPLATE_SELECTION_SCRIPT
 ];
 

@@ -96,6 +96,8 @@ async function assetOutUndoReturned(permitId) {
 }
 
 async function loadAssetOutPage() {
+  const addBtn = document.getElementById('gateAddBtn');
+  if (addBtn) addBtn.style.display = assetOutCanEdit() ? '' : 'none';
   const tbody = document.getElementById('gateTableBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="no-data">กำลังโหลด...</td></tr>';
   try {
@@ -231,7 +233,7 @@ function renderAssetOutTable() {
       + (p.returned_at
           ? (isAdmin ? '<button type="button" class="ax-crc-act" onclick="assetOutUndoReturned(' + p.id + ')" title="ยกเลิกการรับกลับ">↩️</button>' : '')
           : (canEdit ? '<button type="button" class="ax-crc-act is-primary" onclick="assetOutMarkReturned(' + p.id + ')">📥 รับกลับ</button>' : ''))
-      + '<button type="button" class="ax-crc-act" onclick="assetOutReprint(' + p.id + ')" title="พิมพ์ใบซ้ำ">🖨️</button>'
+      + '<button type="button" class="ax-crc-act" onclick="assetOutReprint(' + p.id + ')" title="ดาวน์โหลดใบนำออกตามแบบฟอร์ม">Export Excel</button>'
       + '</span></td>'
       + '</tr>';
   }).join('');

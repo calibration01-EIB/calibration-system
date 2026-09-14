@@ -17,7 +17,7 @@ function assetOutDateSerial(iso) {
 let assetOutTemplateBufPromise = null;
 function assetOutGetTemplate() {
   if (!assetOutTemplateBufPromise) {
-    assetOutTemplateBufPromise = fetch('assets/frm-asset-out-template.xlsx')
+    assetOutTemplateBufPromise = fetch('assets/frm-asset-out-template.xlsx?v=20260911-asset-out2')
       .then(r => { if (!r.ok) throw new Error('template ' + r.status); return r.arrayBuffer(); })
       .catch(e => { assetOutTemplateBufPromise = null; throw e; });
   }
@@ -87,31 +87,31 @@ function assetOutRenderTemplate(templateBuf, d, photoBytes) {
     let sheet = await zip.file('xl/worksheets/sheet1.xml').async('string');
     const T = (addr, txt) => { sheet = aoSetCellText(sheet, addr, txt); };
     const D = (addr, iso) => { sheet = aoSetCellDate(sheet, addr, iso); };
-    // autofill (ต่อท้าย label)
-    T('A6', 'ชื่อทรัพย์สิน   ' + (d.instrument_name || ''));
-    T('G6', 'รหัสทรัพย์สิน   ' + (d.asset_no || ''));
-    T('G8', 'รหัส    ID.No.  ' + (d.id_code || ''));
+    // ใบนำของออก01.xlsx: fill value cells, preserving labels and merged ranges.
+    T('C6', d.instrument_name || '');
+    T('H6', d.asset_no || '');
+    T('H8', d.id_code || '');
     T('I28', d.dept_name || ''); T('I40', d.dept_name || '');
-    T('J28', d.cost_center ? 'Cost Center  ' + d.cost_center : '');
-    T('J40', d.cost_center ? 'Cost Center  ' + d.cost_center : '');
+    T('L28', d.cost_center || '');
+    T('L40', d.cost_center || '');
     // dialog
     D('H4', d.permit_date);
-    T('A8', 'เป็นส่วนประกอบของ  ' + (d.is_component_of || ''));
-    T('A10', 'Job Oder No. ' + (d.job_order_no || ''));
-    T('A12', 'รายละเอียด/ปัญหางานซ่อม   ' + (d.detail || ''));
-    T('A14', 'PR. NO. ' + (d.pr_no || ''));
-    T('G14', 'PO.NO. ' + (d.po_no || ''));
-    T('H16', d.purpose || '');
+    T('D8', d.is_component_of || '');
+    T('C10', d.job_order_no || '');
+    T('E12', d.detail || '');
+    T('B14', d.pr_no || '');
+    T('H14', d.po_no || '');
+    T('G16', d.purpose || '');
     T('G18', d.vendor_name || '');
     T('B20', d.vendor_address || '');
-    T('B22', d.vendor_phone || '');
-    T('F22', d.vendor_fax || '');
-    T('H22', d.vendor_email || '');
+    T('C22', d.vendor_phone || '');
+    T('G22', d.vendor_fax || '');
+    T('J22', d.vendor_email || '');
     T('C24', d.vendor_contact || '');
     D('H24', d.due_date);
     zip.file('xl/worksheets/sheet1.xml', sheet);
-    // รูปทรัพย์สิน → เขียนทับ image2.jpeg (rId2)
-    if (photoBytes) zip.file('xl/media/image2.jpeg', photoBytes);
+    // The sanitized template has one photo placeholder, separate from the logo.
+    if (photoBytes) zip.file('xl/media/image3.jpeg', photoBytes);
     return zip.generateAsync({ type: 'blob', compression: 'DEFLATE',
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   });
@@ -119,8 +119,45 @@ function assetOutRenderTemplate(templateBuf, d, photoBytes) {
 
 // ===== Dialog + submit flow (ปุ่ม 📤 นำทรัพย์สินออก ในหน้าเครื่องมือ) =====
 let aoState = { inst: null, photoBytes: null, photoPromise: null };
+let aoSubmitting = false;
+
+function assetOutCanEdit() {
+  return typeof currentUser !== 'undefined' && !!currentUser
+    && (currentUser.role === 'admin' || currentUser.role === 'editor');
+}
+
+function openAssetOutPicker() {
+  if (!assetOutCanEdit()) { showToast('เฉพาะ Admin หรือ Editor เท่านั้น', 'error'); return; }
+  aoState = { inst: null, photoBytes: null, photoPromise: null };
+  document.getElementById('assetOutBody').innerHTML = `
+    <div class="modal-header"><h3>เพิ่มเครื่องมือนำออก</h3>
+      <button class="btn-close" onclick="closeAssetOutModal()" aria-label="ปิด">×</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label for="ao_instrument_search">ค้นหาเครื่องมือในทะเบียน</label>
+        <input id="ao_instrument_search" type="search" placeholder="ID.No., ชื่อเครื่องมือ หรือรหัสทรัพย์สิน" oninput="renderAssetOutPicker()"></div>
+      <div id="ao_instrument_results" style="max-height:360px;overflow:auto;margin-top:12px"></div>
+    </div>
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeAssetOutModal()">ยกเลิก</button></div>`;
+  document.getElementById('assetOutModal').classList.add('open');
+  renderAssetOutPicker();
+  document.getElementById('ao_instrument_search').focus();
+}
+
+function renderAssetOutPicker() {
+  const q = (document.getElementById('ao_instrument_search').value || '').trim().toLowerCase();
+  const instruments = typeof allData !== 'undefined' ? (allData || []) : [];
+  const rows = instruments.filter(d => [d.id_code, d.instrument_name, d.asset_no, d.department, d.division]
+    .some(v => String(v || '').toLowerCase().includes(q)));
+  document.getElementById('ao_instrument_results').innerHTML = rows.length
+    ? rows.slice(0, 100).map(d => `<button type="button" class="btn-secondary" style="display:block;width:100%;text-align:left;margin-bottom:8px;white-space:normal" onclick="openAssetOutModal(${Number(d.id) || 0})">
+        <b>${assetOutEscapeXml(d.id_code || '–')}</b> · ${assetOutEscapeXml(d.instrument_name || '–')}
+        <small style="display:block">${assetOutEscapeXml(d.asset_no || '')} · ${assetOutEscapeXml(d.division || d.department || '')}</small></button>`).join('')
+      + (rows.length > 100 ? '<p>แสดง 100 รายการแรก กรุณาค้นหาเพื่อจำกัดรายการ</p>' : '')
+    : '<p>ไม่พบเครื่องมือในทะเบียนที่ตรงกับคำค้น</p>';
+}
 
 async function openAssetOutModal(instrumentId) {
+  if (!assetOutCanEdit()) { showToast('เฉพาะ Admin หรือ Editor เท่านั้น', 'error'); return; }
   const { data, error } = await sb.from('instruments').select('*').eq('id', instrumentId).single();
   if (error || !data) { showToast('โหลดข้อมูลเครื่องมือไม่สำเร็จ', 'error'); return; }
   aoState = { inst: data, photoBytes: null, photoPromise: null };
@@ -163,12 +200,13 @@ async function openAssetOutModal(instrumentId) {
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeAssetOutModal()">ยกเลิก</button>
-      <button class="btn-primary" onclick="assetOutSubmit()">บันทึก + Export .xlsx</button>
+      <button id="ao_submit" class="btn-primary" onclick="assetOutSubmit()">บันทึก + Export Excel</button>
     </div>`;
   document.getElementById('assetOutModal').classList.add('open');
 }
 
 function closeAssetOutModal() {
+  if (aoSubmitting) return;
   document.getElementById('assetOutModal').classList.remove('open');
   aoState = { inst: null, photoBytes: null, photoPromise: null };
 }
@@ -179,52 +217,89 @@ function assetOutPickPhoto(ev) {
   // เก็บ Promise ไว้ (ไม่ await ตรงนี้) — assetOutSubmit จะ await ให้เสร็จก่อนใช้เสมอ
   // กันเคส submit เร็วกว่า arrayBuffer() จะ resolve (photoBytes ยังไม่ถูกเซ็ต)
   aoState.photoBytes = null;
-  aoState.photoPromise = f.arrayBuffer();
+  // Normalize PNG/WebP/JPEG to the JPEG placeholder's aspect ratio, without cropping.
+  aoState.photoPromise = new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = 1000; canvas.height = 780;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+      const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+      ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      canvas.toBlob(blob => blob ? blob.arrayBuffer().then(resolve, reject) : reject(new Error('แปลงรูปไม่สำเร็จ')), 'image/jpeg', 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('อ่านรูปไม่สำเร็จ')); };
+    img.src = url;
+  });
+  // Keep the rejection handled while the user is still filling the form.
+  aoState.photoPromise.catch(() => {});
   const prev = document.getElementById('ao_photo_prev');
   prev.src = URL.createObjectURL(f);
   prev.style.display = 'block';
 }
 
 async function assetOutSubmit() {
+  if (!assetOutCanEdit()) { showToast('เฉพาะ Admin หรือ Editor เท่านั้น', 'error'); return; }
+  if (aoSubmitting) return;
   const d = aoState.inst; if (!d) return;
-  // ให้แน่ใจว่ารูปที่เลือกไว้ (ถ้ามี) พร้อมใช้แล้วก่อนดำเนินการต่อ — กันเคสกด "บันทึก" เร็ว
-  // กว่า assetOutPickPhoto's arrayBuffer() จะ resolve เสร็จ (ไม่งั้นรูปจะหายไปเงียบๆ)
-  if (aoState.photoPromise) {
-    try { aoState.photoBytes = await aoState.photoPromise; }
-    catch (e) { aoState.photoBytes = null; showToast('อ่านไฟล์รูปไม่สำเร็จ', 'error'); }
-    aoState.photoPromise = null;
+  aoSubmitting = true;
+  const submit = document.getElementById('ao_submit');
+  if (submit) { submit.disabled = true; submit.textContent = 'กำลังบันทึก…'; }
+  let saved = false;
+  try {
+    // ให้แน่ใจว่ารูปที่เลือกไว้ (ถ้ามี) พร้อมใช้แล้วก่อนดำเนินการต่อ — กันเคสกด "บันทึก" เร็ว
+    // กว่า assetOutPickPhoto's arrayBuffer() จะ resolve เสร็จ (ไม่งั้นรูปจะหายไปเงียบๆ)
+    if (aoState.photoPromise) {
+      try { aoState.photoBytes = await aoState.photoPromise; }
+      catch (e) { aoState.photoBytes = null; showToast('อ่านไฟล์รูปไม่สำเร็จ กรุณาเลือกรูปใหม่', 'error'); return; }
+      aoState.photoPromise = null;
+    }
+    const val = id => (document.getElementById(id).value || '').trim();
+    const dept = d.division || d.department || '';
+    const rec = {
+      instrument_id: d.id, permit_date: val('ao_date') || null,
+      is_component_of: val('ao_component'), job_order_no: val('ao_job'),
+      detail: val('ao_detail'), pr_no: val('ao_pr'), po_no: val('ao_po'),
+      purpose: val('ao_purpose'), vendor_name: val('ao_vname'), vendor_address: val('ao_vaddr'),
+      vendor_phone: val('ao_vphone'), vendor_fax: val('ao_vfax'), vendor_email: val('ao_vemail'),
+      vendor_contact: val('ao_vcontact'), due_date: val('ao_due') || null,
+      cost_center: d.cost_center || null, dept_name: dept,
+      created_by: currentUser?.name || 'Unknown'
+    };
+    // 1) insert → ได้ id
+    const { data: ins, error } = await sb.from('asset_out_permits').insert(rec).select('id').single();
+    if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return; }
+    saved = true;
+    // 2) upload รูป (ถ้ามี) → path asset_out_permits/<instrument_id>/<permit_id>.jpg
+    if (aoState.photoBytes) {
+      const path = `asset_out_permits/${d.id}/${ins.id}.jpg`;
+      const { error: upErr } = await sb.storage.from('certificates')
+        .upload(path, new Blob([aoState.photoBytes], { type: 'image/jpeg' }), { upsert: true, contentType: 'image/jpeg' });
+      if (!upErr) await sb.from('asset_out_permits').update({ photo_path: path }).eq('id', ins.id);
+      else showToast('อัปโหลดรูปไม่สำเร็จ (บันทึกข้อมูลอื่นแล้ว)', 'error');
+    }
+    // 3) export
+    await assetOutExport({ ...rec, instrument_name: d.instrument_name, asset_no: d.asset_no, id_code: d.id_code }, aoState.photoBytes);
+    showToast('สร้างใบนำทรัพย์สินออกแล้ว', 'success');
+  } catch (e) {
+    showToast(saved ? 'บันทึกใบแล้ว แต่ Export หรือแนบรูปไม่สำเร็จ กรุณากด Export Excel ที่รายการอีกครั้ง'
+      : 'บันทึกไม่สำเร็จ: ' + (e.message || ''), 'error');
+  } finally {
+    aoSubmitting = false;
+    if (submit) { submit.disabled = false; submit.textContent = 'บันทึก + Export Excel'; }
+    if (saved) {
+      closeAssetOutModal();
+      if (typeof loadAssetOutPage === 'function') await loadAssetOutPage();
+    }
   }
-  const val = id => (document.getElementById(id).value || '').trim();
-  const dept = d.division || d.department || '';
-  const rec = {
-    instrument_id: d.id, permit_date: val('ao_date') || null,
-    is_component_of: val('ao_component'), job_order_no: val('ao_job'),
-    detail: val('ao_detail'), pr_no: val('ao_pr'), po_no: val('ao_po'),
-    purpose: val('ao_purpose'), vendor_name: val('ao_vname'), vendor_address: val('ao_vaddr'),
-    vendor_phone: val('ao_vphone'), vendor_fax: val('ao_vfax'), vendor_email: val('ao_vemail'),
-    vendor_contact: val('ao_vcontact'), due_date: val('ao_due') || null,
-    cost_center: d.cost_center || null, dept_name: dept,
-    created_by: currentUser?.name || 'Unknown'
-  };
-  // 1) insert → ได้ id
-  const { data: ins, error } = await sb.from('asset_out_permits').insert(rec).select('id').single();
-  if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return; }
-  // 2) upload รูป (ถ้ามี) → path asset_out_permits/<instrument_id>/<permit_id>.jpg
-  if (aoState.photoBytes) {
-    const path = `asset_out_permits/${d.id}/${ins.id}.jpg`;
-    const { error: upErr } = await sb.storage.from('certificates')
-      .upload(path, new Blob([aoState.photoBytes], { type: 'image/jpeg' }), { upsert: true, contentType: 'image/jpeg' });
-    if (!upErr) await sb.from('asset_out_permits').update({ photo_path: path }).eq('id', ins.id);
-    else showToast('อัปโหลดรูปไม่สำเร็จ (บันทึกข้อมูลอื่นแล้ว)', 'error');
-  }
-  // 3) export
-  await assetOutExport({ ...rec, instrument_name: d.instrument_name, asset_no: d.asset_no, id_code: d.id_code }, aoState.photoBytes);
-  showToast('สร้างใบนำทรัพย์สินออกแล้ว', 'success');
-  closeAssetOutModal();
 }
 
 async function assetOutExport(data, photoBytes) {
-  if (typeof JSZip === 'undefined') { showToast('โหลด JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)', 'error'); return; }
+  if (typeof JSZip === 'undefined') throw new Error('โหลด JSZip ไม่สำเร็จ (ต้องออนไลน์ครั้งแรก)');
   const buf = await assetOutGetTemplate();
   const blob = await assetOutRenderTemplate(buf, data, photoBytes || null);
   const a = document.createElement('a');
@@ -260,5 +335,7 @@ async function assetOutReprint(permitId) {
     const { data: u } = await sb.storage.from('certificates').createSignedUrl(p.photo_path, 300);
     if (u && u.signedUrl) photoBytes = await fetch(u.signedUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
   }
-  await assetOutExport({ ...p, instrument_name: inst?.instrument_name, asset_no: inst?.asset_no, id_code: inst?.id_code }, photoBytes);
+  try {
+    await assetOutExport({ ...p, instrument_name: inst?.instrument_name, asset_no: inst?.asset_no, id_code: inst?.id_code }, photoBytes);
+  } catch (e) { showToast('Export ไม่สำเร็จ: ' + (e.message || ''), 'error'); }
 }

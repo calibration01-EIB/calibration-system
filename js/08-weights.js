@@ -34,6 +34,7 @@ async function openCertFile(path) {
 }
 
 async function loadStandardWeights() {
+  if (typeof refSourceStatus === 'function') refSourceStatus('weights', 'loading');
   const host = document.getElementById('swSets');
   if (host && !swData.length) host.innerHTML = '<div class="no-data" style="padding:20px">กำลังโหลด...</div>';
   try {
@@ -41,7 +42,9 @@ async function loadStandardWeights() {
     if (error) throw error;
     swData = data || [];
     filterSW();
+    if (typeof refSourceStatus === 'function') refSourceStatus('weights', 'ready');
   } catch (e) {
+    if (typeof refSourceStatus === 'function') refSourceStatus('weights', 'error');
     if (host) host.innerHTML = '<div class="no-data" style="padding:20px;color:var(--red)">โหลดข้อมูลไม่ได้: ' + escapeHtmlText(e.message) + '</div>';
   }
 }

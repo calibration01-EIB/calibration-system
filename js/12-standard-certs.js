@@ -19,17 +19,19 @@ function scCatMeta(cat) { return SC_CATEGORIES[cat] || ['🧰', '#52667d']; }
 
 function switchSWTab(tab) {
   // "certs" = ใบ Cert Reference (set-view ของ standard_weights) · "cmc" = ขอบข่าย CMC
-  const sections = { certs: 'swSection', cmc: 'cmcSection', presets: 'presetSection' };
+  const sections = { certs: 'refSection', cmc: 'cmcSection', presets: 'presetSection' };
   const buttons = { certs: 'swTabCerts', cmc: 'swTabCmc', presets: 'swTabPresets' };
   const scSec = document.getElementById('scSection'); if (scSec) scSec.style.display = 'none';
+  const swSec = document.getElementById('swSection'); if (swSec) swSec.style.display = 'none';
   Object.entries(sections).forEach(([t, sec]) => { const el = document.getElementById(sec); if (el) el.style.display = (t === tab) ? '' : 'none'; });
   Object.entries(buttons).forEach(([t, id]) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', t === tab); });
-  if (tab === 'certs' && typeof loadStandardWeights === 'function') loadStandardWeights();
+  if (tab === 'certs' && typeof loadReferencePage === 'function') loadReferencePage();
   if (tab === 'cmc' && typeof loadCmcSets === 'function') loadCmcSets();
   if (tab === 'presets' && typeof loadCalPresets === 'function') loadCalPresets();
 }
 
 async function loadStandardCerts() {
+  if (typeof refSourceStatus === 'function') refSourceStatus('certs', 'loading');
   const addBtn = document.getElementById('scAddBtn');
   const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'editor');
   if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
@@ -46,7 +48,9 @@ async function loadStandardCerts() {
     (vRes.data || []).forEach(v => { (byCert[v.cert_id] = byCert[v.cert_id] || []).push(v); });
     scData = (cRes.data || []).map(c => ({ ...c, values: byCert[c.id] || [] }));
     renderSC();
+    if (typeof refSourceStatus === 'function') refSourceStatus('certs', 'ready');
   } catch (e) {
+    if (typeof refSourceStatus === 'function') refSourceStatus('certs', 'error');
     if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="color:var(--red)">โหลดข้อมูลไม่ได้: ' + escapeHtmlText(e.message) + '</td></tr>';
   }
 }
