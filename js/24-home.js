@@ -5,6 +5,7 @@
 
 /* ---------- ภาพสำรอง (ใช้เมื่อไฟล์ assets/tiles/*.png ยังไม่มี) ---------- */
 const AX_ART = {
+  kpi: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#dff3ef"/><path d="M20 54V38M39 54V30M58 54V22M77 54V15" stroke="#0f8f7d" stroke-width="10" stroke-linecap="round"/></svg>',
   dashboard: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#e4eefb"/><rect x="16" y="36" width="12" height="18" rx="3" fill="#2f7de1"/><rect x="34" y="22" width="12" height="32" rx="3" fill="#2f7de1"/><rect x="52" y="30" width="12" height="24" rx="3" fill="#5fa3ee"/><rect x="70" y="16" width="12" height="38" rx="3" fill="#1d5fb4"/></svg>',
   list: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#dff2e8"/><rect x="20" y="6" width="56" height="60" rx="7" fill="#1f9d6b"/><rect x="30" y="20" width="36" height="6" rx="3" fill="#fff"/><rect x="30" y="33" width="36" height="6" rx="3" fill="#fff"/><rect x="30" y="46" width="22" height="6" rx="3" fill="#fff"/></svg>',
   cert: '<svg viewBox="0 0 96 72" fill="none"><rect x="4" y="8" width="88" height="56" rx="8" fill="#e0f3e4"/><rect x="24" y="12" width="48" height="40" rx="6" fill="#3aa564"/><rect x="34" y="24" width="28" height="5" rx="2.5" fill="#fff"/><rect x="34" y="35" width="18" height="5" rx="2.5" fill="#fff"/><circle cx="48" cy="58" r="9" fill="#f0a417"/></svg>',
@@ -17,6 +18,7 @@ const AX_ART = {
 
 /* ---------- นิยามการ์ดหน้าแรก (ลำดับตามดีไซน์) ---------- */
 const AX_TILES = [
+  { k:'kpi', page:'kpi', t:'KPI งานสอบเทียบ', d:'ผลสอบเทียบแยกประเภท ความสำเร็จตามแผน และงานค้าง' },
   { k:'dashboard', img:'01_dashboard',            page:'dashboard', t:'Dashboard',                    d:'ภาพรวมข้อมูลและสถิติการสอบเทียบ' },
   { k:'list',      img:'02_instrument_list',      page:'list',      t:'รายการเครื่องมือ',              d:'จัดการข้อมูลเครื่องมือวัดและรายละเอียด' },
   { k:'cert',      img:'04_cert_number',          page:'cert',      t:'ลำดับเลข Cert',                 d:'ทะเบียนหมายเลขลำดับใบรับรองผลสอบเทียบ' },
@@ -149,7 +151,7 @@ function syncAxMobileNav(page) {
     item.classList.toggle('active', item.getAttribute('data-page') === page);
   });
   const more = document.getElementById('axMobileMoreBtn');
-  if (more) more.classList.toggle('active', ['dashboard', 'cert', 'repairs', 'weights', 'admin', 'audit'].indexOf(page) !== -1);
+  if (more) more.classList.toggle('active', ['dashboard', 'cert', 'repairs', 'weights', 'admin', 'audit', 'kpi'].indexOf(page) !== -1);
 }
 
 /* ---------- หน้า placeholder (ตามดีไซน์ isSoon) ---------- */
