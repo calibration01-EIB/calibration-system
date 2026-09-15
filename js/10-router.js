@@ -2,9 +2,10 @@
 // SHOW PAGE
 // ====================================================
 function showPage(page) {
+  if (page === 'kpi') { showPage('dashboard'); dashSetTab('kpi'); return; }
   const requestedHistory = page === 'calrecs';
   if (page === 'calrecs') page = 'plan';
-  const pages = ['dashboard','list','audit','admin','plan','weights','cert','repairs','gate','kpi'];
+  const pages = ['dashboard','list','audit','admin','plan','weights','cert','repairs','gate'];
   pages.forEach(p => {
     const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
     if (el) el.style.display = page === p ? 'block' : 'none';

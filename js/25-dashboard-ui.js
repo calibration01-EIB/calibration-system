@@ -4,6 +4,15 @@
    ต้องโหลดหลัง 02-dashboard.js / 04-reports.js / 10-router.js
    ============================================================ */
 
+function dashSetTab(tab) {
+  const isKpi = tab === 'kpi';
+  document.getElementById('dashOverviewPanel').style.display = isKpi ? 'none' : 'block';
+  document.getElementById('pageKpi').style.display = isKpi ? 'block' : 'none';
+  document.getElementById('dashOverviewTab').classList.toggle('is-on', !isKpi);
+  document.getElementById('dashKpiTab').classList.toggle('is-on', isKpi);
+  if (isKpi) loadKpiPage();
+}
+
 const DASH_TODO = [
   { src:'statOverdue',     emoji:'⚠️', bg:'#fde8e8', color:'#b91c1c',
     title:'เครื่องมือเกินกำหนดสอบเทียบ', desc:'ต้องดำเนินการทันที',

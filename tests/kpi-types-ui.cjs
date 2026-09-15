@@ -7,9 +7,10 @@ await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.orig
 await page.goto('http://kpi.test');
 await page.addScriptTag({content:`var allData=[];var cwTodayISO=()=> '2026-09-14';var fail=false;var batches=['เครื่องชั่ง','ตุ้มน้ำหนัก','อุณหภูมิ','ความดัน','ไฟฟ้า'].map((t,i)=>({id:i,instrument_type:t,status:'awaiting_calibration'}));var items=batches.flatMap(b=>Array.from({length:12},(_,i)=>({id:b.id*20+i,batch_id:b.id,planned_date:'2026-09-01',result_status:i<9?'completed':'in_progress',calibration_date:i<7?'2026-08-30':'2026-09-02'})));var sb={from(t){return {select(){return this},order(){return this},limit(){return Promise.resolve(fail?{error:{message:'offline'}}:{data:t==='calibration_work_batches'?batches:items})}}}};`});
 await page.addScriptTag({content:fs.readFileSync('js/10-router.js','utf8').split('(function installListIntegrityFixes()')[0]});
-for(const f of ['js/24-home.js','js/28-kpi.js','js/31-kpi-types.js'])await page.addScriptTag({path:f});
+for(const f of ['js/24-home.js','js/25-dashboard-ui.js','js/28-kpi.js','js/31-kpi-types.js'])await page.addScriptTag({path:f});
 await page.evaluate(async()=>{for(const id of ['loginPage','splashScreen'])document.getElementById(id).style.setProperty('display','none','important');document.getElementById('app').style.display='block';document.querySelectorAll('.page-content').forEach(e=>e.style.display='none');kpiYear=2026;showPage('home');});
-await page.locator('#axTiles').getByRole('button',{name:/KPI งานสอบเทียบ/}).click();
+await page.locator('#axTiles').getByRole('button',{name:/Dashboard/}).click();
+await page.locator('#dashKpiTab').click();
 await page.waitForSelector('.kpt-table tbody tr');
 assert.equal(await page.locator('.kpt-table tbody tr').count(),5);
 await page.screenshot({path:'.codex-screens/kpi-types-desktop.png',fullPage:true});

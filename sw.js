@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v171';
+const CACHE_NAME = 'calibration-app-v172';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -36,15 +36,15 @@ const APP_SHELL = [
   './js/07-notifications.js?v=20260610-notif-cancel-fix',
   './js/08-weights.js?v=20260914-reference1',
   './js/09-cert.js?v=20260803-deadcode',
-  './js/10-router.js?v=20260914-reference1',
+  './js/10-router.js?v=20260915-dashboard-kpi',
   './js/12-standard-certs.js?v=20260914-reference1',
   './js/13-cmc.js?v=20260618-cmc',
   './js/14-cal-presets.js?v=20260630-presetsetup2',
   './js/16-repairs.js?v=20260908-filter1',
   './js/18-asset-out.js?v=20260911-asset-out2',
   './js/22-users.js?v=20260908-filter1',
-  './js/24-home.js?v=20260914-kpi-nav1',
-  './js/25-dashboard-ui.js?v=20260908-filter1',
+  './js/24-home.js?v=20260915-dashboard-kpi',
+  './js/25-dashboard-ui.js?v=20260915-dashboard-kpi',
   './js/26-list-ui.js?v=20260908-filter1',
   './js/27-asset-out-page.js?v=20260911-asset-out2',
   './js/28-kpi.js?v=20260914-kpi1',

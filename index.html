@@ -2705,10 +2705,11 @@ body.app-mode textarea:focus {
 
         <!-- แท็บ -->
         <div class="ax-tabs">
-          <button type="button" class="ax-tab is-on" onclick="showPage('dashboard')"><span>📊</span><span>ภาพรวม</span></button>
-          <button type="button" class="ax-tab" onclick="showPage('soon')"><span>📈</span><span>KPI</span></button>
+          <button type="button" id="dashOverviewTab" class="ax-tab is-on" onclick="dashSetTab('overview')"><span>📊</span><span>ภาพรวม</span></button>
+          <button type="button" id="dashKpiTab" class="ax-tab" onclick="dashSetTab('kpi')"><span>📈</span><span>KPI</span></button>
         </div>
 
+        <div id="dashOverviewPanel">
         <!-- KPI CARDS -->
         <div id="statCardsGrid" class="dsh-kpis">
           <button type="button" class="dsh-kpi" onclick="filterByStatus('')">
@@ -2809,6 +2810,23 @@ body.app-mode textarea:focus {
         <div style="display:none">
           <div id="dashMiniList"></div>
         </div>
+
+              </div>
+<!-- หน้า KPI -->
+      <div id="pageKpi" style="display:none">
+        <div class="ax-page-head">
+          <div>
+            <h1>KPI งานสอบเทียบ</h1>
+            <p>ผลสอบเทียบแยกประเภทเครื่องมือ ความสำเร็จตามแผน และงานค้าง</p>
+          </div>
+          <div class="ax-head-actions">
+            <select id="kpiYear" onchange="kpiSetYear(this.value)" class="ax-kpi-year"></select>
+            <button type="button" class="ax-ghost-btn" onclick="loadKpiPage()"><span>↻</span><span>รีเฟรช</span></button>
+          </div>
+        </div>
+        <div class="ax-kpi-nav" id="kpiSubNav"></div>
+        <div id="kpiBody"></div>
+      </div>
 
       </div>
 
@@ -3265,22 +3283,6 @@ body.app-mode textarea:focus {
             <span id="repairCountLabel"></span>
           </div>
         </div>
-      </div>
-
-      <!-- หน้า KPI -->
-      <div id="pageKpi" class="page-content" style="display:none">
-        <div class="ax-page-head">
-          <div>
-            <h1>KPI งานสอบเทียบ</h1>
-            <p>ผลสอบเทียบแยกประเภทเครื่องมือ ความสำเร็จตามแผน และงานค้าง</p>
-          </div>
-          <div class="ax-head-actions">
-            <select id="kpiYear" onchange="kpiSetYear(this.value)" class="ax-kpi-year"></select>
-            <button type="button" class="ax-ghost-btn" onclick="loadKpiPage()"><span>↻</span><span>รีเฟรช</span></button>
-          </div>
-        </div>
-        <div class="ax-kpi-nav" id="kpiSubNav"></div>
-        <div id="kpiBody"></div>
       </div>
 
       <!-- หน้า นำของออกนอกสถานที่ -->
@@ -3806,7 +3808,7 @@ body.app-mode textarea:focus {
     <div class="ax-mobile-more-head"><strong>เมนูเพิ่มเติม</strong><button type="button" onclick="closeAxMobileMore()" aria-label="ปิดเมนู">×</button></div>
     <div class="ax-mobile-more-grid">
       <button type="button" onclick="axMobileGo('dashboard')"><span>📊</span><b>Dashboard</b></button>
-      <button type="button" onclick="axMobileGo('kpi')"><span>📈</span><b>KPI งานสอบเทียบ</b></button>
+
       <button type="button" data-page="plan" onclick="axMobileGo('plan')"><span>📅</span><b>แผนสอบเทียบ</b></button>
       <button type="button" onclick="axMobileGo('cert')"><span>🏷️</span><b>ลำดับเลข Cert</b></button>
       <button type="button" onclick="axMobileGo('repairs')" class="ax-mobile-more-repair"><span>🔧</span><b>งานซ่อม</b><i id="bnavRepairBadge">0</i></button>
@@ -4365,7 +4367,7 @@ body.app-mode textarea:focus {
 <script src="js/07-notifications.js?v=20260610-notif-cancel-fix"></script>
 <script src="js/08-weights.js?v=20260914-reference1"></script>
 <script src="js/09-cert.js?v=20260803-deadcode"></script>
-<script src="js/10-router.js?v=20260914-reference1"></script>
+<script src="js/10-router.js?v=20260915-dashboard-kpi"></script>
 <script src="js/11-import-template-selection.js?v=20260611-balance-mass-split"></script>
 <script src="js/12-standard-certs.js?v=20260914-reference1"></script>
 <script src="js/13-cmc.js?v=20260618-cmc"></script>
@@ -4373,8 +4375,8 @@ body.app-mode textarea:focus {
 <script src="js/16-repairs.js?v=20260908-filter1"></script>
 <script src="js/18-asset-out.js?v=20260911-asset-out2"></script>
 <script src="js/22-users.js?v=20260908-filter1"></script>
-<script src="js/24-home.js?v=20260914-kpi-nav1"></script>
-<script src="js/25-dashboard-ui.js?v=20260908-filter1"></script>
+<script src="js/24-home.js?v=20260915-dashboard-kpi"></script>
+<script src="js/25-dashboard-ui.js?v=20260915-dashboard-kpi"></script>
 <script src="js/26-list-ui.js?v=20260908-filter1"></script>
 <script src="js/27-asset-out-page.js?v=20260911-asset-out2"></script>
 <script src="js/28-kpi.js?v=20260914-kpi1"></script>
