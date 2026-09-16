@@ -380,35 +380,8 @@ function calcDueDateStr(calDate, frequency) {
 }
 
 function calcDueDate(calDate, frequency) {
-  if (!calDate || !frequency) return;
-  const d = new Date(calDate);
-  if (isNaN(d)) return;
-  const f = frequency.toLowerCase();
-
-  if (f.includes('2ครั้ง') || (f.includes('2') && f.includes('ครั้ง/ปี'))) {
-    d.setMonth(d.getMonth() + 6);
-  } else if (f.includes('4ครั้ง') || (f.includes('4') && f.includes('ครั้ง/ปี'))) {
-    d.setMonth(d.getMonth() + 3);
-  } else if (f.includes('3ปี') || (f.includes('3') && (f.includes('ปี') || f.includes('year')))) {
-    d.setFullYear(d.getFullYear() + 3);
-  } else if (f.includes('2ปี') || (f.includes('2') && (f.includes('ปี') || f.includes('year')))) {
-    d.setFullYear(d.getFullYear() + 2);
-  } else if (f.includes('6') && (f.includes('เดือน') || f.includes('month'))) {
-    d.setMonth(d.getMonth() + 6);
-  } else if (f.includes('3') && (f.includes('เดือน') || f.includes('month'))) {
-    d.setMonth(d.getMonth() + 3);
-  } else if (f.includes('ปี') || f.includes('year') || f.includes('/ปี') || f.includes('ครั้ง/ปี')) {
-    d.setFullYear(d.getFullYear() + 1);
-  } else if (f.includes('เดือน') || f.includes('month')) {
-    d.setMonth(d.getMonth() + 6);
-  } else {
-    return;
-  }
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  document.getElementById('iDueDate').value = `${yyyy}-${mm}-${dd}`;
+  const isoDate = parseInstrumentDate(calDate);
+  document.getElementById('iDueDate').value = formatInstrumentDate(calcDueDateStr(isoDate, frequency));
 }
 
 

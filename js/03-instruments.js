@@ -705,11 +705,13 @@ function openInstrumentModal(instrumentId) {
     document.getElementById('iCostCenter').value = d.cost_center || '';
     document.getElementById('iIdCode').value = d.id_code || '';
     document.getElementById('iCertNo').value = d.cert_no || '';
-    document.getElementById('iCalDate').value = d.cal_date || '';
-    document.getElementById('iDueDate').value = d.due_date || '';
+    document.getElementById('iCalDate').value = formatInstrumentDate(d.cal_date);
+    document.getElementById('iDueDate').value = formatInstrumentDate(d.due_date);
     document.getElementById('iPrevCertNo').value = d.prev_cert_no || '–';
-    document.getElementById('iPrevCalDate').value = d.prev_cal_date || '';
+    document.getElementById('iPrevCalDate').value = formatInstrumentDate(d.prev_cal_date);
   } else {
+    document.getElementById('iPrevCertNo').value = '–';
+    document.getElementById('iPrevCalDate').value = '';
     ['iCategory','iName','iBrand','iModel','iSerial','iAssetNo','iDept','iDivision','iCostCenter','iIdCode','iCertNo','iCalDate','iDueDate','iMachineName','iLocation','iCalFrequency','iCalType','iRemark',
      'iUsageFreq','iProductGroup','iUspType','iBalanceType']
       .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
@@ -720,6 +722,7 @@ function openInstrumentModal(instrumentId) {
     setBandFields('', USE_MIN_IDS, 'iUsageMinUnit');
     setBandFields('', USE_MAX_IDS, 'iUsageMaxUnit');
   }
+  setInstrumentDateParts();
   if (typeof updateDeptUnitHint === 'function') updateDeptUnitHint();
   document.getElementById('instrumentModal').classList.add('open');
   initInstrumentDuplicateCheck();
@@ -828,6 +831,89 @@ function buildRangeVal() {
   if (/[^\s\d.\-–()]$/.test(t)) return t;   // ลงท้ายด้วยตัวอักษร = มีหน่วยติดมาแล้ว ไม่เติมซ้ำ
   const u = (document.getElementById('iRangeUnit') || {}).value || '';
   return u ? t + ' ' + u : t;
+}
+
+// Registry form uses DD/MM/YYYY; database values remain ISO date-only strings.
+function formatInstrumentDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+}
+
+function parseInstrumentDate(value) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const [, day, month, year] = match;
+  if (+year === 0 || +month < 1 || +month > 12 || +day < 1) return null;
+  const leap = +year % 4 === 0 && (+year % 100 !== 0 || +year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return +day <= days[+month - 1] ? `${year}-${month}-${day}` : null;
+}
+
+const INSTRUMENT_DATE_PARTS = ['iCalDay', 'iCalMonth', 'iCalYear'];
+
+function setInstrumentDateParts(value = document.getElementById('iCalDate').value) {
+  const parts = value.split('/');
+  INSTRUMENT_DATE_PARTS.forEach((id, index) => {
+    document.getElementById(id).value = parts[index] || '';
+  });
+}
+
+function syncInstrumentDateParts() {
+  const parts = INSTRUMENT_DATE_PARTS.map(id => document.getElementById(id).value);
+  const date = parts.some(Boolean) ? parts.join('/') : '';
+  if (document.getElementById('iCalDate').value === date) return;
+  document.getElementById('iCalDate').value = date;
+  calcDueDate(date, document.getElementById('iCalFrequency').value);
+  autoFillPrevCert();
+}
+
+function instrumentDatePartInput(input) {
+  const index = INSTRUMENT_DATE_PARTS.indexOf(input.id);
+  if (index < 0) return;
+  const width = index === 2 ? 4 : 2;
+  input.value = input.value.replace(/\D/g, '').slice(0, width);
+  syncInstrumentDateParts();
+  if (input.value.length === width && index < 2) {
+    document.getElementById(INSTRUMENT_DATE_PARTS[index + 1]).focus();
+  }
+}
+
+function finishInstrumentDatePart(input) {
+  if (input.id !== 'iCalYear' && /^\d$/.test(input.value)) {
+    input.value = input.value.padStart(2, '0');
+  }
+  syncInstrumentDateParts();
+}
+
+function instrumentDatePartKey(event) {
+  const index = INSTRUMENT_DATE_PARTS.indexOf(event.target.id);
+  if (index < 0 || event.ctrlKey || event.metaKey || event.altKey) return;
+  let next = index;
+  if (event.key === 'ArrowRight' || event.key === '/') next++;
+  else if (event.key === 'ArrowLeft') next--;
+  else return;
+  event.preventDefault();
+  document.getElementById(INSTRUMENT_DATE_PARTS[Math.max(0, Math.min(2, next))]).focus();
+}
+
+function pasteInstrumentDate(event) {
+  const text = event.clipboardData.getData('text').trim();
+  const date = /^\d{8}$/.test(text) ? text.replace(/^(\d{2})(\d{2})(\d{4})$/, '$1/$2/$3') : text;
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date)) return;
+  event.preventDefault();
+  setInstrumentDateParts(date);
+  syncInstrumentDateParts();
+  document.getElementById('iCalYear').focus();
+}
+
+function autoFillPrevCert() {
+  const original = allData.find(row => String(row.id) === String(editingInstrumentId));
+  const cert = document.getElementById('iCertNo').value.trim();
+  const date = parseInstrumentDate(document.getElementById('iCalDate').value);
+  const changed = original && ((original.cert_no && original.cert_no !== cert)
+    || (original.cal_date && original.cal_date !== date));
+  document.getElementById('iPrevCertNo').value = (changed ? original.cert_no : original?.prev_cert_no) || '–';
+  document.getElementById('iPrevCalDate').value = formatInstrumentDate(changed ? original.cal_date : original?.prev_cal_date);
 }
 
 function closeInstrumentModal() {
@@ -972,6 +1058,14 @@ function initInstrumentDuplicateCheck() {
 }
 
 async function saveInstrument() {
+  const calDateInput = document.getElementById('iCalDate');
+  const calDate = parseInstrumentDate(calDateInput.value);
+  if (calDateInput.value.trim() && !calDate) {
+    setInstrumentModalTab('calibration');
+    document.getElementById('iCalDay').focus();
+    showToast('กรุณากรอกวันที่สอบเทียบที่ถูกต้องเป็น DD/MM/YYYY (ค.ศ.) เช่น 16/09/2026', 'error');
+    return;
+  }
   const payload = {
     instrument_type: document.getElementById('iCategory').value || null,
     category: document.getElementById('iCategory').value || null,
@@ -996,8 +1090,8 @@ async function saveInstrument() {
     cost_center: document.getElementById('iCostCenter').value.trim() || null,
     id_code: document.getElementById('iIdCode').value.trim(),
     cert_no: document.getElementById('iCertNo').value.trim(),
-    cal_date: document.getElementById('iCalDate').value || null,
-    due_date: document.getElementById('iDueDate').value || null,
+    cal_date: calDate,
+    due_date: parseInstrumentDate(document.getElementById('iDueDate').value),
     machine_name: document.getElementById('iMachineName').value.trim() || null,
     location: document.getElementById('iLocation').value.trim() || null,
     cal_frequency: document.getElementById('iCalFrequency').value.trim() || null,

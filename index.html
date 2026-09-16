@@ -4247,12 +4247,20 @@ body.app-mode textarea:focus {
           <input type="text" id="iCertNo" placeholder="เช่น 25B001-0" oninput="autoFillPrevCert()">
         </div>
         <div class="form-group">
-          <label>วันที่สอบเทียบ</label>
-          <input type="date" id="iCalDate" onchange="calcDueDate(this.value, document.getElementById('iCalFrequency').value); autoFillPrevCert()">
+          <label id="iCalDateLabel" for="iCalDay">วันที่สอบเทียบ</label>
+          <div class="instrument-date-parts" role="group" aria-labelledby="iCalDateLabel" aria-describedby="iCalDateHint" onkeydown="instrumentDatePartKey(event)" onpaste="pasteInstrumentDate(event)">
+            <input type="text" id="iCalDay" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="วันสอบเทียบ" autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
+            <span aria-hidden="true">/</span>
+            <input type="text" id="iCalMonth" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="เดือนสอบเทียบ" autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
+            <span aria-hidden="true">/</span>
+            <input type="text" id="iCalYear" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="ปีสอบเทียบ ค.ศ." autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
+          </div>
+          <input type="hidden" id="iCalDate">
+          <small id="iCalDateHint">วัน/เดือน/ปี ค.ศ. เช่น 16/09/2026</small>
         </div>
         <div class="form-group">
           <label>วันครบกำหนด</label>
-          <input type="date" id="iDueDate" readonly style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
+          <input type="text" id="iDueDate" placeholder="DD/MM/YYYY" readonly style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
         </div>
         <div class="form-group">
           <label style="color:var(--text3)">📋 Cert รอบก่อน (อัตโนมัติ)</label>
@@ -4260,7 +4268,7 @@ body.app-mode textarea:focus {
         </div>
         <div class="form-group">
           <label style="color:var(--text3)">📋 วันสอบรอบก่อน (อัตโนมัติ)</label>
-          <input type="date" id="iPrevCalDate" readonly style="background:var(--surface2);color:var(--text2)">
+          <input type="text" id="iPrevCalDate" placeholder="DD/MM/YYYY" readonly style="background:var(--surface2);color:var(--text2)">
         </div>
         <div class="form-group">
           <label>Remark</label>

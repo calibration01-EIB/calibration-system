@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Date parts test</title></head><body>
+<div id="fixture"></div><pre id="out"></pre>
+<script>
+function read(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url); xhr.onload = () => resolve(xhr.responseText);
+    xhr.onerror = reject; xhr.send();
+  });
+}
+const results = [];
+function check(condition, message) { if (!condition) throw new Error(message); }
+function test(name, run) {
+  try { run(); results.push('PASS ' + name); }
+  catch (error) { results.push('FAIL ' + name + ': ' + error.message); }
+}
+window.allData = []; window.editingInstrumentId = null;
+(async () => {
+  try {
+    const [html, instruments, audit] = await Promise.all([
+      read('../index.html'), read('../js/03-instruments.js'), read('../js/05-audit.js')
+    ]);
+    const group = html.match(/<div class="instrument-date-parts"[\s\S]*?<\/div>/)[0];
+    document.getElementById('fixture').innerHTML = group
+      + '<input id="iCalDate" type="hidden"><input id="iCalFrequency" value="1ครั้ง/ปี">'
+      + '<input id="iDueDate"><input id="iCertNo"><input id="iPrevCertNo"><input id="iPrevCalDate">';
+    (0, eval)(audit + '\n' + instruments.slice(instruments.indexOf('// Registry form uses'), instruments.indexOf('function closeInstrumentModal')));
+    const day = document.getElementById('iCalDay');
+    const month = document.getElementById('iCalMonth');
+    const year = document.getElementById('iCalYear');
+    const date = document.getElementById('iCalDate');
+    function load(value) { date.value = value; setInstrumentDateParts(); }
+    function type(digits) {
+      for (const digit of digits) {
+        const field = document.activeElement;
+        field.setRangeText(digit, field.selectionStart, field.selectionEnd, 'end');
+        field.dispatchEvent(new InputEvent('input', { bubbles: true, data: digit, inputType: 'insertText' }));
+      }
+    }
+    test('click selects only the day or month', () => {
+      load('16/09/2026'); day.focus(); day.setSelectionRange(1, 1); day.click();
+      check(day.selectionStart === 0 && day.selectionEnd === 2, 'day selection');
+      month.focus(); month.setSelectionRange(1, 1); month.click();
+      check(month.selectionStart === 0 && month.selectionEnd === 2, 'month selection');
+      check(date.value === '16/09/2026', 'click changed date');
+    });
+    test('typing day and month advances and selects the next part', () => {
+      load('16/09/2026'); day.focus(); type('17');
+      check(document.activeElement === month && month.selectionEnd === 2, 'day to month');
+      type('10');
+      check(document.activeElement === year && year.selectionEnd === 4, 'month to year');
+      type('2027');
+      check(date.value === '17/10/2027', 'complete date');
+      check(document.getElementById('iDueDate').value === '17/10/2028', 'due date');
+    });
+    test('new empty record accepts all eight digits continuously', () => {
+      load(''); day.focus(); type('02012026');
+      check(date.value === '02/01/2026', 'day/month order');
+    });
+    test('arrow keys revisit parts and slash completes a one-digit day', () => {
+      load('16/09/2026'); year.focus();
+      year.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+      check(document.activeElement === month, 'left arrow');
+      day.focus(); type('5');
+      day.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true }));
+      check(day.value === '05' && document.activeElement === month, 'single-digit day');
+    });
+    test('paste fills all three parts and validates impossible dates', () => {
+      const data = new DataTransfer(); data.setData('text', '29022024');
+      day.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      check(date.value === '29/02/2024', 'paste');
+      check(parseInstrumentDate(date.value) === '2024-02-29', 'valid leap date');
+      year.focus(); year.select(); type('2025');
+      check(parseInstrumentDate(date.value) === null, 'invalid leap date');
+    });
+    test('clearing all parts leaves an empty optional date', () => {
+      for (const field of [day, month, year]) {
+        field.value = ''; field.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      check(date.value === '', 'clear date');
+    });
+  } catch (error) { results.push('FAIL setup: ' + error.message); }
+  document.getElementById('out').textContent = results.join('\n');
+  document.title = results.some(row => row.startsWith('FAIL')) ? 'FAIL' : 'PASS';
+})();
+</script></body></html>
