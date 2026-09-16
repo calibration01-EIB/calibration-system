@@ -1611,17 +1611,17 @@ tbody tr:hover td { background: #f6fafd !important; }
 #instrumentModal .instrument-form-grid input,
 #instrumentModal .instrument-form-grid select { min-height: 46px; }
 #instrumentModal .instrument-date-parts {
-  display: flex; align-items: center; gap: 2px; min-height: 46px;
-  padding: 0 8px; border: 1.5px solid var(--border); border-radius: var(--radius);
+  display: flex; align-items: center; gap: 0; min-height: 46px;
+  padding: 0 14px; border: 1.5px solid var(--border); border-radius: var(--radius);
   background: var(--surface); color: var(--text); direction: ltr;
 }
 #instrumentModal .instrument-date-parts:focus-within { border-color: var(--accent); }
 #instrumentModal .instrument-date-parts input {
-  width: 3ch; min-width: 0; min-height: 42px; flex: 1 1 0;
-  padding: 8px 2px; border: 0; border-radius: 0; box-shadow: none;
+  width: 2.4ch; min-width: 0; min-height: 42px; flex: 0 0 auto;
+  padding: 8px 0; border: 0; border-radius: 0; box-shadow: none;
   background: transparent; text-align: center; font-variant-numeric: tabular-nums;
 }
-#instrumentModal .instrument-date-parts #iCalYear { flex-grow: 1.6; }
+#instrumentModal .instrument-date-parts #iCalYear { width: 4.6ch; }
 #instrumentModal .instrument-form-wide { grid-column: 1 / -1; }
 #instrumentModal .instrument-modal-footer { justify-content: space-between; border-radius: 0; padding: 14px 24px; }
 #instrumentModal .instrument-footer-hint { color: var(--text3); font-size: 12px; }
