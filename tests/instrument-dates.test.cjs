@@ -13,6 +13,32 @@ function app() {
   return { ctx, fields };
 }
 
+test('calendar selection fills day/month/four-digit year and recalculates due date', () => {
+  const { ctx, fields } = app();
+  for (const id of ['iCalDay', 'iCalMonth', 'iCalYear', 'iCalCalendar', 'iCalDateError']) fields[id] = { value: '' };
+  fields.iCalFrequency = { value: '1ครั้ง/ปี' };
+  ctx.applyInstrumentCalendarDate('2026-04-16');
+  assert.equal(fields.iCalDate.value, '16/04/2026');
+  assert.equal(fields.iCalYear.value, '2026');
+  assert.equal(fields.iDueDate.value, '16/04/2027');
+});
+
+test('short year shows inline error without converting it and clears after correction', () => {
+  const { ctx, fields } = app();
+  for (const id of ['iCalDay', 'iCalMonth', 'iCalYear', 'iCalCalendar', 'iCalDateError']) fields[id] = { value: '' };
+  fields.iCalDate.value = '16/04/26';
+  ctx.setInstrumentDateParts();
+  ctx.validateInstrumentDateEntry();
+  assert.match(fields.iCalDateError.textContent, /4 หลัก/);
+  assert.equal(fields.iCalDateError.hidden, false);
+  assert.equal(fields.iCalYear.value, '26');
+  assert.equal(fields.iCalCalendar.value, '');
+  fields.iCalDate.value = '16/04/2026';
+  ctx.setInstrumentDateParts();
+  assert.equal(fields.iCalDateError.hidden, true);
+  assert.equal(fields.iCalCalendar.value, '2026-04-16');
+});
+
 test('changing the calibration date updates the due date', () => {
   const { ctx, fields } = app();
   fields.iDueDate.value = '2026-09-01';
@@ -137,15 +163,20 @@ test('editing sends ISO dates to storage and preserves prior ISO history', async
   ctx.checkInstrumentDuplicates = () => [];
   ctx.getInstrumentDuplicateMatchesFromDb = async () => [];
   ctx.getDiff = () => null;
+  ctx.requireInstrumentWriteSession = async () => {};
   ctx.logAudit = async () => {};
   ctx.closeInstrumentModal = () => {};
-  ctx.loadData = async () => {};
+  ctx.loadData = async () => true;
+  ctx.resetFilters = () => {};
+  ctx.filteredData = ctx.allData;
+  ctx.pageSize = 100;
+  ctx.renderTable = () => {};
   ctx.setTimeout = () => {};
   ctx.showToast = (message, type) => { assert.notEqual(type, 'error', message); };
   let saved, history;
   ctx.sb = { from(table) { return {
     insert: async row => { assert.equal(table, 'calibration_history'); history = row; return {}; },
-    update: row => ({ eq: async () => { saved = row; return {}; } })
+    update: row => ({ eq: () => ({ select: () => ({ single: async () => { saved = row; return { data: { id: 1 } }; } }) }) })
   }; } };
   await ctx.saveInstrument();
   assert.equal(saved.cal_date, '2026-09-16');

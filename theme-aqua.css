@@ -1622,6 +1622,19 @@ tbody tr:hover td { background: #f6fafd !important; }
   background: transparent; text-align: center; font-variant-numeric: tabular-nums;
 }
 #instrumentModal .instrument-date-parts #iCalYear { width: 4.6ch; }
+#instrumentModal .instrument-date-parts:has([aria-invalid="true"]) { border-color: #c62828; }
+#instrumentModal .instrument-date-parts .instrument-date-calendar {
+  position: relative; display: grid; place-items: center; flex: 0 0 44px;
+  height: 44px; margin: 0 0 0 auto; color: var(--accent); font-size: 22px;
+  border-left: 1px solid var(--border); cursor: pointer;
+}
+#instrumentModal .instrument-date-calendar:focus-within { outline: 2px solid var(--accent); border-radius: 4px; }
+#instrumentModal .instrument-date-calendar input {
+  position: absolute; inset: 0; width: 100%; height: 100%; padding: 0;
+  opacity: 0; cursor: pointer;
+}
+#instrumentModal .instrument-date-error { display: block; color: #c62828; margin-top: 4px; }
+#instrumentModal .instrument-date-error[hidden] { display: none; }
 #instrumentModal .instrument-form-wide { grid-column: 1 / -1; }
 #instrumentModal .instrument-modal-footer { justify-content: space-between; border-radius: 0; padding: 14px 24px; }
 #instrumentModal .instrument-footer-hint { color: var(--text3); font-size: 12px; }

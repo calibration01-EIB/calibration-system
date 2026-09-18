@@ -856,6 +856,31 @@ function setInstrumentDateParts(value = document.getElementById('iCalDate').valu
   INSTRUMENT_DATE_PARTS.forEach((id, index) => {
     document.getElementById(id).value = parts[index] || '';
   });
+  validateInstrumentDateEntry();
+}
+
+function validateInstrumentDateEntry() {
+  const value = document.getElementById('iCalDate').value;
+  const iso = parseInstrumentDate(value);
+  const year = value.split('/')[2] || '';
+  const message = !value || iso ? '' : year.length !== 4
+    ? 'กรุณากรอกปี ค.ศ. 4 หลัก เช่น 2026'
+    : 'กรุณากรอกวันที่ที่มีอยู่จริงให้ครบ วัน/เดือน/ปี';
+  const error = document.getElementById('iCalDateError');
+  if (error) { error.textContent = message; error.hidden = !message; }
+  INSTRUMENT_DATE_PARTS.forEach(id => {
+    document.getElementById(id)?.setAttribute?.('aria-invalid', String(Boolean(message)));
+  });
+  const calendar = document.getElementById('iCalCalendar');
+  if (calendar) calendar.value = iso || '';
+  return !message;
+}
+
+function applyInstrumentCalendarDate(iso) {
+  const value = formatInstrumentDate(iso);
+  if (iso && !parseInstrumentDate(value)) return;
+  setInstrumentDateParts(value);
+  syncInstrumentDateParts();
 }
 
 function syncInstrumentDateParts() {
@@ -863,6 +888,7 @@ function syncInstrumentDateParts() {
   const date = parts.some(Boolean) ? parts.join('/') : '';
   if (document.getElementById('iCalDate').value === date) return;
   document.getElementById('iCalDate').value = date;
+  validateInstrumentDateEntry();
   calcDueDate(date, document.getElementById('iCalFrequency').value);
   autoFillPrevCert();
 }
@@ -899,7 +925,7 @@ function instrumentDatePartKey(event) {
 function pasteInstrumentDate(event) {
   const text = event.clipboardData.getData('text').trim();
   const date = /^\d{8}$/.test(text) ? text.replace(/^(\d{2})(\d{2})(\d{4})$/, '$1/$2/$3') : text;
-  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date)) return;
+  if (!/^\d{2}\/\d{2}\/\d{1,4}$/.test(date)) return;
   event.preventDefault();
   setInstrumentDateParts(date);
   syncInstrumentDateParts();
@@ -1061,8 +1087,10 @@ async function saveInstrument() {
   const calDateInput = document.getElementById('iCalDate');
   const calDate = parseInstrumentDate(calDateInput.value);
   if (calDateInput.value.trim() && !calDate) {
+    validateInstrumentDateEntry();
     setInstrumentModalTab('calibration');
-    document.getElementById('iCalDay').focus();
+    const invalidYear = (calDateInput.value.split('/')[2] || '').length !== 4;
+    document.getElementById(invalidYear ? 'iCalYear' : 'iCalDay').focus();
     showToast('กรุณากรอกวันที่สอบเทียบที่ถูกต้องเป็น DD/MM/YYYY (ค.ศ.) เช่น 16/09/2026', 'error');
     return;
   }
@@ -1132,8 +1160,12 @@ async function saveInstrument() {
   btn.textContent = 'กำลังบันทึก...';
 
   try {
+    await requireInstrumentWriteSession();
+    let savedInstrument;
+    let historyWarning = false;
     if (editingInstrumentId) {
       const original = allData.find(x => x.id === editingInstrumentId);
+      let historyPayload = null;
       // ถ้า cert หรือวันสอบเปลี่ยน → save prev + บันทึกลง history
       if (original) {
         const certChanged = original.cert_no && original.cert_no !== payload.cert_no;
@@ -1141,41 +1173,61 @@ async function saveInstrument() {
         if (certChanged || dateChanged) {
           payload.prev_cert_no = original.cert_no || null;
           payload.prev_cal_date = original.cal_date || null;
-          await sb.from('calibration_history').insert({
+          historyPayload = {
             instrument_id: editingInstrumentId,
             cert_no: original.cert_no || null,
             cal_date: original.cal_date || null,
             due_date: original.due_date || null,
-          });
+          };
         }
       }
-      const { error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId);
+      const { data: updated, error } = await sb.from('instruments').update(payload).eq('id', editingInstrumentId).select().single();
+      if (error?.code === 'PGRST116' || (!error && !updated)) {
+        throw new Error('ไม่มีรายการถูกแก้ไข กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง หรือรายการอาจถูกลบไปแล้ว');
+      }
       if (error) throw error;
+      savedInstrument = updated;
+      if (historyPayload) {
+        try {
+          const { error: historyError } = await sb.from('calibration_history').insert(historyPayload);
+          historyWarning = Boolean(historyError);
+        } catch (e) { historyWarning = true; }
+      }
       const diff = original ? getDiff(original, {...original, ...payload}) : null;
       await logAudit('แก้ไข', {...payload, id: editingInstrumentId}, diff);
-      showToast('แก้ไขเครื่องมือแล้ว', 'success');
     } else {
       const { data: inserted, error } = await sb.from('instruments').insert(payload).select().single();
       if (error) throw error;
+      if (!inserted) throw new Error('ไม่ได้รับข้อมูลยืนยันการบันทึก กรุณาโหลดรายการใหม่เพื่อตรวจสอบ');
+      savedInstrument = inserted;
       await logAudit('เพิ่ม', inserted, null);
-      showToast('เพิ่มเครื่องมือแล้ว', 'success');
     }
-    const highlightCode = payload.id_code || '';
     closeInstrumentModal();
-    await loadData(true);
-    // scroll ไปหาแถวที่แก้ไข/เพิ่ม
-    if (highlightCode) {
-      setTimeout(() => {
-        const rows = document.querySelectorAll('#dataTable tr');
-        rows.forEach(row => {
-          if (row.textContent.includes(highlightCode)) {
-            row.style.background = '#e0f4f1';
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => { row.style.background = ''; }, 2500);
-          }
-        });
-      }, 800);
+    const refreshed = await loadData(true);
+    if (!refreshed) {
+      showToast('บันทึกแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณากดรีเฟรช ไม่ต้องบันทึกซ้ำ', 'error');
+      return;
     }
+    // รายการเรียงตาม id: รายการใหม่อาจอยู่หน้าสุดท้าย ไม่ใช่หน้าที่เปิดอยู่
+    resetFilters();
+    const savedIndex = filteredData.findIndex(row => row.id === savedInstrument.id);
+    if (savedIndex < 0) {
+      showToast('บันทึกแล้ว แต่รายการอยู่นอกขอบเขตข้อมูลที่บัญชีนี้ดูได้ กรุณาตรวจสอบสิทธิ์ประเภทเครื่องมือ', 'error');
+    } else {
+      currentPage = Math.floor(savedIndex / pageSize) + 1;
+      renderTable();
+      showToast('บันทึกเครื่องมือแล้ว', 'success');
+      setTimeout(() => {
+        const rows = document.querySelectorAll(`[data-instrument-id="${Number(savedInstrument.id)}"]`);
+        rows.forEach(row => {
+          if (!row.getClientRects().length) return;
+          row.style.background = '#e0f4f1';
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => { row.style.background = ''; }, 2500);
+        });
+      }, 0);
+    }
+    if (historyWarning) showToast('บันทึกเครื่องมือแล้ว แต่บันทึกประวัติสอบเทียบครั้งก่อนไม่สำเร็จ', 'error');
   } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
   finally {
     btn.disabled = false;

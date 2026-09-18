@@ -2527,7 +2527,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260908-filter1">
+<link rel="stylesheet" href="theme-aqua.css?v=20260918-date1">
 <link rel="stylesheet" href="reference-library.css?v=20260914-reference1">
 <link rel="stylesheet" href="kpi-types.css?v=20260914-kpi1">
 </head>
@@ -4247,16 +4247,21 @@ body.app-mode textarea:focus {
           <input type="text" id="iCertNo" placeholder="เช่น 25B001-0" oninput="autoFillPrevCert()">
         </div>
         <div class="form-group">
-          <label id="iCalDateLabel" for="iCalDay">วันที่สอบเทียบ</label>
-          <div class="instrument-date-parts" role="group" aria-labelledby="iCalDateLabel" aria-describedby="iCalDateHint" onkeydown="instrumentDatePartKey(event)" onpaste="pasteInstrumentDate(event)">
+          <label id="iCalDateLabel" for="iCalDay">วันที่สอบเทียบ (ค.ศ.)</label>
+          <div class="instrument-date-parts" role="group" aria-labelledby="iCalDateLabel" aria-describedby="iCalDateHint iCalDateError" onkeydown="instrumentDatePartKey(event)" onpaste="pasteInstrumentDate(event)">
             <input type="text" id="iCalDay" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="วันสอบเทียบ" autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
             <span aria-hidden="true">/</span>
             <input type="text" id="iCalMonth" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="เดือนสอบเทียบ" autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
             <span aria-hidden="true">/</span>
             <input type="text" id="iCalYear" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="ปีสอบเทียบ ค.ศ." autocomplete="off" onfocus="this.select()" onclick="this.select()" oninput="instrumentDatePartInput(this)" onblur="finishInstrumentDatePart(this)">
+            <label class="instrument-date-calendar" title="เลือกวันที่จากปฏิทิน">
+              <i class="ti ti-calendar" aria-hidden="true"></i>
+              <input type="date" id="iCalCalendar" lang="en-GB" min="0001-01-01" max="9999-12-31" aria-label="เลือกวันที่สอบเทียบจากปฏิทิน" onchange="applyInstrumentCalendarDate(this.value)" onclick="try { this.showPicker?.(); } catch (e) {}">
+            </label>
           </div>
           <input type="hidden" id="iCalDate">
-          <small id="iCalDateHint">วัน/เดือน/ปี ค.ศ. เช่น 16/09/2026</small>
+          <small id="iCalDateHint">วัน/เดือน/ปี ค.ศ. 4 หลัก เช่น 16/04/2026 หรือเลือกจากปฏิทิน</small>
+          <small id="iCalDateError" class="instrument-date-error" role="status" aria-live="polite" hidden></small>
         </div>
         <div class="form-group">
           <label>วันครบกำหนด</label>
@@ -4366,9 +4371,9 @@ body.app-mode textarea:focus {
        · 11-import-template-selection.js ห่อ: openImportModal  (จาก 06b)
      ตรวจได้ด้วย: powershell -File tools\verify-app-load.ps1 -->
 <script src="js/00-config.js?v=20260626-config"></script>
-<script src="js/01-core.js?v=20260722-plan-approval"></script>
-<script src="js/02-dashboard.js?v=20260908-filter1"></script>
-<script src="js/03-instruments.js?v=20260803-split"></script>
+<script src="js/01-core.js?v=20260918-session1"></script>
+<script src="js/02-dashboard.js?v=20260918-save1"></script>
+<script src="js/03-instruments.js?v=20260918-date1"></script>
 <script src="js/04-reports.js?v=20260903-plan2"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06b-import-register.js?v=20260803-split"></script>
@@ -4385,7 +4390,7 @@ body.app-mode textarea:focus {
 <script src="js/22-users.js?v=20260908-filter1"></script>
 <script src="js/24-home.js?v=20260915-dashboard-kpi"></script>
 <script src="js/25-dashboard-ui.js?v=20260915-dashboard-kpi"></script>
-<script src="js/26-list-ui.js?v=20260908-filter1"></script>
+<script src="js/26-list-ui.js?v=20260918-save1"></script>
 <script src="js/27-asset-out-page.js?v=20260911-asset-out2"></script>
 <script src="js/28-kpi.js?v=20260914-kpi1"></script>
 <script src="js/31-kpi-types.js?v=20260914-kpi1"></script>

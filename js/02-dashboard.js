@@ -135,7 +135,7 @@ function renderMobileCards() {
         : (canManagePlan
           ? '<button class="mobile-card-action primary" onclick="event.stopPropagation();goToPlanWithItem(' + id + ')"><i class="ti ti-calendar-plus"></i><span>วางแผน</span></button>'
           : ''));
-    return '<article class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
+    return '<article data-instrument-id="' + id + '" class="mobile-card mobile-card--' + badgeClass + '" role="button" tabindex="0" onclick="openInstrumentDetail(' + id + ')">' +
       '<div class="mobile-card-head">' +
         '<span class="mobile-type-mark" style="color:' + color + ';background:' + color + '14;border-color:' + color + '40"><i class="ti ' + icon + '"></i><b>' + escapeHtmlText(letter) + '</b></span>' +
         '<div class="mobile-card-main">' +
@@ -277,7 +277,7 @@ function escapeJsSingle(value) {
 function getInstrumentCachePrefix() {
   const userKey = currentUser?.id || currentUser?.username || 'anonymous';
   const roleKey = currentUser?.role || 'unknown';
-  return 'ilc_instruments_cache_' + roleKey + '_' + userKey;
+  return 'ilc_instruments_cache_v2_' + roleKey + '_' + userKey;
 }
 
 // ===== List หน่วยงาน (Unit) — ตาราง departments: รหัส → ชื่อเต็ม + แผนก =====
@@ -376,7 +376,7 @@ async function loadData(forceRefresh = false) {
 
 async function fetchFromSupabase() {
   try {
-    const COLS_BASE = 'id,instrument_type,machine_name,location,instrument_name,brand,model,range_val,capacity,resolution,accuracy_class,tolerance,serial_no,asset_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,range_profile,issued_by,responsible_by,request_no,job_no,approved_by,approved_at,resolution_text,usage_min,usage_max,usage_frequency,product_group,usp_type,division,balance_type,capacity_unit,cal_status';
+    const COLS_BASE = 'id,instrument_type,machine_name,location,instrument_name,brand,model,range_val,capacity,resolution,accuracy_class,tolerance,serial_no,asset_no,department,id_code,cert_no,cal_date,due_date,cal_frequency,cal_type,remark,range_profile,issued_by,responsible_by,request_no,job_no,approved_by,approved_at,resolution_text,usage_min,usage_max,usage_frequency,product_group,usp_type,division,balance_type,capacity_unit,cal_status,cost_center,prev_cert_no,prev_cal_date';
     // tolerance_bands = คอลัมน์เสริม · ตรวจครั้งเดียวต่อ session — ถ้ายังไม่มีใน DB ให้ fallback (แอปไม่พัง) แล้วเปิดใช้เองเมื่อเพิ่มคอลัมน์
     if (window.HAS_TOL_BANDS === undefined) {
       try { const probe = await sb.from('instruments').select('tolerance_bands').limit(1); window.HAS_TOL_BANDS = !probe.error; }

@@ -404,7 +404,7 @@ function renderListFull(rows, start) {
     const p = listStatusPill(d);
     const internal = d.cal_type === 'ภายใน' ? '✓' : '';
     const external = d.cal_type === 'ภายนอก' ? '✓' : '';
-    return `<tr class="${p.cancelled ? 'reg-cancelled' : ''}" onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" title="คลิกเพื่อดูรายละเอียด">
+    return `<tr data-instrument-id="${id}" class="${p.cancelled ? 'reg-cancelled' : ''}" onclick="if(!event.target.closest('button'))openInstrumentDetail(${id})" title="คลิกเพื่อดูรายละเอียด">
       <td class="c-no">${start + i + 1}</td>
       <td class="c-name">
         <div class="ax-namecell">

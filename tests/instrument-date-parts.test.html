@@ -23,7 +23,7 @@ window.allData = []; window.editingInstrumentId = null;
     const group = html.match(/<div class="instrument-date-parts"[\s\S]*?<\/div>/)[0];
     document.getElementById('fixture').innerHTML = group
       + '<input id="iCalDate" type="hidden"><input id="iCalFrequency" value="1ครั้ง/ปี">'
-      + '<input id="iDueDate"><input id="iCertNo"><input id="iPrevCertNo"><input id="iPrevCalDate">';
+      + '<input id="iDueDate"><input id="iCertNo"><input id="iPrevCertNo"><input id="iPrevCalDate"><small id="iCalDateError" hidden></small>';
     (0, eval)(audit + '\n' + instruments.slice(instruments.indexOf('// Registry form uses'), instruments.indexOf('function closeInstrumentModal')));
     const day = document.getElementById('iCalDay');
     const month = document.getElementById('iCalMonth');
@@ -78,6 +78,25 @@ window.allData = []; window.editingInstrumentId = null;
         field.value = ''; field.dispatchEvent(new Event('input', { bubbles: true }));
       }
       check(date.value === '', 'clear date');
+    });
+    test('short pasted year is preserved and flagged until corrected', () => {
+      const data = new DataTransfer(); data.setData('text', '16/04/26');
+      day.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      check(date.value === '16/04/26', 'must not guess the century or truncate pasted text');
+      const error = document.getElementById('iCalDateError');
+      check(!error.hidden && error.textContent.includes('4 หลัก'), 'inline year error');
+      check(year.getAttribute('aria-invalid') === 'true', 'accessible invalid state');
+      year.focus(); year.select(); type('2026');
+      check(error.hidden, 'corrected error clears');
+      check(document.getElementById('iCalCalendar').value === '2026-04-16', 'typing syncs calendar');
+    });
+    test('calendar changes synchronize text and due date without timezone conversion', () => {
+      const calendar = document.getElementById('iCalCalendar');
+      calendar.value = '2024-02-29'; calendar.dispatchEvent(new Event('change', { bubbles: true }));
+      check(date.value === '29/02/2024' && year.value === '2024', 'calendar sync');
+      check(document.getElementById('iDueDate').value !== '', 'due date recalculated');
+      calendar.value = ''; calendar.dispatchEvent(new Event('change', { bubbles: true }));
+      check(date.value === '' && day.value === '' && year.value === '', 'calendar clear');
     });
   } catch (error) { results.push('FAIL setup: ' + error.message); }
   document.getElementById('out').textContent = results.join('\n');

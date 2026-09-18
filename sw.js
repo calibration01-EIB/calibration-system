@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v177';
+const CACHE_NAME = 'calibration-app-v180';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -10,7 +10,7 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './theme-aqua.css?v=20260908-filter1',
+  './theme-aqua.css?v=20260918-date1',
   './reference-library.css?v=20260914-reference1',
   './assets/ilc-logo-full.png',
   './assets/ilc-logo-symbol.png',
@@ -27,9 +27,9 @@ const APP_SHELL = [
   './assets/tiles/08_repair.png',
   './assets/tiles/09_offsite_equipment.png',
   './js/00-config.js?v=20260626-config',
-  './js/01-core.js?v=20260722-plan-approval',
-  './js/02-dashboard.js?v=20260908-filter1',
-  './js/03-instruments.js?v=20260803-split',
+  './js/01-core.js?v=20260918-session1',
+  './js/02-dashboard.js?v=20260918-save1',
+  './js/03-instruments.js?v=20260918-date1',
   './js/04-reports.js?v=20260903-plan2',
   './js/05-audit.js?v=20260622-audit-fit',
   './js/06b-import-register.js?v=20260803-split',
@@ -45,7 +45,7 @@ const APP_SHELL = [
   './js/22-users.js?v=20260908-filter1',
   './js/24-home.js?v=20260915-dashboard-kpi',
   './js/25-dashboard-ui.js?v=20260915-dashboard-kpi',
-  './js/26-list-ui.js?v=20260908-filter1',
+  './js/26-list-ui.js?v=20260918-save1',
   './js/27-asset-out-page.js?v=20260911-asset-out2',
   './js/28-kpi.js?v=20260914-kpi1',
   './js/31-kpi-types.js?v=20260914-kpi1',

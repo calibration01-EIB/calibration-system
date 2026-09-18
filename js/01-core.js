@@ -71,11 +71,29 @@ async function doLogin() {
   }
 }
 
-function enterApp(user) {
+async function requireInstrumentWriteSession() {
+  const { data: role, error } = await sb.rpc('app_current_role');
+  if (error) throw new Error('ตรวจสอบการเข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+  if (!role) throw new Error('การเข้าสู่ระบบหมดอายุ กรุณาเก็บข้อมูลที่กรอกไว้ แล้วออกจากระบบและเข้าสู่ระบบใหม่ก่อนบันทึก');
+  if (role !== 'admin' && role !== 'editor') throw new Error('บัญชีนี้ไม่มีสิทธิ์บันทึกเครื่องมือ กรุณาติดต่อผู้ดูแลระบบ');
+}
+
+async function enterApp(user) {
   // Sessions created before token-auth (or any session missing a token) can read
   // but silently fail every write under RLS. Force a fresh login so calCreateClient
   // attaches x-app-token and edits actually save.
   if (!user || !user.token) { clearSession(); location.reload(); return; }
+  // มี token ในเครื่องไม่ได้แปลว่า session ยังใช้ได้: ตรวจวันหมดอายุ/สถานะบัญชีที่ server
+  try {
+    const { data: role, error } = await sb.rpc('app_current_role');
+    if (error) throw error;
+    if (!role) { clearSession(); location.reload(); return; }
+    user = { ...user, role };
+    setSession(user);
+  } catch (e) {
+    showToast('ตรวจสอบการเข้าสู่ระบบไม่สำเร็จ กรุณาโหลดหน้าใหม่: ' + e.message, 'error');
+    return;
+  }
   document.body.classList.add('app-mode');
   document.body.classList.remove('login-mode');
   document.getElementById('loginPage').style.setProperty('display', 'none', 'important');
