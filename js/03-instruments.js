@@ -1084,6 +1084,7 @@ function initInstrumentDuplicateCheck() {
 }
 
 async function saveInstrument() {
+  const wasEditingInstrument = Boolean(editingInstrumentId);
   const calDateInput = document.getElementById('iCalDate');
   const calDate = parseInstrumentDate(calDateInput.value);
   if (calDateInput.value.trim() && !calDate) {
@@ -1208,13 +1209,16 @@ async function saveInstrument() {
       showToast('บันทึกแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณากดรีเฟรช ไม่ต้องบันทึกซ้ำ', 'error');
       return;
     }
-    // รายการเรียงตาม id: รายการใหม่อาจอยู่หน้าสุดท้าย ไม่ใช่หน้าที่เปิดอยู่
-    resetFilters();
+    // การแก้ไขคืนค่าตัวกรองและหน้าปัจจุบันไว้แล้วโดย router wrapper
+    // ส่วนรายการใหม่ให้ล้างตัวกรองเพื่อพาไปยังรายการที่เพิ่งเพิ่ม
+    if (!wasEditingInstrument) resetFilters();
     const savedIndex = filteredData.findIndex(row => row.id === savedInstrument.id);
     if (savedIndex < 0) {
-      showToast('บันทึกแล้ว แต่รายการอยู่นอกขอบเขตข้อมูลที่บัญชีนี้ดูได้ กรุณาตรวจสอบสิทธิ์ประเภทเครื่องมือ', 'error');
+      showToast(wasEditingInstrument
+        ? 'บันทึกการแก้ไขแล้ว แต่รายการไม่ตรงกับตัวกรองปัจจุบัน'
+        : 'บันทึกแล้ว แต่รายการอยู่นอกขอบเขตข้อมูลที่บัญชีนี้ดูได้ กรุณาตรวจสอบสิทธิ์ประเภทเครื่องมือ', wasEditingInstrument ? 'success' : 'error');
     } else {
-      currentPage = Math.floor(savedIndex / pageSize) + 1;
+      if (!wasEditingInstrument) currentPage = Math.floor(savedIndex / pageSize) + 1;
       renderTable();
       showToast('บันทึกเครื่องมือแล้ว', 'success');
       setTimeout(() => {
