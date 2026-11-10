@@ -102,6 +102,22 @@ function closeCertModal() { document.getElementById('certModal').classList.remov
 // ====================================================
 // INSTRUMENT DETAIL MODAL (registry redesign)
 // ====================================================
+function normalizeInstrumentUnitText(value) {
+  return String(value ?? '').replace(/℃/g, '°C')
+    .replace(/(^|[\s\d±+\-/<>=])(?:o|º|°)\s*C(?=$|[^A-Za-z])/g, '$1°C');
+}
+
+function formatInstrumentTolerance(value) {
+  return normalizeInstrumentUnitText(value).replace(/\+\s*\/\s*-/g, '±')
+    .split(/\r?\n|\s*\/\s*(?=[±]?\s*\d)/)
+    .map(part => {
+      const text = part.trim().replace(/^±\s*/, '± ');
+      // Only unsigned scalar limits imply symmetric tolerance; preserve ranges and conditions.
+      return /^(?:\d[\d,.]*|\.\d+)(?:\s*[A-Za-zµμ°%][A-Za-zµμ°%\d^./]*)?$/.test(text)
+        ? '± ' + text : text;
+    }).join(' / ');
+}
+
 function regDetailItem(label, value, full = false) {
   return `<div class="reg-info-item ${full ? 'full' : ''}"><span>${escapeHtmlText(label)}</span><strong>${escapeHtmlText(value || '–')}</strong></div>`;
 }
@@ -457,12 +473,12 @@ function openInstrumentDetail(id) {
         ${regDetailItem('สถานที่ (Location)', d.location)}
       </div>
       <div class="reg-info-grid">
-        ${regDetailItem('พิกัด Max', d.capacity != null && d.capacity !== '' ? `${d.capacity} ${d.capacity_unit || 'g'}` : '')}
-        ${regDetailItem('ความละเอียด (Resolution)', d.resolution_text || d.resolution)}
-        ${regDetailItem('ค่ายอมรับ (Tolerance)', d.tolerance)}
-        ${regDetailItem('ย่านการวัด (Range)', d.range_val)}
-        ${regDetailItem('ใช้งานต่ำสุด (Minimum usage)', d.usage_min)}
-        ${regDetailItem('ใช้งานสูงสุด (Maximum usage)', d.usage_max)}
+        ${regDetailItem('พิกัด Max', normalizeInstrumentUnitText(d.capacity != null && d.capacity !== '' ? `${d.capacity} ${d.capacity_unit || 'g'}` : ''))}
+        ${regDetailItem('ความละเอียด (Resolution)', normalizeInstrumentUnitText(d.resolution_text || d.resolution))}
+        ${regDetailItem('ค่ายอมรับ (Tolerance)', formatInstrumentTolerance(d.tolerance))}
+        ${regDetailItem('ย่านการวัด (Range)', normalizeInstrumentUnitText(d.range_val))}
+        ${regDetailItem('ใช้งานต่ำสุด (Minimum usage)', normalizeInstrumentUnitText(d.usage_min))}
+        ${regDetailItem('ใช้งานสูงสุด (Maximum usage)', normalizeInstrumentUnitText(d.usage_max))}
         ${regDetailItem('ความถี่ใช้งาน (Usage frequency)', d.usage_frequency)}
         ${regDetailItem('Accuracy Class', d.accuracy_class)}
         ${regDetailItem('Type : A,B,C (Ref.USP1058)', d.usp_type)}

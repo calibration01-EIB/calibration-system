@@ -417,11 +417,11 @@ function renderListFull(rows, start) {
       <td>${escapeHtmlText(d.brand || '–')}</td>
       <td class="ax-mono">${escapeHtmlText(d.model || '–')}</td>
       <td class="ax-mono">${escapeHtmlText(d.serial_no || '–')}</td>
-      <td>${listMultiHtml(d.resolution_text || d.resolution)}</td>
-      <td>${listMultiHtml(d.tolerance)}</td>
-      <td>${listMultiHtml(listRangeText(d))}</td>
-      <td>${listMultiHtml(d.usage_min)}</td>
-      <td>${listMultiHtml(d.usage_max)}</td>
+      <td>${listMultiHtml(normalizeInstrumentUnitText(d.resolution_text || d.resolution))}</td>
+      <td>${listMultiHtml(formatInstrumentTolerance(d.tolerance))}</td>
+      <td>${listMultiHtml(normalizeInstrumentUnitText(listRangeText(d)))}</td>
+      <td>${listMultiHtml(normalizeInstrumentUnitText(d.usage_min))}</td>
+      <td>${listMultiHtml(normalizeInstrumentUnitText(d.usage_max))}</td>
       <td>${escapeHtmlText(d.usage_frequency || '–')}</td>
       <td>${escapeHtmlText(d.cal_frequency || '–')}</td>
       <td class="c-loc">${escapeHtmlText([d.department, d.division, d.location].filter(Boolean).join(' · ') || '–')}</td>
