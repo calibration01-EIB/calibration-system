@@ -213,33 +213,103 @@ function filterByStatus(status) {
     return rowStatus === status;
   }
 
+  const MONTH_FILTER_OPTIONS = [
+    ['1', 'มกราคม'], ['2', 'กุมภาพันธ์'], ['3', 'มีนาคม'], ['4', 'เมษายน'],
+    ['5', 'พฤษภาคม'], ['6', 'มิถุนายน'], ['7', 'กรกฎาคม'], ['8', 'สิงหาคม'],
+    ['9', 'กันยายน'], ['10', 'ตุลาคม'], ['11', 'พฤศจิกายน'], ['12', 'ธันวาคม'],
+  ];
+
+  function readListFilterValues() {
+    return {
+      search: (document.getElementById('searchInput')?.value || '').toLowerCase(),
+      type: document.getElementById('typeFilter')?.value || '',
+      unit: document.getElementById('unitFilter')?.value || '',
+      status: document.getElementById('statusFilter')?.value || '',
+      month: document.getElementById('monthFilter')?.value || '',
+    };
+  }
+
+  function matchesListFilterValues(row, filters, excludedFacet = '') {
+    if (filters.search && !matchesText(row, filters.search)) return false;
+    const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : row.instrument_type;
+    if (excludedFacet !== 'type' && filters.type && displayType !== filters.type) return false;
+    if (excludedFacet !== 'unit' && filters.unit && row.department !== filters.unit) return false;
+    if (excludedFacet !== 'status' && filters.status && !matchesStatus(row, filters.status)) return false;
+    if (excludedFacet !== 'month' && filters.month) {
+      if (!row.due_date || String(new Date(row.due_date).getMonth() + 1) !== filters.month) return false;
+    }
+    if (excludedFacet !== 'type' && !filters.type && typeof activeCategory !== 'undefined'
+      && activeCategory && activeCategory !== 'all') {
+      const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(row) : row.instrument_type;
+      if (category !== activeCategory) return false;
+    }
+    return true;
+  }
+
+  function getFacetValues(rows, filters, facet) {
+    const values = new Set();
+    (rows || []).forEach(row => {
+      if (!matchesListFilterValues(row, filters, facet.key)) return;
+      const value = facet.value(row);
+      if (value !== '' && value != null) values.add(String(value));
+    });
+    return [...values].sort((a, b) => facet.key === 'month' ? Number(a) - Number(b) : (a < b ? -1 : a > b ? 1 : 0));
+  }
+
+  function renderFacetOptions(facet, values, selectedValue) {
+    const select = document.getElementById(facet.id);
+    if (!select) return;
+    const options = values.map(value => {
+      let label = value;
+      if (facet.key === 'unit' && typeof deptUnitName === 'function') {
+        const name = deptUnitName(value);
+        if (name) label = `${value} — ${name.length > 42 ? name.slice(0, 40) + '…' : name}`;
+      } else if (facet.key === 'month') {
+        label = MONTH_FILTER_OPTIONS.find(([month]) => month === value)?.[1] || value;
+      }
+      return `<option value="${escapeHtmlAttr(value)}">${escapeHtmlText(label)}</option>`;
+    }).join('');
+    select.innerHTML = `<option value="">${facet.placeholder}</option>${options}`;
+    select.value = selectedValue && values.includes(selectedValue) ? selectedValue : '';
+  }
+
+  function updateListFacetOptions(filters) {
+    const facets = [
+      { key: 'type', id: 'typeFilter', placeholder: 'ทุกประเภท', value: row => typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : row.instrument_type },
+      { key: 'unit', id: 'unitFilter', placeholder: 'ทุกหน่วยงาน', value: row => row.department },
+      { key: 'month', id: 'monthFilter', placeholder: 'ทุกเดือน (ครบกำหนด)', value: row => row.due_date && !Number.isNaN(new Date(row.due_date).getTime()) ? new Date(row.due_date).getMonth() + 1 : '' },
+    ];
+
+    // Clear a prior choice if another filter leaves it with no matching instruments.
+    for (let pass = 0; pass < facets.length; pass++) {
+      let changed = false;
+      facets.forEach(facet => {
+        const selected = filters[facet.key];
+        if (!selected) return;
+        const available = getFacetValues(allData, filters, facet);
+        if (!available.includes(selected)) {
+          filters[facet.key] = '';
+          const select = document.getElementById(facet.id);
+          if (select) select.value = '';
+          changed = true;
+        }
+      });
+      if (!changed) break;
+    }
+
+    facets.forEach(facet => {
+      renderFacetOptions(facet, getFacetValues(allData, filters, facet), filters[facet.key]);
+    });
+  }
+
   function applyListFilters(keepPage = false) {
     ensureCancelStatusFilterOption();
     normalizeRows(allData);
     const previousPage = typeof currentPage === 'number' ? currentPage : 1;
-    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
-    const type = document.getElementById('typeFilter')?.value || '';
-    const unit = document.getElementById('unitFilter')?.value || '';
-    const status = document.getElementById('statusFilter')?.value || '';
-    const month = document.getElementById('monthFilter')?.value || '';
+    const filters = readListFilterValues();
+    updateListFacetOptions(filters);
 
-    filteredData = (allData || []).filter(row => {
-      if (!matchesText(row, search)) return false;
-      const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(row) : row.instrument_type;
-      if (type && displayType !== type) return false;
-      if (unit && row.department !== unit) return false;
-      if (!type && typeof activeCategory !== 'undefined' && activeCategory && activeCategory !== 'all') {
-        const category = typeof getInstrumentCategory === 'function' ? getInstrumentCategory(row) : row.instrument_type;
-        if (category !== activeCategory) return false;
-      }
-      if (!matchesStatus(row, status)) return false;
-      if (month && !row.due_date) return false;
-      if (month) {
-        const m = new Date(row.due_date).getMonth() + 1;
-        if (String(m) !== month) return false;
-      }
-      return true;
-    });
+    filteredData = (allData || []).filter(row => matchesListFilterValues(row, filters));
 
     const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
     const totalPages = Math.max(1, Math.ceil(filteredData.length / size));
