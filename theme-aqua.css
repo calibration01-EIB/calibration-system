@@ -706,6 +706,59 @@ tbody tr:hover td { background: #f6fafd !important; }
 }
 #app #pageList .ax-spec-detail:hover,
 #app #pageList .ax-spec-detail:focus-visible { background: var(--accent); color: #fff; outline: none; }
+/* รายการแบบย่อ: แถวหลักอ่านเร็ว และรายละเอียดขยายในหน้าเดิม */
+#app #pageList .ax-expand-table-wrap { width: 100%; overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+#app #pageList .ax-expand-table { width: 100%; min-width: 1020px; table-layout: fixed; border-collapse: collapse; }
+#app #pageList .ax-expand-table thead th { padding: 10px 9px; border-bottom: 1px solid var(--border); background: #f3f7f9; color: var(--text2); font-size: 12.5px; font-weight: 750; text-align: left; }
+#app #pageList .ax-expand-table thead th:first-child { text-align: center; }
+#app #pageList .ax-expand-table td.ax-expand-table-row {
+  height: auto !important; padding: 0 !important; border: 0 !important;
+  border-bottom: 1px solid var(--line) !important; background: #fff !important; white-space: normal !important;
+}
+#app #pageList .ax-expand-table tbody tr:last-child .ax-expand-table-row { border-bottom: 0 !important; }
+#app #pageList .ax-expand-row { display: block; min-width: 0; overflow: hidden; background: var(--surface); }
+#app #pageList .ax-expand-table tbody tr:nth-child(even) .ax-expand-row { background: #edf4f8; }
+#app #pageList .ax-expand-row[open] { background: #fbfdfd; }
+#app #pageList .ax-expand-table tbody tr .ax-expand-row[open] { background: #fbfdfd; }
+#app #pageList .ax-expand-row.is-cancelled { background: #f7f8fa; }
+#app #pageList .ax-expand-summary {
+  display: grid; grid-template-columns: 4% 26% 18% 16% 12% 12% 12%;
+  align-items: center; min-height: 58px; padding: 0; cursor: pointer; list-style: none;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+#app #pageList .ax-expand-summary::-webkit-details-marker { display: none; }
+#app #pageList .ax-expand-summary:hover,
+#app #pageList .ax-expand-summary:focus-visible { background: #dcefed; box-shadow: inset 4px 0 0 var(--accent); outline: none; }
+#app #pageList .ax-expand-index, #app #pageList .ax-expand-summary-field { min-width: 0; padding: 10px 9px; color: var(--text); font-family: inherit !important; font-size: 14px !important; font-weight: 800 !important; line-height: 1.45; overflow-wrap: anywhere; }
+#app #pageList .ax-expand-index { color: var(--text3); font-family: var(--ff-num); font-weight: 750; text-align: center; }
+#app #pageList .ax-expand-identity { display: flex; min-width: 0; min-height: 58px; align-items: center; gap: 9px; padding: 8px 9px; }
+#app #pageList .ax-expand-kind { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 8px; font-size: 13px; font-weight: 800; }
+#app #pageList .ax-expand-heading { display: block; min-width: 0; }
+#app #pageList .ax-expand-heading strong { color: var(--text); font-size: 14px; font-weight: 800; line-height: 1.45; overflow-wrap: anywhere; }
+#app #pageList .ax-expand-summary-field { border-left: 1px solid var(--line); }
+#app #pageList .ax-expand-summary-field.is-id-code { color: var(--text); font-weight: 800 !important; }
+#app #pageList .ax-expand-status { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr) 14px; align-items: center; gap: 3px 4px; padding: 6px 8px; }
+#app #pageList .ax-expand-status .ax-pill { grid-column: 1; max-width: 100%; padding: 4px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 750; line-height: 1.25; white-space: normal; }
+#app #pageList .ax-expand-due { grid-column: 1 / -1; color: var(--text3); font-size: 10px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+#app #pageList .ax-expand-chevron { color: var(--text3); transition: transform .15s ease; }
+#app #pageList .ax-expand-status .ax-expand-chevron { grid-column: 2; grid-row: 1; justify-self: center; }
+#app #pageList .ax-expand-row[open] .ax-expand-chevron { transform: rotate(180deg); }
+#app #pageList .ax-expand-content { padding: 0 14px 12px; border-top: 1px solid var(--line); }
+#app #pageList .ax-expand-fields {
+  display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: stretch;
+  gap: 8px; margin: 0; padding: 12px 0 4px;
+}
+#app #pageList .ax-expand-field {
+  display: grid; grid-template-columns: minmax(110px,.9fr) minmax(0,1.1fr); align-items: stretch;
+  min-width: 0; min-height: 58px; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 7px; background: #fff;
+}
+#app #pageList .ax-expand-field dt { display: flex; align-items: center; margin: 0; padding: 9px 10px; border-right: 1px solid var(--line); background: #f7fafc; color: var(--text3); font-size: 11.5px; font-weight: 650; line-height: 1.4; }
+#app #pageList .ax-expand-field dd { display: flex; align-items: center; min-width: 0; margin: 0; padding: 9px 11px; color: var(--text); font-size: 12.5px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+#app #pageList .ax-expand-field .ax-ml { align-items: flex-start; white-space: normal; }
+#app #pageList .ax-expand-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 9px; padding-top: 13px; }
+#app #pageList .ax-expand-detail { min-height: 36px; padding: 7px 12px; border: 1px solid var(--accent-br); border-radius: 8px; background: var(--accent-light); color: var(--accent-h); font-family: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+#app #pageList .ax-expand-detail:hover, #app #pageList .ax-expand-detail:focus-visible { background: var(--accent); color: #fff; outline: none; }
 #app #pageList .ax-tablecard .table-wrap {
   height: auto !important; min-height: 0 !important; max-height: none !important;
   overflow-x: auto !important; overflow-y: visible !important;
@@ -793,6 +846,11 @@ tbody tr:hover td { background: #f6fafd !important; }
   font-family: inherit; font-weight: 600; background: var(--accent-light);
   color: var(--accent-h); border: 1px solid #bfe3da;
 }
+.ax-act-cal-edit {
+  font-size: 12px; border-radius: 8px; padding: 5px 9px; cursor: pointer; white-space: nowrap;
+  font-family: inherit; font-weight: 700; background: #edf4ff; color: #245b9b; border: 1px solid #c5d8ef;
+}
+.ax-act-cal-edit:hover, .ax-act-cal-edit:focus-visible { background: #dbeafe; border-color: #8bb5e6; outline: none; }
 .ax-act-mute { font-size: 12.5px; color: var(--text3); }
 #app .ax-actcell .btn-cert { width: auto; padding: 5px 9px; font-size: 12.5px; }
 #app .ax-actcell .btn-del { width: auto; padding: 5px 9px; font-size: 12.5px; line-height: 1.2; }
@@ -1368,6 +1426,7 @@ tbody tr:hover td { background: #f6fafd !important; }
 
 @media (max-width: 1100px) {
   #app #pageList .ax-spec-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #app #pageList .ax-expand-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 /* หน้ารายการบนมือถือ — catalog grid ใช้ renderer เดียวกับ desktop */
@@ -1392,6 +1451,10 @@ tbody tr:hover td { background: #f6fafd !important; }
   #app #pageList .ax-spec-grid { grid-template-columns: minmax(0,1fr); gap: 12px; max-width: 100%; }
   #app #pageList .ax-spec-body { padding: 14px; }
   #app #pageList .ax-spec-id { font-size: 19px; }
+  #app #pageList .ax-expand-table { min-width: 900px; }
+  #app #pageList .ax-expand-content { padding: 0 12px 12px; }
+  #app #pageList .ax-expand-fields { grid-template-columns: minmax(0,1fr); gap: 7px; }
+  #app #pageList .ax-expand-field { grid-template-columns: minmax(112px,.8fr) minmax(0,1.2fr); min-height: 54px; }
 }
 
 /* ============================================================

@@ -481,7 +481,7 @@ function openInstrumentDetail(id) {
         ${regDetailItem('ใช้งานสูงสุด (Maximum usage)', normalizeInstrumentUnitText(d.usage_max))}
         ${regDetailItem('ความถี่ใช้งาน (Usage frequency)', d.usage_frequency)}
         ${regDetailItem('Accuracy Class', d.accuracy_class)}
-        ${regDetailItem('Type : A,B,C (Ref.USP1058)', d.usp_type)}
+        ${regDetailItem('Type : A,B,C (Reference: SWI-ENG-024)', d.usp_type)}
         ${regDetailItem('กลุ่มสินค้า (Product group)', d.product_group)}
       </div>
     </div>

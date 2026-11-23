@@ -2527,7 +2527,7 @@ body.app-mode textarea:focus {
 }
 </style>
 <!-- ธีมจากดีไซน์ Calibration App — ต้องโหลดหลัง <style> ด้านบนเสมอ -->
-<link rel="stylesheet" href="theme-aqua.css?v=20260918-date1">
+<link rel="stylesheet" href="theme-aqua.css?v=20261123-tool-list1">
 <link rel="stylesheet" href="reference-library.css?v=20260914-reference1">
 <link rel="stylesheet" href="kpi-types.css?v=20260914-kpi1">
 </head>
@@ -2892,12 +2892,12 @@ body.app-mode textarea:focus {
           </div>
         </div>
 
-        <!-- สลับมุมมอง: สเปกแบบการ์ด / บัญชีรายการแบบตารางเดิม -->
+        <!-- สลับมุมมอง: รายการย่อแบบขยาย / บัญชีรายการแบบตาราง -->
         <div class="ax-view-tabs" id="listViewTabs"></div>
 
-        <!-- มุมมองสเปก: catalog cards -->
+        <!-- มุมมองรายการย่อ: ขยายแถวเพื่อดูข้อมูลครบ -->
         <div class="ax-tablecard" id="listSpecCard">
-          <div class="ax-spec-grid" id="listSpecGrid" aria-label="มุมมองสเปกเครื่องมือ"></div>
+          <div class="ax-expand-list" id="listExpandList" aria-label="รายการเครื่องมือแบบขยาย"></div>
         </div>
 
         <!-- มุมมองบัญชีรายการ (ทุกคอลัมน์ตามฟอร์ม) -->
@@ -2922,7 +2922,7 @@ body.app-mode textarea:focus {
                   <th rowspan="2">ความถี่สอบเทียบ<span>(Calibration frequency)</span></th>
                   <th rowspan="2" class="c-loc">สถานที่<span>(Location)</span></th>
                   <th colspan="2">การสอบเทียบ<span>(Calibration)</span></th>
-                  <th rowspan="2">Type : A,B,C<span>(Ref.USP1058)</span></th>
+                  <th rowspan="2">Type : A,B,C<span>(Reference: SWI-ENG-024)</span></th>
                   <th rowspan="2">สถานะ<span>(Status)</span></th>
                 </tr>
                 <tr>
@@ -4191,7 +4191,7 @@ body.app-mode textarea:focus {
           </datalist>
         </div>
         <div class="form-group">
-          <label>Type : A,B,C (Ref.USP1058)</label>
+          <label>Type : A,B,C (Reference: SWI-ENG-024)</label>
           <input type="text" id="iUspType" list="uspTypeList" placeholder="เช่น B">
           <datalist id="uspTypeList">
             <option value="A"></option>
@@ -4373,7 +4373,7 @@ body.app-mode textarea:focus {
 <script src="js/00-config.js?v=20260626-config"></script>
 <script src="js/01-core.js?v=20260918-session1"></script>
 <script src="js/02-dashboard.js?v=20260918-save1"></script>
-<script src="js/03-instruments.js?v=20260918-units1"></script>
+<script src="js/03-instruments.js?v=20261123-tool-list1"></script>
 <script src="js/04-reports.js?v=20260903-plan2"></script>
 <script src="js/05-audit.js?v=20260622-audit-fit"></script>
 <script src="js/06b-import-register.js?v=20260803-split"></script>
@@ -4390,7 +4390,7 @@ body.app-mode textarea:focus {
 <script src="js/22-users.js?v=20260908-filter1"></script>
 <script src="js/24-home.js?v=20260915-dashboard-kpi"></script>
 <script src="js/25-dashboard-ui.js?v=20260915-dashboard-kpi"></script>
-<script src="js/26-list-ui.js?v=20260918-units1"></script>
+<script src="js/26-list-ui.js?v=20261123-tool-list1"></script>
 <script src="js/27-asset-out-page.js?v=20260911-asset-out2"></script>
 <script src="js/28-kpi.js?v=20260914-kpi1"></script>
 <script src="js/31-kpi-types.js?v=20260914-kpi1"></script>
@@ -4445,7 +4445,7 @@ body.app-mode textarea:focus {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=20260914-reference1').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=20261123-tool-list1').catch(() => {});
   });
 }
 </script>

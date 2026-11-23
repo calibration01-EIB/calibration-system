@@ -1,23 +1,23 @@
 /* ============================================================
    26-list-ui.js — หน้า "รายการเครื่องมือ" ตามดีไซน์ Calibration App
-   2 มุมมอง: สเปก / บัญชีรายการ + ชิปสถานะ + pager แบบใหม่
+   2 มุมมอง: รายการย่อแบบขยาย / บัญชีรายการ + ชิปสถานะ + pager แบบใหม่
    (จอมือถือไม่ใช้ตารางเลย — ใช้ #mobileCardList ของเดิมแทน)
    แทน renderTable() เดิม (02-dashboard.js) แต่ยังใช้ตัวกรอง/pagination เดิมทั้งหมด
    ต้องโหลดหลัง 02-dashboard.js / 04-reports.js / 10-router.js
    ============================================================ */
 
-/* มุมมองการ์ดเป็นของฝั่งมือถือเท่านั้น (#mobileCardList + renderMobileCards ใน 02-dashboard.js)
-   จอใหญ่จึงมีแค่ 2 มุมมองนี้ — อย่าเพิ่ม 'card' กลับเข้ามาเป็นแท็บ */
+/* ใช้รายการย่อแบบขยายเป็นค่าเริ่มต้น และคงตารางครบเป็นมุมมองสำรอง */
 const LIST_VIEWS = [
-  { k: 'spec', label: 'มุมมองสเปก',      sub: 'ย่าน · ความละเอียด · ค่ายอมรับ' },
+  { k: 'expand', label: 'รายการแบบย่อ',   sub: 'กดขยายเพื่อดูข้อมูลครบ' },
   { k: 'full', label: 'บัญชีรายการ',      sub: 'ทุกคอลัมน์ตามฟอร์ม' }
 ];
 
 let listView = (() => {
-  // ต้องกรองค่าเก่าใน localStorage ด้วย ('card' ที่เคยเลือกไว้จะทำให้ไม่มีตารางไหนโชว์เลย)
-  let v = 'spec';
-  try { v = localStorage.getItem('axListView') || 'spec'; } catch (e) {}
-  return LIST_VIEWS.some(x => x.k === v) ? v : 'spec';
+  // แปลงค่ามุมมองเดิมให้เป็นรายการย่อ เพื่อให้ผู้ใช้ที่เคยเลือกไว้ยังเห็นรายการได้
+  let v = 'expand';
+  try { v = localStorage.getItem('axListView') || 'expand'; } catch (e) {}
+  if (v === 'spec') v = 'expand';
+  return LIST_VIEWS.some(x => x.k === v) ? v : 'expand';
 })();
 
 const LIST_STATUS_CHIPS = [
@@ -111,8 +111,8 @@ function listStatusPill(d) {
   if (cancelled) return { bg: '#eef0f3', fg: '#5f6b7a', emoji: '⛔', text: 'ยกเลิกสอบเทียบ', days: 'ยกเลิกสอบเทียบ', cancelled: true };
   if (days === null || days === undefined) return { bg: '#eef0f3', fg: '#5f6b7a', emoji: '⚪', text: 'ไม่ระบุ', days: '–', cancelled: false };
   if (days < 0)  return { bg: '#fde8e8', fg: '#d93a3a', emoji: '🔴', text: 'เลยกำหนด', days: 'เกิน ' + Math.abs(days) + ' วัน', cancelled: false };
-  if (days <= 30) return { bg: '#fdf3dd', fg: '#b45309', emoji: '🟡', text: 'ใกล้ครบ', days: days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน', cancelled: false };
-  return { bg: '#e1f5ee', fg: '#0f6e56', emoji: '🟢', text: 'ปกติ', days: 'อีก ' + days + ' วัน', cancelled: false };
+  if (days <= 30) return { bg: '#fdf3dd', fg: '#b45309', emoji: '🟡', text: 'ใกล้ครบกำหนด', days: days === 0 ? 'วันนี้' : 'อีก ' + days + ' วัน', cancelled: false };
+  return { bg: '#e1f5ee', fg: '#0f6e56', emoji: '🟢', text: 'สอบเทียบแล้ว', days: 'อีก ' + days + ' วัน', cancelled: false };
 }
 
 function cwRegistryShortcutHtml(instrumentId) {
@@ -151,6 +151,7 @@ function listActionCell(d) {
   const activeWork = work && work.isActive !== false;
   const canEdit = typeof currentUser !== 'undefined'
     && (currentUser?.role === 'admin' || currentUser?.role === 'editor');
+  const calEditBtn = canEdit ? `<button type="button" class="ax-act-cal-edit" onclick="openInstrumentCalibrationEdit(${id})">🗓️ แก้ไข CERT / วันสอบเทียบ</button>` : '';
   if (cancelled) {
     planBtn = '<span class="ax-act-mute">ไม่ต้องวางแผน</span>';
   } else if (!activeWork && canEdit) {
@@ -163,7 +164,16 @@ function listActionCell(d) {
     ? `<button type="button" class="btn-del" onclick="deleteInstrument(${id},'${escapeJsSingle(d.instrument_name || '')}')">🗑️</button>`
     : '';
 
-  return `<span class="ax-actcell">${fileBtn}${planBtn}${cwRegistryShortcutHtml(id)}${delBtn}</span>`;
+  return `<span class="ax-actcell">${fileBtn}${calEditBtn}${planBtn}${cwRegistryShortcutHtml(id)}${delBtn}</span>`;
+}
+
+function openInstrumentCalibrationEdit(instrumentId) {
+  const id = Number(instrumentId);
+  if (!Number.isSafeInteger(id) || id <= 0 || typeof openInstrumentModal !== 'function') return;
+  openInstrumentModal(id);
+  if (!document.getElementById('instrumentModal')?.classList.contains('open')) return;
+  setInstrumentModalTab('calibration');
+  document.getElementById('iCertNo')?.focus();
 }
 
 /* ---------- ชิปสถานะ ---------- */
@@ -392,6 +402,66 @@ function renderListSpec(rows) {
   observeListSpecPhotos(grid);
 }
 
+/* ---------- รายการย่อ: ขยายเพื่อดูรายละเอียดทั้งหมด ---------- */
+
+function listExpandField(label, value, multi = false) {
+  const content = multi ? listMultiHtml(value) : escapeHtmlText(value || '–');
+  return `<div class="ax-expand-field"><dt>${label}</dt><dd>${content}</dd></div>`;
+}
+
+function listExpandRowHtml(d, index) {
+  const id = Number(d.id) || 0;
+  const p = listStatusPill(d);
+  const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+  const [letter, , color] = regTypeMeta(displayType, d);
+  const code = escapeHtmlText(d.id_code || '–');
+  const brandModel = [d.brand, d.model].filter(Boolean).join(' / ') || '–';
+  const location = [d.department, d.division, d.location].filter(Boolean).join(' · ');
+  const calibration = [d.cal_type === 'ภายใน' ? '✓ ภายใน' : '', d.cal_type === 'ภายนอก' ? '✓ ภายนอก' : ''].filter(Boolean).join(' · ') || '–';
+  const fields = [
+    listExpandField('ประเภทเครื่องมือ', displayType || '–'),
+    listExpandField('รหัสเครื่องจักร', d.machine_name),
+    listExpandField('เลขที่ใบรับรอง (CERT)', d.cert_no),
+    listExpandField('ความละเอียด', normalizeInstrumentUnitText(d.resolution_text || d.resolution), true),
+    listExpandField('ค่ายอมรับ', formatInstrumentTolerance(d.tolerance), true),
+    listExpandField('ย่านการวัด', normalizeInstrumentUnitText(listRangeText(d)), true),
+    listExpandField('ใช้งานต่ำสุด', normalizeInstrumentUnitText(d.usage_min), true),
+    listExpandField('ใช้งานสูงสุด', normalizeInstrumentUnitText(d.usage_max), true),
+    listExpandField('ความถี่ใช้งาน', d.usage_frequency),
+    listExpandField('ความถี่สอบเทียบ', d.cal_frequency),
+    listExpandField('วันครบกำหนดสอบเทียบ', d.due_date ? formatDate(d.due_date) : '–'),
+    listExpandField('สถานที่', location),
+    listExpandField('การสอบเทียบ', calibration),
+    listExpandField('Type : A,B,C (Reference: SWI-ENG-024)', d.usp_type)
+  ].join('');
+  return `<tr><td colspan="7" class="ax-expand-table-row">
+    <details class="ax-expand-row${p.cancelled ? ' is-cancelled' : ''}" data-instrument-id="${id}">
+      <summary class="ax-expand-summary">
+        <span class="ax-expand-index">${index + 1}</span>
+        <span class="ax-expand-identity"><span class="ax-expand-kind" style="background:${color}1a;color:${color}">${escapeHtmlText(letter)}</span><strong>${listMultiHtml(d.instrument_name)}</strong></span>
+        <span class="ax-expand-summary-field is-id-code">${code}</span>
+        <span class="ax-expand-summary-field">${escapeHtmlText(brandModel)}</span>
+        <span class="ax-expand-summary-field">${escapeHtmlText(d.serial_no || '–')}</span>
+        <span class="ax-expand-summary-field">${escapeHtmlText(d.asset_no || '–')}</span>
+        <span class="ax-expand-status"><span class="ax-pill" style="background:${p.bg};color:${p.fg}">${p.emoji} ${escapeHtmlText(p.text)}</span><small class="ax-expand-due">ครบกำหนด: ${escapeHtmlText(d.due_date ? formatDate(d.due_date) : 'ไม่ระบุ')}</small><span class="ax-expand-chevron" aria-hidden="true">⌄</span></span>
+      </summary>
+    <div class="ax-expand-content"><dl class="ax-expand-fields">${fields}</dl>
+        <div class="ax-expand-actions">${listActionCell(d)}<button type="button" class="ax-expand-detail" onclick="openInstrumentDetail(${id})">เปิดรายละเอียดทั้งหมด</button></div>
+      </div>
+    </details>
+  </td></tr>`;
+}
+
+function renderListExpandable(rows, start) {
+  const host = document.getElementById('listExpandList');
+  if (!host) return;
+  host.innerHTML = `<div class="ax-expand-table-wrap"><table class="ax-expand-table">
+    <colgroup><col style="width:4%"><col style="width:26%"><col style="width:18%"><col style="width:16%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
+    <thead><tr><th>No.</th><th>ประเภท / เครื่องมือ</th><th>ID.Code</th><th>ยี่ห้อ/รุ่น</th><th>S/N</th><th>Asset No.</th><th>สถานะสอบเทียบ</th></tr></thead>
+    <tbody>${rows.map((row, index) => listExpandRowHtml(row, start + index)).join('')}</tbody>
+  </table></div>`;
+}
+
 /* ---------- มุมมองบัญชีรายการ ---------- */
 
 function renderListFull(rows, start) {
@@ -451,19 +521,21 @@ function renderListPage() {
 
   const empty = rowsAll.length === 0;
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
-  show('listSpecCard', !empty && listView === 'spec');
+  show('listSpecCard', !empty && listView === 'expand');
   show('listFullCard', !empty && listView === 'full');
   show('listEmpty', empty);
 
   if (empty) {
     const grid = document.getElementById('listSpecGrid');
     if (grid) grid.innerHTML = '';
+    const expandable = document.getElementById('listExpandList');
+    if (expandable) expandable.innerHTML = '';
     const tf = document.getElementById('dataTableFull');
     if (tf) tf.innerHTML = '<tr><td colspan="19" class="no-data">ไม่พบข้อมูล</td></tr>';
   } else if (listView === 'full') {
     renderListFull(pageRows, start);
   } else {
-    renderListSpec(pageRows, start);
+    renderListExpandable(pageRows, start);
   }
 
   const label = document.getElementById('listResultLabel');
@@ -477,7 +549,7 @@ function renderListPage() {
   renderListStatusChips();
   syncListFilterUi();
   if (typeof updatePaginationUI === 'function') updatePaginationUI();
-  if (typeof updateFileCounts === 'function' && listView === 'spec') updateFileCounts(pageRows);
+  if (typeof updateFileCounts === 'function' && listView === 'expand') updateFileCounts(pageRows);
   if (typeof renderMobileCards === 'function') renderMobileCards();
 }
 
