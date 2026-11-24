@@ -14,7 +14,8 @@ function calSessionToken() {
 // สร้าง Supabase client พร้อมแนบ token ปัจจุบัน — การเขียน/ลบตารางข้อมูลต้องมี token ที่ถูกต้อง
 function calCreateClient() {
   const token = calSessionToken();
-  return supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     global: { headers: token ? { 'x-app-token': token } : {} }
   });
+  return typeof calInstallStorageAdapter === 'function' ? calInstallStorageAdapter(client) : client;
 }

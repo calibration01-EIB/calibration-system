@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v183';
+const CACHE_NAME = 'calibration-app-v185';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -27,6 +27,7 @@ const APP_SHELL = [
   './assets/tiles/08_repair.png',
   './assets/tiles/09_offsite_equipment.png',
   './js/00-config.js?v=20260626-config',
+  './js/00-storage.js?v=20261124-drive-hybrid1',
   './js/01-core.js?v=20260918-session1',
   './js/02-dashboard.js?v=20260918-save1',
   './js/03-instruments.js?v=20261123-tool-list1',
