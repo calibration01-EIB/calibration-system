@@ -1429,11 +1429,24 @@ tbody tr:hover td { background: #f6fafd !important; }
   #app #pageList .ax-expand-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
-/* หน้ารายการบนมือถือ — catalog grid ใช้ renderer เดียวกับ desktop */
+/* หน้ารายการบนมือถือ — ใช้ mobile cards แทนตารางที่กว้างเกินจอ */
 @media (max-width: 768px) {
-  #app #pageList #mobileCardList,
-  #app #pageList #mobileCardList.mobile-visible { display: none !important; }
-  #app #pageList #listFullCard .table-wrap { display: block !important; }
+  #app #pageList #listViewTabs,
+  #app #pageList #listSpecCard,
+  #app #pageList #listFullCard,
+  #app #pageList #listEmpty { display: none !important; }
+  #app #pageList #mobileCardList { display: none !important; }
+  #app #pageList #mobileCardList.mobile-visible { display: block !important; }
+  #app #pageList .mobile-card { width: 100%; max-width: 100%; box-sizing: border-box; }
+  #app #pageList .mobile-card-main,
+  #app #pageList .mobile-card-title-row,
+  #app #pageList .mobile-field { min-width: 0; }
+  #app #pageList .mobile-card-title,
+  #app #pageList .mobile-card-sub,
+  #app #pageList .mobile-card-kicker,
+  #app #pageList .mobile-field strong { overflow-wrap: anywhere; }
+  #app #pageList .ax-head-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); overflow: visible; }
+  #app #pageList .ax-head-actions > button { width: 100%; min-width: 0; justify-content: center; }
   .ax-filter-card { padding: 14px; gap: 12px; margin-bottom: 16px; }
   .ax-search { flex: 1 1 100%; min-width: 0; padding: 10px 12px; }
   #app .ax-search input { font-size: 15px; }
@@ -2348,3 +2361,28 @@ tbody tr:hover td { background: #f6fafd !important; }
   #app #cwItemResultDialog .cw-item-result-error { margin-inline: 13px; }
   #app #cwItemResultDialog .cw-result-fields { grid-template-columns: 1fr; }
 }
+
+/* หน้ารายการเครื่องมือ: สเกลและระยะห่างให้พอดีกับมือถือ */
+@media (max-width: 767px) {
+  #app #pageList > .ax-page-head h1 { font-size: 20px; }
+  #app #pageList > .ax-page-head p { font-size: 12.5px; }
+  #app #pageList .ax-filter-row > .ax-search input { font-size: 13px !important; }
+  #app #pageList .ax-filter-row > select { font-size: 13px !important; }
+  #app #pageList .ax-catpills .reg-pill,
+  #app #pageList .ax-catpills .reg-pill span:not(.ax-pill-letter),
+  #app #pageList .ax-catpills .reg-pill strong { font-size: 12.5px !important; }
+  #app #pageList .ax-chip { font-size: 12.5px; }
+  #app #pageList .ax-vtab b { font-size: 13px; }
+  #app #pageList .ax-vtab span { font-size: 11.5px; }
+  #app #pageList .ax-spec-status { font-size: 11px; }
+  #app #pageList .ax-spec-id { font-size: 16px; }
+  #app #pageList .ax-spec-cert,
+  #app #pageList .ax-spec-due { font-size: 12px; }
+  #app #pageList .ax-spec-detail { font-size: 12.5px; }
+  #app #pageList .ax-filter-summary { font-size: 12px; }
+  #app #pageList .ax-filter-toggle,
+  #app #pageList .ax-filter-reset { font-size: 12.5px; }
+  #app #pageList .ax-pager { gap: 8px; }
+  #app #pageList .ax-pager-ctl { gap: 6px; }
+}
+
