@@ -23,11 +23,11 @@ async function loadCertFiles(instrumentId, idCode) {
     // อัพเดทปุ่มในตาราง
     const validCnt = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder').length;
     fileCountCache[instrumentId] = validCnt;
-    const btn = document.getElementById('certbtn-' + instrumentId);
-    if (btn) {
+    const btns = document.querySelectorAll('[id="certbtn-' + instrumentId + '"], [id="certbtn-' + instrumentId + '-mobile"]');
+    btns.forEach(btn => {
       btn.className = validCnt > 0 ? 'btn-cert btn-cert-has' : 'btn-cert btn-cert-empty';
       btn.innerHTML = validCnt > 0 ? `📎 ${validCnt} ไฟล์` : '📎 ไฟล์';
-    }
+    });
   } catch(e) {
     document.getElementById('fileListSection').innerHTML = '<p style="color:var(--red);font-size:13px">โหลดไฟล์ไม่สำเร็จ</p>';
   }
@@ -1281,3 +1281,4 @@ function toggleManageColumns(show) {
 
 
 // ====================================================
+

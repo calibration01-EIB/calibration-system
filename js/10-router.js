@@ -87,7 +87,8 @@ function updateMobileListVisibility(page) {
   if (!el) return;
   const shouldShow = page === 'list' && window.innerWidth <= 768;
   el.classList.toggle('mobile-visible', shouldShow);
-  if (shouldShow && typeof renderMobileCards === 'function') renderMobileCards();
+  if (shouldShow && typeof window.renderListMobileCards === 'function') window.renderListMobileCards();
+  else if (shouldShow && typeof renderMobileCards === 'function') renderMobileCards();
 }
 
 window.addEventListener('resize', () => {
@@ -570,3 +571,4 @@ if (document.readyState === 'loading') {
 } else {
   bootApp();
 }
+

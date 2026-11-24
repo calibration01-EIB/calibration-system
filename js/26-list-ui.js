@@ -136,13 +136,13 @@ window.cwRegistryShortcutHtml = cwRegistryShortcutHtml;
 
 /* ปุ่มงานท้ายแถว (ไฟล์ / วางแผน / ลบ) — ดีไซน์ไม่มีคอลัมน์นี้
    แต่ระบบใช้งานจริงอยู่ จึงคงไว้เป็นคอลัมน์เดียวรวบท้ายตาราง */
-function listActionCell(d) {
+function listActionCell(d, mobile = false) {
   const id = Number(d.id) || 0;
   const cancelled = d.calibration_cancelled === true
     || (typeof window.isCalibrationCancelled === 'function' && window.isCalibrationCancelled(d));
   const cnt = typeof fileCountCache !== 'undefined' ? fileCountCache[d.id] : undefined;
   const openCertCall = `openCertModal(${id},'${escapeJsSingle(d.id_code)}','${escapeJsSingle(d.cert_no)}','${escapeJsSingle(d.instrument_name)}')`;
-  const fileBtn = `<button type="button" id="certbtn-${id}" class="btn-cert ${cnt > 0 ? 'btn-cert-has' : 'btn-cert-empty'}" onclick="${openCertCall}">📎 ${cnt > 0 ? cnt + ' ไฟล์' : 'ไฟล์'}</button>`;
+  const fileBtn = `<button type="button" id="certbtn-${id}${mobile ? '-mobile' : ''}" class="btn-cert ${cnt > 0 ? 'btn-cert-has' : 'btn-cert-empty'}" onclick="${openCertCall}">📎 ${cnt > 0 ? cnt + ' ไฟล์' : 'ไฟล์'}</button>`;
 
   let planBtn;
   const workMap = typeof calibrationWorkStatusMap !== 'undefined' && calibrationWorkStatusMap
@@ -409,16 +409,11 @@ function listExpandField(label, value, multi = false) {
   return `<div class="ax-expand-field"><dt>${label}</dt><dd>${content}</dd></div>`;
 }
 
-function listExpandRowHtml(d, index) {
-  const id = Number(d.id) || 0;
-  const p = listStatusPill(d);
+function listExpandFieldsHtml(d) {
   const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
-  const [letter, , color] = regTypeMeta(displayType, d);
-  const code = escapeHtmlText(d.id_code || '–');
-  const brandModel = [d.brand, d.model].filter(Boolean).join(' / ') || '–';
   const location = [d.department, d.division, d.location].filter(Boolean).join(' · ');
   const calibration = [d.cal_type === 'ภายใน' ? '✓ ภายใน' : '', d.cal_type === 'ภายนอก' ? '✓ ภายนอก' : ''].filter(Boolean).join(' · ') || '–';
-  const fields = [
+  return [
     listExpandField('ประเภทเครื่องมือ', displayType || '–'),
     listExpandField('รหัสเครื่องจักร', d.machine_name),
     listExpandField('เลขที่ใบรับรอง (CERT)', d.cert_no),
@@ -434,6 +429,16 @@ function listExpandRowHtml(d, index) {
     listExpandField('การสอบเทียบ', calibration),
     listExpandField('Type : A,B,C (Reference: SWI-ENG-024)', d.usp_type)
   ].join('');
+}
+
+function listExpandRowHtml(d, index) {
+  const id = Number(d.id) || 0;
+  const p = listStatusPill(d);
+  const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+  const [letter, , color] = regTypeMeta(displayType, d);
+  const code = escapeHtmlText(d.id_code || '–');
+  const brandModel = [d.brand, d.model].filter(Boolean).join(' / ') || '–';
+  const fields = listExpandFieldsHtml(d);
   return `<tr><td colspan="7" class="ax-expand-table-row">
     <details class="ax-expand-row${p.cancelled ? ' is-cancelled' : ''}" data-instrument-id="${id}">
       <summary class="ax-expand-summary">
@@ -461,6 +466,44 @@ function renderListExpandable(rows, start) {
     <tbody>${rows.map((row, index) => listExpandRowHtml(row, start + index)).join('')}</tbody>
   </table></div>`;
 }
+
+function listMobileCardHtml(d, index) {
+  const id = Number(d.id) || 0;
+  const status = listStatusPill(d);
+  const displayType = typeof getDisplayInstrumentType === 'function' ? getDisplayInstrumentType(d) : d.instrument_type;
+  const [letter, , color] = regTypeMeta(displayType, d);
+  const brandModel = [d.brand, d.model].filter(Boolean).join(' / ') || '–';
+  const due = d.due_date ? formatDate(d.due_date) : 'ไม่ระบุ';
+  return `<details class="ax-mobile-list-card${status.cancelled ? ' is-cancelled' : ''}" data-instrument-id="${id}">
+    <summary class="ax-mobile-list-summary">
+      <span class="ax-mobile-list-index">${index + 1}</span>
+      <span class="ax-mobile-list-kind" style="background:${color}1a;color:${color}">${escapeHtmlText(letter)}</span>
+      <span class="ax-mobile-list-identity">
+        <strong>${listMultiHtml(d.instrument_name)}</strong>
+        <small>${escapeHtmlText(d.id_code || '–')} · ${escapeHtmlText(brandModel)}</small>
+        <span class="ax-mobile-list-status"><span class="ax-pill" style="background:${status.bg};color:${status.fg}">${status.emoji} ${escapeHtmlText(status.text)}</span><small>ครบกำหนด ${escapeHtmlText(due)}</small></span>
+      </span>
+      <span class="ax-mobile-list-chevron" aria-hidden="true">⌄</span>
+    </summary>
+    <div class="ax-mobile-list-details">
+      <dl class="ax-expand-fields">${listExpandFieldsHtml(d)}</dl>
+      <div class="ax-expand-actions">${listActionCell(d, true)}<button type="button" class="ax-expand-detail" onclick="openInstrumentDetail(${id})">เปิดรายละเอียดทั้งหมด</button></div>
+    </div>
+  </details>`;
+}
+
+function renderListMobileCards(rows, start) {
+  const host = document.getElementById('mobileCardList');
+  if (!host) return;
+  const rowsAll = typeof filteredData !== 'undefined' ? filteredData || [] : [];
+  const size = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+  const offset = Number.isFinite(Number(start)) ? Number(start) : Math.max(0, ((currentPage || 1) - 1) * size);
+  const listRows = Array.isArray(rows) ? rows : rowsAll.slice(offset, offset + size);
+  host.innerHTML = listRows.length
+    ? listRows.map((row, index) => listMobileCardHtml(row, offset + index)).join('')
+    : '<div class="ax-mobile-list-empty">ไม่พบเครื่องมือที่ตรงกับตัวกรอง</div>';
+}
+window.renderListMobileCards = renderListMobileCards;
 
 /* ---------- มุมมองบัญชีรายการ ---------- */
 
@@ -549,8 +592,9 @@ function renderListPage() {
   renderListStatusChips();
   syncListFilterUi();
   if (typeof updatePaginationUI === 'function') updatePaginationUI();
-  if (typeof updateFileCounts === 'function' && listView === 'expand') updateFileCounts(pageRows);
-  if (typeof renderMobileCards === 'function') renderMobileCards();
+  if (typeof updateFileCounts === 'function' && (listView === 'expand' || window.innerWidth <= 768)) updateFileCounts(pageRows);
+  if (window.innerWidth <= 768) renderListMobileCards(pageRows, start);
+  else if (typeof renderMobileCards === 'function') renderMobileCards();
 }
 
 /* แทนที่ renderTable เดิม (10-router ห่อไว้เพื่อ normalize — เราทำเองแล้ว) */
@@ -578,3 +622,4 @@ document.addEventListener('DOMContentLoaded', () => {
   renderListStatusChips();
   syncListFilterUi();
 });
+

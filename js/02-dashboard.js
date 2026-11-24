@@ -860,13 +860,14 @@ async function updateFileCounts(pageItems) {
       const { data } = await sb.storage.from('certificates').list(folder);
       const cnt = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder').length;
       fileCountCache[d.id] = cnt;
-      const btn = document.getElementById('certbtn-' + d.id);
-      if (btn) {
+      const btns = document.querySelectorAll('[id="certbtn-' + d.id + '"], [id="certbtn-' + d.id + '-mobile"]');
+      btns.forEach(btn => {
         btn.className = cnt > 0 ? 'btn-cert btn-cert-has' : 'btn-cert btn-cert-empty';
         btn.innerHTML = cnt > 0 ? '📎 ' + cnt + ' ไฟล์' : '📎 ไฟล์';
-      }
+      });
     } catch(e) {}
   }
 }
 
 // ====================================================
+

@@ -2386,3 +2386,74 @@ tbody tr:hover td { background: #f6fafd !important; }
   #app #pageList .ax-pager-ctl { gap: 6px; }
 }
 
+/* รายการการ์ดบนมือถือ: ข้อมูลย่อด้านหน้า กดเพื่อเปิดรายละเอียดเดิม */
+@media (max-width: 768px) {
+  #app #pageList #mobileCardList.mobile-visible {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr);
+    gap: 8px;
+    padding: 0 0 8px !important;
+  }
+  #app #pageList .ax-mobile-list-card {
+    min-width: 0;
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 5px 16px rgba(18,48,71,.06);
+  }
+  #app #pageList .ax-mobile-list-card.is-cancelled { background: #f7f8fa; }
+  #app #pageList .ax-mobile-list-summary {
+    display: grid;
+    grid-template-columns: 20px 30px minmax(0,1fr) 14px;
+    align-items: center;
+    gap: 8px;
+    min-height: 72px;
+    padding: 10px 11px;
+    cursor: pointer;
+    list-style: none;
+  }
+  #app #pageList .ax-mobile-list-summary::-webkit-details-marker { display: none; }
+  #app #pageList .ax-mobile-list-index { color: var(--text3); font: 700 10px var(--ff-num); text-align: center; }
+  #app #pageList .ax-mobile-list-kind {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  #app #pageList .ax-mobile-list-identity { display: grid; min-width: 0; gap: 3px; }
+  #app #pageList .ax-mobile-list-identity > strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  #app #pageList .ax-mobile-list-identity > strong .ax-ml > span { font-size: 13px; }
+  #app #pageList .ax-mobile-list-identity > small {
+    overflow: hidden;
+    color: var(--text2);
+    font-size: 10.5px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app #pageList .ax-mobile-list-status { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 5px 8px; }
+  #app #pageList .ax-mobile-list-status .ax-pill { max-width: 100%; padding: 2px 7px; font-size: 10px; line-height: 1.35; }
+  #app #pageList .ax-mobile-list-status > small { color: var(--text3); font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+  #app #pageList .ax-mobile-list-chevron { color: var(--text3); transition: transform .15s ease; }
+  #app #pageList .ax-mobile-list-card[open] .ax-mobile-list-chevron { transform: rotate(180deg); }
+  #app #pageList .ax-mobile-list-card[open] .ax-mobile-list-summary { border-bottom: 1px solid var(--line); background: #f7fbfc; }
+  #app #pageList .ax-mobile-list-details { padding: 0 10px 10px; }
+  #app #pageList .ax-mobile-list-details .ax-expand-fields { padding-top: 10px; }
+  #app #pageList .ax-mobile-list-details .ax-expand-actions { justify-content: flex-start; gap: 7px; padding-top: 10px; }
+  #app #pageList .ax-mobile-list-details .ax-actcell { justify-content: flex-start; }
+  #app #pageList .ax-mobile-list-empty { padding: 18px 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--text3); text-align: center; font-size: 12px; }
+}
+
