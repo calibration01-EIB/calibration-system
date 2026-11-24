@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calibration-app-v186';
+const CACHE_NAME = 'calibration-app-v187';
 const IMPORT_TEMPLATE_SELECTION_SCRIPT = './js/11-import-template-selection.js?v=20260611-balance-mass-split';
 const RETIRED_ASSET_PATHS = Object.freeze([
   'js/06-plan.js', 'js/15-plan-export.js', 'js/17-frm-cross-month.js', 'assets/frm-eib04-template.xlsx'
@@ -6,7 +6,7 @@ const RETIRED_ASSET_PATHS = Object.freeze([
 const APP_SHELL = [
   './',
   './index.html',
-  './index.html?v=20261124-mobile-expand1',
+  './index.html?v=20261124-mobile-expand2',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -37,7 +37,7 @@ const APP_SHELL = [
   './js/07-notifications.js?v=20260610-notif-cancel-fix',
   './js/08-weights.js?v=20260914-reference1',
   './js/09-cert.js?v=20260803-deadcode',
-  './js/10-router.js?v=20261124-mobile-expand1',
+  './js/10-router.js?v=20261124-mobile-expand2',
   './js/12-standard-certs.js?v=20260914-reference1',
   './js/13-cmc.js?v=20260618-cmc',
   './js/14-cal-presets.js?v=20260630-presetsetup2',

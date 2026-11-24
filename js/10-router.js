@@ -86,9 +86,10 @@ function updateMobileListVisibility(page) {
   const el = document.getElementById('mobileCardList');
   if (!el) return;
   const shouldShow = page === 'list' && window.innerWidth <= 768;
+  const wasVisible = el.classList.contains('mobile-visible');
   el.classList.toggle('mobile-visible', shouldShow);
-  if (shouldShow && typeof window.renderListMobileCards === 'function') window.renderListMobileCards();
-  else if (shouldShow && typeof renderMobileCards === 'function') renderMobileCards();
+  if (shouldShow && !wasVisible && typeof window.renderListMobileCards === 'function') window.renderListMobileCards();
+  else if (shouldShow && !wasVisible && typeof renderMobileCards === 'function') renderMobileCards();
 }
 
 window.addEventListener('resize', () => {
